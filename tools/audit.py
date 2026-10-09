@@ -407,6 +407,64 @@ class Auditor:
             raise Mismatch(f"{path}: recursive call must become recursive result bvar {ih}, found {cur}")
 
 
+class Facts:
+    """Native universe facts of the export (independent reading of the IR record)."""
+
+    def __init__(self, rec):
+        self.levels = ["Set"] + list(rec["levels"])
+        self.rel = {(x["l"], x["r"]): x["rel"] for x in rec["relations"]}
+
+    def entails(self, a, b, k):
+        """a + k <= b in the source universe graph."""
+        if k <= 0:
+            return a == b or self.rel.get((a, b)) in ("le", "lt")
+        if k == 1:
+            return self.rel.get((a, b)) == "lt"
+        return any(self.rel.get((a, c)) == "lt" and self.entails(c, b, k - 1) for c in self.levels)
+
+
+def const_occurrences(e, acc):
+    stack = [e]
+    while stack:
+        x = stack.pop()
+        if isinstance(x, dict):
+            if x.get("k") == "const":
+                acc.append((x["n"], x["u"]))
+            stack.extend(v for v in x.values() if isinstance(v, (dict, list)))
+        elif isinstance(x, list):
+            stack.extend(x)
+    return acc
+
+
+def check_universe_args(facts, own, gen, exprs):
+    """Rule R3 (docs/UNIVERSE_TRANSLATION.md) for every reference in `exprs`.
+    own: source global levels of the referring declaration; gen: target name -> source levels."""
+    n = 0
+    own_params = {level_param(g): g for g in own}
+    for e in exprs:
+        for name, us in const_occurrences(e, []):
+            if name not in gen:
+                continue
+            ls = gen[name]
+            if len(us) != len(ls):
+                raise Mismatch(f"{name}: {len(us)} universe arguments for {len(ls)} parameters")
+            for l, sigma in zip(ls, us):
+                c, ps = level_nf(sigma)
+                if l in own:
+                    if (c, ps) != canon(None, {level_param(l): 0}):
+                        raise Mismatch(f"{name}: source level {l} is shared, argument must be {level_param(l)}")
+                else:
+                    if c is not None and not facts.entails("Set", l, c):
+                        raise Mismatch(f"{name}: Set + {c} <= {l} not entailed by the source universe graph")
+                    for p, k in ps:
+                        if p not in own_params:
+                            raise Mismatch(f"{name}: argument mentions {p}, not a parameter of the referring declaration")
+                        if not facts.entails(own_params[p], l, k):
+                            raise Mismatch(f"{name}: {own_params[p]} + {k} <= {l} not entailed by the source universe graph")
+                n += 1
+    return n
+
+
 def closure_refs(t, acc):
     """Independent reimplementation of dependency extraction (not shared with tools/contract.py)."""
     stack = [t]
@@ -527,6 +585,27 @@ def main(src_path, contract_path, report_path, out_path):
         problem("coverage", f"report summary {report.get('summary')} differs from recomputed {want_summary}")
     if not accepted:
         problem("coverage", "no accepted declaration")
+    # Universe interpretation (rule R3), checked independently of the translator.
+    facts = Facts(lines[4]) if lines[4].get("kind") == "universe_facts" else None
+    if facts is None:
+        problem("universe", "source IR has no native universe facts")
+    gen = {}
+    for s_, r_ in rows.items():
+        if r_.get("status") == "TRANSLATED_AND_CHECKED" and r_.get("level_params"):
+            d_ = decls[s_]
+            gen[r_["target"]] = sorted(source_globals([d_["type"], d_["body"]], set()))
+    univ_checked = 0
+    if facts is not None:
+        for s_, r_ in rows.items():
+            if r_.get("status") != "TRANSLATED_AND_CHECKED":
+                continue
+            d_ = decls[s_]
+            own = set(source_globals([d_["type"], d_["body"]], set())) if d_["kind"] == "constant" else set()
+            exprs = [r_.get("target_type"), r_.get("target_value")] + [c["type"] for c in r_.get("target_ctors", [])]
+            try:
+                univ_checked += check_universe_args(facts, own, gen, [x for x in exprs if x is not None])
+            except Mismatch as e:
+                problem("universe", f"{s_}: {e}")
     # Structural fidelity of every accepted translation.
     aud = Auditor(decls, list(rows.values()))
     for s in sorted(decls):
@@ -578,6 +657,7 @@ def main(src_path, contract_path, report_path, out_path):
             problem("structure", f"{s}: {e}")
         verdicts.append(v)
     out = {"schema": "rocq2lean-audit/2", "status": "OK" if not problems else "AUDIT_REJECTED",
+           "universe_arguments_checked": univ_checked,
            "coverage": {"requested_roots": len(canon), "required_closure": len(closure), "accepted": len(accepted),
                         "extra_exported": sorted(set(decls) - closure)},
            "problems": problems, "verdicts": verdicts}

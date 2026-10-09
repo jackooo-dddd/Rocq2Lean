@@ -10,3 +10,10 @@ VERNAC COMMAND EXTEND Rocq2LeanExport CLASSIFIED AS QUERY STATE opaque_access
     fun ~opaque_access -> R2l_export.export ~opaque_access file roots
   }
 END
+
+(* Rocq2Lean CheckRelation "a" "b" "lt|le|none|eq": native re-check of one universe fact. *)
+VERNAC COMMAND EXTEND Rocq2LeanCheckRelation CLASSIFIED AS QUERY
+| [ "Rocq2Lean" "CheckRelation" string(a) string(b) string(r) ] -> {
+    R2l_export.check_relation a b r
+  }
+END

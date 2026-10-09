@@ -46,6 +46,10 @@ structure GEnv where
   consts : Std.HashMap String Name := {}
   /-- Number of universe parameters of each accepted constant (generalized global levels). -/
   constLevels : Std.HashMap String Nat := {}
+  /-- Source global level of each universe parameter of each accepted constant, by target name. -/
+  constGlobals : Std.HashMap Name (Array String) := {}
+  /-- Native universe facts of the export. -/
+  facts : IR.UniverseFacts := { levels := #[], relations := #[] }
   inds : Std.HashMap String IndTarget := {}
   /-- Global universe names read directly as the level of a Lean `Sort` (adapter checks only). -/
   sortOverride : Std.HashMap String Level := {}
@@ -489,18 +493,83 @@ partial def levelMVarsOf (e : Expr) : StateM (Array LMVarId) Unit := do
   | .mdata _ b | .proj _ _ b => levelMVarsOf b
   | _ => pure ()
 
+/-- `a + k ≤ b` is entailed by the native facts (`Set` included): `k = 0` needs `≤`, `k = 1`
+needs `<`, larger offsets need a chain of strict steps. -/
+partial def entails (f : IR.UniverseFacts) (a b : String) (k : Nat) : Bool :=
+  if k == 0 then a == b || f.rel a b == "le" || f.rel a b == "lt"
+  else if k == 1 then f.rel a b == "lt"
+  else (("Set" :: f.levels.toList).any fun c => f.rel a c == "lt" && entails f c b (k - 1))
+
+/-- Normal form `max(c, p₁ + k₁, …)` of a level without `imax`/metavariables. -/
+partial def levelNF : Level → Option (Nat × List (Name × Nat))
+  | .zero => some (0, [])
+  | .param p => some (0, [(p, 0)])
+  | .succ l => do let (c, ps) ← levelNF l; some (c + 1, ps.map fun (p, k) => (p, k + 1))
+  | .max a b => do
+    let (c1, p1) ← levelNF a
+    let (c2, p2) ← levelNF b
+    some (max c1 c2, p2.foldl (fun acc (p, k) =>
+      match acc.find? (·.1 == p) with
+      | some (_, k') => acc.map fun (q, j) => if q == p then (q, max k k') else (q, j)
+      | none => acc ++ [(p, k)]) p1)
+  | _ => none
+
+/-- Universe obligation (docs/UNIVERSE_TRANSLATION.md, rule R3) for one reference: the target
+universe argument `σ` for the referenced constant's parameter standing for source level `l`. -/
+def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) (σ : Level) :
+    Except String Unit := do
+  if own.contains l then
+    unless σ.normalize == .param (levelParamName l) do
+      throw s!"coherence: source level {l} is shared with the referring declaration, so its argument must be u_{l}, not {σ}"
+    return
+  let some (c, ps) := levelNF σ.normalize | throw s!"argument {σ} for {l} is outside the supported level fragment"
+  unless entails f "Set" l c do throw s!"argument {σ}: Set + {c} ≤ {l} is not entailed by the source universe graph"
+  for (p, k) in ps do
+    let some m := own.find? (fun g => levelParamName g == p)
+      | throw s!"argument {σ} mentions {p}, which is not a parameter of the referring declaration"
+    unless entails f m l k do throw s!"argument {σ}: {m} + {k} ≤ {l} is not entailed by the source universe graph"
+
+/-- All constant occurrences of `e` with their universe arguments. -/
+partial def constOccurrences (e : Expr) (acc : Array (Name × List Level) := #[]) : Array (Name × List Level) :=
+  match e with
+  | .const c ls => acc.push (c, ls)
+  | .app f a => constOccurrences a (constOccurrences f acc)
+  | .lam _ t b _ | .forallE _ t b _ => constOccurrences b (constOccurrences t acc)
+  | .letE _ t v b _ => constOccurrences b (constOccurrences v (constOccurrences t acc))
+  | .mdata _ b | .proj _ _ b => constOccurrences b acc
+  | _ => acc
+
+/-- Check every universe argument at every reference to a generalized constant in `e`;
+returns the number of checked arguments. -/
+def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr) : Except String Nat := do
+  let mut n := 0
+  for (c, ls) in constOccurrences e do
+    if let some globals := genv.constGlobals[c]? then
+      unless globals.size == ls.length do throw s!"{c}: {ls.length} universe arguments for {globals.size} parameters"
+      for l in globals, σ in ls do
+        match checkInstantiation genv.facts own l σ with
+        | .ok () => n := n + 1
+        | .error msg => throw s!"reference to {c}: {msg}"
+  return n
+
 /-- Solve the universe metavariables introduced at references to generalized constants:
 type-check with Lean's checker (which unifies universe levels; terms are not changed) and
 unify the value's type with the declared type; any level left unconstrained is set to `0`.
 The kernel re-checks the result. -/
-def solveLevels (ty val : Expr) : MetaM (Expr × Expr) := do
-  try Meta.check ty catch _ => pure ()
-  try Meta.check val catch _ => pure ()
-  try discard <| withTransparency .all <| isDefEq (← inferType val) ty catch _ => pure ()
+def solveLevels (ty val : Expr) : MetaM (Expr × Expr × Array String × Nat) := do
+  let mut diags : Array String := #[]
+  try Meta.check ty catch e => diags := diags.push s!"Meta.check type: {← e.toMessageData.toString}"
+  try Meta.check val catch e => diags := diags.push s!"Meta.check value: {← e.toMessageData.toString}"
+  try
+    unless ← withTransparency .all <| isDefEq (← inferType val) ty do
+      diags := diags.push "value type not unified with the declared type by Meta.isDefEq"
+  catch e => diags := diags.push s!"isDefEq: {← e.toMessageData.toString}"
   let ty ← instantiateMVars ty
   let val ← instantiateMVars val
   let ((), ms) := ((levelMVarsOf ty *> levelMVarsOf val).run #[])
+  -- Residual levels are unconstrained by unification; they are defaulted to 0 and *recorded*,
+  -- and must still pass the universe obligations (rule R3) like every other argument.
   for m in ms do assignLevelMVar m levelZero
-  return (← instantiateMVars ty, ← instantiateMVars val)
+  return (← instantiateMVars ty, ← instantiateMVars val, diags, ms.size)
 
 end Rocq2Lean

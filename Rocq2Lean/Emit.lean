@@ -42,6 +42,10 @@ structure DeclResult where
   levelParams : List Name := []
   /-- Number of parameters (generated inductives). -/
   numParams : Nat := 0
+  /-- Universe solving: diagnostics, number of defaulted levels, references checked (rule R3). -/
+  levelDiagnostics : Array String := #[]
+  levelDefaults : Nat := 0
+  universeChecks : Nat := 0
   deriving Inhabited
 
 def DeclResult.ok (r : DeclResult) : Bool :=
@@ -68,6 +72,12 @@ private def blockedDeps (results : Std.HashMap String DeclResult) (deps : Array 
     match results[d]? with
     | none => (missing.push d, failed)
     | some r => if r.ok then (missing, failed) else (missing, failed.push d)
+
+/-- Global levels of a constant, as generalized (sorted). -/
+def globalsOf' (c : IR.ConstantDecl) : Array String :=
+  match c.body with
+  | some b => (globalsOf b (globalsOf c.type)).toArray
+  | none => (globalsOf c.type).toArray
 
 def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl) :
     MetaM DeclResult := do
@@ -109,7 +119,13 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let (ty, val) ← solveLevels ty val
+    let (ty, val, diags, defaults) ← solveLevels ty val
+    let base := { base with levelDiagnostics := diags, levelDefaults := defaults }
+    let nchecks ← match checkUniverseObligations genv globals ty, checkUniverseObligations genv globals val with
+      | .ok a, .ok b => pure (a + b)
+      | .error msg, _ | _, .error msg =>
+        return { base with status := "UNIVERSE_REJECTED", message := msg }
+    let base := { base with universeChecks := nchecks }
     unless (← whnf (← inferType ty)).isSort do
       return { base with status := "TRANSLATION_FAILED", message := "translated type is not a type" }
     let (decl, kind) ←
@@ -184,7 +200,7 @@ where
 
 /-- Translate all declarations of an export, in order. -/
 def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
-  let mut genv : GEnv := {}
+  let mut genv : GEnv := { facts := src.facts }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   for d in src.decls do
@@ -193,7 +209,9 @@ def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
         let r ← processConstant genv results c
         if r.ok then if let some n := r.target then
           genv := { genv with consts := genv.consts.insert c.name n,
-                              constLevels := genv.constLevels.insert c.name r.levelParams.length }
+                              constLevels := genv.constLevels.insert c.name r.levelParams.length,
+                              constGlobals := if r.levelParams.isEmpty then genv.constGlobals
+                                else genv.constGlobals.insert n ((globalsOf' c).qsort (· < ·)) }
         pure r
       | .inductive i =>
         let (r, t?) ← processInductive genv results i src.rawDecls[i.name]!
@@ -241,6 +259,9 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("target_value", match r.targetValue with | some e => exprJson e | none => .null),
     ("level_params", Json.arr (r.levelParams.map (Json.str ·.toString)).toArray),
     ("num_params", r.numParams),
+    ("universe_level_defaults", r.levelDefaults),
+    ("universe_checks", r.universeChecks),
+    ("universe_diagnostics", Json.arr (r.levelDiagnostics.map Json.str)),
     ("target_ctors", Json.arr (r.targetCtors.map fun (n, e) =>
       Json.mkObj [("name", n.toString), ("type", exprJson e)]))]
 

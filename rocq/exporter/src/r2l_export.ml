@@ -15,7 +15,7 @@ module K = Kernames
 module U = Universes0
 module J = R2l_json
 
-let ir_version = "rocq2lean-ir/0.1"
+let ir_version = "rocq2lean-ir/0.2"
 let metarocq_commit = "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81"
 
 let bs = Caml_bytestring.caml_string_of_bytestring
@@ -227,9 +227,15 @@ let flags_json (f : Declarations.typing_flags) =
       ("sprop_allowed", J.Bool f.sprop_allowed);
       ("allow_uip", J.Bool f.allow_uip) ]
 
-let native_constant env kn =
+let native_constant ~opaque_access env kn =
   match Environ.lookup_constant (Names.Constant.make1 (to_rocq_kn kn)) env with
   | cb ->
+    let private_univs =
+      match Global.body_of_constant_body opaque_access cb with
+      | Some (_, Opaqueproof.PrivateMonomorphic (), _) -> "none"
+      | Some (_, Opaqueproof.PrivatePolymorphic _, _) -> "polymorphic_private"
+      | None -> "no_body"
+    in
     let kind =
       match cb.Declarations.const_body with
       | Declarations.Undef _ -> "assumption"
@@ -242,6 +248,7 @@ let native_constant env kn =
       J.Obj
         [ ("body_kind", J.Str kind);
           ("polymorphic", J.Bool (Declareops.constant_is_polymorphic cb));
+          ("private_universes", J.Str private_univs);
           ("typing_flags", flags_json cb.Declarations.const_typing_flags) ] )
   | exception Not_found -> (None, J.Obj [ ("error", J.Str "not found in native environment") ])
 
@@ -267,6 +274,84 @@ let body_state native_kind (body : A.term option) =
   | _, None -> "unavailable"
   | _, Some _ -> "inconsistent"
 
+(* ---------- native universe facts ---------- *)
+
+let level_name l = if Univ.Level.is_set l then "Set" else Univ.Level.to_string l
+
+(* Universe levels occurring in the native kernel terms of an exported declaration. *)
+let native_decl_levels ~opaque_access env (((kn : K.kername), (d : E.global_decl))) acc =
+  try
+    match d with
+    | E.ConstantDecl _ ->
+      let cb = Environ.lookup_constant (Names.Constant.make1 (to_rocq_kn kn)) env in
+      let acc = Vars.universes_of_constr ~init:acc cb.Declarations.const_type in
+      (match Global.body_of_constant_body opaque_access cb with
+       | Some (c, _, _) -> Vars.universes_of_constr ~init:acc c
+       | None -> acc)
+    | E.InductiveDecl _ ->
+      let mib = Environ.lookup_mind (Names.MutInd.make1 (to_rocq_kn kn)) env in
+      (* Template inductives: MetaRocq quotes them at their default instance (template_defaults),
+         so those default levels are part of the export. *)
+      let acc =
+        match mib.Declarations.mind_template with
+        | Some t ->
+          Array.fold_left (fun acc l -> Univ.Level.Set.add l acc) acc
+            (snd (UVars.Instance.to_array t.Declarations.template_defaults))
+        | None -> acc
+      in
+      Array.fold_left
+        (fun acc oib ->
+          let acc = Vars.universes_of_constr ~init:acc oib.Declarations.mind_user_arity in
+          Array.fold_left (fun acc c -> Vars.universes_of_constr ~init:acc c) acc oib.Declarations.mind_user_lc)
+        acc mib.Declarations.mind_packets
+  with Not_found -> acc
+
+let native_relation g a b =
+  let u = Univ.Universe.make in
+  if UGraph.check_leq g (Univ.Universe.super (u a)) (u b) then "lt"
+  else if UGraph.check_leq g (u a) (u b) then "le"
+  else "none"
+
+(* Pairwise native relations (from the loaded environment's universe graph) between Set and
+   every global level occurring in the exported declarations. *)
+let universe_facts_json ~opaque_access env decls =
+  let lv = List.fold_left (fun acc d -> native_decl_levels ~opaque_access env d acc) Univ.Level.Set.empty decls in
+  let lv = Univ.Level.Set.filter (fun l -> not (Univ.Level.is_set l) && Univ.Level.var_index l = None) lv in
+  let levels = Univ.Level.set :: Univ.Level.Set.elements lv in
+  let g = Environ.universes env in
+  let rels =
+    List.concat_map
+      (fun a ->
+        List.filter_map
+          (fun b ->
+            if Univ.Level.equal a b then None
+            else
+              match native_relation g a b with
+              | "none" -> None
+              | r -> Some (J.Obj [ ("l", J.Str (level_name a)); ("rel", J.Str r); ("r", J.Str (level_name b)) ]))
+          levels)
+      levels
+  in
+  J.Obj
+    [ ("kind", J.Str "universe_facts");
+      ("levels", J.Arr (List.map (fun l -> J.Str (level_name l)) (List.tl levels)));
+      ("relations", J.Arr rels);
+      ("source", J.Str "native UGraph.check_leq on the loaded environment; pairwise over Set and all levels of the export") ]
+
+(* Rocq2Lean CheckRelation "a" "b" "lt|le|none": re-check one fact against the native graph of a
+   fresh process. Names are resolved through the graph's own domain (no string parsing). *)
+let check_relation a b want =
+  let g = Environ.universes (Global.env ()) in
+  let by_name = Hashtbl.create 97 in
+  Univ.Level.Set.iter (fun l -> Hashtbl.replace by_name (level_name l) l) (UGraph.domain g);
+  Hashtbl.replace by_name "Set" Univ.Level.set;
+  match (Hashtbl.find_opt by_name a, Hashtbl.find_opt by_name b) with
+  | Some la, Some lb ->
+    let got = if a = b then "eq" else native_relation g la lb in
+    if got = want then Feedback.msg_info Pp.(str ("UREL_OK " ^ a ^ " " ^ b ^ " " ^ want))
+    else Feedback.msg_info Pp.(str ("UREL_MISMATCH " ^ a ^ " " ^ b ^ " expected=" ^ want ^ " native=" ^ got))
+  | _ -> Feedback.msg_info Pp.(str ("UREL_UNKNOWN " ^ a ^ " " ^ b))
+
 (* ---------- declarations ---------- *)
 
 let finite_json = function B.Finite -> J.Str "Finite" | B.CoFinite -> J.Str "CoFinite" | B.BiFinite -> J.Str "BiFinite"
@@ -282,12 +367,12 @@ let variance_json = function
   | U.Variance.Covariant -> J.Str "covariant"
   | U.Variance.Invariant -> J.Str "invariant"
 
-let decl_json env ((kn : K.kername), (d : E.global_decl)) =
+let decl_json ~opaque_access env ((kn : K.kername), (d : E.global_decl)) =
   let key = kn_key kn in
   let ident = [ ("name", J.Str key); ("mp", mp_json (fst kn)); ("id", J.Str (bs (snd kn))) ] in
   match d with
   | E.ConstantDecl cb ->
-    let native_kind, native = native_constant env kn in
+    let native_kind, native = native_constant ~opaque_access env kn in
     let tdeps = deps SS.empty cb.E.cst_type in
     let bdeps = match cb.E.cst_body with None -> SS.empty | Some b -> deps SS.empty b in
     J.Obj
@@ -461,7 +546,8 @@ let export ~opaque_access file (roots : Libnames.qualid list) =
   line roots_json;
   line (J.Obj [ ("kind", J.Str "libraries"); ("libraries", J.Arr (List.map lib_json libs)) ]);
   line (J.Obj [ ("kind", J.Str "universes"); ("levels", J.Arr (sorted levels)); ("constraints", J.Arr (sorted constraints)) ]);
-  List.iter (fun d -> line (decl_json env d)) decls;
+  line (universe_facts_json ~opaque_access env decls);
+  List.iter (fun d -> line (decl_json ~opaque_access env d)) decls;
   line (J.Obj [ ("kind", J.Str "footer"); ("declarations", J.Int (List.length decls)) ]);
   close_out oc;
   Feedback.msg_info

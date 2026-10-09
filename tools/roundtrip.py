@@ -200,6 +200,60 @@ def term_deps(t, acc):
     return acc
 
 
+def term_levels(t, acc):
+    if isinstance(t, dict):
+        if t.get("k") == "global" and "n" in t:
+            acc.add(t["n"])
+        for v in t.values():
+            term_levels(v, acc)
+    elif isinstance(t, list):
+        for v in t:
+            term_levels(v, acc)
+    return acc
+
+
+def check_universes(lines, out, loadpaths, requires):
+    """Native re-check of the universe facts, and consistency of MetaRocq's universe record."""
+    facts = lines[4]
+    problems = []
+    if facts.get("kind") != "universe_facts":
+        return {"status": "MISSING", "problems": ["universe facts record missing"]}
+    names = ["Set"] + facts["levels"]
+    rel = {(x["l"], x["r"]): x["rel"] for x in facts["relations"]}
+    # Every level named in the exported terms is covered by the facts.
+    used = term_levels([d for d in lines if d.get("kind") in ("constant", "inductive")], set())
+    for n in sorted(used - set(names)):
+        problems.append(f"universe level {n} occurs in the export but has no native facts")
+    # MetaRocq's constraints are entailed by the native facts.
+    for c in lines[3]["constraints"]:
+        a = "Set" if c["l"]["k"] == "set" else c["l"].get("n")
+        b = "Set" if c["r"]["k"] == "set" else c["r"].get("n")
+        r = rel.get((a, b), "none")
+        k = c["rel"]
+        ok = ((k["k"] == "le" and ((k["offset"] <= 0 and r in ("le", "lt")) or (k["offset"] == 1 and r == "lt")))
+              or (k["k"] == "eq" and r == "le" and rel.get((b, a)) == "le"))
+        if not ok:
+            problems.append(f"MetaRocq constraint {a} {k} {b} is not entailed by the native facts")
+    # Fresh-process native re-check of every ordered pair.
+    plugin = Path(__file__).resolve().parent.parent / "rocq" / "exporter"
+    v = ["From Rocq2LeanExport Require Import Loader.", *[f"Require {r}." for r in requires]]
+    pairs = [(a, b) for a in names for b in names if a != b]
+    v += [f'Rocq2Lean CheckRelation "{a}" "{b}" "{rel.get((a, b), "none")}".' for a, b in pairs]
+    vfile = out / "RoundTripUniverses.v"
+    vfile.write_text("\n".join(v) + "\n")
+    p = subprocess.run(["rocq", "compile", "-I", str(plugin / "src"), "-Q", str(plugin / "theories"), "Rocq2LeanExport",
+                        *loadpaths, str(vfile)], capture_output=True, text=True)
+    (out / "logs" / "roundtrip_universes.log").write_text(p.stdout + p.stderr)
+    oks = [l for l in (p.stdout + p.stderr).splitlines() if l.startswith("UREL_OK")]
+    bad = [l for l in (p.stdout + p.stderr).splitlines() if l.startswith(("UREL_MISMATCH", "UREL_UNKNOWN"))]
+    problems += bad
+    if p.returncode != 0:
+        problems.append(f"universe re-check process exited with {p.returncode}")
+    if len(oks) != len(pairs):
+        problems.append(f"universe re-check confirmed {len(oks)} of {len(pairs)} pairs")
+    return {"status": "OK" if not problems else "MISMATCH", "problems": problems, "pairs": len(pairs)}
+
+
 def main(argv):
     src, out = Path(argv[0]), Path(argv[1])
     rest = argv[2:]
@@ -269,11 +323,15 @@ def main(argv):
             problems.append(f"{d['name']}: {st}")
     if p.returncode != 0:
         problems.append(f"round-trip Rocq process exited with {p.returncode}")
+    universe = check_universes(lines, out, loadpaths, requires)
+    problems += universe["problems"]
+    results["__universe_facts__"] = universe["status"]
     report = {"schema": "rocq2lean-roundtrip/1", "status": "OK" if not problems else "EXPORT_VALIDATION_FAILED",
               "checked": len(decls), "results": results, "problems": problems,
               "method": "independent Python decoder -> MetaRocq Gallina; transparent structural equality "
                         "(rocq/roundtrip/RtEq.v: cb_eqb / mib_eqb) against a fresh quotation; native opacity check; "
-                        "recomputed dependency edges"}
+                        "recomputed dependency edges; native universe facts re-checked pairwise in a fresh process "
+                        "(Rocq2Lean CheckRelation) and MetaRocq's constraints checked to be entailed by them"}
     (out / "roundtrip.json").write_text(json.dumps(report, indent=2) + "\n")
     print(report["status"], f"{len(decls)} declarations", *problems[:10], sep="\n  ")
     return 0 if not problems else 1

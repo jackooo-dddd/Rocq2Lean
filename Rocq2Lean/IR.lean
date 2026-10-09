@@ -1,7 +1,7 @@
 import Lean.Data.Json
 
 /-!
-# Source IR (`rocq2lean-ir/0.1`)
+# Source IR (`rocq2lean-ir/0.2`)
 
 A faithful in-memory copy of the NDJSON written by `rocq/exporter` (see `docs/IR_SPEC.md`).
 Nothing is normalized here: the parser is strict and rejects unknown tags, so a schema
@@ -134,6 +134,28 @@ def Decl.name : Decl → String
   | .constant c => c.name
   | .inductive i => i.name
 
+/-- A source universe constraint `l rel r` as quoted by MetaRocq: `kind = "le"` with an
+offset (`l + offset ≤ r`; offset 1 means `l < r`) or `kind = "eq"`. -/
+structure UConstraint where
+  l : Level
+  kind : String
+  offset : Int
+  r : Level
+  deriving Inhabited, Repr
+
+/-- Native universe facts: the exact relation (`lt`, `le`, or none) between every pair of levels
+of the export (and `Set`), computed from Rocq's universe graph by the exporter. -/
+structure UniverseFacts where
+  levels : Array String
+  relations : Array (String × String × String)
+  deriving Inhabited, Repr
+
+def UniverseFacts.rel (f : UniverseFacts) (a b : String) : String :=
+  if a == b then "eq" else
+  match f.relations.find? (fun (x, _, y) => x == a && y == b) with
+  | some (_, r, _) => r
+  | none => "none"
+
 structure Root where
   requested : String
   name : String
@@ -144,6 +166,9 @@ structure Source where
   roots : Array Root
   libraries : Array (String × Option String)
   decls : Array Decl
+  universeLevels : Array Level
+  universeConstraints : Array UConstraint
+  facts : UniverseFacts
   /-- Raw JSON line of each declaration, by name (for provenance and re-checking). -/
   rawDecls : Std.HashMap String Json
   deriving Inhabited
@@ -291,17 +316,32 @@ def parseDecl (j : Json) : P Decl := do
   | k => throw s!"not a declaration line: kind '{k}'"
 
 /-- Parse a whole NDJSON export. The line layout is fixed: header, roots, libraries, universes,
-declarations…, footer (whose count must match). -/
+universe_facts, declarations…, footer (whose count must match). -/
 def parseSource (contents : String) : P Source := do
   let lines := (contents.splitOn "\n").filter (· ≠ "") |>.toArray
   let js ← lines.mapM Json.parse
-  unless js.size ≥ 5 do throw "truncated export: fewer than 5 lines"
+  unless js.size ≥ 6 do throw "truncated export: fewer than 6 lines"
   let header := js[0]!
-  unless (← str header "kind") == "header" && (← str header "ir") == "rocq2lean-ir/0.1" do
-    throw "first line is not a rocq2lean-ir/0.1 header"
+  unless (← str header "kind") == "header" && (← str header "ir") == "rocq2lean-ir/0.2" do
+    throw "first line is not a rocq2lean-ir/0.2 header"
   unless (← str js[1]! "kind") == "roots" do throw "second line is not the roots record"
   unless (← str js[2]! "kind") == "libraries" do throw "third line is not the libraries record"
   unless (← str js[3]! "kind") == "universes" do throw "fourth line is not the universes record"
+  unless (← str js[4]! "kind") == "universe_facts" do throw "fifth line is not the universe facts record"
+  let universeLevels ← (← arr js[3]! "levels").mapM parseLevel
+  let universeConstraints ← (← arr js[3]! "constraints").mapM fun c => do
+    let rel ← field c "rel"
+    let kind ← str rel "k"
+    let offset : Int ← if kind == "le" then (← field rel "offset").getInt? else pure 0
+    unless kind == "le" || kind == "eq" do throw s!"unknown constraint kind {kind}"
+    return { l := ← parseLevel (← field c "l"), kind, offset, r := ← parseLevel (← field c "r") : UConstraint }
+  let fj := js[4]!
+  let facts : UniverseFacts := {
+    levels := ← (← arr fj "levels").mapM (·.getStr?),
+    relations := ← (← arr fj "relations").mapM fun x => do
+      let r ← str x "rel"
+      unless r == "lt" || r == "le" do throw s!"unknown universe relation {r}"
+      return ((← str x "l"), r, (← str x "r")) }
   let footer := js[js.size - 1]!
   unless (← str footer "kind") == "footer" do throw "missing footer (export incomplete?)"
   let roots ← (← arr js[1]! "roots").mapM fun r => do
@@ -311,7 +351,7 @@ def parseSource (contents : String) : P Source := do
       | .null => pure none
       | v => some <$> v.getStr?
     return ((← str l "dirpath"), vo)
-  let declJs := js.extract 4 (js.size - 1)
+  let declJs := js.extract 5 (js.size - 1)
   unless declJs.size == (← nat footer "declarations") do
     throw s!"footer announces {← nat footer "declarations"} declarations, found {declJs.size}"
   let decls ← declJs.mapM parseDecl
@@ -319,6 +359,6 @@ def parseSource (contents : String) : P Source := do
   for d in decls, j in declJs do
     if raw.contains d.name then throw s!"duplicate declaration {d.name}"
     raw := raw.insert d.name j
-  return { header, roots, libraries, decls, rawDecls := raw }
+  return { header, roots, libraries, decls, universeLevels, universeConstraints, facts, rawDecls := raw }
 
 end Rocq2Lean.IR
