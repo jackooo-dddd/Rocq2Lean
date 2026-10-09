@@ -230,7 +230,8 @@ DOWNSTREAM = {
                "translation_manifest.json", "audit.json", "consumer_result.json", "verify.json", "lean"],
     "translate": ["translation_report.json", "translation_manifest.json", "audit.json", "consumer_result.json",
                   "verify.json", "lean"],
-    "verify": ["audit.json", "consumer_result.json", "verify.json"],
+    "verify": ["audit.json", "consumer_result.json", "verify.json", "lean/Rocq2LeanConsumer.lean",
+               "lean/Rocq2LeanConsumer.olean", "lean/Rocq2LeanConsumer.ilean"],
 }
 
 
@@ -278,10 +279,10 @@ def check_request(raw):
 
 def export(manifest, raw_roots, out, log_name="export.log"):
     roots = check_request(raw_roots)
-    doctor(write_report=False, quiet=True)
     out = Path(out).resolve()
     with RunLock(out):
-        invalidate(out, "export")
+        invalidate(out, "export")          # before anything else: no earlier result survives
+        doctor(write_report=False, quiet=True)
         return _export(manifest, roots, list(raw_roots), out, log_name)
 
 
@@ -376,10 +377,10 @@ def lean_build_sha256():
 
 
 def translate(inp, out):
-    doctor(write_report=False, quiet=True)
     inp, out = Path(inp).resolve(), Path(out).resolve()
     with RunLock(out):
         invalidate(out, "translate")
+        doctor(write_report=False, quiet=True)
         return _translate(inp, out)
 
 
@@ -432,11 +433,11 @@ def _translate(inp, out):
 # ---------------------------------------------------------------- verify
 
 def verify(run_dir):
-    doctor(write_report=False, quiet=True)
     run_dir = Path(run_dir).resolve()
     with RunLock(run_dir):
         invalidate(run_dir, "verify")
         try:
+            doctor(write_report=False, quiet=True)
             return _verify(run_dir)
         except Rejected as e:
             atomic_write_json(run_dir / "verify.json", {"schema": "rocq2lean-verify/2", "status": e.status,
