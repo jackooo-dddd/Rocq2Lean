@@ -31,6 +31,37 @@ open Lean Elab Command Meta
 
 syntax (name := rocqVerify) "#rocq2lean_verify " str str str : command
 
+/-- Obligation for every recursor application `I.rec params motive minors idx major` occurring in
+an accepted value: `idx` are exactly the indices of the (weak-head normalized) type of `major`.
+Returns the number of checked applications and any violations. -/
+def checkRecIndices (v : Expr) : MetaM (Nat × Array String) := do
+  let checked ← IO.mkRef 0
+  let bad ← IO.mkRef (#[] : Array String)
+  discard <| Meta.transform v (post := fun e => do
+    if let .const r _ := e.getAppFn then
+      if let some (.recInfo rv) := (← getEnv).find? r then
+        let args := e.getAppArgs
+        let n := rv.numParams + rv.numMotives + rv.numMinors + rv.numIndices + 1
+        if args.size ≥ n then
+          let major := args[n - 1]!
+          let idx := args.extract (rv.numParams + rv.numMotives + rv.numMinors) (n - 1)
+          let mty ← whnf (← inferType major)
+          let margs := mty.getAppArgs
+          let want := margs.extract rv.numParams margs.size
+          checked.modify (· + 1)
+          unless want.size == idx.size && (want.zip idx).all (fun (a, b) => a == b) do
+            unless want.size == idx.size && (← (want.zip idx).allM fun (a, b) => isDefEq a b) do
+              bad.modify (·.push s!"{r}: indices differ from the major premise's type")
+    return .continue)
+  return (← checked.get, ← bad.get)
+
+/-- Kernel metadata of a recursor, for the independent audit. -/
+def recursorJson (rv : RecursorVal) : Json :=
+  Json.mkObj [("name", rv.name.toString), ("level_params", Json.arr (rv.levelParams.map (Json.str ·.toString)).toArray),
+    ("num_params", rv.numParams), ("num_indices", rv.numIndices), ("num_motives", rv.numMotives),
+    ("num_minors", rv.numMinors), ("rule_nfields", Json.arr (rv.rules.map (fun r => Json.num r.nfields)).toArray),
+    ("type", exprJson rv.type)]
+
 private def kindOf : ConstantInfo → String
   | .defnInfo _ => "def"
   | .thmInfo _ => "theorem"
@@ -106,6 +137,8 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
   if accepted.isEmpty then problems := note "coverage" "no accepted declaration" problems
   -- per declaration
   let env ← getEnv
+  let mut recs : Std.HashMap Name RecursorVal := {}
+  let mut recApps : Nat := 0
   for (s, r) in accepted do
     let tgt := getStr r "target"
     let some ci := env.find? tgt.toName
@@ -139,14 +172,21 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
     for c in used do
       unless allowed.contains c do
         problems := note "target_deps" s!"{tgt}: references {c}, which is not part of this run's accepted closure" problems
+      if let some (.recInfo rv) := env.find? c then recs := recs.insert c rv
+    if let some v := ci.value? (allowOpaque := true) then
+      let (n, bad) ← liftTermElabM (checkRecIndices v)
+      recApps := recApps + n
+      for b in bad do problems := note "rec_indices" s!"{tgt}: {b}" problems
     let axs ← liftCoreM (collectAxioms tgt.toName)
     unless axs.isEmpty do problems := note "axioms" s!"{tgt}: depends on axioms {axs}" problems
   for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)
   let dets := ["binding", "coverage", "presence", "kind", "safety", "levels", "type", "value", "ctors",
-               "target_deps", "axioms"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
+               "target_deps", "axioms", "rec_indices"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
   let res := Json.mkObj [
     ("schema", "rocq2lean-consumer/1"), ("status", if problems.isEmpty then "OK" else "AUDIT_REJECTED"),
     ("run_id", getStr contract "run_id"), ("accepted_checked", accepted.size),
+    ("recursor_applications_checked", recApps),
+    ("recursors", Json.arr (recs.toArray.map (recursorJson ·.2))),
     ("detectors", Json.mkObj dets),
     ("problems", Json.arr (problems.map fun (d, m) => Json.mkObj [("detector", d), ("message", m)]))]
   IO.FS.writeFile outPath (res.pretty ++ "\n")

@@ -30,6 +30,7 @@ Anything outside these rules (case, fix, proj, ...) is reported as UNAUDITABLE, 
 
 import json
 import sys
+from pathlib import Path
 
 # Independent copy of the bootstrap table (names and universe rule only).
 BOOTSTRAP = {
@@ -131,7 +132,8 @@ def source_globals(t, acc):
 
 
 class Auditor:
-    def __init__(self, decls, results):
+    def __init__(self, decls, results, recursors=None):
+        self.recursors = recursors
         self.decls = decls
         self.ok = {r["source"]: r for r in results
                    if r["status"] in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED")}
@@ -299,12 +301,52 @@ class Auditor:
             self.check(a, spine[i], path + [f"param{i}"], env)
         motive = self.strip_lams(spine[npar], len(p["ctx"]), path + ["motive"])
         self.check(p["ret"], motive, path + ["motive"], self.push(env, len(p["ctx"])))
+        self.check_rec_binders(cur, spine, npar, len(brs), nidx, path, [self.recursive_fields(ref, k) for k in range(len(brs))],
+                               [len(br["ctx"]) for br in brs], 0)
         for k, br in enumerate(brs):
             nf, nih = len(br["ctx"]), self.recursive_fields(ref, k)
             body = self.strip_lams(spine[npar + 1 + k], nf + nih, path + [f"minor{k}"])
             self.check(br["body"], body, path + [f"minor{k}"], self.shift(self.push(env, nf), nih))
         # Indices of the major premise are forced by the recursor's (kernel-checked) type.
         self.check(s["c"], spine[-1], path + ["major"], env)
+
+    def check_rec_binders(self, head, spine, npar, nmin, nidx, path, nihs, nfs, nq):
+        """Recursor identity/levels (kernel metadata) and the binder types of the motive and of
+        every minor premise, reconstructed from the kernel-checked recursor type instantiated
+        with the actual parameters and motive, compared modulo beta and binder names."""
+        rec = self.recursors.get(head["n"]) if self.recursors is not None else None
+        if rec is None:
+            raise Mismatch(f"{path}: no kernel metadata for recursor {head['n']} (fail closed)")
+        if len(head["u"]) != len(rec["level_params"]):
+            raise Mismatch(f"{path}: {head['n']} applied to {len(head['u'])} universe levels, kernel expects {len(rec['level_params'])}")
+        if (rec["num_params"], rec["num_indices"], rec["num_minors"], rec["num_motives"]) != (npar, nidx, nmin, 1):
+            raise Mismatch(f"{path}: recursor shape differs from the source match")
+        if [rec["rule_nfields"][k] for k in range(nmin)] != nfs:
+            raise Mismatch(f"{path}: constructor field counts differ from the kernel recursor rules")
+        ty = inst_levels(rec["type"], dict(zip(rec["level_params"], head["u"])))
+        ty = inst_forall(ty, spine[:npar], path)
+        mdoms, _ = foralls(ty, 1, path + ["motive"])
+        want, _ = foralls(mdoms[0], nidx + 1, path + ["motive type"])
+        got, _ = lam_domains(spine[npar], nidx + 1, path + ["motive"])
+        for i, (w, g) in enumerate(zip(want, got)):
+            if not same_mod_beta(w, g):
+                raise Mismatch(f"{path}: motive binder {i} type differs from the recursor's")
+        ty = inst_forall(ty, [spine[npar]], path)
+        for k in range(nmin):
+            ty = beta(ty)
+            if ty["k"] != "forall":
+                raise Mismatch(f"{path}: recursor has fewer minors than expected")
+            mty = ty["t"]
+            nb = nfs[k] + nihs[k]
+            want, rest = foralls(mty, nb, path + [f"minor{k} type"])
+            if nq:
+                qwant, _ = foralls(rest, nq, path + [f"minor{k} result"])
+                want = want + qwant
+            got, _ = lam_domains(spine[npar + 1 + k], nb + nq, path + [f"minor{k}"])
+            for i, (w, g) in enumerate(zip(want, got)):
+                if not same_mod_beta(w, g):
+                    raise Mismatch(f"{path}: minor {k} binder {i} type differs from the recursor's")
+            ty = subst(ty["b"], spine[npar + 1 + k])
 
     @staticmethod
     def unspine(e):
@@ -356,8 +398,38 @@ class Auditor:
         self.check({"k": "rel", "i": nl - 1 - r}, spine[npar + 1 + nmin + nidx], path + ["major"], senv)
         for j in range(nq):
             self.check({"k": "rel", "i": nq - 1 - j}, spine[len(spine) - nq + j], path + [f"q{j}"], senv)
-        # Motive: shape only (forced by the declared type, which is audited).
-        self.strip_lams(spine[npar], nidx + 1, path + ["motive"])
+        # Parameters and indices given to the recursor are those of the decreasing argument's
+        # source type (its lambda type, under the first r lambdas).
+        env_r = [("forbid",)] + list(env)
+        for _ in range(r):
+            env_r = self.push(env_r)
+        env_r = self.shift(env_r, nl - r)
+        if len(xargs) != npar + nidx:
+            raise Mismatch(f"{path}: decreasing argument's type has {len(xargs)} arguments, expected {npar + nidx}")
+        for i in range(npar):
+            self.check(xargs[i], spine[i], path + [f"param{i}"], env_r)
+        for j in range(nidx):
+            self.check(xargs[npar + j], spine[npar + 1 + nmin + j], path + [f"index{j}"], env_r)
+        # Motive body = the source fixpoint type after P and x, under: x -> motive binder 0,
+        # index parameters -> motive index binders, other parameters -> the outer lambdas.
+        idx_of = {}
+        for j, a in enumerate(xargs[npar:]):
+            if a["k"] == "rel" and a["i"] < r:
+                idx_of[r - 1 - a["i"]] = j
+        menv = [("bvar", 0)]
+        for i in reversed(range(r)):
+            menv.append(("bvar", nidx - idx_of[i]) if i in idx_of else ("bvar", (nl - 1 - i) + nidx + 1))
+        menv += self.shift(list(env), nl + nidx + 1)
+        fty = d["ty"]
+        for _ in range(r + 1):
+            if fty["k"] != "prod":
+                raise Mismatch(f"{path}: fixpoint type has fewer than {r + 1} binders")
+            fty = fty["b"]
+        mbody = self.strip_lams(spine[npar], nidx + 1, path + ["motive"])
+        self.check(fty, mbody, path + ["motive body"], menv)
+        self.check_rec_binders(head, spine, npar, nmin, nidx, path,
+                               [len(self.recursive_positions(ref, k)) for k in range(nmin)],
+                               [len(br["ctx"]) for br in b["brs"]], nq)
         for k, br in enumerate(b["brs"]):
             nf = len(br["ctx"])
             rpos = self.recursive_positions(ref, k)
@@ -405,6 +477,113 @@ class Auditor:
             cur = cur["f"]
         if cur != {"k": "bvar", "i": ih}:
             raise Mismatch(f"{path}: recursive call must become recursive result bvar {ih}, found {cur}")
+
+
+# ---------- de Bruijn utilities on Lean expression JSON (independent of the translator) ----------
+
+def lift(e, n, k=0):
+    """Add n to every bvar >= k."""
+    t = e["k"]
+    if t == "bvar":
+        return {"k": "bvar", "i": e["i"] + n} if e["i"] >= k else e
+    if t == "app":
+        return {"k": "app", "f": lift(e["f"], n, k), "a": lift(e["a"], n, k)}
+    if t in ("lam", "forall"):
+        return dict(e, t=lift(e["t"], n, k), b=lift(e["b"], n, k + 1))
+    if t == "let":
+        return dict(e, t=lift(e["t"], n, k), v=lift(e["v"], n, k), b=lift(e["b"], n, k + 1))
+    if t in ("mdata", "proj"):
+        return dict(e, e=lift(e["e"], n, k))
+    return e
+
+
+def subst(e, arg, k=0):
+    """Replace bvar k by arg (lifted under binders) and lower the bvars above it."""
+    t = e["k"]
+    if t == "bvar":
+        if e["i"] == k:
+            return lift(arg, k)
+        return {"k": "bvar", "i": e["i"] - 1} if e["i"] > k else e
+    if t == "app":
+        return {"k": "app", "f": subst(e["f"], arg, k), "a": subst(e["a"], arg, k)}
+    if t in ("lam", "forall"):
+        return dict(e, t=subst(e["t"], arg, k), b=subst(e["b"], arg, k + 1))
+    if t == "let":
+        return dict(e, t=subst(e["t"], arg, k), v=subst(e["v"], arg, k), b=subst(e["b"], arg, k + 1))
+    if t in ("mdata", "proj"):
+        return dict(e, e=subst(e["e"], arg, k))
+    return e
+
+
+def inst_levels(e, m):
+    if isinstance(e, dict):
+        if e.get("k") == "param" and e.get("n") in m and set(e) == {"k", "n"}:
+            return m[e["n"]]
+        return {k: inst_levels(v, m) for k, v in e.items()}
+    if isinstance(e, list):
+        return [inst_levels(v, m) for v in e]
+    return e
+
+
+def beta(e):
+    """Full beta normal form."""
+    t = e["k"]
+    if t == "app":
+        f, a = beta(e["f"]), beta(e["a"])
+        if f["k"] == "lam":
+            return beta(subst(f["b"], a))
+        return {"k": "app", "f": f, "a": a}
+    if t in ("lam", "forall"):
+        return dict(e, t=beta(e["t"]), b=beta(e["b"]))
+    if t == "let":
+        return dict(e, t=beta(e["t"]), v=beta(e["v"]), b=beta(e["b"]))
+    if t == "mdata":
+        return beta(e["e"])
+    return e
+
+
+def anon(e):
+    if isinstance(e, dict):
+        return {k: anon(v) for k, v in e.items() if k != "n" or e.get("k") in ("const", "param")}
+    if isinstance(e, list):
+        return [anon(v) for v in e]
+    return e
+
+
+def same_mod_beta(a, b):
+    return anon(beta(a)) == anon(beta(b))
+
+
+def foralls(e, n, path):
+    """Domains of the first n foralls of e (each under the previous binders) and the rest."""
+    doms = []
+    for _ in range(n):
+        e = beta(e)
+        if e["k"] != "forall":
+            raise Mismatch(f"{path}: expected {n} binders in the recursor type")
+        doms.append(e["t"])
+        e = e["b"]
+    return doms, e
+
+
+def lam_domains(e, n, path):
+    doms = []
+    for _ in range(n):
+        if e["k"] != "lam":
+            raise Mismatch(f"{path}: expected {n} lambdas")
+        doms.append(e["t"])
+        e = e["b"]
+    return doms, e
+
+
+def inst_forall(ty, args, path):
+    """Instantiate leading foralls of ty with args (all in the same outer context)."""
+    for a in args:
+        ty = beta(ty)
+        if ty["k"] != "forall":
+            raise Mismatch(f"{path}: recursor type has too few binders")
+        ty = subst(ty["b"], a)
+    return ty
 
 
 class Facts:
@@ -507,7 +686,7 @@ def sha256_path(p):
     return hashlib.sha256(open(p, "rb").read()).hexdigest()
 
 
-def main(src_path, contract_path, report_path, out_path):
+def main(src_path, contract_path, report_path, out_path, metadata_path=None):
     from collections import Counter
     lines = [json.loads(l) for l in open(src_path)]
     decls = {d["name"]: d for d in lines if d["kind"] in ("constant", "inductive")}
@@ -607,7 +786,10 @@ def main(src_path, contract_path, report_path, out_path):
             except Mismatch as e:
                 problem("universe", f"{s_}: {e}")
     # Structural fidelity of every accepted translation.
-    aud = Auditor(decls, list(rows.values()))
+    recursors = None
+    if metadata_path and Path(metadata_path).exists():
+        recursors = {r["name"]: r for r in json.load(open(metadata_path)).get("recursors", [])}
+    aud = Auditor(decls, list(rows.values()), recursors)
     for s in sorted(decls):
         r, d = rows.get(s), decls[s]
         v = {"source": s, "status": r.get("status") if r else None,
@@ -667,7 +849,8 @@ def main(src_path, contract_path, report_path, out_path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 5:
-        print("usage: audit.py SOURCE.ndjson CONTRACT.json TRANSLATION_REPORT.json AUDIT_OUT.json", file=sys.stderr)
+    if len(sys.argv) not in (5, 6):
+        print("usage: audit.py SOURCE.ndjson CONTRACT.json TRANSLATION_REPORT.json AUDIT_OUT.json [TARGET_METADATA.json]",
+              file=sys.stderr)
         sys.exit(2)
-    sys.exit(main(*sys.argv[1:5]))
+    sys.exit(main(*sys.argv[1:]))

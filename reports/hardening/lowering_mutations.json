@@ -1,0 +1,98 @@
+[
+  {
+    "mutation": "recursive-result-order",
+    "declaration": "M3.M3Fix.mirrorR",
+    "kernel": "ACCEPTED",
+    "audit_exit": 1,
+    "detectors": [
+      "structure"
+    ],
+    "classification": "audit rejection (type-correct mutation)"
+  },
+  {
+    "mutation": "trailing-argument-order",
+    "declaration": "L.Lower.swapacc",
+    "kernel": "ACCEPTED",
+    "audit_exit": 1,
+    "detectors": [
+      "structure"
+    ],
+    "classification": "audit rejection (type-correct mutation)"
+  },
+  {
+    "mutation": "case-motive-content",
+    "declaration": "M3.M3Case.vid",
+    "kernel": "REJECTED",
+    "audit_exit": 1,
+    "detectors": [
+      "structure"
+    ],
+    "classification": "kernel rejection + audit"
+  },
+  {
+    "mutation": "case-index-beta-equivalent",
+    "declaration": "M3.M3Case.vid",
+    "kernel": "ACCEPTED",
+    "audit_exit": 0,
+    "detectors": [],
+    "classification": "intentionally equivalent"
+  },
+  {
+    "mutation": "case-index-different",
+    "declaration": "M3.M3Case.vid",
+    "kernel": "REJECTED",
+    "audit_exit": 0,
+    "detectors": [],
+    "classification": "kernel rejection"
+  },
+  {
+    "mutation": "minor-binder-beta-equivalent",
+    "declaration": "M3.M3Fix.addR",
+    "kernel": "ACCEPTED",
+    "audit_exit": 0,
+    "detectors": [],
+    "classification": "intentionally equivalent"
+  },
+  {
+    "mutation": "minor-binder-different-type",
+    "declaration": "M3.M3Fix.addR",
+    "kernel": "REJECTED",
+    "audit_exit": 1,
+    "detectors": [
+      "structure"
+    ],
+    "classification": "kernel rejection + audit"
+  },
+  {
+    "mutation": "recursor-selection",
+    "declaration": "M3.M3Fix.addR",
+    "kernel": "REJECTED",
+    "audit_exit": 1,
+    "detectors": [
+      "structure"
+    ],
+    "classification": "kernel rejection + audit"
+  },
+  {
+    "mutation": "fix-index-different",
+    "declaration": "M3.M3Fix.vmap",
+    "kernel": "REJECTED",
+    "audit_exit": 1,
+    "detectors": [
+      "structure"
+    ],
+    "classification": "kernel rejection + audit"
+  },
+  {
+    "mutation": "cast-annotation-wrong",
+    "declaration": "M2.M2A.vm_proof",
+    "translator": "TRANSLATION_FAILED",
+    "classification": "translator rejection"
+  },
+  {
+    "mutation": "cast-annotation-convertible",
+    "declaration": "M2.M2A.vm_proof",
+    "translator": "TRANSLATED_AND_CHECKED",
+    "classification": "intentionally equivalent"
+  }
+]

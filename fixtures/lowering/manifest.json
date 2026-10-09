@@ -1,0 +1,2 @@
+{"name": "lowering", "load_paths": [["-Q", "../m3", "M3"], ["-Q", ".", "L"]],
+ "files": ["../m3/M3Types.v", "Lower.v"], "requires": ["L.Lower"]}

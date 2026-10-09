@@ -39,8 +39,9 @@ def audit_report(run, rep, name):
     run = Path(run)
     p2 = run / f"report_{name}.json"
     p2.write_text(json.dumps(rep))
+    meta = [str(run / "consumer_result.json")] if (run / "consumer_result.json").exists() else []
     p = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), str(run / "source.ndjson"),
-                        str(run / "contract.json"), str(p2), str(run / f"audit_{name}.json")],
+                        str(run / "contract.json"), str(p2), str(run / f"audit_{name}.json"), *meta],
                        capture_output=True, text=True)
     if p.returncode not in (0, 1):
         raise RuntimeError(f"auditor did not run ({p.returncode}): {p.stderr[-400:]}")

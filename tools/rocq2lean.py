@@ -542,7 +542,7 @@ def _verify(run_dir):
                        f"{[d for d, v in consumer.get('detectors', {}).items() if v != 'OK']}; see {cres}")
     # Independent structural audit, driven by the contract.
     p = run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), snap["ir"], str(con_p), str(report_p),
-             str(run_dir / "audit.json")], log, check=False)
+             str(run_dir / "audit.json"), str(cres)], log, check=False)
     audit = json.loads((run_dir / "audit.json").read_text()) if (run_dir / "audit.json").exists() else {}
     if p.returncode != 0 or audit.get("status") != "OK":
         raise Rejected("AUDIT_REJECTED", f"structural audit failed (exit {p.returncode}); see {run_dir / 'audit.json'}")
