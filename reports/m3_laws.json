@@ -1,0 +1,86 @@
+[
+  {
+    "law": "M3.M3Case.pred_r_RS",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Case.pred_nat_S",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Case.head_or_cons",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Case.vid_cons",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Case.vtail_cons",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Case.eq_sym_nat",
+    "kind": "propositional (original proof translated)"
+  },
+  {
+    "law": "M3.M3Fix.addR_RZ",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Fix.addR_RS",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Fix.lengthR_nil",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Fix.lengthR_cons",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Fix.mirrorR_node",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Fix.addAcc_RS",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Fix.vmap_cons",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Fix.double_nat_S",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Fix.addR_2_1",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Fix.mirror_small",
+    "kind": "definitional (original eq_refl proof accepted by the Lean kernel)"
+  },
+  {
+    "law": "M3.M3Proofs.addR_n_RZ",
+    "kind": "propositional (original proof translated)"
+  },
+  {
+    "law": "M3.M3Proofs.length_map",
+    "kind": "propositional (original proof translated)"
+  },
+  {
+    "law": "M3.M3Proofs.mirror_mirror",
+    "kind": "propositional (original proof translated)"
+  },
+  {
+    "law": "M3.M3Proofs.vmap_id",
+    "kind": "propositional (original proof translated)"
+  },
+  {
+    "law": "M3.M3Proofs.vid_id",
+    "kind": "propositional (original proof translated)"
+  }
+]

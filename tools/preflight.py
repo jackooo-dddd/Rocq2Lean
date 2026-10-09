@@ -9,8 +9,9 @@ docs/SUPPORT_PROFILE.md.
 import json
 import sys
 
-# Node kinds the current build translates.
-SUPPORTED_NODES = {"rel", "sort", "cast", "prod", "lam", "let", "app", "const", "ind", "construct"}
+# Node kinds the current build translates (case/fix only in the shapes of docs/SUPPORT_PROFILE.md;
+# preflight cannot see shape restrictions, so "candidate" stays a weaker claim than "supported").
+SUPPORTED_NODES = {"rel", "sort", "cast", "prod", "lam", "let", "app", "const", "ind", "construct", "case", "fix"}
 BOOTSTRAP = {"Corelib.Init.Datatypes.nat", "Corelib.Init.Logic.eq"}
 
 
@@ -23,9 +24,7 @@ def walk(t, found):
                 found.add("SProp")
             elif s["k"] == "type":
                 for e in s["u"]:
-                    if e["l"]["k"] == "global":
-                        found.add("global universe level")
-                    elif e["l"]["k"] == "var":
+                    if e["l"]["k"] == "var":
                         found.add("polymorphic universe level")
             return
         if k is not None and k not in SUPPORTED_NODES:
@@ -55,7 +54,22 @@ def classify(d):
     else:
         if d["name"] in BOOTSTRAP:
             return "CANDIDATE_SUPPORTED", ["bootstrap registry"]
-        found.add("new inductive declaration")
+        if d["universes"]["k"] != "monomorphic":
+            found.add("universe-polymorphic inductive")
+        if d["finite"] == "CoFinite":
+            found.add("coinductive type")
+        if len(d["bodies"]) != 1:
+            found.add("mutual inductive block")
+        if any(b["projs"] for b in d["bodies"]):
+            found.add("primitive record")
+        for b in d["bodies"]:
+            walk(b["type"], found)
+            for c in b["ctors"]:
+                walk(c["type"], found)
+                for a in c["args"]:
+                    if a["ty"]["k"] == "sort" and False:
+                        pass
+        found = {f for f in found if f != "global universe level"}
     return ("UNSUPPORTED_FEATURE" if found else "CANDIDATE_SUPPORTED"), sorted(found)
 
 

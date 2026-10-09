@@ -11,12 +11,14 @@
     "M3Types.v",
     "M3Case.v",
     "M3Fix.v",
-    "M3Proofs.v"
+    "M3Proofs.v",
+    "M3Neg.v"
   ],
   "requires": [
     "M3.M3Types",
     "M3.M3Case",
     "M3.M3Fix",
-    "M3.M3Proofs"
+    "M3.M3Proofs",
+    "M3.M3Neg"
   ]
 }

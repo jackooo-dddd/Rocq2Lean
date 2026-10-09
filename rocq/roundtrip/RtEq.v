@@ -93,8 +93,19 @@ Definition decl_eqb (d d' : context_decl) : bool :=
   && term_eqb d.(decl_type) d'.(decl_type).
 Definition ctx_eqb := list_eqb decl_eqb.
 
+Definition ctype_eqb (c c' : ConstraintType.t) : bool :=
+  match c, c' with
+  | ConstraintType.Le z, ConstraintType.Le z' => Z.eqb z z'
+  | ConstraintType.Eq, ConstraintType.Eq => true
+  | _, _ => false end.
+Definition cstr_eqb (c c' : UnivConstraint.t) : bool :=
+  level_eqb c.1.1 c'.1.1 && ctype_eqb c.1.2 c'.1.2 && level_eqb c.2 c'.2.
 Definition udecl_eqb (u u' : universes_decl) : bool :=
-  match u, u' with Monomorphic_ctx, Monomorphic_ctx => true | _, _ => false end.
+  match u, u' with
+  | Monomorphic_ctx, Monomorphic_ctx => true
+  | Polymorphic_ctx (ns, cs), Polymorphic_ctx (ns', cs') =>
+      list_eqb name_eqb ns ns' && list_eqb cstr_eqb (ConstraintSet.elements cs) (ConstraintSet.elements cs')
+  | _, _ => false end.
 
 Definition cb_eqb (c c' : constant_body) : bool :=
   term_eqb c.(cst_type) c'.(cst_type) && option_eqb term_eqb c.(cst_body) c'.(cst_body)

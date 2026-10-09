@@ -6,3 +6,4 @@ import Rocq2Lean.Bootstrap
 import Rocq2Lean.Emit
 import Rocq2Lean.Command
 import Rocq2Lean.Verify
+import Rocq2Lean.Eval

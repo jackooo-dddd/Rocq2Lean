@@ -148,7 +148,14 @@ class Dec:
     def udecl(self, u):
         if u["k"] == "monomorphic":
             return "Monomorphic_ctx"
-        raise Unsupported("universe-polymorphic declaration")
+        names = gl_list(["nAnon" if n is None else f"(nNamed {bs(n)})" for n in u["names"]])
+        cs = []
+        for c in u["constraints"]:
+            rel = c["rel"]
+            ct = f"(ConstraintType.Le ({rel['offset']})%Z)" if rel["k"] == "le" else "ConstraintType.Eq"
+            cs.append(f"(({level(c['l'])}, {ct}), {level(c['r'])})")
+        cset = "(List.fold_right ConstraintSet.add ConstraintSet.empty " + gl_list(cs) + ")"
+        return f"(Polymorphic_ctx ({names}, {cset}))"
 
     def constant(self, d):
         body = "None" if d["body"] is None else f"(Some {self.term(d['body'])})"
