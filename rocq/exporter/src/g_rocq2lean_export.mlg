@@ -1,0 +1,12 @@
+DECLARE PLUGIN "rocq2lean-export.plugin"
+
+{
+open Stdarg
+}
+
+(* Rocq2Lean Export "out.ndjson" root1 root2 ... *)
+VERNAC COMMAND EXTEND Rocq2LeanExport CLASSIFIED AS QUERY STATE opaque_access
+| [ "Rocq2Lean" "Export" string(file) ne_global_list(roots) ] -> {
+    fun ~opaque_access -> R2l_export.export ~opaque_access file roots
+  }
+END

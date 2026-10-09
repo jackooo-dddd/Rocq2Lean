@@ -1,0 +1,74 @@
+GATE_TRANSPARENT Fixtures.IdNat.id_nat BODY_PRESENT env_decls=2
+GATE_QED Fixtures.IdNat.id_nat_correct BODY_PRESENT env_decls=4
+GATE_INDUCTIVE Fixtures.GateInd.RBool INDUCTIVE
+GATE_UNIVERSE Fixtures.GateInd.TypeOfSets BODY_PRESENT env_decls=1
+GATE_QED_NOBYPASS NO_BODY
+(tLam "x"
+   (tInd
+      {|
+        inductive_mind := (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+        inductive_ind := 0
+      |} [])
+   (tLam "y"
+      (tInd
+         {|
+           inductive_mind := (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+           inductive_ind := 0
+         |} [])
+      (tRel 1)))
+(tPro "n"
+   (tInd
+      {|
+        inductive_mind := (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+        inductive_ind := 0
+      |} [])
+   (tApp
+      (tInd
+         {|
+           inductive_mind := (MPfile ["Logic"; "Init"; "Corelib"], "eq");
+           inductive_ind := 0
+         |} [])
+      [tInd
+         {|
+           inductive_mind := (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+           inductive_ind := 0
+         |} [];
+       tApp (tConst (MPfile ["IdNat"; "Fixtures"], "id_nat") []) [tRel 0];
+       tRel 0]),
+ Some
+   (tLam "n"
+      (tInd
+         {|
+           inductive_mind := (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+           inductive_ind := 0
+         |} [])
+      (tApp
+         (tConstruct
+            {|
+              inductive_mind := (MPfile ["Logic"; "Init"; "Corelib"], "eq");
+              inductive_ind := 0
+            |} 0 [])
+         [tInd
+            {|
+              inductive_mind :=
+                (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+              inductive_ind := 0
+            |} [];
+          tRel 0])),
+ Monomorphic_ctx)
+({|
+   VSet.this :=
+     LevelSet.Raw.Node 2%Z LevelSet.Raw.Leaf Level.lzero
+       (LevelSet.Raw.Node 1%Z LevelSet.Raw.Leaf
+          (Level.level "Fixtures.GateInd.24") LevelSet.Raw.Leaf);
+   VSet.is_ok :=
+     LevelSet.Raw.add_ok
+       (s:=LevelSet.Raw.Node 1%Z LevelSet.Raw.Leaf Level.lzero
+             LevelSet.Raw.Leaf)
+       (Level.level "Fixtures.GateInd.24")
+       (LevelSet.Raw.add_ok (s:=LevelSet.Raw.Leaf) Level.lzero
+          LevelSet.Raw.empty_ok)
+ |},
+ {|
+   CS.this := ConstraintSet.Raw.Leaf; CS.is_ok := ConstraintSet.Raw.empty_ok
+ |})

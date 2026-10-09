@@ -1,0 +1,9 @@
+Makefile.rocq
+Makefile.rocq.conf
+.Makefile.rocq.d
+*.cm*
+*.o
+*.a
+src/g_rocq2lean_export.ml
+.merlin
+.lia.cache

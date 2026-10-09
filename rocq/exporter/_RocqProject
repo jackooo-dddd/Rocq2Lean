@@ -1,0 +1,8 @@
+-I src
+-Q theories Rocq2LeanExport
+src/META.rocq2lean-export
+src/r2l_json.ml
+src/r2l_export.ml
+src/g_rocq2lean_export.mlg
+src/rocq2lean_export_plugin.mlpack
+theories/Loader.v

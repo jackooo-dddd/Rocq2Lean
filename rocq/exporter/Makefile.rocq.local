@@ -1,0 +1,1 @@
+CAMLPKGS += -package rocq-metarocq-template-ocaml.plugin
