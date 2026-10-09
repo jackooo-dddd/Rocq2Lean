@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lib import ROOT, check, cli, decls, results, finish  # noqa: E402
+from lib import ROOT, audit_report, check, cli, decls, results, finish, structurally_rejected  # noqa: E402
 
 MAN = ROOT / "fixtures" / "m2" / "manifest.json"
 ROOTS = ["M2.M2A.prop_id", "M2.M2A.twice_succ", "M2.M2A.first_second", "M2.M2A.vm_proof",
@@ -46,16 +46,16 @@ check(R["M2.M2A.pick_first"]["target_value"]["b"]["b"] == {"k": "bvar", "i": 1}
       "same-typed functions keep their distinct bodies")
 
 
-def audit_with(mutate, name):
-    """Run the independent audit on a mutated copy of the report; it must reject."""
+def audit_with(mutate, name, decl):
+    """The auditor must reject the mutated report through its structural detector on `decl`."""
     rep2 = json.loads((run / "translation_report.json").read_text())
     by = {r["source"]: r for r in rep2["results"]}
     mutate(by)
-    p2 = run / f"report_{name}.json"
-    p2.write_text(json.dumps(rep2))
-    p = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), str(run / "source.ndjson"),
-                        str(p2), str(run / f"audit_{name}.json")], capture_output=True, text=True)
-    return p.returncode != 0
+    return structurally_rejected(run, rep2, name, decl)
+
+
+rc, probs = audit_report(run, json.loads((run / "translation_report.json").read_text()), "unmutated")
+check(rc == 0 and not probs, "audit positive control: unmutated M2 report accepted")
 
 
 def swap_picks(by):
@@ -63,20 +63,20 @@ def swap_picks(by):
     a["target_value"], b["target_value"] = b["target_value"], a["target_value"]
 
 
-check(audit_with(swap_picks, "swap"), "audit rejects swapped same-typed bodies (type-correct mutation)")
+check(audit_with(swap_picks, "swap", "M2.M2A.pick_first"), "audit rejects swapped same-typed bodies (type-correct mutation)")
 
 
 def unrelated_true(by):
     by["M2.M2A.dep_use"]["target_value"] = {"k": "const", "n": "True.intro", "u": []}
 
 
-check(audit_with(unrelated_true, "true"), "audit rejects an unrelated True proof substituted for a declaration")
+check(audit_with(unrelated_true, "true", "M2.M2A.dep_use"), "audit rejects an unrelated True proof substituted for a declaration")
 
 
 def swap_args(by):
     v = by["M2.M2A.compose"]["target_value"]          # fun f g x => f (g x)
     v["b"]["b"]["b"]["f"] = {"k": "bvar", "i": 1}    # -> g (g x)
-check(audit_with(swap_args, "args"), "audit rejects a swapped variable inside a body")
+check(audit_with(swap_args, "args", "M2.M2A.compose"), "audit rejects a swapped variable inside a body")
 
 # Source-IR mutation against the anchored snapshot: same-typed swap in pick_first.
 mut = ROOT / "runs" / "m2-srcmut"

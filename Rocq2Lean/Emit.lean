@@ -40,6 +40,8 @@ structure DeclResult where
   targetCtors : Array (Name × Expr) := #[]
   /-- Universe parameters (generalized source global levels). -/
   levelParams : List Name := []
+  /-- Number of parameters (generated inductives). -/
+  numParams : Nat := 0
   deriving Inhabited
 
 def DeclResult.ok (r : DeclResult) : Bool :=
@@ -176,7 +178,7 @@ where
     match ← addChecked decl with
     | .accepted =>
       let tgt : IndTarget := { types := #[tname], ctors := #[cnames], univ := .mono, rule := "generated" }
-      return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty,
+      return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty, numParams := i.npars,
                           targetCtors := ctors.map fun c => (c.name, c.type) }, some tgt)
     | .rejected msg => return ({ base with status := "KERNEL_REJECTED", message := msg }, none)
 
@@ -238,6 +240,7 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("target_type", match r.targetType with | some e => exprJson e | none => .null),
     ("target_value", match r.targetValue with | some e => exprJson e | none => .null),
     ("level_params", Json.arr (r.levelParams.map (Json.str ·.toString)).toArray),
+    ("num_params", r.numParams),
     ("target_ctors", Json.arr (r.targetCtors.map fun (n, e) =>
       Json.mkObj [("name", n.toString), ("type", exprJson e)]))]
 

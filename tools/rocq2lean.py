@@ -164,6 +164,86 @@ def doctor(write_report=True, quiet=False):
     return report
 
 
+# ---------------------------------------------------------------- run-state helpers
+
+IMPL_GLOBS = ["Rocq2Lean.lean", "Rocq2Lean/*.lean", "tools/*.py", "rocq/exporter/src/*.ml",
+              "rocq/exporter/src/*.mlg", "rocq/exporter/src/*.mlpack", "rocq/exporter/src/META.*",
+              "rocq/exporter/theories/*.v", "rocq/exporter/Makefile*", "rocq/exporter/_RocqProject",
+              "rocq/roundtrip/RtEq.v", "lakefile.lean", "lake-manifest.json", "lean-toolchain",
+              "toolchains.lock.json"]
+
+
+def impl_files():
+    files = set()
+    for g in IMPL_GLOBS:
+        files.update(p for p in ROOT.glob(g) if p.is_file())
+    return sorted(files)
+
+
+def impl_tree_sha256():
+    """Content hash of the implementation (independent of git state)."""
+    h = hashlib.sha256()
+    for p in impl_files():
+        h.update(str(p.relative_to(ROOT)).encode() + b"\0" + sha256_file(p).encode() + b"\n")
+    return h.hexdigest()
+
+
+def git_identity():
+    def g(*a):
+        return subprocess.run(["git", "-C", str(ROOT), *a], capture_output=True, text=True).stdout.strip()
+    return {"commit": g("rev-parse", "HEAD"), "dirty_paths": len(g("status", "--porcelain").splitlines())}
+
+
+def atomic_write_json(path, obj):
+    path = Path(path)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with open(tmp, "w") as f:
+        f.write(json.dumps(obj, indent=2) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+class RunLock:
+    """Exclusive lock on a run directory: concurrent writers are rejected, not interleaved."""
+
+    def __init__(self, run):
+        self.path = Path(run) / ".rocq2lean.lock"
+
+    def __enter__(self):
+        import fcntl
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.f = open(self.path, "w")
+        try:
+            fcntl.flock(self.f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise Rejected("RUN_BUSY", f"another rocq2lean process holds {self.path}")
+        return self
+
+    def __exit__(self, *exc):
+        self.f.close()
+
+
+# Artifacts a phase invalidates when it starts (anything downstream of it).
+DOWNSTREAM = {
+    "export": ["source.ndjson", "source_snapshot.json", "contract.json", "roundtrip.json", "translation_report.json",
+               "translation_manifest.json", "audit.json", "consumer_result.json", "verify.json", "lean"],
+    "translate": ["translation_report.json", "translation_manifest.json", "audit.json", "consumer_result.json",
+                  "verify.json", "lean"],
+    "verify": ["audit.json", "consumer_result.json", "verify.json"],
+}
+
+
+def invalidate(run, phase):
+    import shutil
+    for name in DOWNSTREAM[phase]:
+        p = Path(run) / name
+        if p.is_dir():
+            shutil.rmtree(p)
+        elif p.exists():
+            p.unlink()
+
+
 # ---------------------------------------------------------------- export
 
 def load_manifest(path):
@@ -184,10 +264,31 @@ def build_exporter(log):
     return EXPORTER / "src" / "rocq2lean_export_plugin.cmxs"
 
 
-def export(manifest, roots, out, log_name="export.log"):
+def check_request(raw):
+    """Normalize the request once (strip surrounding whitespace) and reject empty or duplicate
+    roots after normalization. Returns the normalized list; both lists are recorded."""
+    roots = [r.strip() for r in raw]
+    if not roots or any(not r for r in roots):
+        raise Rejected("ROOT_CONTRACT_REJECTED", "empty root request (or an empty root name)")
+    dups = sorted({r for r in roots if roots.count(r) > 1})
+    if dups:
+        raise Rejected("ROOT_CONTRACT_REJECTED", f"duplicate requested roots (after whitespace normalization): {dups}")
+    return roots
+
+
+def export(manifest, raw_roots, out, log_name="export.log"):
+    roots = check_request(raw_roots)
     doctor(write_report=False, quiet=True)
-    m, mpath, lp, files = load_manifest(manifest)
     out = Path(out).resolve()
+    with RunLock(out):
+        invalidate(out, "export")
+        return _export(manifest, roots, list(raw_roots), out, log_name)
+
+
+def _export(manifest, roots, raw_roots, out, log_name):
+    sys.path.insert(0, str(ROOT / "tools"))
+    import contract as contract_mod
+    m, mpath, lp, files = load_manifest(manifest)
     (out / "logs").mkdir(parents=True, exist_ok=True)
     log = out / "logs" / log_name
     if log.exists():
@@ -198,8 +299,6 @@ def export(manifest, roots, out, log_name="export.log"):
         run(["rocq", "compile", *lp, str(f)], log, env=oenv)
     export_v = out / "Export.v"
     ir = out / "source.ndjson"
-    if ir.exists():
-        ir.unlink()
     lines = ["From Rocq2LeanExport Require Import Loader."]
     lines += [f"Require {r}." for r in m.get("requires", [])]
     lines.append(f'Rocq2Lean Export "{ir}" {" ".join(roots)}.')
@@ -207,7 +306,7 @@ def export(manifest, roots, out, log_name="export.log"):
     p = run(["rocq", "compile", "-I", str(EXPORTER / "src"), "-Q", str(EXPORTER / "theories"), "Rocq2LeanExport",
              *lp, str(export_v)], log, env=oenv, check=False)
     if p.returncode != 0 or not ir.exists():
-        raise Rejected("EXPORT_VALIDATION_FAILED", f"export process failed; see {log}")
+        raise Rejected("EXPORT_VALIDATION_FAILED", f"export process failed (exit {p.returncode}); see {log}")
     first = json.loads(ir.open().readline())
     libs = []
     with ir.open() as fh:
@@ -218,24 +317,36 @@ def export(manifest, roots, out, log_name="export.log"):
                     libs.append({"dirpath": l["dirpath"], "vo": l["vo"],
                                  "sha256": sha256_file(l["vo"]) if l["vo"] else None})
                 break
+    rt = run([sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"), str(ir), str(out), *lp, "--",
+              *m.get("requires", [])], log, env=oenv, check=False)
+    rt_status = json.loads((out / "roundtrip.json").read_text())["status"] if (out / "roundtrip.json").exists() \
+        else "NOT_RUN"
+    if rt.returncode != 0 or rt_status != "OK":
+        raise Rejected("EXPORT_VALIDATION_FAILED",
+                       f"independent round trip failed (exit {rt.returncode}, status {rt_status}); see {out / 'roundtrip.json'}")
+    try:
+        con = contract_mod.build(ir, roots)
+    except contract_mod.ContractError as e:
+        raise Rejected("ROOT_CONTRACT_REJECTED", str(e))
+    atomic_write_json(out / "contract.json", con)
     snapshot = {
-        "schema": "rocq2lean-source-snapshot/1",
+        "schema": "rocq2lean-source-snapshot/2",
+        "run_id": con["run_id"],
         "manifest": str(mpath), "manifest_sha256": sha256_file(mpath),
-        "roots": roots,
+        "request": roots,
+        "request_raw": raw_roots,
+        "request_normalization": "strip surrounding whitespace",
         "ir": str(ir), "ir_sha256": sha256_file(ir),
+        "contract_sha256": sha256_file(out / "contract.json"),
+        "roundtrip": rt_status, "roundtrip_sha256": sha256_file(out / "roundtrip.json"),
         "frontend": first["frontend"], "rocq_version": first["rocq_version"],
         "exporter_plugin_sha256": sha256_file(plugin),
         "sources": [{"file": str(f), "sha256": sha256_file(f)} for f in files],
         "libraries": libs,
         "toolchains_lock_sha256": lock_sha(),
+        "impl_tree_sha256": impl_tree_sha256(),
     }
-    rt = run([sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"), str(ir), str(out), *lp, "--",
-              *m.get("requires", [])], log, env=oenv, check=False)
-    snapshot["roundtrip"] = json.loads((out / "roundtrip.json").read_text())["status"] \
-        if (out / "roundtrip.json").exists() else "NOT_RUN"
-    (out / "source_snapshot.json").write_text(json.dumps(snapshot, indent=2) + "\n")
-    if rt.returncode != 0:
-        raise Rejected("EXPORT_VALIDATION_FAILED", f"independent round trip failed; see {out / 'roundtrip.json'}")
+    atomic_write_json(out / "source_snapshot.json", snapshot)
     return ir
 
 
@@ -247,14 +358,32 @@ def inspect(manifest, roots):
         import preflight
         report = preflight.preflight(ir)
     print(json.dumps(report, indent=2))
+    blocked = [r for r, v in report["roots"].items() if v["status"] != "CANDIDATE_SUPPORTED"]
+    if blocked:
+        raise Rejected("UNSUPPORTED_FEATURE", f"preflight blockers for roots: {blocked}")
     return report
 
 
 # ---------------------------------------------------------------- translate
 
+def lean_build_sha256():
+    """Digest of the built translator oleans used by the generated module."""
+    h = hashlib.sha256()
+    for p in sorted((ROOT / ".lake" / "build" / "lib" / "lean").glob("Rocq2Lean*.olean")) + \
+            sorted((ROOT / ".lake" / "build" / "lib" / "lean" / "Rocq2Lean").glob("*.olean")):
+        h.update(p.name.encode() + sha256_file(p).encode())
+    return h.hexdigest()
+
+
 def translate(inp, out):
     doctor(write_report=False, quiet=True)
     inp, out = Path(inp).resolve(), Path(out).resolve()
+    with RunLock(out):
+        invalidate(out, "translate")
+        return _translate(inp, out)
+
+
+def _translate(inp, out):
     lean_dir = out / "lean"
     lean_dir.mkdir(parents=True, exist_ok=True)
     (out / "logs").mkdir(parents=True, exist_ok=True)
@@ -262,23 +391,41 @@ def translate(inp, out):
     if log.exists():
         log.unlink()
     report = out / "translation_report.json"
-    for stale in [report, lean_dir / "Rocq2LeanOut.olean", lean_dir / "Rocq2LeanOut.ilean"]:
-        if stale.exists():
-            stale.unlink()
+    in_sha = sha256_file(inp)
+    con_p = out / "contract.json"
+    run_id = None
+    if con_p.exists():
+        con = json.loads(con_p.read_text())
+        if con["ir_sha256"] == in_sha:
+            run_id = con["run_id"]
+    run_id = run_id or f"translate-only-{in_sha[:16]}"
     run(["lake", "-d", str(ROOT), "build", "Rocq2Lean"], log, env=lean_env())
     mod = lean_dir / "Rocq2LeanOut.lean"
-    mod.write_text(f'import Rocq2Lean\n#rocq2lean_import "{inp}" "{report}"\n')
+    mod.write_text(f'import Rocq2Lean\n#rocq2lean_import "{inp}" "{report}" "{in_sha}" "{run_id}"\n')
     p = run(["lake", "-d", str(ROOT), "env", "lean", str(mod), "-o", str(lean_dir / "Rocq2LeanOut.olean"),
              "-i", str(lean_dir / "Rocq2LeanOut.ilean")], log, cwd=lean_dir, env=lean_env(), check=False)
     if not report.exists():
-        raise Rejected("TRANSLATION_FAILED", f"no report written; see {log}")
+        raise Rejected("TRANSLATION_FAILED", f"no report written (exit {p.returncode}); see {log}")
     rep = json.loads(report.read_text())
+    if rep.get("input_sha256") != in_sha or rep.get("run_id") != run_id:
+        raise Rejected("TRANSLATION_FAILED", "report is not bound to this input/run")
     rep_roots = {r["name"]: r["status"] for r in rep["roots"]}
     for name, st in rep_roots.items():
         print(f"{st:24} {name}")
     if p.returncode != 0:
         bad = sorted({st for st in rep_roots.values() if st != "TRANSLATED_AND_CHECKED"})
-        raise Rejected(bad[0] if bad else "TRANSLATION_FAILED", f"translation rejected; see {log}")
+        raise Rejected(bad[0] if bad else "TRANSLATION_FAILED", f"translation rejected (exit {p.returncode}); see {log}")
+    atomic_write_json(out / "translation_manifest.json", {
+        "schema": "rocq2lean-translation-manifest/1",
+        "run_id": run_id, "input": str(inp), "input_sha256": in_sha,
+        "report_sha256": sha256_file(report),
+        "module_lean_sha256": sha256_file(mod),
+        "module_olean_sha256": sha256_file(lean_dir / "Rocq2LeanOut.olean"),
+        "module_ilean_sha256": sha256_file(lean_dir / "Rocq2LeanOut.ilean"),
+        "translator_build_sha256": lean_build_sha256(),
+        "impl_tree_sha256": impl_tree_sha256(),
+        "lean_exit": p.returncode,
+    })
     return rep
 
 
@@ -287,61 +434,143 @@ def translate(inp, out):
 def verify(run_dir):
     doctor(write_report=False, quiet=True)
     run_dir = Path(run_dir).resolve()
+    with RunLock(run_dir):
+        invalidate(run_dir, "verify")
+        try:
+            return _verify(run_dir)
+        except Rejected as e:
+            atomic_write_json(run_dir / "verify.json", {"schema": "rocq2lean-verify/2", "status": e.status,
+                                                        "reason": e.msg, "impl_tree_sha256": impl_tree_sha256()})
+            raise
+
+
+def _need(p, what):
+    if not Path(p).exists():
+        raise Rejected("AUDIT_REJECTED", f"missing {what}: {p}")
+    return Path(p)
+
+
+def bound_hashes(run_dir, snap, tm):
+    """Every artifact the verdict is bound to, recomputed from disk."""
+    lean_dir = run_dir / "lean"
+    h = {"ir": sha256_file(snap["ir"]),
+         "contract": sha256_file(run_dir / "contract.json"),
+         "roundtrip": sha256_file(run_dir / "roundtrip.json"),
+         "manifest": sha256_file(snap["manifest"]),
+         "translation_report": sha256_file(run_dir / "translation_report.json"),
+         "module_lean": sha256_file(lean_dir / "Rocq2LeanOut.lean"),
+         "module_olean": sha256_file(lean_dir / "Rocq2LeanOut.olean"),
+         "module_ilean": sha256_file(lean_dir / "Rocq2LeanOut.ilean"),
+         "toolchains_lock": lock_sha(),
+         "impl_tree": impl_tree_sha256(),
+         "translator_build": lean_build_sha256(),
+         "exporter_plugin": sha256_file(EXPORTER / "src" / "rocq2lean_export_plugin.cmxs")}
+    for lib in snap["libraries"]:
+        if lib["vo"]:
+            h["vo:" + lib["dirpath"]] = sha256_file(lib["vo"])
+    for s in snap["sources"]:
+        h["src:" + s["file"]] = sha256_file(s["file"])
+    return h
+
+
+def _verify(run_dir):
     log = run_dir / "logs" / "verify.log"
+    (run_dir / "logs").mkdir(exist_ok=True)
     if log.exists():
         log.unlink()
-    checks = {}
-    snap_p = run_dir / "source_snapshot.json"
-    if not snap_p.exists():
-        raise Rejected("AUDIT_REJECTED", "no source snapshot in run directory")
-    snap = json.loads(snap_p.read_text())
+    snap = json.loads(_need(run_dir / "source_snapshot.json", "source snapshot").read_text())
+    if snap.get("schema") != "rocq2lean-source-snapshot/2":
+        raise Rejected("AUDIT_REJECTED", f"unknown snapshot schema {snap.get('schema')}")
+    con_p = _need(run_dir / "contract.json", "coverage contract")
+    tm = json.loads(_need(run_dir / "translation_manifest.json", "translation manifest").read_text())
+    report_p = _need(run_dir / "translation_report.json", "translation report")
+    _need(run_dir / "roundtrip.json", "round-trip result")
+    for f in ("Rocq2LeanOut.lean", "Rocq2LeanOut.olean", "Rocq2LeanOut.ilean"):
+        _need(run_dir / "lean" / f, "generated module artifact")
+    h0 = bound_hashes(run_dir, snap, tm)
     problems = []
-    if snap["toolchains_lock_sha256"] != lock_sha():
-        problems.append("toolchain lock changed since export")
-    if sha256_file(snap["ir"]) != snap["ir_sha256"]:
+    # Source anchoring.
+    if snap["roundtrip"] != "OK" or h0["roundtrip"] != snap["roundtrip_sha256"]:
+        problems.append("source round trip not verified or changed since export")
+    if h0["contract"] != snap["contract_sha256"]:
+        problems.append("coverage contract changed since export")
+    if h0["ir"] != snap["ir_sha256"]:
         problems.append("source IR changed since export")
+    if h0["manifest"] != snap["manifest_sha256"]:
+        problems.append("source manifest changed since export")
+    if h0["toolchains_lock"] != snap["toolchains_lock_sha256"]:
+        problems.append("toolchain lock changed since export")
     for lib in snap["libraries"]:
-        if lib["vo"] and sha256_file(lib["vo"]) != lib["sha256"]:
+        if lib["vo"] and h0["vo:" + lib["dirpath"]] != lib["sha256"]:
             problems.append(f"library {lib['dirpath']} changed since export")
     for s in snap["sources"]:
-        if sha256_file(s["file"]) != s["sha256"]:
+        if h0["src:" + s["file"]] != s["sha256"]:
             problems.append(f"source file {s['file']} changed since export")
-    checks["snapshot"] = problems or "OK"
+    con = json.loads(con_p.read_text())
+    if con["run_id"] != snap["run_id"] or con["ir_sha256"] != snap["ir_sha256"] or con["request"] != snap["request"]:
+        problems.append("contract is not bound to this export (run id / IR digest / request)")
     if problems:
         raise Rejected("AUDIT_REJECTED", "; ".join(problems))
-
-    report_p = run_dir / "translation_report.json"
-    if not report_p.exists():
-        raise Rejected("AUDIT_REJECTED", "no translation report in run directory")
+    # Artifact freshness: translation bound to this export and still current.
     rep = json.loads(report_p.read_text())
-    if Path(rep["source"]).resolve() != Path(snap["ir"]).resolve():
-        raise Rejected("AUDIT_REJECTED", "translation report was produced from a different IR file")
-    requested = set(snap["roots"])
-    reported = {r["requested"] for r in json.loads(Path(snap["ir"]).open().readlines()[1])["roots"]}
-    if requested != reported:
-        raise Rejected("AUDIT_REJECTED", f"requested roots {requested} differ from exported roots {reported}")
-
-    # Fresh-process consumer of the generated module.
+    if tm["run_id"] != con["run_id"] or rep.get("run_id") != con["run_id"]:
+        problems.append("translation belongs to a different run")
+    if tm["input_sha256"] != con["ir_sha256"] or rep.get("input_sha256") != con["ir_sha256"]:
+        problems.append("translation input digest differs from the contract")
+    for k, hk in (("report_sha256", "translation_report"), ("module_lean_sha256", "module_lean"),
+                  ("module_olean_sha256", "module_olean"), ("module_ilean_sha256", "module_ilean"),
+                  ("impl_tree_sha256", "impl_tree"), ("translator_build_sha256", "translator_build")):
+        if tm[k] != h0[hk]:
+            problems.append(f"{hk} changed since translation (stale artifact or implementation)")
+    if snap["impl_tree_sha256"] != h0["impl_tree"]:
+        problems.append("implementation changed since export")
+    if problems:
+        raise Rejected("AUDIT_REJECTED", "; ".join(problems))
+    # Fresh-process consumer, driven by the contract.
     lean_dir = run_dir / "lean"
     cons = lean_dir / "Rocq2LeanConsumer.lean"
-    cons.write_text(f'import Rocq2LeanOut\nimport Rocq2Lean.Verify\n#rocq2lean_verify "{report_p}"\n')
+    cres = run_dir / "consumer_result.json"
+    cons.write_text(f'import Rocq2LeanOut\nimport Rocq2Lean.Verify\n'
+                    f'#rocq2lean_verify "{con_p}" "{report_p}" "{cres}"\n')
     lp = run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], log, env=lean_env()).stdout.strip()
     env = dict(lean_env(), LEAN_PATH=f"{lp}:{lean_dir}")
     p = run([f"{HOME}/.elan/bin/lean", str(cons)], log, cwd=lean_dir, env=env, check=False)
-    checks["consumer"] = "OK" if p.returncode == 0 else (p.stdout + p.stderr).strip()
-    if p.returncode != 0:
-        raise Rejected("AUDIT_REJECTED", f"consumer check failed; see {log}")
-
-    # Independent structural audit.
-    p = run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), snap["ir"], str(report_p),
+    consumer = json.loads(cres.read_text()) if cres.exists() else {"status": "NOT_RUN", "detectors": {}}
+    if p.returncode != 0 or consumer.get("status") != "OK":
+        raise Rejected("AUDIT_REJECTED", f"consumer check failed (exit {p.returncode}): "
+                       f"{[d for d, v in consumer.get('detectors', {}).items() if v != 'OK']}; see {cres}")
+    # Independent structural audit, driven by the contract.
+    p = run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), snap["ir"], str(con_p), str(report_p),
              str(run_dir / "audit.json")], log, check=False)
-    checks["structural_audit"] = "OK" if p.returncode == 0 else p.stdout.strip()
-    if p.returncode != 0:
-        raise Rejected("AUDIT_REJECTED", f"structural audit failed; see {run_dir / 'audit.json'}")
-
-    result = {"schema": "rocq2lean-verify/1", "status": "VERIFIED", "checks": checks,
-              "roots": rep["roots"], "summary": rep["summary"], "toolchains_lock_sha256": lock_sha()}
-    (run_dir / "verify.json").write_text(json.dumps(result, indent=2) + "\n")
+    audit = json.loads((run_dir / "audit.json").read_text()) if (run_dir / "audit.json").exists() else {}
+    if p.returncode != 0 or audit.get("status") != "OK":
+        raise Rejected("AUDIT_REJECTED", f"structural audit failed (exit {p.returncode}); see {run_dir / 'audit.json'}")
+    # Re-hash everything before publishing: nothing may have changed during verification.
+    h1 = bound_hashes(run_dir, snap, tm)
+    if h1 != h0:
+        changed = sorted(k for k in h0 if h0[k] != h1.get(k))
+        raise Rejected("AUDIT_REJECTED", f"artifacts changed during verification: {changed}")
+    result = {
+        "schema": "rocq2lean-verify/2", "status": "VERIFIED", "run_id": con["run_id"],
+        "request": con["request"], "roots": con["roots"],
+        "required_closure_size": len(con["required_closure"]), "extra_exported": con["extra_exported"],
+        "gates": {
+            "source_anchoring": "OK (snapshot hashes, round trip, contract binding)",
+            "root_and_closure_coverage": f"OK (consumer coverage detector; audit {audit.get('coverage', {})})",
+            "kernel_insertion": "OK (every accepted declaration was added through addDeclCore doCheck=true at translation)",
+            "fresh_readback": "OK (separate Lean process imported the module and re-checked type/value/levels against the report)",
+            "assumptions": "OK (collectAxioms empty for every accepted declaration)",
+            "structural_audit": "OK",
+            "artifact_freshness": "OK (all bound hashes equal before and after verification)",
+        },
+        "consumer_detectors": consumer.get("detectors"),
+        "audit_summary": audit.get("coverage"),
+        "bound_sha256": h1,
+        "git": git_identity(),
+        "note": "fresh_readback imports the .olean; it does not re-typecheck declarations from scratch "
+                "(kernel checking happened at insertion; a clean rebuild is separate evidence)",
+    }
+    atomic_write_json(run_dir / "verify.json", result)
     print("VERIFIED", run_dir)
     return result
 
@@ -378,6 +607,9 @@ def main(argv=None):
     except Rejected as e:
         print(f"{e.status}: {e.msg}", file=sys.stderr)
         return 2
+    except Exception as e:  # tool failure, distinguished from a rejection
+        print(f"TOOL_FAILURE: {type(e).__name__}: {e}", file=sys.stderr)
+        return 3
     return 0
 
 

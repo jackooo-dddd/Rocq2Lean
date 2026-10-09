@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lib import ROOT, check, cli, decls, results, finish  # noqa: E402
+from lib import ROOT, audit_report, check, cli, decls, results, finish, structurally_rejected  # noqa: E402
 
 MAN = ROOT / "fixtures" / "m3" / "manifest.json"
 STAGES = {
@@ -69,10 +69,10 @@ s = json.dumps(mr["target_value"])
 swapped = s.replace('{"k": "bvar", "i": 0}', "@@").replace('{"k": "bvar", "i": 1}', '{"k": "bvar", "i": 0}').replace("@@", '{"k": "bvar", "i": 1}')
 check(swapped != s, "M3c mutation constructed (swap mirrorR recursive results)")
 mr["target_value"] = json.loads(swapped)
-(run / "report_swapped.json").write_text(json.dumps(rep))
-p = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), str(run / "source.ndjson"),
-                    str(run / "report_swapped.json"), str(run / "audit_swapped.json")], capture_output=True, text=True)
-check(p.returncode != 0, "audit rejects mirrorR with its two recursive results swapped (left/right kept distinct)")
+rc, probs = audit_report(run, json.loads((run / "translation_report.json").read_text()), "unmutated")
+check(rc == 0 and not probs, "audit positive control: unmutated M3c report accepted")
+check(structurally_rejected(run, rep, "swapped", "M3.M3Fix.mirrorR"),
+      "audit rejects mirrorR with its two recursive results swapped (structure detector on mirrorR)")
 
 # Definitional vs propositional laws.
 laws = []

@@ -1,26 +1,35 @@
 import Lean
 import Rocq2Lean.Emit
+import Rocq2Lean.Bootstrap
 
 /-!
-# `#rocq2lean_verify`
+# `#rocq2lean_verify "contract.json" "report.json" "result.json"`
 
-Run in a *separate* module that imports the generated one. For every declaration the report
-lists as `TRANSLATED_AND_CHECKED` it re-checks, against the imported environment:
+Fresh-process consumer check. Run in a *separate* module that imports the generated one. The
+expected roots and the required dependency closure come from the **coverage contract**
+written at export time from the validated source IR (never from the report under audit).
 
-* the target exists and has the recorded declaration kind;
-* its type and value are exactly the ones recorded in the report;
-* its transitive axiom set (`collectAxioms`) is empty — the pilot's success profile admits no
-  axioms at all, so even standard Lean axioms are reported.
+Detectors (each recorded separately in `result.json`):
 
-It also requires every requested root to be `TRANSLATED_AND_CHECKED`. Any failure fails the
-consumer module.
+* `binding` — report `run_id` / `input_sha256` equal the contract's;
+* `coverage` — exactly one result per exported declaration; every declaration of the required
+  closure accepted (`TRANSLATED_AND_CHECKED`, or `BOOTSTRAP_RESOLVED` for bootstrap rules);
+  every requested root `TRANSLATED_AND_CHECKED`; at least one accepted declaration;
+* `presence`, `kind`, `type`, `value`, `levels`, `ctors` — the imported declaration equals the
+  reported one;
+* `safety` — not `unsafe`/`partial`;
+* `axioms` — empty transitive axiom set (`collectAxioms`), standard Lean axioms included;
+* `target_deps` — every constant referenced by an accepted target is an accepted target of
+  this run, a bootstrap target, or a kernel-generated constructor/recursor of one.
+
+Any failure fails the module (non-zero exit of the consumer process).
 -/
 
 namespace Rocq2Lean
 
 open Lean Elab Command Meta
 
-syntax (name := rocqVerify) "#rocq2lean_verify " str : command
+syntax (name := rocqVerify) "#rocq2lean_verify " str str str : command
 
 private def kindOf : ConstantInfo → String
   | .defnInfo _ => "def"
@@ -32,51 +41,117 @@ private def kindOf : ConstantInfo → String
   | .axiomInfo _ => "axiom"
   | .quotInfo _ => "quot"
 
+private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k).toOption.getD ""
+
 @[command_elab rocqVerify] def elabRocqVerify : CommandElab := fun stx => do
-  let some repPath := stx[1].isStrLit? | throwError "expected a report path"
+  let some conPath := stx[1].isStrLit? | throwError "expected a contract path"
+  let some repPath := stx[2].isStrLit? | throwError "expected a report path"
+  let some outPath := stx[3].isStrLit? | throwError "expected a result path"
+  let contract ← IO.ofExcept (Json.parse (← IO.FS.readFile conPath))
   let report ← IO.ofExcept (Json.parse (← IO.FS.readFile repPath))
   let results ← IO.ofExcept (report.getObjValAs? (Array Json) "results")
-  let roots ← IO.ofExcept (report.getObjValAs? (Array Json) "roots")
-  let mut problems : Array String := #[]
-  for r in roots do
-    let st := (r.getObjValAs? String "status").toOption.getD "?"
-    if st != "TRANSLATED_AND_CHECKED" then
-      problems := problems.push s!"root {(r.getObjValAs? String "name").toOption.getD "?"} has status {st}"
-  let mut checked : Nat := 0
+  let reqRoots ← IO.ofExcept (contract.getObjValAs? (Array Json) "roots")
+  let required ← IO.ofExcept (contract.getObjValAs? (Array String) "required_closure")
+  let exported ← IO.ofExcept (contract.getObjValAs? (Array String) "exported")
+  let mut problems : Array (String × String) := #[]
+  let mut detectors : Std.HashMap String Nat := {}
+  let note (det msg : String) (ps : Array (String × String)) := ps.push (det, msg)
+  -- binding
+  if getStr report "run_id" != getStr contract "run_id" then
+    problems := note "binding" "report run_id differs from the contract" problems
+  if getStr report "input_sha256" != getStr contract "ir_sha256" then
+    problems := note "binding" "report input_sha256 differs from the contract's IR digest" problems
+  -- coverage: exactly one row per exported declaration, none extra
+  let mut rows : Std.HashMap String (Array Json) := {}
   for r in results do
-    unless (r.getObjValAs? String "status").toOption == some "TRANSLATED_AND_CHECKED" do continue
-    let some tgt := (r.getObjValAs? String "target").toOption | problems := problems.push "result without target"; continue
-    let name := tgt.toName
-    let some ci := (← getEnv).find? name
-      | problems := problems.push s!"{tgt}: not present in the imported environment"; continue
-    let kind := (r.getObjValAs? String "target_kind").toOption.getD ""
-    if kindOf ci != kind then problems := problems.push s!"{tgt}: kind {kindOf ci}, report says {kind}"
+    let s := getStr r "source"
+    rows := rows.insert s ((rows.getD s #[]).push r)
+  for (s, rs) in rows.toList do
+    if rs.size != 1 then problems := note "coverage" s!"{s}: {rs.size} result rows" problems
+    unless exported.contains s do problems := note "coverage" s!"{s}: result for a declaration that was not exported" problems
+  for s in exported do
+    unless rows.contains s do problems := note "coverage" s!"{s}: exported declaration has no result" problems
+  let status (s : String) : String := match rows[s]? with
+    | some #[r] => getStr r "status"
+    | _ => "MISSING"
+  for s in required do
+    let st := status s
+    let okBootstrap := st == "BOOTSTRAP_RESOLVED" && (findBootstrap? s).isSome
+    unless st == "TRANSLATED_AND_CHECKED" || okBootstrap do
+      problems := note "coverage" s!"required declaration {s} has status {st}" problems
+  for r in reqRoots do
+    let c := getStr r "canonical"
+    if status c != "TRANSLATED_AND_CHECKED" then
+      problems := note "coverage" s!"requested root {getStr r "requested"} ({c}) has status {status c}" problems
+  -- allowed target constants
+  let mut allowed : Std.HashSet Name := {}
+  let mut accepted : Array (String × Json) := #[]
+  for s in required do
+    match rows[s]? with
+    | some #[r] =>
+      let st := getStr r "status"
+      if st == "TRANSLATED_AND_CHECKED" then
+        let t := (getStr r "target").toName
+        allowed := allowed.insert t
+        if getStr r "target_kind" == "inductive" then
+          allowed := allowed.insert (t.str "rec")
+          for c in (r.getObjValAs? (Array Json) "target_ctors").toOption.getD #[] do
+            allowed := allowed.insert (getStr c "name").toName
+        accepted := accepted.push (s, r)
+      else if st == "BOOTSTRAP_RESOLVED" then
+        if let some rule := findBootstrap? s then
+          for t in rule.target.types do allowed := allowed.insert t |>.insert (t.str "rec")
+          for cs in rule.target.ctors do for c in cs do allowed := allowed.insert c
+    | _ => pure ()
+  if accepted.isEmpty then problems := note "coverage" "no accepted declaration" problems
+  -- per declaration
+  let env ← getEnv
+  for (s, r) in accepted do
+    let tgt := getStr r "target"
+    let some ci := env.find? tgt.toName
+      | problems := note "presence" s!"{tgt} ({s}): not in the imported environment" problems; continue
+    let kind := getStr r "target_kind"
+    if kindOf ci != kind then problems := note "kind" s!"{tgt}: imported {kindOf ci}, report says {kind}" problems
+    if ci.isUnsafe || ci.isPartial then problems := note "safety" s!"{tgt}: unsafe or partial" problems
     let lps := ((r.getObjValAs? (Array String) "level_params").toOption.getD #[]).toList.map String.toName
-    if ci.levelParams != lps then problems := problems.push s!"{tgt}: universe parameters differ from the report"
+    if ci.levelParams != lps then problems := note "levels" s!"{tgt}: universe parameters differ" problems
     if (r.getObjValD "target_type") != exprJson ci.type then
-      problems := problems.push s!"{tgt}: imported type differs from the reported type"
+      problems := note "type" s!"{tgt}: imported type differs from the reported type" problems
+    let mut used : Array Name := ci.type.getUsedConstants
     if let .inductInfo iv := ci then
       let ctors := (r.getObjValAs? (Array Json) "target_ctors").toOption.getD #[]
-      let names := ctors.filterMap fun c => (c.getObjValAs? String "name").toOption.map String.toName
-      if iv.ctors != names.toList then problems := problems.push s!"{tgt}: constructors differ from the report"
+      if iv.ctors != (ctors.map fun c => (getStr c "name").toName).toList then
+        problems := note "ctors" s!"{tgt}: constructors differ from the report" problems
       for c in ctors do
-        let cn := ((c.getObjValAs? String "name").toOption.getD "").toName
-        match (← getEnv).find? cn with
+        match env.find? (getStr c "name").toName with
         | some cci =>
           if (c.getObjValD "type") != exprJson cci.type then
-            problems := problems.push s!"{cn}: imported constructor type differs from the report"
-        | none => problems := problems.push s!"{cn}: constructor missing from the imported environment"
+            problems := note "ctors" s!"{getStr c "name"}: constructor type differs" problems
+          used := used ++ cci.type.getUsedConstants
+        | none => problems := note "ctors" s!"{getStr c "name"}: constructor missing" problems
     else
-    match ci.value? (allowOpaque := true) with
-    | some v =>
-      if (r.getObjValD "target_value") != exprJson v then
-        problems := problems.push s!"{tgt}: imported value differs from the reported value"
-    | none => problems := problems.push s!"{tgt}: imported declaration has no value"
-    let axs ← liftCoreM (collectAxioms name)
-    unless axs.isEmpty do problems := problems.push s!"{tgt}: depends on axioms {axs}"
-    checked := checked + 1
+      match ci.value? (allowOpaque := true) with
+      | some v =>
+        if (r.getObjValD "target_value") != exprJson v then
+          problems := note "value" s!"{tgt}: imported value differs from the reported value" problems
+        used := used ++ v.getUsedConstants
+      | none => problems := note "value" s!"{tgt}: imported declaration has no value" problems
+    for c in used do
+      unless allowed.contains c do
+        problems := note "target_deps" s!"{tgt}: references {c}, which is not part of this run's accepted closure" problems
+    let axs ← liftCoreM (collectAxioms tgt.toName)
+    unless axs.isEmpty do problems := note "axioms" s!"{tgt}: depends on axioms {axs}" problems
+  for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)
+  let dets := ["binding", "coverage", "presence", "kind", "safety", "levels", "type", "value", "ctors",
+               "target_deps", "axioms"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
+  let res := Json.mkObj [
+    ("schema", "rocq2lean-consumer/1"), ("status", if problems.isEmpty then "OK" else "AUDIT_REJECTED"),
+    ("run_id", getStr contract "run_id"), ("accepted_checked", accepted.size),
+    ("detectors", Json.mkObj dets),
+    ("problems", Json.arr (problems.map fun (d, m) => Json.mkObj [("detector", d), ("message", m)]))]
+  IO.FS.writeFile outPath (res.pretty ++ "\n")
   unless problems.isEmpty do
-    throwError "AUDIT_REJECTED (consumer):\n{String.intercalate "\n" problems.toList}"
-  logInfo m!"rocq2lean verify: {checked} imported declaration(s) match the report; no axioms"
+    throwError "AUDIT_REJECTED (consumer):\n{String.intercalate "\n" (problems.map fun (d, m) => s!"[{d}] {m}").toList}"
+  logInfo m!"rocq2lean verify: {accepted.size} accepted declaration(s) of the required closure match; no axioms"
 
 end Rocq2Lean

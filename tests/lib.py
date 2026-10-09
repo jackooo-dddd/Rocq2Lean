@@ -32,3 +32,23 @@ def results(run):
 def finish(stage):
     print(f"{stage}: {'OK' if not FAILS else f'{len(FAILS)} FAILURE(S)'}")
     sys.exit(1 if FAILS else 0)
+
+
+def audit_report(run, rep, name):
+    """Run the standalone auditor (source + contract + given report). Returns (exit, problems)."""
+    run = Path(run)
+    p2 = run / f"report_{name}.json"
+    p2.write_text(json.dumps(rep))
+    p = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), str(run / "source.ndjson"),
+                        str(run / "contract.json"), str(p2), str(run / f"audit_{name}.json")],
+                       capture_output=True, text=True)
+    if p.returncode not in (0, 1):
+        raise RuntimeError(f"auditor did not run ({p.returncode}): {p.stderr[-400:]}")
+    out = json.loads((run / f"audit_{name}.json").read_text())
+    return p.returncode, out["problems"]
+
+
+def structurally_rejected(run, rep, name, decl):
+    """True iff the auditor rejects the report through its structural detector on `decl`."""
+    rc, probs = audit_report(run, rep, name)
+    return rc == 1 and any(x["detector"] == "structure" and x["message"].startswith(decl + ":") for x in probs)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Independent structural audit: source IR  vs  accepted Lean terms.
 
-    audit.py SOURCE.ndjson TRANSLATION_REPORT.json AUDIT_OUT.json
+    audit.py SOURCE.ndjson CONTRACT.json TRANSLATION_REPORT.json AUDIT_OUT.json
 
 Kernel acceptance only shows that a generated body has the generated type. This audit checks
 that each accepted target term is the image of its *source* term under the documented rules,
@@ -407,22 +407,135 @@ class Auditor:
             raise Mismatch(f"{path}: recursive call must become recursive result bvar {ih}, found {cur}")
 
 
-def main(src_path, report_path, out_path):
+def closure_refs(t, acc):
+    """Independent reimplementation of dependency extraction (not shared with tools/contract.py)."""
+    stack = [t]
+    while stack:
+        x = stack.pop()
+        if isinstance(x, list):
+            stack.extend(x)
+        elif isinstance(x, dict):
+            k = x.get("k")
+            if k == "const":
+                acc.add(x["c"])
+            elif k in ("ind", "construct"):
+                acc.add(x["ind"]["mind"])
+            elif k == "case":
+                acc.add(x["ci"]["ind"]["mind"])
+            elif k == "proj":
+                acc.add(x["p"]["ind"]["mind"])
+            stack.extend(x.values())
+    return acc
+
+
+def required_closure(decls, roots):
+    seen, todo = set(), list(roots)
+    while todo:
+        n = todo.pop()
+        if n in seen:
+            continue
+        if n not in decls:
+            raise Mismatch(f"required declaration {n} absent from the export")
+        seen.add(n)
+        d = decls[n]
+        refs = closure_refs([d["type"], d["body"]] if d["kind"] == "constant" else [d["params"], d["bodies"]], set())
+        refs.discard(n)
+        todo.extend(refs - seen)
+    return seen
+
+
+def sha256_path(p):
+    import hashlib
+    return hashlib.sha256(open(p, "rb").read()).hexdigest()
+
+
+def main(src_path, contract_path, report_path, out_path):
+    from collections import Counter
     lines = [json.loads(l) for l in open(src_path)]
     decls = {d["name"]: d for d in lines if d["kind"] in ("constant", "inductive")}
+    con = json.load(open(contract_path))
     report = json.load(open(report_path))
-    results = report["results"]
-    verdicts, failures = [], 0
-    names = [r["source"] for r in results]
-    if sorted(names) != sorted(decls):
-        failures += 1
-        verdicts.append({"source": "*", "verdict": "MISMATCH",
-                         "reason": "report results do not cover the exported declarations one-to-one"})
-    aud = Auditor(decls, results)
-    for r in results:
-        d = decls.get(r["source"])
-        v = {"source": r["source"], "status": r["status"]}
+    results = report.get("results", [])
+    problems, verdicts = [], []
+
+    def problem(det, msg):
+        problems.append({"detector": det, "message": msg})
+
+    # Binding.
+    ir_sha = sha256_path(src_path)
+    if con.get("ir_sha256") != ir_sha:
+        problem("binding", "contract IR digest differs from the audited source")
+    if report.get("input_sha256") != ir_sha:
+        problem("binding", "report input digest differs from the audited source")
+    if report.get("run_id") != con.get("run_id"):
+        problem("binding", "report run id differs from the contract")
+    # Requested roots, re-derived from the source root records.
+    request = con.get("request") or []
+    if not request:
+        problem("coverage", "empty request")
+    src_roots = lines[1]["roots"]
+    if [r["requested"] for r in src_roots] != request:
+        problem("coverage", "source root records differ from the contract request")
+    canon = [r["name"] for r in src_roots]
+    if len(set(canon)) != len(canon):
+        problem("coverage", "two requested roots resolve to the same declaration")
+    for r in src_roots:
+        if r["term"]["k"] not in ("const", "ind"):
+            problem("coverage", f"unsupported root form {r['term']['k']} for {r['requested']}")
+    if [c["canonical"] for c in con.get("roots", [])] != canon:
+        problem("coverage", "contract roots differ from the source root records")
+    # Required closure, recomputed here.
+    try:
+        closure = required_closure(decls, canon)
+    except Mismatch as e:
+        closure = set()
+        problem("coverage", str(e))
+    if sorted(closure) != con.get("required_closure"):
+        problem("coverage", "contract closure differs from the closure recomputed from the source")
+    if sorted(decls) != con.get("exported"):
+        problem("coverage", "contract export list differs from the source")
+    # Result rows: exactly one per exported declaration.
+    counts = Counter(r.get("source") for r in results)
+    for s, n in counts.items():
+        if n != 1:
+            problem("coverage", f"{s}: {n} result rows")
+        if s not in decls:
+            problem("coverage", f"{s}: result for a declaration that was not exported")
+    for s in decls:
+        if counts[s] == 0:
+            problem("coverage", f"{s}: exported declaration has no result")
+    rows = {r["source"]: r for r in results if counts[r.get("source")] == 1}
+    ok_status = lambda s: rows.get(s, {}).get("status")
+    for s in sorted(closure):
+        st = ok_status(s)
+        if not (st == "TRANSLATED_AND_CHECKED" or (st == "BOOTSTRAP_RESOLVED" and s in BOOTSTRAP)):
+            problem("coverage", f"required declaration {s} has status {st}")
+    for c in canon:
+        if ok_status(c) != "TRANSLATED_AND_CHECKED":
+            problem("coverage", f"requested root {c} has status {ok_status(c)}")
+    rep_roots = report.get("roots", [])
+    if [r.get("name") for r in rep_roots] != canon or any(r.get("status") != ok_status(r.get("name")) for r in rep_roots):
+        problem("coverage", "report root records disagree with the contract or with the result rows")
+    # Summary counts, recomputed.
+    accepted = [s for s in closure if ok_status(s) == "TRANSLATED_AND_CHECKED"]
+    want_summary = {"roots": len(canon),
+                    "translated_dependencies": len([s for s in accepted if s not in canon]),
+                    "bootstrap_resolved": len([s for s in decls if ok_status(s) == "BOOTSTRAP_RESOLVED"]),
+                    "generated_helpers": 0,
+                    "not_ok": len([s for s in decls if ok_status(s) not in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED")])}
+    if report.get("summary") != want_summary:
+        problem("coverage", f"report summary {report.get('summary')} differs from recomputed {want_summary}")
+    if not accepted:
+        problem("coverage", "no accepted declaration")
+    # Structural fidelity of every accepted translation.
+    aud = Auditor(decls, list(rows.values()))
+    for s in sorted(decls):
+        r, d = rows.get(s), decls[s]
+        v = {"source": s, "status": r.get("status") if r else None,
+             "role": "root" if s in canon else ("required" if s in closure else "extra_not_required")}
         try:
+            if r is None:
+                raise Mismatch("no unique result row")
             if r["status"] == "TRANSLATED_AND_CHECKED" and d["kind"] == "inductive":
                 if len(d["bodies"]) != 1:
                     raise Mismatch("UNAUDITABLE: mutual block")
@@ -430,6 +543,8 @@ def main(src_path, report_path, out_path):
                 t, cs = generated_names(d["name"], b["name"], [c["name"] for c in b["ctors"]])
                 if r["target"] != t or [c["name"] for c in r["target_ctors"]] != cs:
                     raise Mismatch(f"target names {r['target']} / {r['target_ctors']} are not the images of the source")
+                if r.get("num_params") != d["npars"]:
+                    raise Mismatch("parameter count differs from the source")
                 aud.check(b["type"], r["target_type"], ["arity"])
                 for c, tc in zip(b["ctors"], r["target_ctors"]):
                     aud.check(c["type"], tc["type"], ["ctor " + c["name"]], [("const", t)])
@@ -439,9 +554,11 @@ def main(src_path, report_path, out_path):
                     raise Mismatch("UNAUDITABLE: declaration kind")
                 if r["target"] != target_name(d["name"]):
                     raise Mismatch(f"target name {r['target']} is not the image of {d['name']}")
-                want_kinds = {"transparent": {"def"}, "opaque_present": {"theorem", "opaque"}}[d["body_state"]]
+                want_kinds = {"transparent": {"def"}, "opaque_present": {"theorem", "opaque"}}.get(d["body_state"], set())
                 if r["target_kind"] not in want_kinds:
                     raise Mismatch(f"{d['body_state']} source emitted as {r['target_kind']}")
+                if r.get("target_type") is None or r.get("target_value") is None:
+                    raise Mismatch("success claimed without target type/value")
                 want_lp = sorted(level_param(n) for n in source_globals([d["type"], d["body"]], set()))
                 if r.get("level_params", []) != want_lp:
                     raise Mismatch(f"universe parameters {r.get('level_params')} are not the generalized globals {want_lp}")
@@ -458,18 +575,19 @@ def main(src_path, report_path, out_path):
         except Mismatch as e:
             v["verdict"] = "MISMATCH"
             v["reason"] = str(e)
-            failures += 1
+            problem("structure", f"{s}: {e}")
         verdicts.append(v)
-    for root in report["roots"]:
-        if root["status"] != "TRANSLATED_AND_CHECKED":
-            failures += 1
-            verdicts.append({"source": root["name"], "verdict": "ROOT_NOT_ACCEPTED"})
-    out = {"schema": "rocq2lean-audit/1", "status": "OK" if failures == 0 else "AUDIT_REJECTED",
-           "failures": failures, "verdicts": verdicts}
+    out = {"schema": "rocq2lean-audit/2", "status": "OK" if not problems else "AUDIT_REJECTED",
+           "coverage": {"requested_roots": len(canon), "required_closure": len(closure), "accepted": len(accepted),
+                        "extra_exported": sorted(set(decls) - closure)},
+           "problems": problems, "verdicts": verdicts}
     json.dump(out, open(out_path, "w"), indent=2)
-    print(out["status"], f"({failures} failure(s))")
-    return 0 if failures == 0 else 1
+    print(out["status"], f"({len(problems)} problem(s))")
+    return 0 if not problems else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main(*sys.argv[1:4]))
+    if len(sys.argv) != 5:
+        print("usage: audit.py SOURCE.ndjson CONTRACT.json TRANSLATION_REPORT.json AUDIT_OUT.json", file=sys.stderr)
+        sys.exit(2)
+    sys.exit(main(*sys.argv[1:5]))
