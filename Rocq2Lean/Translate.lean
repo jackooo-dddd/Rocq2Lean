@@ -189,11 +189,77 @@ partial def trans (t : IR.Term) : TransM Expr := do
     let f' ← withPath "f" (transHead f args')
     pure (mkAppN f' args')
   | .const .. | .ind .. | .construct .. => transHead t #[]
-  | .case .. => failT "UNSUPPORTED_FEATURE" "match (Case lowering not enabled)"
+  | .case ind npar _ puinst pparams pctx pret scrut brs =>
+    withPath "case" (transCase ind npar puinst pparams pctx pret scrut brs)
   | .proj .. => failT "UNSUPPORTED_FEATURE" "primitive projection"
   | .fix .. => failT "UNSUPPORTED_FEATURE" "fixpoint (Fix lowering not enabled)"
   | .cofix .. => failT "UNSUPPORTED_FEATURE" "cofixpoint"
   | .prim k _ => failT "UNSUPPORTED_FEATURE" s!"primitive {k}"
+
+/-- M3b: lower a source `match` to the kernel-generated recursor `I.rec`.
+
+* parameters: the translated source parameters;
+* motive: built in the recursor's own motive telescope (indices, then the major premise) from
+  the source return clause, so it stays dependent; its universe is computed by Lean;
+* minors: one per constructor, binding the constructor fields (count from the kernel's
+  recursor rules) and then the recursive-result binders, which a plain `match` ignores;
+* indices: read from the inferred type of the translated scrutinee (Rocq's `Case` does not
+  store them).
+-/
+partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (pparams : Array IR.Term)
+    (pctx : Array AName) (pret : IR.Term) (scrut : IR.Term) (brs : Array (Array AName × IR.Term)) :
+    TransM Expr := do
+  let tgt ← lookupInd ind
+  let iname := tgt.types[ind.idx]!
+  let recName := iname.str "rec"
+  let some (.recInfo rv) := (← getEnv).find? recName
+    | failT "TRANSLATION_FAILED" s!"no recursor {recName} in the target environment"
+  unless rv.numMotives == 1 do failT "UNSUPPORTED_FEATURE" s!"match on a mutual or nested inductive ({iname})"
+  unless rv.numParams == npar && pparams.size == npar do
+    failT "EXPORT_VALIDATION_FAILED" s!"case has {pparams.size} parameters, {recName} expects {rv.numParams}"
+  unless pctx.size == rv.numIndices + 1 do
+    failT "EXPORT_VALIDATION_FAILED" s!"case return context has {pctx.size} binders, expected {rv.numIndices + 1}"
+  unless brs.size == rv.numMinors do
+    failT "EXPORT_VALIDATION_FAILED" s!"case has {brs.size} branches, {recName} has {rv.numMinors} minors"
+  let params ← pparams.mapIdxM fun k a => withPath s!"param{k}" (trans a)
+  let indLvls ← univArgs ind.mind tgt puinst params
+  let scrut' ← withPath "scrutinee" (trans scrut)
+  let sty ← liftMeta do whnf (← inferType scrut')
+  let sargs := sty.getAppArgs
+  unless sty.getAppFn.isConstOf iname && sargs.size == npar + rv.numIndices do
+    failT "TRANSLATION_FAILED" s!"scrutinee type is not an application of {iname}"
+  let idx := sargs.extract npar sargs.size
+  let large := rv.levelParams.length == indLvls.length + 1
+  let recLvls (u : Level) := if large then u :: indLvls else indLvls
+  -- Motive, in the recursor's motive telescope (binder types do not depend on the motive level).
+  let ty0 ← liftMeta do
+    instantiateForall (← inferType (mkConst recName (recLvls levelZero))) params
+  let .forallE _ motiveTy _ _ := ty0 | failT "TRANSLATION_FAILED" s!"unexpected type of {recName}"
+  let (motive, u) ← forallTelescopeReducing motiveTy fun xs _ => do
+    unless xs.size == pctx.size do failT "TRANSLATION_FAILED" "motive arity differs from the case context"
+    let ret ← withPath "return" (withReader (fun c => { c with locals := c.locals ++ xs }) (trans pret))
+    let u ← liftMeta do instantiateLevelMVars (← getLevel ret)
+    return (← mkLambdaFVars xs ret, u.normalize)
+  if !large && u != levelZero then
+    failT "UNSUPPORTED_FEATURE" s!"elimination of {iname} into a non-Prop sort is not available in Lean"
+  let recConst := mkConst recName (recLvls u)
+  -- Minors.
+  let mut ty ← liftMeta do instantiateForall (← inferType recConst) (params.push motive)
+  let mut minors : Array Expr := #[]
+  for k in [0:rv.numMinors] do
+    let ty' ← liftMeta (whnf ty)
+    let .forallE _ minorTy rest _ := ty' | failT "TRANSLATION_FAILED" s!"{recName}: missing minor {k}"
+    let nfields := rv.rules[k]!.nfields
+    let (bctx, bbody) := brs[k]!
+    unless bctx.size == nfields do
+      failT "UNSUPPORTED_FEATURE" s!"branch {k}: {bctx.size} binders for {nfields} fields (let-bound constructor arguments)"
+    let minor ← forallTelescopeReducing minorTy fun ys _ => do
+      let fields := ys.extract 0 nfields
+      let body ← withPath s!"branch{k}" (withReader (fun c => { c with locals := c.locals ++ fields }) (trans bbody))
+      mkLambdaFVars ys body
+    minors := minors.push minor
+    ty := rest.instantiate1 minor
+  return mkAppN recConst (params ++ #[motive] ++ minors ++ idx ++ #[scrut'])
 
 /-- Translate an application head. `args` are the already-translated arguments, needed when
 the target's universe is computed from them. -/

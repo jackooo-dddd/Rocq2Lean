@@ -1,6 +1,18 @@
 {
   "name": "m3",
-  "load_paths": [["-Q", ".", "M3"]],
-  "files": ["M3Types.v"],
-  "requires": ["M3.M3Types"]
+  "load_paths": [
+    [
+      "-Q",
+      ".",
+      "M3"
+    ]
+  ],
+  "files": [
+    "M3Types.v",
+    "M3Case.v"
+  ],
+  "requires": [
+    "M3.M3Types",
+    "M3.M3Case"
+  ]
 }
