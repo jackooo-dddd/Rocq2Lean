@@ -14,4 +14,8 @@ Updated only from test evidence (`scripts/test-*` on cityu-wsl). Statuses follow
 | M3b case lowering | PASS | nonrecursive nat/list/tree matches and indexed dependent matches (`vid`, `vtail`), `destruct` on `eq`, lowered to kernel `I.rec` with dependent motives |
 | M3c fix lowering | PASS | `addR`, `lengthR`, `mapR`, `mirrorR` (distinct left/right results; swap mutation rejected), `addAcc` (function-valued motive), `vmap` (index generalization), `double_nat` (Nat.rec) |
 | M3d original induction proofs | PASS | `addR n RZ = n`, `lengthR (mapR f xs) = lengthR xs`, `mirrorR (mirrorR t) = t`, `vmap id v = v`, `vid v = v` — original proofs incl. generated `*_ind` and Corelib `eq_ind`/`eq_sym`/`eq_ind_r` (global levels generalized); 15 definitional / 6 propositional laws (`reports/m3_laws.json`); computation 78/78 agree; 7 unsupported patterns rejected explicitly |
-| Negative / holdout suites | PARTIAL | missing body, assumption, relaxed flags, unsupported inductive (in smoke/M1) |
+| Negative suite | PASS | `scripts/test-negative` 11/11 |
+| Holdout (implementation frozen at `pilot-freeze-1`) | PASS | `scripts/test-holdout`: 9/9 new roots VERIFIED, implementation unchanged since the tag |
+| Clean rebuild | PASS | fresh clone at `61cecf1`: `scripts/test-all` exit 0 (`reports/test_all.json`) |
+
+Final report: `reports/FINAL_REPORT.md`.
