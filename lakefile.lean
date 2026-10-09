@@ -11,4 +11,4 @@ lean_lib Rocq2Lean
 /-- Phase 0 smoke tests of the checked kernel path. -/
 lean_lib Smoke where
   srcDir := "tests/smoke"
-  roots := #[`KernelPath, `Sha256Vectors]
+  roots := #[`KernelPath, `Sha256Vectors, `UniverseRules]
