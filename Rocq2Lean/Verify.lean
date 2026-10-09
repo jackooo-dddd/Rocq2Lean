@@ -53,6 +53,18 @@ private def kindOf : ConstantInfo → String
     if kindOf ci != kind then problems := problems.push s!"{tgt}: kind {kindOf ci}, report says {kind}"
     if (r.getObjValD "target_type") != exprJson ci.type then
       problems := problems.push s!"{tgt}: imported type differs from the reported type"
+    if let .inductInfo iv := ci then
+      let ctors := (r.getObjValAs? (Array Json) "target_ctors").toOption.getD #[]
+      let names := ctors.filterMap fun c => (c.getObjValAs? String "name").toOption.map String.toName
+      if iv.ctors != names.toList then problems := problems.push s!"{tgt}: constructors differ from the report"
+      for c in ctors do
+        let cn := ((c.getObjValAs? String "name").toOption.getD "").toName
+        match (← getEnv).find? cn with
+        | some cci =>
+          if (c.getObjValD "type") != exprJson cci.type then
+            problems := problems.push s!"{cn}: imported constructor type differs from the report"
+        | none => problems := problems.push s!"{cn}: constructor missing from the imported environment"
+    else
     match ci.value? (allowOpaque := true) with
     | some v =>
       if (r.getObjValD "target_value") != exprJson v then

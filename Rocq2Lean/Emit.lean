@@ -36,6 +36,8 @@ structure DeclResult where
   /-- Accepted target type and value, for the independent structural audit. -/
   targetType : Option Expr := none
   targetValue : Option Expr := none
+  /-- Accepted constructor names and types (generated inductives). -/
+  targetCtors : Array (Name × Expr) := #[]
   deriving Inhabited
 
 def DeclResult.ok (r : DeclResult) : Bool :=
@@ -117,7 +119,8 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
   | st, _ =>
     return { base with status := "EXPORT_VALIDATION_FAILED", message := s!"body state '{st}' inconsistent with body" }
 
-def processInductive (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl) (raw : Json) :
+def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
+    (raw : Json) :
     MetaM (DeclResult × Option IndTarget) := do
   let base : DeclResult := { source := i.name, kind := "inductive", status := "" }
   let (missing, failed) := blockedDeps results (i.typeDeps.filter (· != i.name))
@@ -135,9 +138,38 @@ def processInductive (results : Std.HashMap String DeclResult) (i : IR.Inductive
       return ({ base with status := "BOOTSTRAP_RESOLVED", rule := rule.id, target := rule.target.types[0]?,
                           targetKind := "inductive (bootstrap)" }, some rule.target)
     | .error msg => return ({ base with status := "AUDIT_REJECTED", rule := rule.id, message := msg }, none)
-  | none =>
-    return ({ base with status := "UNSUPPORTED_FEATURE",
-                        message := "new inductive declarations are not enabled in this build" }, none)
+  | none => generateInductive base i
+
+where
+  /-- M3a: emit a fresh Lean inductive for a single-body, monomorphic, non-coinductive block. -/
+  generateInductive (base : DeclResult) (i : IR.InductiveDecl) : MetaM (DeclResult × Option IndTarget) := do
+    let unsupported (msg : String) := ({ base with status := "UNSUPPORTED_FEATURE", message := msg }, none)
+    if let .polymorphic .. := i.universes then return unsupported "universe-polymorphic inductive"
+    if i.finite == "CoFinite" then return unsupported "coinductive type"
+    unless i.bodies.size == 1 do return unsupported s!"mutual block of {i.bodies.size} inductives"
+    let body := i.bodies[0]!
+    unless body.projs.isEmpty do return unsupported "primitive record (projections)"
+    if (← getEnv).contains (inductiveNames i.name body.name #[]).1 then
+      return ({ base with status := "TRANSLATION_FAILED", message := "target name already in use" }, none)
+    let (tname, cnames) := inductiveNames i.name body.name (body.ctors.map (·.name))
+    let ty ← match ← runTrans genv (withPath "arity" (transClosed body.type)) with
+      | .ok e => pure e
+      | .error e => return (fromTransError base e, none)
+    let mut ctors : Array Constructor := #[]
+    for c in body.ctors, cn in cnames do
+      let r ← (withReader (fun ctx => { ctx with locals := #[mkConst tname] })
+                 (withPath s!"ctor {c.name}" (transClosed c.type))).run { genv } |>.run
+      match r with
+      | .ok cty => ctors := ctors.push { name := cn, type := cty }
+      | .error e => return (fromTransError base e, none)
+    let decl := Declaration.inductDecl [] i.npars [{ name := tname, type := ty, ctors := ctors.toList }] false
+    let base := { base with target := some tname, targetKind := "inductive", rule := "inductive/generated" }
+    match ← addChecked decl with
+    | .accepted =>
+      let tgt : IndTarget := { types := #[tname], ctors := #[cnames], univ := .mono, rule := "generated" }
+      return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty,
+                          targetCtors := ctors.map fun c => (c.name, c.type) }, some tgt)
+    | .rejected msg => return ({ base with status := "KERNEL_REJECTED", message := msg }, none)
 
 /-- Translate all declarations of an export, in order. -/
 def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
@@ -151,7 +183,7 @@ def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
         if r.ok then if let some n := r.target then genv := { genv with consts := genv.consts.insert c.name n }
         pure r
       | .inductive i =>
-        let (r, t?) ← processInductive results i src.rawDecls[i.name]!
+        let (r, t?) ← processInductive genv results i src.rawDecls[i.name]!
         if let some t := t? then genv := { genv with inds := genv.inds.insert i.name t }
         pure r
     results := results.insert r.source r
@@ -193,6 +225,8 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("path", Json.arr (r.path.map Json.str).toArray),
     ("blocked_by", Json.arr (r.blockedBy.map Json.str)),
     ("target_type", match r.targetType with | some e => exprJson e | none => .null),
-    ("target_value", match r.targetValue with | some e => exprJson e | none => .null)]
+    ("target_value", match r.targetValue with | some e => exprJson e | none => .null),
+    ("target_ctors", Json.arr (r.targetCtors.map fun (n, e) =>
+      Json.mkObj [("name", n.toString), ("type", exprJson e)]))]
 
 end Rocq2Lean

@@ -77,6 +77,18 @@ def targetName (key : String) : Name :=
   let comps := (key.splitOn "/").flatMap (·.splitOn ".")
   comps.foldl Name.str `Rocq
 
+/-- Module part of a key (everything before the final `.ident`). -/
+def keyModule (key : String) : String :=
+  match key.splitOn "." with
+  | [] => key
+  | comps => String.intercalate "." comps.dropLast
+
+/-- Lean names for a generated inductive body and its constructors:
+`Rocq.<module>.<type>` and `Rocq.<module>.<type>.<ctor>`. -/
+def inductiveNames (mindKey : String) (body : String) (ctors : Array String) : Name × Array Name :=
+  let t := targetName (keyModule mindKey ++ "." ++ body)
+  (t, ctors.map (Name.str t))
+
 def binderName (n : AName) : Name :=
   match n.name with
   | some s => Name.mkSimple s

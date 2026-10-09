@@ -37,6 +37,15 @@ def target_name(key):
     return "Rocq." + ".".join(comps)
 
 
+def key_module(key):
+    return key.rsplit(".", 1)[0]
+
+
+def generated_names(mind, body, ctors):
+    t = target_name(key_module(mind) + "." + body)
+    return t, [t + "." + c for c in ctors]
+
+
 def level_value(l):
     """Value of a closed Lean level JSON, or None if it mentions parameters."""
     k = l["k"]
@@ -78,6 +87,11 @@ class Auditor:
         if mind in BOOTSTRAP:
             b = BOOTSTRAP[mind]
             return b["types"][idx], b["ctors"][idx], b["univ"]
+        r = self.ok.get(mind)
+        if r is not None and r["status"] == "TRANSLATED_AND_CHECKED" and self.decls[mind]["kind"] == "inductive":
+            body = self.decls[mind]["bodies"][idx]
+            t, cs = generated_names(mind, body["name"], [c["name"] for c in body["ctors"]])
+            return t, cs, "mono"
         raise Mismatch(f"inductive {mind} has no audited realisation")
 
     def head(self, t):
@@ -97,16 +111,23 @@ class Auditor:
             return ctors[t["c"]], univ
         return None
 
-    def check(self, s, e, path):
-        """Compare source term `s` with target Lean expr JSON `e`."""
+    def check(self, s, e, path, depth=0, outer=()):
+        """Compare source term `s` with target Lean expr JSON `e`. `depth` counts local binders;
+        a source `rel i` with `i >= depth` denotes `outer[i - depth]` (a block self-reference)."""
         k = s["k"]
+        C = lambda s2, e2, seg, d=depth: self.check(s2, e2, path + [seg], d, outer)
         if e["k"] == "mdata":
             raise Mismatch(f"{path}: unexpected metadata node in target")
         if k == "cast":
-            return self.check(s["t"], e, path + ["cast"])
+            return C(s["t"], e, "cast")
         if k == "rel":
-            if e["k"] != "bvar" or e["i"] != s["i"]:
-                raise Mismatch(f"{path}: source rel {s['i']} vs target {e}")
+            if s["i"] < depth:
+                if e["k"] != "bvar" or e["i"] != s["i"]:
+                    raise Mismatch(f"{path}: source rel {s['i']} vs target {e}")
+                return
+            j = s["i"] - depth
+            if j >= len(outer) or e != {"k": "const", "n": outer[j], "u": []}:
+                raise Mismatch(f"{path}: block reference rel {s['i']} vs target {e}")
             return
         if k == "sort":
             if e["k"] != "sort" or level_value(e["l"]) != source_sort_value(s["s"]):
@@ -116,15 +137,15 @@ class Auditor:
             want = "forall" if k == "prod" else "lam"
             if e["k"] != want:
                 raise Mismatch(f"{path}: expected {want}, found {e['k']}")
-            self.check(s["ty"], e["t"], path + [k + ".ty"])
-            self.check(s["b"], e["b"], path + [k + ".b"])
+            C(s["ty"], e["t"], k + ".ty")
+            C(s["b"], e["b"], k + ".b", depth + 1)
             return
         if k == "let":
             if e["k"] != "let":
                 raise Mismatch(f"{path}: expected let, found {e['k']}")
-            self.check(s["ty"], e["t"], path + ["let.ty"])
-            self.check(s["v"], e["v"], path + ["let.v"])
-            self.check(s["b"], e["b"], path + ["let.b"])
+            C(s["ty"], e["t"], "let.ty")
+            C(s["v"], e["v"], "let.v")
+            C(s["b"], e["b"], "let.b", depth + 1)
             return
         if k == "app":
             args = s["args"]
@@ -132,17 +153,17 @@ class Auditor:
             for i in reversed(range(len(args))):
                 if cur["k"] != "app":
                     raise Mismatch(f"{path}: expected application with {len(args)} arguments")
-                self.check(args[i], cur["a"], path + [f"arg{i}"])
+                C(args[i], cur["a"], f"arg{i}")
                 cur = cur["f"]
-            return self.check_head(s["f"], cur, path + ["f"])
+            return self.check_head(s["f"], cur, path + ["f"], depth, outer)
         if k in ("const", "ind", "construct"):
-            return self.check_head(s, e, path)
+            return self.check_head(s, e, path, depth, outer)
         raise Mismatch(f"{path}: UNAUDITABLE source node '{k}'")
 
-    def check_head(self, s, e, path):
+    def check_head(self, s, e, path, depth=0, outer=()):
         h = self.head(s) if s["k"] in ("const", "ind", "construct") else None
         if h is None:
-            return self.check(s, e, path)
+            return self.check(s, e, path, depth, outer)
         name, univ = h
         if e["k"] != "const" or e["n"] != name:
             raise Mismatch(f"{path}: expected constant {name}, found {e.get('n', e['k'])}")
@@ -168,9 +189,20 @@ def main(src_path, report_path, out_path):
         d = decls.get(r["source"])
         v = {"source": r["source"], "status": r["status"]}
         try:
-            if r["status"] == "TRANSLATED_AND_CHECKED":
+            if r["status"] == "TRANSLATED_AND_CHECKED" and d["kind"] == "inductive":
+                if len(d["bodies"]) != 1:
+                    raise Mismatch("UNAUDITABLE: mutual block")
+                b = d["bodies"][0]
+                t, cs = generated_names(d["name"], b["name"], [c["name"] for c in b["ctors"]])
+                if r["target"] != t or [c["name"] for c in r["target_ctors"]] != cs:
+                    raise Mismatch(f"target names {r['target']} / {r['target_ctors']} are not the images of the source")
+                aud.check(b["type"], r["target_type"], ["arity"])
+                for c, tc in zip(b["ctors"], r["target_ctors"]):
+                    aud.check(c["type"], tc["type"], ["ctor " + c["name"]], 0, (t,))
+                v["verdict"] = "MATCH"
+            elif r["status"] == "TRANSLATED_AND_CHECKED":
                 if d["kind"] != "constant":
-                    raise Mismatch("UNAUDITABLE: generated inductive")
+                    raise Mismatch("UNAUDITABLE: declaration kind")
                 if r["target"] != target_name(d["name"]):
                     raise Mismatch(f"target name {r['target']} is not the image of {d['name']}")
                 want_kinds = {"transparent": {"def"}, "opaque_present": {"theorem", "opaque"}}[d["body_state"]]
