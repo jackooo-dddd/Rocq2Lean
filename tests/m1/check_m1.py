@@ -54,8 +54,9 @@ check(R["M1.M1Neg.uses_ax"]["status"] == "BLOCKED_DEPENDENCY"
       and R["M1.M1Neg.uses_ax"]["blocked_by"] == ["M1.M1Neg.ax"], "dependency on an assumption blocks the proof")
 check(R["M1.M1Neg.relaxed"]["status"] == "AUDIT_REJECTED", "relaxed source checking rejected")
 check(R["M1.M1Neg.uses_relaxed"]["status"] == "BLOCKED_DEPENDENCY", "dependent of relaxed input blocked")
-check(R["M1.M1Chain.uses_color"]["status"] == "BLOCKED_DEPENDENCY"
-      and R["M1.M1Base.Color"]["status"] == "UNSUPPORTED_FEATURE", "unsupported inductive reported with path")
+check(R["M1.M1Base.Color"]["status"] == "TRANSLATED_AND_CHECKED"
+      and R["M1.M1Chain.uses_color"]["status"] == "TRANSLATED_AND_CHECKED",
+      "simple inductive and its use translate (M3a); unsupported inductives are covered by test-m3")
 rc, out = cli("verify", "--run", neg)
 check(rc != 0, "verify refuses a run whose roots were rejected")
 finish("test-m1")
