@@ -212,6 +212,34 @@ def term_levels(t, acc):
     return acc
 
 
+def check_native_meta(decls, out, loadpaths, requires):
+    """Fresh-process native recomputation of each declaration's metadata (body kind, typing flags,
+    polymorphism, template/private status, private universes), compared field by field."""
+    plugin = Path(__file__).resolve().parent.parent / "rocq" / "exporter"
+    v = ["From Rocq2LeanExport Require Import Loader.", *[f"Require {r}." for r in requires]]
+    v += [f'Rocq2Lean NativeMeta "{d["name"]}" "{d["kind"]}".' for d in decls]
+    vfile = out / "RoundTripNative.v"
+    vfile.write_text("\n".join(v) + "\n")
+    p = subprocess.run(["rocq", "compile", "-I", str(plugin / "src"), "-Q", str(plugin / "theories"), "Rocq2LeanExport",
+                        *loadpaths, str(vfile)], capture_output=True, text=True)
+    (out / "logs" / "roundtrip_native.log").write_text(p.stdout + p.stderr)
+    got = {}
+    for line in (p.stdout + p.stderr).splitlines():
+        if line.startswith("NATIVE_META "):
+            _, key, js = line.split(" ", 2)
+            got[key] = json.loads(js)
+    problems = []
+    for d in decls:
+        if d["name"] not in got:
+            problems.append(f"{d['name']}: native metadata not recomputed")
+        elif got[d["name"]] != d["native"]:
+            diff = sorted(k for k in set(got[d["name"]]) | set(d["native"]) if got[d["name"]].get(k) != d["native"].get(k))
+            problems.append(f"{d['name']}: native metadata differs in {diff}")
+    if p.returncode != 0:
+        problems.append(f"native metadata process exited with {p.returncode}")
+    return {"status": "OK" if not problems else "MISMATCH", "problems": problems}
+
+
 def check_universes(lines, out, loadpaths, requires):
     """Native re-check of the universe facts, and consistency of MetaRocq's universe record."""
     facts = lines[4]
@@ -323,6 +351,9 @@ def main(argv):
             problems.append(f"{d['name']}: {st}")
     if p.returncode != 0:
         problems.append(f"round-trip Rocq process exited with {p.returncode}")
+    meta = check_native_meta(decls, out, loadpaths, requires)
+    problems += meta["problems"]
+    results["__native_metadata__"] = meta["status"]
     universe = check_universes(lines, out, loadpaths, requires)
     problems += universe["problems"]
     results["__universe_facts__"] = universe["status"]

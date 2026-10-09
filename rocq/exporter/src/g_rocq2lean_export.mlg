@@ -17,3 +17,10 @@ VERNAC COMMAND EXTEND Rocq2LeanCheckRelation CLASSIFIED AS QUERY
     R2l_export.check_relation a b r
   }
 END
+
+(* Rocq2Lean NativeMeta "key" "constant|inductive": native metadata of one declaration. *)
+VERNAC COMMAND EXTEND Rocq2LeanNativeMeta CLASSIFIED AS QUERY STATE opaque_access
+| [ "Rocq2Lean" "NativeMeta" string(key) string(kind) ] -> {
+    fun ~opaque_access -> R2l_export.native_meta ~opaque_access key kind
+  }
+END

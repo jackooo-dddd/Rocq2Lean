@@ -227,8 +227,10 @@ let flags_json (f : Declarations.typing_flags) =
       ("sprop_allowed", J.Bool f.sprop_allowed);
       ("allow_uip", J.Bool f.allow_uip) ]
 
-let native_constant ~opaque_access env kn =
-  match Environ.lookup_constant (Names.Constant.make1 (to_rocq_kn kn)) env with
+let rec native_constant ~opaque_access env kn = native_constant_kn ~opaque_access env (to_rocq_kn kn)
+
+and native_constant_kn ~opaque_access env rkn =
+  match Environ.lookup_constant (Names.Constant.make1 rkn) env with
   | cb ->
     let private_univs =
       match Global.body_of_constant_body opaque_access cb with
@@ -252,8 +254,10 @@ let native_constant ~opaque_access env kn =
           ("typing_flags", flags_json cb.Declarations.const_typing_flags) ] )
   | exception Not_found -> (None, J.Obj [ ("error", J.Str "not found in native environment") ])
 
-let native_inductive env kn =
-  match Environ.lookup_mind (Names.MutInd.make1 (to_rocq_kn kn)) env with
+let rec native_inductive env kn = native_inductive_kn env (to_rocq_kn kn)
+
+and native_inductive_kn env rkn =
+  match Environ.lookup_mind (Names.MutInd.make1 rkn) env with
   | mib ->
     let open Declarations in
     J.Obj
@@ -351,6 +355,31 @@ let check_relation a b want =
     if got = want then Feedback.msg_info Pp.(str ("UREL_OK " ^ a ^ " " ^ b ^ " " ^ want))
     else Feedback.msg_info Pp.(str ("UREL_MISMATCH " ^ a ^ " " ^ b ^ " expected=" ^ want ^ " native=" ^ got))
   | _ -> Feedback.msg_info Pp.(str ("UREL_UNKNOWN " ^ a ^ " " ^ b))
+
+(* Rocq2Lean NativeMeta "key" "constant|inductive": recompute the native metadata of one
+   declaration in a fresh process. Keys are parsed back to kernel names (IR_SPEC "Keys"). *)
+let kername_of_key key =
+  let i = String.rindex key '.' in
+  let mp_s = String.sub key 0 i and id = String.sub key (i + 1) (String.length key - i - 1) in
+  let parts = String.split_on_char '/' mp_s in
+  let file = List.hd parts in
+  let dp = Names.DirPath.make (List.rev_map Names.Id.of_string (String.split_on_char '.' file)) in
+  let mp =
+    List.fold_left (fun mp f -> Names.ModPath.MPdot (mp, Names.Id.of_string f)) (Names.ModPath.MPfile dp) (List.tl parts)
+  in
+  Names.KerName.make mp (Names.Id.of_string id)
+
+let native_meta ~opaque_access key kind =
+  let env = Global.env () in
+  let j =
+    try
+      let rkn = kername_of_key key in
+      match kind with
+      | "constant" -> snd (native_constant_kn ~opaque_access env rkn)
+      | _ -> native_inductive_kn env rkn
+    with e -> J.Obj [ ("error", J.Str (Printexc.to_string e)) ]
+  in
+  Feedback.msg_info Pp.(str ("NATIVE_META " ^ key ^ " " ^ J.to_string j))
 
 (* ---------- declarations ---------- *)
 
