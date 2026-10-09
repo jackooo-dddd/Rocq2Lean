@@ -1,4 +1,4 @@
-# Source IR — `rocq2lean-ir/0.1`
+# Source IR — `rocq2lean-ir/0.2`
 
 NDJSON, one JSON object per line, written by `rocq/exporter` (`Rocq2Lean Export "file" roots…`).
 It is a field-by-field serialization of MetaRocq Template quotations
@@ -12,8 +12,9 @@ It is a field-by-field serialization of MetaRocq Template quotations
 | 1 | `header` | `ir`, `frontend` (name, MetaRocq commit, quoter, opaque access), `rocq_version`, `ocaml_version`, `global_typing_flags`, `conventions` |
 | 2 | `roots` | `[{requested, name, term}]` — the qualid as written and its quoted head |
 | 3 | `libraries` | `[{dirpath, vo}]` — compiled libraries the declarations come from |
-| 4 | `universes` | union of the quoted environments' `levels` and `constraints` |
-| 5… | `constant` / `inductive` | declarations, **dependencies before dependents** |
+| 4 | `universes` | union of the quoted environments' `levels` and `constraints` (MetaRocq) |
+| 5 | `universe_facts` | native pairwise relations (`lt`/`le`) over `Set` and every level of the export, from Rocq's universe graph (`docs/UNIVERSE_TRANSLATION.md`, R0) |
+| 6… | `constant` / `inductive` | declarations, **dependencies before dependents** |
 | last | `footer` | `declarations`: count (an incomplete export is rejected) |
 
 ## Conventions
@@ -47,7 +48,7 @@ Binder annotation `n = {n: name|null, r: "R"|"I"}`. Sorts: `prop`, `sprop`,
 ## Declarations
 
 `constant`: `name, mp, id, type, body|null, body_state, universes, relevance, deps{type,body},
-native{body_kind, polymorphic, typing_flags}`.
+native{body_kind, polymorphic, private_universes, typing_flags}`.
 
 `body_state` is one of — and these are never interchangeable:
 
@@ -65,6 +66,22 @@ indices, sort, type, kelim, ctors[{name, args, indices, type, arity}], projs, r}
 
 `deps` are computed from the quoted terms (constants, inductives, constructors, case and
 projection metadata), self-references removed.
+
+## Round-trip coverage (what is independently re-checked)
+
+| Field | Check |
+|---|---|
+| constant type/body, relevance, universes decl; inductive params, bodies, indices, sorts, ctors (args, indices, types, arity), projections, eliminations, variance | Python decoder → Gallina; `RtEq.v` structural equality against a fresh MetaRocq quotation |
+| `body_state` | native opacity: body hidden without bypass iff `opaque_present`/`assumption` |
+| `deps` | recomputed from the terms |
+| `native` (body kind, polymorphic, private universes, typing flags, template, private) | recomputed natively in a fresh process (`Rocq2Lean NativeMeta`) |
+| `universe_facts` | every ordered pair re-checked natively (`Rocq2Lean CheckRelation`); every level named in a term is covered |
+| `universes` (MetaRocq record) | each constraint entailed by the native facts |
+| `roots`, `libraries`, `mp`/`id` | roots: contract (request ↔ resolution); libraries: hashed in the snapshot; names: via the kernel names used by the round trip |
+
+Not independently re-checked: the MetaRocq quoter itself (both quotations go through it; the
+native checks above cover metadata and universes but not term structure), and primitive
+literals (rejected by the decoder).
 
 ## Hashes
 
