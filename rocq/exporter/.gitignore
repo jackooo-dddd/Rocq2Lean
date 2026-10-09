@@ -7,3 +7,4 @@ Makefile.rocq.conf
 src/g_rocq2lean_export.ml
 .merlin
 .lia.cache
+*.d
