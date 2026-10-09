@@ -1,0 +1,8 @@
+PASS doctor (3s)
+PASS test-smoke (12s)
+PASS test-m1 (13s)
+PASS test-m2 (10s)
+PASS test-m3 (47s)
+PASS test-negative (29s)
+PASS test-holdout (7s)
+exit=0

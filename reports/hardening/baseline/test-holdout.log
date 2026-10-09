@@ -1,0 +1,6 @@
+PASS implementation unchanged since tag pilot-freeze-1 (holdouts cannot have shaped it)
+PASS holdout export + round trip
+PASS all 9 holdout roots TRANSLATED_AND_CHECKED
+PASS holdout run VERIFIED
+PASS holdout pulled new Corelib content (False/True/not/Nat.add) through the generic rules
+test-holdout: OK

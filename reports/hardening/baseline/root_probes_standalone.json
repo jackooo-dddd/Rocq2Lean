@@ -1,0 +1,32 @@
+{
+  "correct": {
+    "exit": 0,
+    "verdict": "ACCEPT",
+    "stdout": "OK (0 failure(s))"
+  },
+  "roots_empty": {
+    "exit": 0,
+    "verdict": "ACCEPT",
+    "stdout": "OK (0 failure(s))"
+  },
+  "no_roots_only_unsupported": {
+    "exit": 1,
+    "verdict": "REJECT",
+    "stdout": "AUDIT_REJECTED (1 failure(s))"
+  },
+  "root_success_result_unsupported": {
+    "exit": 0,
+    "verdict": "ACCEPT",
+    "stdout": "OK (0 failure(s))"
+  },
+  "root_and_result_fail": {
+    "exit": 1,
+    "verdict": "REJECT",
+    "stdout": "AUDIT_REJECTED (5 failure(s))"
+  },
+  "no_roots_only_unsupported_single_decl_source": {
+    "exit": 0,
+    "verdict": "ACCEPT",
+    "stdout": "OK (0 failure(s))"
+  }
+}

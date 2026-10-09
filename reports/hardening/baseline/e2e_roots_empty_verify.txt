@@ -1,0 +1,2 @@
+VERIFIED /home/shunqwang4/research/Rocq2Lean/runs/probe-e2e
+verify exit=0

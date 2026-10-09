@@ -1,0 +1,14 @@
+PASS M2 export + round trip
+PASS all M2 roots TRANSLATED_AND_CHECKED
+PASS M2 run VERIFIED (consumer + independent audit)
+PASS all three (shadowing) lets preserved
+PASS kernel vm cast present in source, validated and erased in target
+PASS identical short names in different modules get distinct targets
+PASS identical binder names: inner binder referenced (bvar 0)
+PASS same-typed functions keep their distinct bodies
+PASS audit rejects swapped same-typed bodies (type-correct mutation)
+PASS audit rejects an unrelated True proof substituted for a declaration
+PASS audit rejects a swapped variable inside a body
+PASS verify rejects a source IR that differs from the anchored snapshot
+PASS independent round trip flags the mutated declaration
+test-m2: OK

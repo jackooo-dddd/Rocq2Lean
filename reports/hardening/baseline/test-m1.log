@@ -1,0 +1,25 @@
+PASS M1 export of positive roots succeeds (with independent round trip)
+PASS transparent data definition
+PASS transparent proof-valued definition stays transparent
+PASS Qed proof body exported (opacity bypass)
+PASS opaque data-valued constant body exported
+PASS Defined is transparent
+PASS Section variable discharged into a leading binder
+PASS opaque dependency chain collected through proof bodies (body deps, not type deps)
+PASS type and body deps distinguished
+PASS inductive outside the closure is not exported (explicit roots, not whole library)
+PASS M1 positive roots translate
+PASS transparent proof-valued definition emitted as def (not theorem)
+PASS opaque proof emitted as theorem
+PASS opaque data-valued constant emitted as opaque
+PASS bootstrap-resolved references counted separately
+PASS M1 positive run VERIFIED (snapshot, consumer, audit)
+PASS M1 negative roots still export faithfully
+PASS translation of negative roots exits non-zero
+PASS genuine assumption detected (no axiom created)
+PASS dependency on an assumption blocks the proof
+PASS relaxed source checking rejected
+PASS dependent of relaxed input blocked
+PASS simple inductive and its use translate (M3a); unsupported inductives are covered by test-m3
+PASS verify refuses a run whose roots were rejected
+test-m1: OK
