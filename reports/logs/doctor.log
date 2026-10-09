@@ -41,7 +41,7 @@ rocq-runtime           9.3.0
 rocq-stdlib            9.2.0
 stdlib-shims           0.3.0
 zarith                 1.14
-[exit 0, 0.2s]
+[exit 0, 0.3s]
 
 $ opam pin list --switch=rocq930 --color=never   (cwd=/home/shunqwang4/research/Rocq2Lean)
 rocq-core.9.3.0               version  9.3.0
@@ -50,5 +50,5 @@ rocq-metarocq-common.dev      git      git+https://github.com/MetaRocq/metarocq.
 rocq-metarocq-template.dev    git      git+https://github.com/MetaRocq/metarocq.git#c18395ad772a40d59b6d04a5fcd1a4e0e5073d81       (at c18395ad772a40d59b6d04a5fcd1a4e0e5073d81)
 rocq-metarocq-utils.dev       git      git+https://github.com/MetaRocq/metarocq.git#c18395ad772a40d59b6d04a5fcd1a4e0e5073d81       (at c18395ad772a40d59b6d04a5fcd1a4e0e5073d81)
 rocq-runtime.9.3.0            version  9.3.0
-[exit 0, 0.2s]
+[exit 0, 0.3s]
 

@@ -229,7 +229,13 @@ def export(manifest, roots, out, log_name="export.log"):
         "libraries": libs,
         "toolchains_lock_sha256": lock_sha(),
     }
+    rt = run([sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"), str(ir), str(out), *lp, "--",
+              *m.get("requires", [])], log, env=oenv, check=False)
+    snapshot["roundtrip"] = json.loads((out / "roundtrip.json").read_text())["status"] \
+        if (out / "roundtrip.json").exists() else "NOT_RUN"
     (out / "source_snapshot.json").write_text(json.dumps(snapshot, indent=2) + "\n")
+    if rt.returncode != 0:
+        raise Rejected("EXPORT_VALIDATION_FAILED", f"independent round trip failed; see {out / 'roundtrip.json'}")
     return ir
 
 
