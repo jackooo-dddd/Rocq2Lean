@@ -21,7 +21,10 @@ recomputed here from scratch (pure de Bruijn, no Lean code, its own copy of the 
 
 Documented equivalences: binder names and binder info are not compared; the universe argument
 of a template-rule constant (Eq) is not compared, because the kernel forces it to be the sort
-level of the first argument; closed universe levels are compared by their numeric value.
+level of the first argument; source global levels become universe parameters named
+u_<name with . -> _>, and references to such generalized constants must carry that many universe
+arguments, whose values (solved by Lean's unifier) are constrained by kernel typing and are not
+compared; universe levels are compared through a semantic normal form max(c, u_i + k_i).
 Anything outside these rules (case, fix, proj, ...) is reported as UNAUDITABLE, which fails.
 """
 
@@ -53,34 +56,78 @@ def generated_names(mind, body, ctors):
     return t, [t + "." + c for c in ctors]
 
 
-def level_value(l):
-    """Value of a closed Lean level JSON, or None if it mentions parameters."""
+def level_param(name):
+    """Independent copy of the naming rule for generalized global levels."""
+    return "u_" + name.replace(".", "_")
+
+
+def level_nf(l):
+    """Normal form of a Lean level without imax: (constant, {param: offset}), meaning
+    max(constant, param_i + offset_i). The constant is dropped when some offset dominates it
+    (params are >= 0), so semantically equal levels have equal normal forms."""
+    return canon(*level_raw(l))
+
+
+def level_raw(l):
     k = l["k"]
     if k == "zero":
-        return 0
-    if k == "succ":
-        v = level_value(l["l"])
-        return None if v is None else v + 1
-    if k == "max":
-        a, b = level_value(l["a"]), level_value(l["b"])
-        return None if a is None or b is None else max(a, b)
-    if k == "imax":
-        a, b = level_value(l["a"]), level_value(l["b"])
-        return None if a is None or b is None else (0 if b == 0 else max(a, b))
-    return None
+        c, ps = 0, {}
+    elif k == "param":
+        c, ps = None, {l["n"]: 0}
+    elif k == "succ":
+        c, ps = level_raw(l["l"])
+        c = None if c is None else c + 1
+        ps = {p: o + 1 for p, o in ps.items()}
+    elif k == "max":
+        c1, p1 = level_raw(l["a"])
+        c2, p2 = level_raw(l["b"])
+        cs = [x for x in (c1, c2) if x is not None]
+        c = max(cs) if cs else None
+        ps = dict(p1)
+        for p, o in p2.items():
+            ps[p] = max(ps.get(p, o), o)
+    else:
+        raise Mismatch(f"level outside the audited fragment: {k}")
+    return c, ps
 
 
-def source_sort_value(s):
+def canon(c, ps):
+    if ps and c is not None and c <= max(ps.values()):
+        c = None
+    if not ps and c is None:
+        c = 0
+    return (c, tuple(sorted(ps.items())))
+
+
+def source_sort_nf(s):
     if s["k"] == "prop":
-        return 0
+        return canon(0, {})
     if s["k"] == "type":
-        vals = []
+        c, ps = None, {}
         for e in s["u"]:
-            if e["l"]["k"] != "set":
+            if e["l"]["k"] == "set":
+                c = max(c or 0, e["n"] + 1)
+            elif e["l"]["k"] == "global":
+                p = level_param(e["l"]["n"])
+                ps[p] = max(ps.get(p, 0), e["n"] + 1)
+            else:
                 raise Mismatch(f"source universe outside the audited fragment: {e}")
-            vals.append(e["n"] + 1)
-        return max(vals)
+        return canon(c, ps)
     raise Mismatch(f"source sort outside the audited fragment: {s}")
+
+
+def source_globals(t, acc):
+    if isinstance(t, dict):
+        if t.get("k") == "sort" and t["s"]["k"] == "type":
+            for e in t["s"]["u"]:
+                if e["l"]["k"] == "global":
+                    acc.add(e["l"]["n"])
+        for v in t.values():
+            source_globals(v, acc)
+    elif isinstance(t, list):
+        for v in t:
+            source_globals(v, acc)
+    return acc
 
 
 class Auditor:
@@ -109,7 +156,8 @@ class Auditor:
                 raise Mismatch(f"reference to non-accepted constant {t['c']}")
             if t["u"]:
                 raise Mismatch("universe instance on constant")
-            return target_name(t["c"]), "mono"
+            n = len(self.ok[t["c"]].get("level_params", []))
+            return target_name(t["c"]), ("mono" if n == 0 else ("params", n))
         if k == "ind":
             name, _, univ = self.ind_target(t["ind"])
             return name, univ
@@ -151,7 +199,7 @@ class Auditor:
                 raise Mismatch(f"{path}: source rel {s['i']} should be {want}, found {e}")
             return
         if k == "sort":
-            if e["k"] != "sort" or level_value(e["l"]) != source_sort_value(s["s"]):
+            if e["k"] != "sort" or level_nf(e["l"]) != source_sort_nf(s["s"]):
                 raise Mismatch(f"{path}: sort mismatch")
             return
         if k in ("prod", "lam"):
@@ -198,6 +246,8 @@ class Auditor:
             raise Mismatch(f"{path}: unexpected universe arguments on {name}")
         if univ == "template" and len(e["u"]) != 1:
             raise Mismatch(f"{path}: template constant {name} must have one universe argument")
+        if isinstance(univ, tuple) and len(e["u"]) != univ[1]:
+            raise Mismatch(f"{path}: generalized constant {name} must have {univ[1]} universe arguments")
 
     def recursive_fields(self, ref, ctor):
         """Number of recursive constructor arguments (Lean adds one recursive result for each)."""
@@ -392,6 +442,9 @@ def main(src_path, report_path, out_path):
                 want_kinds = {"transparent": {"def"}, "opaque_present": {"theorem", "opaque"}}[d["body_state"]]
                 if r["target_kind"] not in want_kinds:
                     raise Mismatch(f"{d['body_state']} source emitted as {r['target_kind']}")
+                want_lp = sorted(level_param(n) for n in source_globals([d["type"], d["body"]], set()))
+                if r.get("level_params", []) != want_lp:
+                    raise Mismatch(f"universe parameters {r.get('level_params')} are not the generalized globals {want_lp}")
                 aud.check(d["type"], r["target_type"], ["type"])
                 aud.check(d["body"], r["target_value"], ["body"])
                 v["verdict"] = "MATCH"

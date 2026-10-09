@@ -38,6 +38,8 @@ structure DeclResult where
   targetValue : Option Expr := none
   /-- Accepted constructor names and types (generated inductives). -/
   targetCtors : Array (Name × Expr) := #[]
+  /-- Universe parameters (generalized source global levels). -/
+  levelParams : List Name := []
   deriving Inhabited
 
 def DeclResult.ok (r : DeclResult) : Bool :=
@@ -94,27 +96,34 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let name := targetName c.name
     if (← getEnv).contains name then
       return { base with status := "TRANSLATION_FAILED", message := s!"target name {name} already in use" }
-    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) with
+    -- Global monomorphic levels become universe parameters of this declaration.
+    let globals := (globalsOf body (globalsOf c.type)).toArray.qsort (· < ·)
+    let lparams := globals.toList.map levelParamName
+    let gl : Std.HashMap String Level :=
+      globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
+    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl with
       | .ok e => pure e
       | .error e => return fromTransError base e
+    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl with
+      | .ok e => pure e
+      | .error e => return fromTransError base e
+    let (ty, val) ← solveLevels ty val
     unless (← whnf (← inferType ty)).isSort do
       return { base with status := "TRANSLATION_FAILED", message := "translated type is not a type" }
-    let val ← match ← runTrans genv (withPath "body" (transClosed body)) with
-      | .ok e => pure e
-      | .error e => return fromTransError base e
     let (decl, kind) ←
       if c.bodyState == "transparent" then
         let h := ReducibilityHints.regular (getMaxHeight (← getEnv) val + 1)
-        pure (Declaration.defnDecl { name, levelParams := [], type := ty, value := val, hints := h,
+        pure (Declaration.defnDecl { name, levelParams := lparams, type := ty, value := val, hints := h,
                                      safety := .safe, all := [name] }, "def")
       else if ← isProp ty then
-        pure (Declaration.thmDecl { name, levelParams := [], type := ty, value := val, all := [name] }, "theorem")
+        pure (Declaration.thmDecl { name, levelParams := lparams, type := ty, value := val, all := [name] }, "theorem")
       else
-        pure (Declaration.opaqueDecl { name, levelParams := [], type := ty, value := val, isUnsafe := false,
+        pure (Declaration.opaqueDecl { name, levelParams := lparams, type := ty, value := val, isUnsafe := false,
                                        all := [name] }, "opaque")
     let base := { base with target := some name, targetKind := kind, rule := s!"constant/{c.bodyState}" }
     match ← addChecked decl with
-    | .accepted => return { base with status := "TRANSLATED_AND_CHECKED", targetType := ty, targetValue := val }
+    | .accepted => return { base with status := "TRANSLATED_AND_CHECKED", targetType := ty, targetValue := val,
+                                      levelParams := lparams }
     | .rejected msg => return { base with status := "KERNEL_REJECTED", message := msg }
   | st, _ =>
     return { base with status := "EXPORT_VALIDATION_FAILED", message := s!"body state '{st}' inconsistent with body" }
@@ -180,7 +189,9 @@ def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
     let r ← match d with
       | .constant c =>
         let r ← processConstant genv results c
-        if r.ok then if let some n := r.target then genv := { genv with consts := genv.consts.insert c.name n }
+        if r.ok then if let some n := r.target then
+          genv := { genv with consts := genv.consts.insert c.name n,
+                              constLevels := genv.constLevels.insert c.name r.levelParams.length }
         pure r
       | .inductive i =>
         let (r, t?) ← processInductive genv results i src.rawDecls[i.name]!
@@ -226,6 +237,7 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("blocked_by", Json.arr (r.blockedBy.map Json.str)),
     ("target_type", match r.targetType with | some e => exprJson e | none => .null),
     ("target_value", match r.targetValue with | some e => exprJson e | none => .null),
+    ("level_params", Json.arr (r.levelParams.map (Json.str ·.toString)).toArray),
     ("target_ctors", Json.arr (r.targetCtors.map fun (n, e) =>
       Json.mkObj [("name", n.toString), ("type", exprJson e)]))]
 

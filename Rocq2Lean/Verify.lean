@@ -51,6 +51,8 @@ private def kindOf : ConstantInfo → String
       | problems := problems.push s!"{tgt}: not present in the imported environment"; continue
     let kind := (r.getObjValAs? String "target_kind").toOption.getD ""
     if kindOf ci != kind then problems := problems.push s!"{tgt}: kind {kindOf ci}, report says {kind}"
+    let lps := ((r.getObjValAs? (Array String) "level_params").toOption.getD #[]).toList.map String.toName
+    if ci.levelParams != lps then problems := problems.push s!"{tgt}: universe parameters differ from the report"
     if (r.getObjValD "target_type") != exprJson ci.type then
       problems := problems.push s!"{tgt}: imported type differs from the reported type"
     if let .inductInfo iv := ci then

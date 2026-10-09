@@ -44,6 +44,8 @@ structure IndTarget where
 
 structure GEnv where
   consts : Std.HashMap String Name := {}
+  /-- Number of universe parameters of each accepted constant (generalized global levels). -/
+  constLevels : Std.HashMap String Nat := {}
   inds : Std.HashMap String IndTarget := {}
   /-- Global universe names read directly as the level of a Lean `Sort` (adapter checks only). -/
   sortOverride : Std.HashMap String Level := {}
@@ -51,6 +53,9 @@ structure GEnv where
 
 structure TCtx where
   genv : GEnv
+  /-- Global monomorphic levels of the declaration being translated, as Lean universe
+  parameters (`Type@{l+n} ↦ Sort (u_l + n + 1)`). -/
+  globalLevels : Std.HashMap String Level := {}
   /-- `locals[k]` is the Lean value of the `k`-th enclosing source binder, outermost first;
   source `rel i` denotes `locals[locals.size - 1 - i]`. -/
   locals : Array Expr := #[]
@@ -108,7 +113,10 @@ def transTypeLevel (u : Array LevelExpr) : TransM Level := do
       | some l =>
         if e.offset == 0 then pure l
         else failT "UNSUPPORTED_FEATURE" s!"successor of adapter-bound level {n}"
-      | none => failT "UNSUPPORTED_FEATURE" s!"monomorphic global universe {n} (outside the pilot universe fragment)"
+      | none =>
+        match (← read).globalLevels[n]? with
+        | some l => pure (l.addOffset (e.offset + 1))
+        | none => failT "UNSUPPORTED_FEATURE" s!"global universe {n} not generalized for this declaration"
     | .var i => failT "UNSUPPORTED_FEATURE" s!"universe-polymorphic level variable {i}"
   let mut acc := parts[0]!
   for l in parts[1:] do acc := mkLevelMax' acc l
@@ -410,7 +418,12 @@ partial def transHead (f : IR.Term) (args : Array Expr) : TransM Expr := do
   | .const c u =>
     unless u.isEmpty do failT "UNSUPPORTED_FEATURE" s!"non-empty universe instance on constant {c}"
     match (← read).genv.consts[c]? with
-    | some n => pure (mkConst n)
+    | some n =>
+      -- Universe parameters of a generalized constant are instantiated by fresh level
+      -- metavariables, solved by Lean's unifier after translation (`solveLevels`).
+      let k := (← read).genv.constLevels[c]?.getD 0
+      let lvls ← liftMeta do (List.range k).mapM fun _ => mkFreshLevelMVar
+      pure (mkConst n lvls)
     | none => failT "TRANSLATION_FAILED" s!"reference to constant {c}, which has no accepted translation"
   | .ind i u =>
     let t ← lookupInd i
@@ -429,10 +442,65 @@ end
 def transClosed (t : IR.Term) : TransM Expr := do
   let e ← instantiateMVars (← trans t)
   if e.hasFVar then failT "TRANSLATION_FAILED" "translated term has escaping free variables"
-  if e.hasMVar then failT "TRANSLATION_FAILED" "translated term has unresolved metavariables"
+  if e.hasExprMVar then failT "TRANSLATION_FAILED" "translated term has unresolved metavariables"
   return e
 
-def runTrans {α} (genv : GEnv) (x : TransM α) : MetaM (Except TransError α) :=
-  (x { genv }).run
+def runTrans {α} (genv : GEnv) (x : TransM α) (globalLevels : Std.HashMap String Level := {}) :
+    MetaM (Except TransError α) :=
+  (x { genv, globalLevels }).run
+
+/-! ## Universe generalization -/
+
+/-- Global level names occurring in a source term (in sorts). -/
+partial def globalsOf (t : IR.Term) (acc : Std.HashSet String := {}) : Std.HashSet String :=
+  let sortG (s : SortIR) (acc : Std.HashSet String) : Std.HashSet String :=
+    match s with
+    | .type u => u.foldl (fun a e => match e.level with | .global n => a.insert n | _ => a) acc
+    | _ => acc
+  let go := fun (t : IR.Term) (a : Std.HashSet String) => globalsOf t a
+  match t with
+  | .sort s => sortG s acc
+  | .cast c _ ty => go ty (go c acc)
+  | .prod _ a b | .lam _ a b => go b (go a acc)
+  | .letIn _ v ty b => go b (go ty (go v acc))
+  | .app f args => args.foldl (fun a x => go x a) (go f acc)
+  | .evar _ args => args.foldl (fun a x => go x a) acc
+  | .case _ _ _ _ ps _ r c brs =>
+    brs.foldl (fun a b => go b.2 a) (go c (go r (ps.foldl (fun a x => go x a) acc)))
+  | .proj _ _ _ c => go c acc
+  | .fix ds _ | .cofix ds _ => ds.foldl (fun a (_, ty, b, _) => go b (go ty a)) acc
+  | _ => acc
+
+/-- Lean universe parameter for a source global level: `u_` followed by the level name with
+`.` replaced by `_` (e.g. `Corelib.Init.Logic.8 ↦ u_Corelib_Init_Logic_8`). -/
+def levelParamName (n : String) : Name := Name.mkSimple ("u_" ++ n.replace "." "_")
+
+/-- Level metavariables of an expression. -/
+partial def levelMVarsOf (e : Expr) : StateM (Array LMVarId) Unit := do
+  let lv (l : Level) : StateM (Array LMVarId) Unit := do
+    for m in (l.collectMVars {}).toArray do
+      unless (← get).contains m do modify (·.push m)
+  match e with
+  | .sort l => lv l
+  | .const _ ls => ls.forM lv
+  | .app f a => do levelMVarsOf f; levelMVarsOf a
+  | .lam _ t b _ | .forallE _ t b _ => do levelMVarsOf t; levelMVarsOf b
+  | .letE _ t v b _ => do levelMVarsOf t; levelMVarsOf v; levelMVarsOf b
+  | .mdata _ b | .proj _ _ b => levelMVarsOf b
+  | _ => pure ()
+
+/-- Solve the universe metavariables introduced at references to generalized constants:
+type-check with Lean's checker (which unifies universe levels; terms are not changed) and
+unify the value's type with the declared type; any level left unconstrained is set to `0`.
+The kernel re-checks the result. -/
+def solveLevels (ty val : Expr) : MetaM (Expr × Expr) := do
+  try Meta.check ty catch _ => pure ()
+  try Meta.check val catch _ => pure ()
+  try discard <| withTransparency .all <| isDefEq (← inferType val) ty catch _ => pure ()
+  let ty ← instantiateMVars ty
+  let val ← instantiateMVars val
+  let ((), ms) := ((levelMVarsOf ty *> levelMVarsOf val).run #[])
+  for m in ms do assignLevelMVar m levelZero
+  return (← instantiateMVars ty, ← instantiateMVars val)
 
 end Rocq2Lean
