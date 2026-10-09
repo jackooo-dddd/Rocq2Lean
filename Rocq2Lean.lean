@@ -5,3 +5,4 @@ import Rocq2Lean.Translate
 import Rocq2Lean.Bootstrap
 import Rocq2Lean.Emit
 import Rocq2Lean.Command
+import Rocq2Lean.Verify

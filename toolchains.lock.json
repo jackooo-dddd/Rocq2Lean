@@ -1,0 +1,34 @@
+{
+  "schema": "rocq2lean-toolchains/1",
+  "lean": {
+    "toolchain": "leanprover/lean4:v4.33.1",
+    "version_line": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+    "commit": "819816b2e0a3bf405af45ae5c7af2491d8f5bee6"
+  },
+  "rocq": {
+    "opam_switch": "rocq930",
+    "version_line": "The Rocq Prover, version 9.3.0",
+    "ocaml": "4.14.2",
+    "tag": "V9.3.0",
+    "commit": "c8e202eb0d6cc08b848ba27dcf2cc35804df7d96",
+    "opam_packages": {
+      "rocq-core": "9.3.0",
+      "rocq-runtime": "9.3.0",
+      "rocq-stdlib": "9.2.0",
+      "ocaml-base-compiler": "4.14.2",
+      "coq-ext-lib": "0.13.2"
+    },
+    "opam_git_pins": {
+      "rocq-equations": "d56dfc2c38feb5054d75ef43540ee89a6beb1a7e",
+      "rocq-metarocq-utils": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81",
+      "rocq-metarocq-common": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81",
+      "rocq-metarocq-template": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81"
+    }
+  },
+  "frontend": {
+    "name": "metarocq-template",
+    "metarocq_commit": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81",
+    "metarocq_patch": null,
+    "status": "METAROCQ_TEMPLATE_RUNNING"
+  }
+}

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Verify the fixed toolchains against toolchains.lock.json; writes reports/environment.json.
+exec "$(dirname "$0")/rocq2lean" doctor

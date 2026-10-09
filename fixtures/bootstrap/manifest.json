@@ -1,0 +1,6 @@
+{
+  "name": "bootstrap",
+  "load_paths": [["-Q", ".", "Fixtures"]],
+  "files": ["IdNat.v", "GateInd.v"],
+  "requires": ["Fixtures.IdNat"]
+}
