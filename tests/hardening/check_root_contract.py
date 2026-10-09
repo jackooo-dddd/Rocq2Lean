@@ -35,7 +35,8 @@ def audit(rep, con=CON, name="x"):
     (d / f"{name}.report.json").write_text(json.dumps(rep))
     (d / f"{name}.contract.json").write_text(json.dumps(con))
     p = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), str(BASE / "source.ndjson"),
-                        str(d / f"{name}.contract.json"), str(d / f"{name}.report.json"), str(d / f"{name}.audit.json")],
+                        str(d / f"{name}.contract.json"), str(d / f"{name}.report.json"), str(d / f"{name}.audit.json"),
+                        str(BASE / "consumer_result.json")],      # kernel recursor metadata (fail closed without it)
                        capture_output=True, text=True)
     out = json.loads((d / f"{name}.audit.json").read_text())
     return p.returncode, [x["detector"] + ": " + x["message"] for x in out["problems"]]
