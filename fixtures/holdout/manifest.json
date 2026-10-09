@@ -1,0 +1,6 @@
+{
+  "name": "holdout",
+  "load_paths": [["-Q", "../m3", "M3"], ["-Q", ".", "H"]],
+  "files": ["../m3/M3Types.v", "../m3/M3Case.v", "../m3/M3Fix.v", "Holdout.v"],
+  "requires": ["H.Holdout"]
+}
