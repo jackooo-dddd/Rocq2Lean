@@ -1,0 +1,6 @@
+{
+  "name": "m2",
+  "load_paths": [["-Q", ".", "M2"]],
+  "files": ["M2A.v", "M2B.v"],
+  "requires": ["M2.M2A", "M2.M2B"]
+}
