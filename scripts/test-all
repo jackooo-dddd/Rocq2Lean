@@ -2,10 +2,11 @@
 # Runs every stage suite in a fresh process each; writes reports/test_all.json.
 cd "$(dirname "$0")/.." || exit 2
 status=0; results=()
-for t in doctor test-smoke test-m1 test-m2 test-m3 test-negative test-holdout; do
+for t in doctor test-smoke test-m1 test-m2 test-m3 test-negative test-holdout test-root-contract test-artifact-integrity test-universe-audit test-lowering-audit test-source-metadata test-cli-status test-assumptions; do
   start=$(date +%s)
-  if ./scripts/$t > "reports/logs/$t.log" 2>&1; then r=PASS; else r=FAIL; status=1; fi
-  results+=("{\"suite\":\"$t\",\"result\":\"$r\",\"seconds\":$(( $(date +%s) - start ))}")
+  ./scripts/$t > "reports/logs/$t.log" 2>&1; rc=$?
+  if [ $rc -eq 0 ]; then r=PASS; else r=FAIL; status=1; fi
+  results+=("{\"suite\":\"$t\",\"result\":\"$r\",\"exit\":$rc,\"checks_passed\":$(grep -c '^PASS' reports/logs/$t.log),\"checks_failed\":$(grep -c '^FAIL' reports/logs/$t.log),\"seconds\":$(( $(date +%s) - start ))}")
   echo "$r $t ($(( $(date +%s) - start ))s)"
 done
 printf '{"schema":"rocq2lean-test-all/1","commit":"%s","results":[%s]}\n' "$(git rev-parse HEAD)" \

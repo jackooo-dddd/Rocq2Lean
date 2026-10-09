@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -o pipefail
+exec python3 -I "$(dirname "$0")/../tests/hardening/check_assumptions.py"

@@ -102,4 +102,18 @@ def preflight(ir_path):
 
 
 if __name__ == "__main__":
-    print(json.dumps(preflight(sys.argv[1]), indent=2))
+    # Exit status (docs/ACCEPTANCE_INVARIANTS.md, "CLI"): 0 every requested root is a candidate;
+    # 2 a known blocker; 3 invalid input or tool failure. A candidate is not a translation result.
+    if len(sys.argv) != 2:
+        print("usage: preflight.py SOURCE.ndjson", file=sys.stderr)
+        sys.exit(3)
+    try:
+        rep = preflight(sys.argv[1])
+    except (OSError, ValueError, KeyError, IndexError) as e:
+        print(f"TOOL_FAILURE: invalid input: {type(e).__name__}: {e}", file=sys.stderr)
+        sys.exit(3)
+    print(json.dumps(rep, indent=2))
+    blocked = [r for r, v in rep["roots"].items() if v["status"] != "CANDIDATE_SUPPORTED"]
+    if blocked:
+        print(f"UNSUPPORTED_FEATURE: blockers for roots {blocked}", file=sys.stderr)
+        sys.exit(2)

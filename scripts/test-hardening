@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Hardening suites (each in a fresh process); non-zero if any fails.
+cd "$(dirname "$0")/.." || exit 2
+status=0
+for t in test-root-contract test-artifact-integrity test-universe-audit test-lowering-audit test-source-metadata test-cli-status test-assumptions; do
+  start=$(date +%s)
+  if ./scripts/$t > "reports/logs/$t.log" 2>&1; then r=PASS; else r=FAIL; status=1; fi
+  echo "$r $t ($(( $(date +%s) - start ))s; $(grep -c '^PASS' reports/logs/$t.log) checks passed, $(grep -c '^FAIL' reports/logs/$t.log) failed)"
+done
+exit $status
