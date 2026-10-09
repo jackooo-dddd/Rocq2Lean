@@ -1,0 +1,12 @@
+.lake/
+*.vo
+*.vok
+*.vos
+*.glob
+*.aux
+.*.aux
+*.olean
+*.ilean
+_build/
+runs/
+.work/
