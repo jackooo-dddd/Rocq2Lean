@@ -1,0 +1,6 @@
+{
+  "name": "m1",
+  "load_paths": [["-Q", ".", "M1"]],
+  "files": ["M1Base.v", "M1Chain.v", "M1Neg.v"],
+  "requires": ["M1.M1Chain", "M1.M1Neg"]
+}
