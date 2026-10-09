@@ -148,6 +148,37 @@ def univArgs (mind : String) (t : IndTarget) (u : Array IR.Level) (args : Array 
 
 /-! ## Terms -/
 
+/-- Leading lambdas of a source term. -/
+def peelLams : IR.Term → Array (AName × IR.Term) × IR.Term
+  | .lam n t b => let (ls, r) := peelLams b; (#[(n, t)] ++ ls, r)
+  | t => (#[], t)
+
+def recursorOf (iname : Name) : TransM RecursorVal := do
+  match (← getEnv).find? (iname.str "rec") with
+  | some (.recInfo rv) =>
+    unless rv.numMotives == 1 do failT "UNSUPPORTED_FEATURE" s!"elimination of a mutual or nested inductive ({iname})"
+    return rv
+  | _ => failT "TRANSLATION_FAILED" s!"no recursor {iname}.rec in the target environment"
+
+/-- Binders of a minor premise: exactly `nfields` constructor fields, then exactly one recursive
+result per recursive field (a field whose type is an application of `iname`). Functional
+recursive fields (`… → I …`) are rejected. Continues with fields, recursive fields, results
+and the remaining (motive-application) type. -/
+def minorTelescope {α} (minorTy : Expr) (nfields : Nat) (iname : Name)
+    (k : Array Expr → Array Expr → Array Expr → Expr → TransM α) : TransM α :=
+  forallBoundedTelescope minorTy (some nfields) fun fields rest => do
+    unless fields.size == nfields do failT "TRANSLATION_FAILED" "minor premise has too few field binders"
+    let mut recFields := #[]
+    for y in fields do
+      let yt ← liftMeta do inferType y
+      let functional ← liftMeta do forallTelescopeReducing yt fun zs body => do
+        return !zs.isEmpty && (← whnf body).getAppFn.isConstOf iname
+      if functional then failT "UNSUPPORTED_FEATURE" "functional recursive constructor field"
+      if (← liftMeta do whnf yt).getAppFn.isConstOf iname then recFields := recFields.push y
+    forallBoundedTelescope rest (some recFields.size) fun ihs res => do
+      unless ihs.size == recFields.size do failT "TRANSLATION_FAILED" "minor premise has too few recursive results"
+      k fields recFields ihs res
+
 mutual
 
 partial def trans (t : IR.Term) : TransM Expr := do
@@ -192,7 +223,7 @@ partial def trans (t : IR.Term) : TransM Expr := do
   | .case ind npar _ puinst pparams pctx pret scrut brs =>
     withPath "case" (transCase ind npar puinst pparams pctx pret scrut brs)
   | .proj .. => failT "UNSUPPORTED_FEATURE" "primitive projection"
-  | .fix .. => failT "UNSUPPORTED_FEATURE" "fixpoint (Fix lowering not enabled)"
+  | .fix defs idx => withPath "fix" (transFix defs idx)
   | .cofix .. => failT "UNSUPPORTED_FEATURE" "cofixpoint"
   | .prim k _ => failT "UNSUPPORTED_FEATURE" s!"primitive {k}"
 
@@ -201,8 +232,8 @@ partial def trans (t : IR.Term) : TransM Expr := do
 * parameters: the translated source parameters;
 * motive: built in the recursor's own motive telescope (indices, then the major premise) from
   the source return clause, so it stays dependent; its universe is computed by Lean;
-* minors: one per constructor, binding the constructor fields (count from the kernel's
-  recursor rules) and then the recursive-result binders, which a plain `match` ignores;
+* minors: one per constructor, binding exactly the constructor fields (count from the
+  kernel's recursor rules) and the recursive-result binders, which a plain `match` ignores;
 * indices: read from the inferred type of the translated scrutinee (Rocq's `Case` does not
   store them).
 -/
@@ -211,16 +242,13 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
     TransM Expr := do
   let tgt ← lookupInd ind
   let iname := tgt.types[ind.idx]!
-  let recName := iname.str "rec"
-  let some (.recInfo rv) := (← getEnv).find? recName
-    | failT "TRANSLATION_FAILED" s!"no recursor {recName} in the target environment"
-  unless rv.numMotives == 1 do failT "UNSUPPORTED_FEATURE" s!"match on a mutual or nested inductive ({iname})"
+  let rv ← recursorOf iname
   unless rv.numParams == npar && pparams.size == npar do
-    failT "EXPORT_VALIDATION_FAILED" s!"case has {pparams.size} parameters, {recName} expects {rv.numParams}"
+    failT "EXPORT_VALIDATION_FAILED" s!"case has {pparams.size} parameters, {iname}.rec expects {rv.numParams}"
   unless pctx.size == rv.numIndices + 1 do
     failT "EXPORT_VALIDATION_FAILED" s!"case return context has {pctx.size} binders, expected {rv.numIndices + 1}"
   unless brs.size == rv.numMinors do
-    failT "EXPORT_VALIDATION_FAILED" s!"case has {brs.size} branches, {recName} has {rv.numMinors} minors"
+    failT "EXPORT_VALIDATION_FAILED" s!"case has {brs.size} branches, {iname}.rec has {rv.numMinors} minors"
   let params ← pparams.mapIdxM fun k a => withPath s!"param{k}" (trans a)
   let indLvls ← univArgs ind.mind tgt puinst params
   let scrut' ← withPath "scrutinee" (trans scrut)
@@ -231,35 +259,149 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
   let idx := sargs.extract npar sargs.size
   let large := rv.levelParams.length == indLvls.length + 1
   let recLvls (u : Level) := if large then u :: indLvls else indLvls
-  -- Motive, in the recursor's motive telescope (binder types do not depend on the motive level).
   let ty0 ← liftMeta do
-    instantiateForall (← inferType (mkConst recName (recLvls levelZero))) params
-  let .forallE _ motiveTy _ _ := ty0 | failT "TRANSLATION_FAILED" s!"unexpected type of {recName}"
+    instantiateForall (← inferType (mkConst (iname.str "rec") (recLvls Level.zero))) params
+  let .forallE _ motiveTy _ _ := ty0 | failT "TRANSLATION_FAILED" s!"unexpected type of {iname}.rec"
   let (motive, u) ← forallTelescopeReducing motiveTy fun xs _ => do
     unless xs.size == pctx.size do failT "TRANSLATION_FAILED" "motive arity differs from the case context"
     let ret ← withPath "return" (withReader (fun c => { c with locals := c.locals ++ xs }) (trans pret))
     let u ← liftMeta do instantiateLevelMVars (← getLevel ret)
     return (← mkLambdaFVars xs ret, u.normalize)
-  if !large && u != levelZero then
+  if !large && u != Level.zero then
     failT "UNSUPPORTED_FEATURE" s!"elimination of {iname} into a non-Prop sort is not available in Lean"
-  let recConst := mkConst recName (recLvls u)
-  -- Minors.
+  let recConst := mkConst (iname.str "rec") (recLvls u)
   let mut ty ← liftMeta do instantiateForall (← inferType recConst) (params.push motive)
   let mut minors : Array Expr := #[]
   for k in [0:rv.numMinors] do
-    let ty' ← liftMeta (whnf ty)
-    let .forallE _ minorTy rest _ := ty' | failT "TRANSLATION_FAILED" s!"{recName}: missing minor {k}"
-    let nfields := rv.rules[k]!.nfields
+    let .forallE _ minorTy rest _ ← liftMeta (whnf ty) | failT "TRANSLATION_FAILED" s!"{iname}.rec: missing minor {k}"
     let (bctx, bbody) := brs[k]!
+    let nfields := rv.rules[k]!.nfields
     unless bctx.size == nfields do
       failT "UNSUPPORTED_FEATURE" s!"branch {k}: {bctx.size} binders for {nfields} fields (let-bound constructor arguments)"
-    let minor ← forallTelescopeReducing minorTy fun ys _ => do
-      let fields := ys.extract 0 nfields
+    let minor ← minorTelescope minorTy nfields iname fun fields _ ihs _ => do
       let body ← withPath s!"branch{k}" (withReader (fun c => { c with locals := c.locals ++ fields }) (trans bbody))
-      mkLambdaFVars ys body
+      mkLambdaFVars (fields ++ ihs) body
     minors := minors.push minor
     ty := rest.instantiate1 minor
   return mkAppN recConst (params ++ #[motive] ++ minors ++ idx ++ #[scrut'])
+
+/-- Replace each recursive call `f P… y rest` by `ih_y rest'`, where `y` is a direct recursive
+constructor field. Parameters before the decreasing argument must be the function's own
+parameters, except index variables of the decreasing argument, which must be the
+corresponding index of `y`'s type. Any other occurrence of `f` is rejected. -/
+partial def replaceRecCalls (f : FVarId) (P : Array Expr) (idxPos : Array (Option Nat))
+    (fieldIH : Array (Expr × Expr × Array Expr)) (e : Expr) : TransM Expr := do
+  let go := replaceRecCalls f P idxPos fieldIH
+  match e with
+  | .app .. =>
+    let fn := e.getAppFn
+    let args := e.getAppArgs
+    if fn.isFVarOf f then
+      let r := P.size
+      unless args.size ≥ r + 1 do failT "UNSUPPORTED_FEATURE" "recursive call without its decreasing argument"
+      let y := args[r]!
+      let some (_, ih, yIdx) := fieldIH.find? (·.1 == y)
+        | failT "UNSUPPORTED_FEATURE" "recursive call on a term that is not a direct recursive constructor field"
+      for i in [0:r] do
+        match idxPos[i]! with
+        | none =>
+          unless args[i]! == P[i]! do
+            failT "UNSUPPORTED_FEATURE" s!"recursive call changes parameter {i}, which precedes the decreasing argument"
+        | some j =>
+          unless args[i]! == yIdx[j]! do
+            failT "UNSUPPORTED_FEATURE" s!"recursive call passes index argument {i} different from the field's index"
+      return mkAppN ih (← (args.extract (r + 1) args.size).mapM go)
+    return mkAppN (← go fn) (← args.mapM go)
+  | .lam n t b bi => return .lam n (← go t) (← go b) bi
+  | .forallE n t b bi => return .forallE n (← go t) (← go b) bi
+  | .letE n t v b nd => return .letE n (← go t) (← go v) (← go b) nd
+  | .mdata d b => return .mdata d (← go b)
+  | .proj sn i b => return .proj sn i (← go b)
+  | .fvar id => if id == f then failT "UNSUPPORTED_FEATURE" "recursive function used other than in a call" else pure e
+  | _ => pure e
+
+/-- Open the leading source lambdas of a fixpoint body with their translated source types. -/
+partial def withSourceLams (lams : Array (AName × IR.Term)) (base : Array Expr) (i : Nat) (acc : Array Expr)
+    (k : Array Expr → TransM Expr) : TransM Expr := do
+  if h : i < lams.size then
+    let (n, t) := lams[i]
+    let t' ← withPath s!"lam{i}" (withReader (fun c => { c with locals := base ++ acc }) (trans t))
+    withLocalDecl (binderName n) .default t' fun a => withSourceLams lams base (i + 1) (acc.push a) k
+  else k acc
+
+/-- M3c: lower a single structurally recursive `fix` to the decreasing argument's recursor.
+
+Source shape: `fix f a₀ … a_{n-1} {struct a_r} := match a_r with … end`. Target:
+`λ P x Q, I.rec params (λ idx x, ∀ Q, T) minors idx x Q` with `P = a₀…a_{r-1}`, `x = a_r`,
+`Q = a_{r+1}…`. The motive is function-valued over `Q`, so arguments after the decreasing one
+may change in recursive calls; index variables of `x` are generalized. Each minor binds the
+fields, the recursive results and its own `Q`; recursive calls on fields become the
+corresponding recursive results (`replaceRecCalls`). The source `match`'s return clause is
+not used: the motive is determined by the fixpoint's declared type. -/
+partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx : Nat) : TransM Expr := do
+  unless defs.size == 1 && fidx == 0 do failT "UNSUPPORTED_FEATURE" s!"mutual fixpoint ({defs.size} functions)"
+  let (fname, fty, fbody, rarg) := defs[0]!
+  let fty' ← withPath "type" (trans fty)
+  let (lams, b) := peelLams fbody
+  unless rarg < lams.size do
+    failT "UNSUPPORTED_FEATURE" s!"decreasing argument {rarg} is not bound by the leading lambdas ({lams.size})"
+  let .case cind cnpar _ _ _ _ _ (.rel sj) brs := b
+    | failT "UNSUPPORTED_FEATURE" "fixpoint body is not a match on the decreasing argument"
+  unless sj == lams.size - 1 - rarg do failT "UNSUPPORTED_FEATURE" "match scrutinee is not the decreasing argument"
+  let outer := (← read).locals
+  withLocalDecl (binderName fname) .default fty' fun fv => do
+  withSourceLams lams (outer.push fv) 0 #[] fun as => do
+    let P := as.extract 0 rarg
+    let x := as[rarg]!
+    let Q := as.extract (rarg + 1) as.size
+    let T ← liftMeta (instantiateForall fty' as)
+    let tgt ← lookupInd cind
+    let iname := tgt.types[cind.idx]!
+    let xty ← liftMeta do whnf (← inferType x)
+    unless xty.getAppFn.isConstOf iname do
+      failT "TRANSLATION_FAILED" "type of the decreasing argument is not the matched inductive"
+    let rv ← recursorOf iname
+    unless rv.numParams == cnpar && brs.size == rv.numMinors do
+      failT "EXPORT_VALIDATION_FAILED" "match metadata disagrees with the recursor"
+    let xargs := xty.getAppArgs
+    let params := xargs.extract 0 rv.numParams
+    let idx := xargs.extract rv.numParams xargs.size
+    unless idx.all (P.contains ·) && idx.toList.eraseDups.length == idx.size do
+      failT "UNSUPPORTED_FEATURE" "indices of the decreasing argument are not distinct earlier parameters"
+    let idxPos : Array (Option Nat) := P.map fun p => idx.findIdx? (· == p)
+    let indLvls := xty.getAppFn.constLevels!
+    let QT ← mkForallFVars Q T
+    let u := (← liftMeta do instantiateLevelMVars (← getLevel QT)).normalize
+    let motive ← mkLambdaFVars (idx.push x) QT
+    let large := rv.levelParams.length == indLvls.length + 1
+    if !large && u != Level.zero then
+      failT "UNSUPPORTED_FEATURE" s!"recursion on {iname} into a non-Prop sort is not available in Lean"
+    let recConst := mkConst (iname.str "rec") (if large then u :: indLvls else indLvls)
+    let mut ty ← liftMeta do instantiateForall (← inferType recConst) (params.push motive)
+    let mut minors : Array Expr := #[]
+    for k in [0:rv.numMinors] do
+      let .forallE _ minorTy rest _ ← liftMeta (whnf ty) | failT "TRANSLATION_FAILED" s!"{iname}.rec: missing minor {k}"
+      let (bctx, bbody) := brs[k]!
+      let nfields := rv.rules[k]!.nfields
+      unless bctx.size == nfields do
+        failT "UNSUPPORTED_FEATURE" s!"branch {k}: let-bound constructor arguments"
+      let minor ← minorTelescope minorTy nfields iname fun fields recFields ihs res => do
+        let fieldIH ← (recFields.zip ihs).mapM fun (y, ih) => do
+          let yt ← liftMeta do whnf (← inferType y)
+          return (y, ih, yt.getAppArgs.extract rv.numParams yt.getAppArgs.size)
+        let res ← liftMeta (whnf res)
+        forallBoundedTelescope res (some Q.size) fun qs _ => do
+          unless qs.size == Q.size do failT "TRANSLATION_FAILED" "minor result has fewer binders than the motive"
+          let locals := outer ++ #[fv] ++ P ++ #[x] ++ qs ++ fields
+          let body ← withPath s!"branch{k}" (withReader (fun c => { c with locals := locals }) (trans bbody))
+          let body ← replaceRecCalls fv.fvarId! P idxPos fieldIH body
+          mkLambdaFVars (fields ++ ihs ++ qs) body
+      minors := minors.push minor
+      ty := rest.instantiate1 minor
+    let res ← mkLambdaFVars as (mkAppN (mkAppN recConst (params ++ #[motive] ++ minors ++ idx ++ #[x])) Q)
+    if res.containsFVar fv.fvarId! then
+      failT "UNSUPPORTED_FEATURE" "recursive function escapes the supported call pattern"
+    return res
 
 /-- Translate an application head. `args` are the already-translated arguments, needed when
 the target's universe is computed from them. -/

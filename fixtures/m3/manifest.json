@@ -9,10 +9,12 @@
   ],
   "files": [
     "M3Types.v",
-    "M3Case.v"
+    "M3Case.v",
+    "M3Fix.v"
   ],
   "requires": [
     "M3.M3Types",
-    "M3.M3Case"
+    "M3.M3Case",
+    "M3.M3Fix"
   ]
 }

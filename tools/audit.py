@@ -15,6 +15,9 @@ recomputed here from scratch (pure de Bruijn, no Lean code, its own copy of the 
                   major's indices are forced by the kernel-checked recursor type and not compared;
                   each minor binds the constructor fields plus one recursive result per recursive
                   field (counted here from the source constructor), which the branch ignores
+  fix          -> lam a0..an. I.rec params motive minors idx a_r Q; lambda types compared; the
+                  motive is forced by the (audited) declared type; minor bodies compared with
+                  each recursive call f P.. y rest  ->  (recursive result for field y) rest
 
 Documented equivalences: binder names and binder info are not compared; the universe argument
 of a template-rule constant (Eq) is not compared, because the kernel forces it to be the sort
@@ -118,15 +121,15 @@ class Auditor:
     # Variable environments: env[i] is what source `rel i` must become in the target, either
     # ("bvar", j) or ("const", name) (a block self-reference in a constructor type).
     @staticmethod
-    def push(env, n=1):
-        for _ in range(n):
-            env = [("bvar", 0)] + [("bvar", x[1] + 1) if x[0] == "bvar" else x for x in env]
-        return env
-
-    @staticmethod
     def shift(env, n):
-        """The target has `n` extra binders that the source does not (recursive results)."""
-        return [("bvar", x[1] + n) if x[0] == "bvar" else x for x in env]
+        """The target has `n` extra binders that the source does not."""
+        return [("bvar", x[1] + n, *x[2:]) if x[0] == "bvar" else x for x in env]
+
+    @classmethod
+    def push(cls, env, n=1):
+        for _ in range(n):
+            env = [("bvar", 0)] + cls.shift(env, 1)
+        return env
 
     def check(self, s, e, path, env=()):
         """Compare source term `s` with target Lean expr JSON `e` under `env`."""
@@ -141,6 +144,8 @@ class Auditor:
             if s["i"] >= len(env):
                 raise Mismatch(f"{path}: source rel {s['i']} out of scope")
             want = env[s["i"]]
+            if want[0] not in ("bvar", "const"):
+                raise Mismatch(f"{path}: source rel {s['i']} refers to {want[0]} binder outside a supported call")
             ok = (e == {"k": "bvar", "i": want[1]}) if want[0] == "bvar" else (e == {"k": "const", "n": want[1], "u": []})
             if not ok:
                 raise Mismatch(f"{path}: source rel {s['i']} should be {want}, found {e}")
@@ -163,6 +168,8 @@ class Auditor:
             C(s["v"], e["v"], "let.v")
             C(s["b"], e["b"], "let.b", self.push(env))
             return
+        if k == "app" and s["f"]["k"] == "rel" and s["f"]["i"] < len(env) and env[s["f"]["i"]][0] == "rec":
+            return self.check_rec_call(s, e, path, env, env[s["f"]["i"]][1])
         if k == "app":
             args = s["args"]
             cur = e
@@ -176,6 +183,8 @@ class Auditor:
             return self.check_head(s, e, path, env)
         if k == "case":
             return self.check_case(s, e, path, env)
+        if k == "fix":
+            return self.check_fix(s, e, path, env)
         raise Mismatch(f"{path}: UNAUDITABLE source node '{k}'")
 
     def check_head(self, s, e, path, env=()):
@@ -192,11 +201,15 @@ class Auditor:
 
     def recursive_fields(self, ref, ctor):
         """Number of recursive constructor arguments (Lean adds one recursive result for each)."""
+        return len(self.recursive_positions(ref, ctor))
+
+    def recursive_positions(self, ref, ctor):
+        """Outermost-first positions of the recursive constructor arguments."""
         mib = self.decls[ref["mind"]]
         if len(mib["bodies"]) != 1:
             raise Mismatch("UNAUDITABLE: case on a mutual block")
         args = list(reversed(mib["bodies"][ref["i"]]["ctors"][ctor]["args"]))  # outermost first
-        n = 0
+        pos = []
         for p, a in enumerate(args):
             t, depth = a["ty"], 0
             while t["k"] == "prod":
@@ -204,8 +217,10 @@ class Auditor:
             while t["k"] == "app":
                 t = t["f"]
             if t == {"k": "rel", "i": p + mib["npars"] + depth}:
-                n += 1
-        return n
+                if depth:
+                    raise Mismatch("UNAUDITABLE: functional recursive field")
+                pos.append(p)
+        return pos
 
     @staticmethod
     def strip_lams(e, n, path):
@@ -240,6 +255,106 @@ class Auditor:
             self.check(br["body"], body, path + [f"minor{k}"], self.shift(self.push(env, nf), nih))
         # Indices of the major premise are forced by the recursor's (kernel-checked) type.
         self.check(s["c"], spine[-1], path + ["major"], env)
+
+    @staticmethod
+    def unspine(e):
+        spine = []
+        while e["k"] == "app":
+            spine.append(e["a"])
+            e = e["f"]
+        return e, list(reversed(spine))
+
+    def check_fix(self, s, e, path, env):
+        """fix f a0..a_{n-1} {struct a_r} := match a_r with ... end
+           ->  lam a0..a_{n-1}. I.rec params motive minors idx a_r Q   (Q = a_{r+1}..)"""
+        if len(s["defs"]) != 1 or s["idx"] != 0:
+            raise Mismatch(f"{path}: UNAUDITABLE mutual fixpoint")
+        d = s["defs"][0]
+        r = d["rarg"]
+        lams, b = [], d["body"]
+        while b["k"] == "lam":
+            lams.append(b)
+            b = b["b"]
+        nl = len(lams)
+        if b["k"] != "case" or b["c"] != {"k": "rel", "i": nl - 1 - r}:
+            raise Mismatch(f"{path}: UNAUDITABLE fixpoint shape")
+        senv = [("forbid",)] + list(env)      # the source binds f; the target does not
+        cur = e
+        for i, lam in enumerate(lams):
+            if cur["k"] != "lam":
+                raise Mismatch(f"{path}: expected {nl} lambdas")
+            self.check(lam["ty"], cur["t"], path + [f"lam{i}"], senv)
+            senv = self.push(senv)
+            cur = cur["b"]
+        # Index positions: earlier parameters that are indices of the decreasing argument's type.
+        xty = lams[r]["ty"]
+        xargs = []
+        while xty["k"] == "app":
+            xargs = xty["args"] + xargs
+            xty = xty["f"]
+        ref = b["ci"]["ind"]
+        npar = b["ci"]["npar"]
+        idx_pos = {r - 1 - a["i"] for a in xargs[npar:] if a["k"] == "rel" and a["i"] < r}
+        head, spine = self.unspine(cur)
+        tname, _, _ = self.ind_target(ref)
+        if head["k"] != "const" or head["n"] != tname + ".rec":
+            raise Mismatch(f"{path}: fixpoint must lower to {tname}.rec")
+        nmin, nq, nidx = len(b["brs"]), nl - r - 1, len(b["p"]["ctx"]) - 1
+        if len(spine) != npar + 1 + nmin + nidx + 1 + nq:
+            raise Mismatch(f"{path}: {tname}.rec applied to {len(spine)} arguments")
+        # Major premise and trailing arguments are the decreasing argument and Q, in order.
+        self.check({"k": "rel", "i": nl - 1 - r}, spine[npar + 1 + nmin + nidx], path + ["major"], senv)
+        for j in range(nq):
+            self.check({"k": "rel", "i": nq - 1 - j}, spine[len(spine) - nq + j], path + [f"q{j}"], senv)
+        # Motive: shape only (forced by the declared type, which is audited).
+        self.strip_lams(spine[npar], nidx + 1, path + ["motive"])
+        for k, br in enumerate(b["brs"]):
+            nf = len(br["ctx"])
+            rpos = self.recursive_positions(ref, k)
+            nih = len(rpos)
+            body = self.strip_lams(spine[npar + 1 + k], nf + nih + nq, path + [f"minor{k}"])
+            depth = nf + nih + nq
+            benv = [("bvar", q + nih + nq, "field", k, q) for q in range(nf)]   # q: innermost-first
+            for t in range(nl):                                               # a_{nl-1} .. a_0
+                i = nl - 1 - t
+                if i > r:
+                    benv.append(("bvar", nq - 1 - (i - r - 1)))
+                else:
+                    benv.append(("bvar", senv[t][1] + depth, "param", i))
+            info = {"minor": k, "r": r, "nf": nf, "nq": nq, "rec_q": [nf - 1 - p for p in rpos], "idx_pos": idx_pos}
+            benv.append(("rec", info))
+            benv += self.shift(senv[nl + 1:], depth)
+            self.check(br["body"], body, path + [f"minor{k}"], benv)
+
+    def check_rec_call(self, s, e, path, env, info):
+        args, r = s["args"], info["r"]
+        if len(args) < r + 1:
+            raise Mismatch(f"{path}: recursive call without its decreasing argument")
+        for i in range(r):
+            if i in info["idx_pos"]:
+                continue        # index arguments are fixed by the field's type
+            a = args[i]
+            ent = env[a["i"]] if a["k"] == "rel" and a["i"] < len(env) else None
+            if not (ent and ent[0] == "bvar" and ent[2:4] == ("param", i)):
+                raise Mismatch(f"{path}: recursive call changes parameter {i}")
+        y = args[r]
+        ent = env[y["i"]] if y["k"] == "rel" and y["i"] < len(env) else None
+        if not (ent and ent[0] == "bvar" and len(ent) == 5 and ent[2] == "field" and ent[3] == info["minor"]):
+            raise Mismatch(f"{path}: recursive call not on a constructor field")
+        q = ent[4]
+        if q not in info["rec_q"]:
+            raise Mismatch(f"{path}: recursive call on a non-recursive field")
+        m = info["rec_q"].index(q)
+        ih = ent[1] - 1 - m - q
+        rest = args[r + 1:]
+        cur = e
+        for j in reversed(range(len(rest))):
+            if cur["k"] != "app":
+                raise Mismatch(f"{path}: recursive result applied to too few arguments")
+            self.check(rest[j], cur["a"], path + [f"rec-arg{j}"], env)
+            cur = cur["f"]
+        if cur != {"k": "bvar", "i": ih}:
+            raise Mismatch(f"{path}: recursive call must become recursive result bvar {ih}, found {cur}")
 
 
 def main(src_path, report_path, out_path):
