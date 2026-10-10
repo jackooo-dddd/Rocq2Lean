@@ -1,0 +1,85 @@
+{
+  "schema": "rocq2lean-holdout2/1",
+  "freeze": "742b3a9cbaab622d4a2f17b2e02de3fd5959d65d",
+  "roots": {
+    "H2.Holdout2.add_comm'": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.points_flip": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.fin_val_lift": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.tmax_comm": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.tmax_idem": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.tri_neq": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.S_inj'": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.ev_dbl": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.ev_plus4": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.ev_sum": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.len_revA": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.len_mapL": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.three_eq": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    },
+    "H2.Holdout2.use_three": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": ""
+    }
+  },
+  "pipeline_exit_codes": {
+    "export": 0,
+    "translate": 0,
+    "verify": 0,
+    "status": 0
+  },
+  "verified": true,
+  "verify_status": "VERIFIED",
+  "required_closure_size": 47
+}
