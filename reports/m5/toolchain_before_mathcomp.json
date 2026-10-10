@@ -1,0 +1,12 @@
+{
+ "digest": "493c3a2086b912a1c9942b93729f47b9687a88388546ec0d3c3b368f97361775",
+ "files": 93,
+ "components": {
+  "lean:bin/lake": "60330ab6f07dce20f3fa9ebb08e8b984ea9549eac172afeb15d9d2227060e2b3",
+  "lean:bin/lean": "e8baaa71855a616dc351028f3ad2200051b0671f423a1696a100e809302d5550",
+  "lean:lib/lean/libleanshared.so": "23d636cac1cadcba37beac30eff9b9b20d66cee726cf5defb4ae39f1284a3e5a",
+  "metarocq:rocq-metarocq-template-ocaml/metarocq_template_plugin.cmxs": "57e78b292dcb738f36bc19b89776d4cbb8358490b07c47fda756584cf73bb805",
+  "metarocq:rocq-metarocq-template-rocq/template_rocq.cmxs": "c7fdf8f873c63b4192ea24935805bace5336da692b09151262ea195c4421d1d2",
+  "rocq:bin/rocq": "9dc2d1af4d97218d4b0c53631e5ebcbd82ce4b535a30ebc7466892a415ded99f"
+ }
+}

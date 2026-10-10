@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lib import ROOT, check, cli, finish  # noqa: E402
+from lib import ROOT, check, cli, finish, SWITCH  # noqa: E402
 
 MAN = ROOT / "fixtures" / "m1" / "manifest.json"
 RUN = ROOT / "runs" / "hm-meta"
@@ -27,7 +27,7 @@ def roundtrip(name, mutate):
     shutil.rmtree(d, ignore_errors=True)
     d.mkdir()
     (d / "source.ndjson").write_text("".join(json.dumps(x) + "\n" for x in lines))
-    p = subprocess.run(["opam", "exec", "--switch=rocq930", "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
+    p = subprocess.run(["opam", "exec", "--switch=" + SWITCH, "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
                         str(d / "source.ndjson"), str(d), "-Q", str(MAN.parent), "M1", "--", "M1.M1Chain", "M1.M1Base"],
                        capture_output=True, text=True, env=env)
     return p.returncode, json.loads((d / "roundtrip.json").read_text())["problems"]

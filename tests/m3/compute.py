@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests"))
-from lib import cli  # noqa: E402
+from lib import cli, SWITCH  # noqa: E402
 
 RUN = ROOT / "runs" / "m3-compute"
 M3 = ROOT / "fixtures" / "m3"
@@ -151,7 +151,7 @@ def main():
     # Rocq side.
     env = dict(os.environ, PATH=f"{Path.home()}/.local/bin:" + os.environ["PATH"])
     enc_dir = ROOT / "tests" / "m3"
-    subprocess.run(["opam", "exec", "--switch=rocq930", "--", "rocq", "compile", "-Q", str(enc_dir), "R2LEnc",
+    subprocess.run(["opam", "exec", "--switch=" + SWITCH, "--", "rocq", "compile", "-Q", str(enc_dir), "R2LEnc",
                     str(enc_dir / "Enc.v")], check=True, env=env, capture_output=True)
     ev = ["From MetaRocq.Utils Require Import utils.", "From MetaRocq.Template Require Import All.",
           "From R2LEnc Require Import Enc.", "Require M3C.Cases.", "Open Scope bs_scope.", ""]
@@ -159,7 +159,7 @@ def main():
         ev.append(f"MetaRocq Run (tmBind (tmEval all M3C.Cases.case{i}) (fun v => tmBind (tmQuote v) "
                   f"(fun q => tmBind (tmEval all (enc q)) (fun s => tmMsg (\"EVAL {i} \" ^ s))))).")
     (RUN / "RocqEval.v").write_text("\n".join(ev) + "\n")
-    p = subprocess.run(["opam", "exec", "--switch=rocq930", "--", "rocq", "compile", "-Q", str(enc_dir), "R2LEnc",
+    p = subprocess.run(["opam", "exec", "--switch=" + SWITCH, "--", "rocq", "compile", "-Q", str(enc_dir), "R2LEnc",
                         "-Q", str(M3), "M3", "-Q", str(RUN), "M3C", str(RUN / "RocqEval.v")],
                        env=env, capture_output=True, text=True)
     rocq = {}

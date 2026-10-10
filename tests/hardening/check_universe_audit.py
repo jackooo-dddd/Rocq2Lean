@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
-from lib import ROOT, audit_report, check, cli, finish, results  # noqa: E402
+from lib import ROOT, audit_report, check, cli, finish, results, SWITCH  # noqa: E402
 import audit as A  # noqa: E402
 import replay  # noqa: E402
 
@@ -104,7 +104,7 @@ for name, lines in (("drop-ua<=ub", mutate_facts(drop=(ua, ub))),
     d.mkdir()
     (d / "source.ndjson").write_text("".join(json.dumps(x) + "\n" for x in lines))
     env = dict(os.environ, PATH=f"{Path.home()}/.local/bin:" + os.environ["PATH"])
-    p = subprocess.run(["opam", "exec", "--switch=rocq930", "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
+    p = subprocess.run(["opam", "exec", "--switch=" + SWITCH, "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
                         str(d / "source.ndjson"), str(d), "-Q", str(MAN.parent), "U", "--", "U.Univ"],
                        capture_output=True, text=True, env=env)
     check(p.returncode != 0 and "UREL_MISMATCH" in p.stdout, f"[{name}] native re-check rejects the mutated universe fact")
@@ -267,7 +267,7 @@ shutil.rmtree(d, ignore_errors=True)
 d.mkdir()
 (d / "source.ndjson").write_text("".join(json.dumps(x) + "\n" for x in lines))
 env = dict(os.environ, PATH=f"{Path.home()}/.local/bin:" + os.environ["PATH"])
-p = subprocess.run(["opam", "exec", "--switch=rocq930", "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
+p = subprocess.run(["opam", "exec", "--switch=" + SWITCH, "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
                     str(d / "source.ndjson"), str(d), "-Q", str(MAN.parent), "U", "--", "U.Univ"],
                    capture_output=True, text=True, env=env)
 check(p.returncode != 0 and "is not entailed by the native facts" in p.stdout,

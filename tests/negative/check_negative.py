@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lib import ROOT, check, cli, results, finish  # noqa: E402
+from lib import ROOT, check, cli, results, finish, SWITCH  # noqa: E402
 
 BASE = ROOT / "runs" / "neg-base"
 MAN = ROOT / "fixtures" / "m3" / "manifest.json"
@@ -77,7 +77,7 @@ def reorder(lines):
     return lines
 rc, R, _, run = mutated("reorder", reorder)
 env = dict(os.environ, PATH=f"{Path.home()}/.local/bin:" + os.environ["PATH"])
-p = subprocess.run(["opam", "exec", "--switch=rocq930", "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
+p = subprocess.run(["opam", "exec", "--switch=" + SWITCH, "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
                     str(run / "source.ndjson"), str(run / "rt"), "-Q", str(ROOT / "fixtures" / "m3"), "M3", "--",
                     "M3.M3Proofs", "M3.M3Fix"], capture_output=True, text=True, env=env)
 check(p.returncode != 0 and "M3.M3Types.Tree: RT_MISMATCH" in p.stdout, "reordered constructors detected by the round trip")

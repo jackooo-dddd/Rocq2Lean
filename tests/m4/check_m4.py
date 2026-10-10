@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
-from lib import ROOT, audit_report, check, cli, finish, forge_run, results  # noqa: E402
+from lib import ROOT, audit_report, check, cli, finish, forge_run, results, SWITCH  # noqa: E402
 import replay  # noqa: E402
 
 MAN = ROOT / "fixtures" / "m4" / "manifest.json"
@@ -127,7 +127,7 @@ shutil.rmtree(d, ignore_errors=True)
 (d / "logs").mkdir(parents=True)
 (d / "source.ndjson").write_text("".join(json.dumps(x) + "\n" for x in lines))
 env = dict(os.environ, PATH=f"{Path.home()}/.local/bin:" + os.environ["PATH"])
-p = subprocess.run(["opam", "exec", "--switch=rocq930", "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
+p = subprocess.run(["opam", "exec", "--switch=" + SWITCH, "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
                     str(d / "source.ndjson"), str(d), "-Q", str(MAN.parent), "M4", "--", "M4.M4Std"],
                    capture_output=True, text=True, env=env)
 rt = json.loads((d / "roundtrip.json").read_text()) if (d / "roundtrip.json").exists() else {}

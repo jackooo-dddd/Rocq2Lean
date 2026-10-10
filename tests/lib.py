@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# The Rocq opam switch is the one of the toolchain lock (single source of truth).
+SWITCH = json.loads((ROOT / "toolchains.lock.json").read_text())["rocq"]["opam_switch"]
 CLI = [sys.executable, "-I", str(ROOT / "tools" / "rocq2lean.py")]
 FAILS = []
 

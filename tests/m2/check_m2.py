@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lib import ROOT, audit_report, check, cli, decls, results, finish, structurally_rejected  # noqa: E402
+from lib import ROOT, audit_report, check, cli, decls, results, finish, structurally_rejected, SWITCH  # noqa: E402
 
 MAN = ROOT / "fixtures" / "m2" / "manifest.json"
 ROOTS = ["M2.M2A.prop_id", "M2.M2A.twice_succ", "M2.M2A.first_second", "M2.M2A.vm_proof",
@@ -92,7 +92,7 @@ for d in lines:
 (mut / "source.ndjson").write_text("".join(json.dumps(d) + "\n" for d in lines))
 rc, out = cli("verify", "--run", mut)
 check(rc != 0 and "source IR changed" in out, "verify rejects a source IR that differs from the anchored snapshot")
-oenv_cmd = ["opam", "exec", "--switch=rocq930", "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
+oenv_cmd = ["opam", "exec", "--switch=" + SWITCH, "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
             str(mut / "source.ndjson"), str(mut / "rt"), "-Q", str(ROOT / "fixtures" / "m2"), "M2", "--",
             "M2.M2A", "M2.M2B"]
 p = subprocess.run(oenv_cmd, capture_output=True, text=True,
