@@ -1,0 +1,1 @@
+{"name": "m4", "load_paths": [["-Q", ".", "M4"]], "files": ["M4Std.v"], "requires": ["M4.M4Std", "Stdlib.Lists.List"]}

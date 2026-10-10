@@ -160,8 +160,10 @@ def univArgs (mind : String) (t : IndTarget) (u : Array IR.Level) (args : Array 
   | .params n _ => liftMeta do (List.range n).mapM fun _ => mkFreshLevelMVar
   | .templateFromArg k =>
     if h : k < args.size then
+      -- The level may still contain metavariables (proof-local levels, R2B; references to
+      -- generalized constants): they are solved with the rest of the declaration (`solveLevels`),
+      -- and any left unassigned must be justified (R3′).
       let l ← liftMeta (do instantiateLevelMVars (← getLevel args[k]))
-      if l.hasMVar then failT "TRANSLATION_FAILED" s!"could not determine the universe of {mind}"
       pure [l.normalize]
     else
       failT "UNSUPPORTED_FEATURE" s!"{mind} used with fewer than {k + 1} arguments: its universe is undetermined"
@@ -546,8 +548,12 @@ partial def levelNF : Level → Option (Nat × List (Name × Nat))
 
 /-- Universe obligation (docs/UNIVERSE_TRANSLATION.md, rule R3) for one reference: the target
 universe argument `σ` for the referenced constant's parameter standing for source level `l`. -/
-def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) (σ : Level) :
-    Except String Unit := do
+def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) (σ : Level)
+    (body : Std.HashMap String Level := {}) : Except String Unit := do
+  if let some s := body[l]? then
+    unless σ.normalize == s.normalize do
+      throw s!"coherence: source level {l} is a proof-local level of the referring declaration, solved as {s}; the argument must be the same, not {σ}"
+    return
   if own.contains l then
     unless σ.normalize == .param (levelParamName l) do
       throw s!"coherence: source level {l} is shared with the referring declaration, so its argument must be u_{l}, not {σ}"
@@ -558,6 +564,50 @@ def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) 
     let some m := own.find? (fun g => levelParamName g == p)
       | throw s!"argument {σ} mentions {p}, which is not a parameter of the referring declaration"
     unless entails f m l k do throw s!"argument {σ}: {m} + {k} ≤ {l} is not entailed by the source universe graph"
+
+/-- Summands `(source level, offset)` of a target level over the declaration's parameters, read
+back as source levels (`u_l ↦ l`, constant `c ↦ Set + c`). -/
+def sourceSummands (typeLevels : Array String) (σ : Level) : Except String (List (String × Nat)) := do
+  let some (c, ps) := levelNF σ.normalize | throw s!"level {σ} is outside the supported level fragment"
+  let ps ← ps.mapM fun (p, k) => do
+    let some m := typeLevels.find? (fun g => levelParamName g == p)
+      | throw s!"level {σ} mentions {p}, which is not a parameter of the declaration"
+    pure (m, k)
+  return ("Set", c) :: ps
+
+/-- `max lhs + k ≤ max rhs` is entailed by the native facts: every summand of the left side is
+below some summand of the right side. -/
+def summandsLeq (f : IR.UniverseFacts) (lhs rhs : List (String × Nat)) (k : Nat) : Bool :=
+  lhs.all fun (a, i) => (a == "Set" && i + k == 0) || rhs.any fun (b, j) =>
+    if i + k ≤ j then entails f a b 0 || a == "Set" else entails f a b (i + k - j)
+
+/-- Rule R2B (docs/UNIVERSE_TRANSLATION.md): a proof-local level `m` (in the body, not the type) is
+solved by Lean's unifier as `σ m`; every native fact between `m` and `Set`, a type level or another
+proof-local level must still hold with each proof-local level read as its solution. -/
+def checkBodyLevel (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std.HashMap String Level)
+    (m : String) : Except String Unit := do
+  let summ (x : String) : Except String (List (String × Nat)) :=
+    match sol[x]? with
+    | some σ => sourceSummands typeLevels σ
+    | none => pure [(x, 0)]
+  let mine (x : String) := x == "Set" || typeLevels.contains x || sol.contains x
+  for (a, r, b) in f.relations do
+    unless (a == m || b == m) && mine a && mine b do continue
+    let k := if r == "lt" then 1 else 0
+    unless summandsLeq f (← summ a) (← summ b) k do
+      throw s!"proof-local level {m} solved as {sol[m]?}: native fact {a} {r} {b} does not hold for the solution"
+
+/-- Minimal-model default of an unconstrained proof-local level `m` (R2B/R3′): the least level
+satisfying its native lower bounds from `Set` and the type levels (`Set < m` gives 1, `l ≤ m`
+gives `u_l`, `l < m` gives `u_l + 1`). -/
+def minimalModelLevel (f : IR.UniverseFacts) (typeLevels : Array String) (m : String) : Level := Id.run do
+  let mut acc : Level := .zero
+  for (a, r, b) in f.relations do
+    unless b == m do continue
+    let k := if r == "lt" then 1 else 0
+    if a == "Set" then acc := mkLevelMax' acc (Level.ofNat k)
+    else if typeLevels.contains a then acc := mkLevelMax' acc ((Level.param (levelParamName a)).addOffset k)
+  return acc.normalize
 
 /-- All constant occurrences of `e` with their universe arguments. -/
 partial def constOccurrences (e : Expr) (acc : Array (Name × List Level) := #[]) : Array (Name × List Level) :=
@@ -571,13 +621,14 @@ partial def constOccurrences (e : Expr) (acc : Array (Name × List Level) := #[]
 
 /-- Check every universe argument at every reference to a generalized constant in `e`;
 returns the number of checked arguments. -/
-def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr) : Except String Nat := do
+def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr)
+    (body : Std.HashMap String Level := {}) : Except String Nat := do
   let mut n := 0
   for (c, ls) in constOccurrences e do
     if let some globals := genv.constGlobals[c]? then
       unless globals.size == ls.length do throw s!"{c}: {ls.length} universe arguments for {globals.size} parameters"
       for l in globals, σ in ls do
-        match checkInstantiation genv.facts own l σ with
+        match checkInstantiation genv.facts own l σ body with
         | .ok () => n := n + 1
         | .error msg => throw s!"reference to {c}: {msg}"
   return n
@@ -586,7 +637,8 @@ def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr) : Exc
 type-check with Lean's checker (which unifies universe levels; terms are not changed) and
 unify the value's type with the declared type; any level left unconstrained is set to `0`.
 The kernel re-checks the result. -/
-def solveLevels (ty val : Expr) : MetaM (Expr × Expr × Array String × List Name × Expr × Expr) := do
+def solveLevels (ty val : Expr) (dflt : LMVarId → Level := fun _ => .zero) :
+    MetaM (Expr × Expr × Array String × List Name × Expr × Expr × List Level) := do
   let mut diags : Array String := #[]
   try Meta.check ty catch e => diags := diags.push s!"Meta.check type: {← e.toMessageData.toString}"
   try Meta.check val catch e => diags := diags.push s!"Meta.check value: {← e.toMessageData.toString}"
@@ -607,7 +659,7 @@ def solveLevels (ty val : Expr) : MetaM (Expr × Expr × Array String × List Na
     | _ => none
   let gty := ty.replaceLevel sub
   let gval := val.replaceLevel sub
-  for m in ms do assignLevelMVar m Level.zero
-  return (← instantiateMVars ty, ← instantiateMVars val, diags, ps, gty, gval)
+  for m in ms do assignLevelMVar m (dflt m)
+  return (← instantiateMVars ty, ← instantiateMVars val, diags, ps, gty, gval, ms.toList.map dflt)
 
 end Rocq2Lean

@@ -135,11 +135,16 @@ shutil.rmtree(RES, ignore_errors=True)
 rcs = [cli("export", "--manifest", MAN, "--roots", "U.UnivResidual.use_cst_eq", "--out", RES)[0],
        cli("translate", "--input", RES / "source.ndjson", "--out", RES)[0], cli("verify", "--run", RES)[0]]
 RR, _ = results(RES)
-uc = RR["U.UnivResidual.use_cst"]
+uc = RR["U.UnivResidual.cst"]
 cons = json.loads((RES / "consumer_result.json").read_text())
-check(rcs == [0, 0, 0] and uc["universe_level_defaults"] == 1 and uc["universe_residuals"]["params"] == ["u_residual_0"]
-      and cons["residual_levels_checked"] == 1,
-      "residual level: use_cst defaults one unconstrained level, justified (kernel, every value) and re-checked by the consumer — VERIFIED")
+ONE = {"k": "succ", "l": {"k": "zero"}}
+# ur occurs only in cst's body: a proof-local level (R2B); nothing constrains it, so it defaults to its
+# minimal model (Set < ur gives 1), justified by the kernel for every value, re-checked by the consumer.
+check(rcs == [0, 0, 0] and uc["level_params"] == [] and uc["universe_level_defaults"] == 1
+      and uc["universe_residuals"]["params"] == ["u_residual_0"] and uc["universe_residuals"]["defaults"] == [ONE]
+      and [b["sigma"] for b in uc["body_levels"]] == [ONE] and cons["residual_levels_checked"] == 1
+      and RR["U.UnivResidual.use_cst"]["universe_level_defaults"] == 0,
+      "residual proof-local level: cst defaults ur to its minimal model (1), justified (kernel, every value) and re-checked by the consumer — VERIFIED")
 
 
 def e2e(run, name, mutate):
@@ -169,22 +174,36 @@ def forge_unjustified(rows):
                 raise_eq(v)
     raise_eq(gty)
     r["universe_level_defaults"] = 1
-    r["universe_residuals"] = {"params": ["u_residual_0"], "default": "zero", "justification": "forged",
+    r["universe_residuals"] = {"params": ["u_residual_0"], "defaults": [{"k": "zero"}], "justification": "forged",
                                "generic_type": gty, "generic_value": r["target_value"]}
 rc, cp, ap = e2e(RES, "unjustified", forge_unjustified)
 check(rc == 2 and any(x["detector"] == "residual_levels" and "rejected by the kernel" in x["message"] for x in cp),
       "forged residual whose generic declaration is not valid for every level: consumer kernel re-check rejects (verify exit 2)")
 check(not any(x["detector"] == "universe" for x in ap),
       "  (the auditor's syntactic residual check alone accepts it: the kernel re-check is the necessary gate)")
-rc, cp, ap = e2e(RES, "unrecorded", lambda rows: rows["U.UnivResidual.use_cst"].update(universe_residuals=None))
+rc, cp, ap = e2e(RES, "unrecorded", lambda rows: rows["U.UnivResidual.cst"].update(universe_residuals=None))
 check(rc == 2 and any(x["detector"] == "residual_levels" and "without a justification" in x["message"] for x in cp)
       and any(x["detector"] == "universe" and "without a justification record" in x["message"] for x in ap),
       "defaulted level with its justification record removed: rejected by consumer and auditor")
 
 
 def forge_generic(rows):
-    g = rows["U.UnivResidual.use_cst"]["universe_residuals"]["generic_value"]
-    g["u"] = [{"k": "succ", "l": u} for u in g["u"]]
+    g = rows["U.UnivResidual.cst"]["universe_residuals"]["generic_value"]
+    done = []
+
+    def bump(e):                             # first occurrence of the residual parameter -> its successor
+        if isinstance(e, dict):
+            for k_, v_ in list(e.items()):
+                if not done and v_ == {"k": "param", "n": "u_residual_0"}:
+                    e[k_] = {"k": "succ", "l": v_}
+                    done.append(1)
+                else:
+                    bump(v_)
+        elif isinstance(e, list):
+            for v_ in e:
+                bump(v_)
+    bump(g)
+    assert done
 rc, cp, ap = e2e(RES, "generic-mismatch", forge_generic)
 check(rc == 2 and any(x["detector"] == "residual_levels" and "not the imported one" in x["message"] for x in cp)
       and any("differs from the reported declaration" in x["message"] for x in ap),

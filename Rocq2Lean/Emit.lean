@@ -49,9 +49,12 @@ structure DeclResult where
   /-- Defaulted (residual) universe levels: the fresh parameters standing for them and the
   declaration's type/value with those parameters, which the kernel accepted (justification). -/
   residualParams : List Name := []
+  residualDefaults : List Level := []
   /-- Generated inductives with level parameters: whether the source is template polymorphic, and
   for each template level the parameter (regular order) whose sort binds it (R5). -/
   isTemplate : Bool := false
+  /-- Proof-local levels (in the body only) and their solutions (R2B). -/
+  bodyLevels : Array (String × Level) := #[]
   templateParams : Array (String × Nat) := #[]
   residualType : Option Expr := none
   residualValue : Option Expr := none
@@ -86,11 +89,10 @@ private def blockedDeps (results : Std.HashMap String DeclResult) (deps : Array 
 def globalsOfInd (i : IR.InductiveDecl) : Array String :=
   (i.bodies.foldl (fun acc (b : IR.OneInd) => b.ctors.foldl (fun acc c => globalsOf c.type acc) (globalsOf b.type acc)) {}).toArray.qsort (· < ·)
 
-/-- Global levels of a constant, as generalized (sorted). -/
+/-- Global levels of a constant that are generalized: those of its type (sorted); proof-local
+levels of the body are solved instead (R2B). -/
 def globalsOf' (c : IR.ConstantDecl) : Array String :=
-  match c.body with
-  | some b => (globalsOf b (globalsOf c.type)).toArray
-  | none => (globalsOf c.type).toArray
+  (globalsOf c.type).toArray
 
 /-- The target declaration of a constant, by target kind. -/
 def mkConstDecl (name : Name) (kind : String) (lps : List Name) (ty val : Expr) : MetaM Declaration := do
@@ -140,20 +142,38 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let name := targetName c.name
     if (← getEnv).contains name then
       return { base with status := "TRANSLATION_FAILED", message := s!"target name {name} already in use" }
-    -- Global monomorphic levels become universe parameters of this declaration.
-    let globals := (globalsOf body (globalsOf c.type)).toArray.qsort (· < ·)
+    -- Global monomorphic levels of the *type* become universe parameters (R2); levels occurring
+    -- only in the body are proof-local: level metavariables solved by Lean's unifier (R2B).
+    let globals := (globalsOf c.type).toArray.qsort (· < ·)
+    let bodyOnly := (globalsOf body).toArray.filter (!globals.contains ·) |>.qsort (· < ·)
     let lparams := globals.toList.map levelParamName
-    let gl : Std.HashMap String Level :=
+    let mut gl : Std.HashMap String Level :=
       globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
+    let mut bodyMVars : Array (String × Level) := #[]
+    for m in bodyOnly do
+      let v ← mkFreshLevelMVar
+      gl := gl.insert m v
+      bodyMVars := bodyMVars.push (m, v)
     let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl with
       | .ok e => pure e
       | .error e => return fromTransError base e
     let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let (ty, val, diags, resid, gty, gval) ← solveLevels ty val
+    -- Unassigned proof-local levels default to their minimal model (R2B); others to 0 (R3′).
+    let mut dflts : Std.HashMap LMVarId Level := {}
+    for (m, v) in bodyMVars do
+      if let .mvar id := v then dflts := dflts.insert id (minimalModelLevel genv.facts globals m)
+    let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val (fun id => dflts.getD id .zero)
     let base := { base with levelDiagnostics := diags, levelDefaults := resid.length }
-    let nchecks ← match checkUniverseObligations genv globals ty, checkUniverseObligations genv globals val with
+    let mut sol : Std.HashMap String Level := {}
+    for (m, v) in bodyMVars do
+      sol := sol.insert m (← instantiateLevelMVars v).normalize
+    let base := { base with bodyLevels := bodyMVars.map fun (p : String × Level) => (p.1, sol[p.1]!) }
+    for m in bodyOnly do
+      if let .error msg := checkBodyLevel genv.facts globals sol m then
+        return { base with status := "UNIVERSE_REJECTED", message := msg }
+    let nchecks ← match checkUniverseObligations genv globals ty sol, checkUniverseObligations genv globals val sol with
       | .ok a, .ok b => pure (a + b)
       | .error msg, _ | _, .error msg =>
         return { base with status := "UNIVERSE_REJECTED", message := msg }
@@ -165,7 +185,7 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     if let some msg ← justifyResiduals name kind lparams resid gty gval then
       return { base with status := "UNIVERSE_REJECTED", message := msg }
     let base := if resid.isEmpty then base
-      else { base with residualParams := resid, residualType := gty, residualValue := gval }
+      else { base with residualParams := resid, residualDefaults := rdefaults, residualType := gty, residualValue := gval }
     match ← addChecked (← mkConstDecl name kind lparams ty val) with
     | .accepted => return { base with status := "TRANSLATED_AND_CHECKED", targetType := ty, targetValue := val,
                                       levelParams := lparams }
@@ -346,13 +366,14 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("level_params", Json.arr (r.levelParams.map (Json.str ·.toString)).toArray),
     ("num_params", r.numParams),
     ("template", r.isTemplate),
+    ("body_levels", Json.arr (r.bodyLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
     ("template_params", Json.arr (r.templateParams.map fun (l, k) => Json.mkObj [("level", l), ("param", k)])),
     ("universe_level_defaults", r.levelDefaults),
     ("universe_checks", r.universeChecks),
     ("universe_diagnostics", Json.arr (r.levelDiagnostics.map Json.str)),
     ("universe_residuals", if r.residualParams.isEmpty then .null else Json.mkObj [
       ("params", Json.arr (r.residualParams.map (Json.str ·.toString)).toArray),
-      ("default", "zero"),
+      ("defaults", Json.arr (r.residualDefaults.map levelJson).toArray),
       ("justification", "kernel accepted the declaration with these levels as fresh universe parameters"),
       ("generic_type", match r.residualType with | some e => exprJson e | none => .null),
       ("generic_value", match r.residualValue with | some e => exprJson e | none => .null)]),

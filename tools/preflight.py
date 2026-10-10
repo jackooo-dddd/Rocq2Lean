@@ -10,7 +10,7 @@ Statically detected blockers (the translator rejects the same shapes during tran
   relaxed source checking flags; node kinds outside the fragment (cofix, proj, primitives, evars, section variables), SProp and
   irrelevant binders, universe-polymorphic levels and instances, source assumptions and missing
   bodies; inductives that are polymorphic, coinductive, mutual, primitive records or mention
-  global universe levels; `match` on a mutual block, a nested inductive, an inductive with
+  template inductives with unbound template levels; `match` on a mutual block, a nested inductive, an inductive with
   functional recursive fields or let-bound constructor arguments; `fix` that is mutual, whose body
   is not a match on its decreasing argument, or whose recursive calls change a parameter before the
   decreasing argument, are not on a direct recursive constructor field, or use the function other
@@ -233,16 +233,40 @@ def calls(t, depth, nl, nf, r, idx_pos, rec_q, found, path):
             go(v, 0, key)
 
 
-def global_levels(t, found, path):
+def global_levels(t, acc):
     if isinstance(t, list):
-        for i, v in enumerate(t):
-            global_levels(v, found, path + [i])
+        for v in t:
+            global_levels(v, acc)
     elif isinstance(t, dict):
-        if t.get("k") == "sort" and t["s"]["k"] == "type" and any(e["l"]["k"] == "global" for e in t["s"]["u"]):
-            found.add("global universe level in an inductive declaration", path)
-        for key, v in t.items():
+        if t.get("k") == "sort" and t["s"]["k"] == "type":
+            acc.update(e["l"]["n"] for e in t["s"]["u"] if e["l"]["k"] == "global")
+        for v in t.values():
             if isinstance(v, (dict, list)):
-                global_levels(v, found, path + [key])
+                global_levels(v, acc)
+    return acc
+
+
+def template_blockers(d, found):
+    """Inductives with global levels are supported (R2T): non-template ones obey R3 at references;
+    template ones need every template level bound by exactly one parameter of sort Type@{l}
+    (offset 0, possibly quality-polymorphic: translated at quality Type), per the kernel record."""
+    gs = global_levels([[b["type"], [c["type"] for c in b["ctors"]]] for b in d["bodies"]], set())
+    nat = d.get("native") or {}
+    if not gs or not nat.get("template"):
+        return
+    ti = nat.get("template_info") or {}
+    bound = []
+    for k, pa in enumerate(ti.get("param_arguments", [])):
+        if pa is None:
+            continue
+        us = pa.get("u", [])
+        if pa.get("k") not in ("type", "quality_sort") or len(us) != 1 or us[0].get("n") != 0 or us[0].get("bound") is None:
+            found.add("template parameter binding a level with an offset or an algebraic universe", ["native", "template_info"])
+            return
+        bound.append(us[0]["l"])
+    defaults = ti.get("defaults", [])
+    if sorted(bound) != sorted(defaults) or not gs <= set(defaults):
+        found.add("template inductive with unbound or non-template global levels", ["native", "template_info"])
 
 
 def relaxed_flags(d):
@@ -280,10 +304,10 @@ def classify(d, inds):
             found.add("primitive record", [])
         for i, b in enumerate(d["bodies"]):
             walk(b["type"], found, inds, ["bodies", i, "type"])
-            global_levels(b["type"], found, ["bodies", i, "type"])
             for j, c in enumerate(b["ctors"]):
                 walk(c["type"], found, inds, ["bodies", i, "ctors", j, "type"])
-                global_levels(c["type"], found, ["bodies", i, "ctors", j, "type"])
+        if len(d["bodies"]) == 1:
+            template_blockers(d, found)
     return ("UNSUPPORTED_FEATURE" if found.where else "CANDIDATE_SUPPORTED"), dict(sorted(found.where.items()))
 
 

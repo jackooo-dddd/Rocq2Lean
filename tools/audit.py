@@ -100,7 +100,10 @@ def canon(c, ps):
     return (c, tuple(sorted(ps.items())))
 
 
-def source_sort_nf(s):
+def source_sort_nf(s, body=None):
+    """Normal form of the target sort a source sort must become: global levels of the declaration's
+    type are parameters u_<name> (R2); proof-local levels (R2B) are read through their solutions
+    `body[name]` (a Lean level JSON, as claimed by the report and checked by check_body_levels)."""
     if s["k"] == "prop":
         return canon(0, {})
     if s["k"] == "type":
@@ -108,6 +111,12 @@ def source_sort_nf(s):
         for e in s["u"]:
             if e["l"]["k"] == "set":
                 c = max(c or 0, e["n"] + 1)
+            elif e["l"]["k"] == "global" and body is not None and e["l"]["n"] in body:
+                bc, bps = level_raw(body[e["l"]["n"]])
+                if bc is not None:
+                    c = max(c or 0, bc + e["n"] + 1)
+                for p, o in bps.items():
+                    ps[p] = max(ps.get(p, 0), o + e["n"] + 1)
             elif e["l"]["k"] == "global":
                 p = level_param(e["l"]["n"])
                 ps[p] = max(ps.get(p, 0), e["n"] + 1)
@@ -158,6 +167,7 @@ def template_binding(d):
 
 class Auditor:
     def __init__(self, decls, results, recursors=None):
+        self.body = None          # proof-local level solutions of the declaration being audited
         self.recursors = recursors
         self.decls = decls
         self.ok = {r["source"]: r for r in results
@@ -228,7 +238,7 @@ class Auditor:
                 raise Mismatch(f"{path}: source rel {s['i']} should be {want}, found {e}")
             return
         if k == "sort":
-            if e["k"] != "sort" or level_nf(e["l"]) != source_sort_nf(s["s"]):
+            if e["k"] != "sort" or level_nf(e["l"]) != source_sort_nf(s["s"], self.body):
                 raise Mismatch(f"{path}: sort mismatch")
             return
         if k in ("prod", "lam"):
@@ -642,7 +652,7 @@ def const_occurrences(e, acc):
     return acc
 
 
-def check_universe_args(facts, own, gen, exprs):
+def check_universe_args(facts, own, gen, exprs, body=None):
     """Rule R3 (docs/UNIVERSE_TRANSLATION.md) for every reference in `exprs`.
     own: source global levels of the referring declaration; gen: target name -> source levels."""
     n = 0
@@ -656,7 +666,10 @@ def check_universe_args(facts, own, gen, exprs):
                 raise Mismatch(f"{name}: {len(us)} universe arguments for {len(ls)} parameters")
             for l, sigma in zip(ls, us):
                 c, ps = level_nf(sigma)
-                if l in own:
+                if body and l in body:
+                    if (c, ps) != level_nf(body[l]):
+                        raise Mismatch(f"{name}: source level {l} is proof-local, argument must be its solution {body[l]}")
+                elif l in own:
                     if (c, ps) != canon(None, {level_param(l): 0}):
                         raise Mismatch(f"{name}: source level {l} is shared, argument must be {level_param(l)}")
                 else:
@@ -838,10 +851,47 @@ def check_residuals(r):
     ps = res.get("params", [])
     if len(ps) != n or len(set(ps)) != n or set(ps) & set(r.get("level_params", [])):
         raise Mismatch(f"residual parameters {ps} do not match {n} defaulted level(s)")
-    zero = {p: _ZERO for p in ps}
-    if inst_levels(res.get("generic_type"), zero) != r.get("target_type") or \
-            inst_levels(res.get("generic_value"), zero) != r.get("target_value"):
-        raise Mismatch("generic declaration with residual levels at 0 differs from the reported declaration")
+    ds = res.get("defaults", [])
+    if len(ds) != n or any(p in json.dumps(d_) for d_ in ds for p in ps):
+        raise Mismatch("residual defaults missing or mentioning residual parameters")
+    dflt = dict(zip(ps, ds))
+    if inst_levels(res.get("generic_type"), dflt) != r.get("target_type") or \
+            inst_levels(res.get("generic_value"), dflt) != r.get("target_value"):
+        raise Mismatch("generic declaration with residual levels at their defaults differs from the reported declaration")
+
+
+def check_body_levels(facts, d, sol):
+    """Rule R2B, independently: the proof-local levels of a constant (in its body, not its type) are
+    exactly the reported ones; each solution is a level over the type's parameters, and every native
+    fact between a proof-local level and Set / a type level / another proof-local level holds with
+    proof-local levels read as their solutions (summand-wise entailment in the native graph)."""
+    tl = sorted(source_globals(d["type"], set()))
+    bo = sorted(source_globals(d["body"], set()) - set(tl))
+    if sorted(sol) != bo:
+        raise Mismatch(f"proof-local levels {sorted(sol)} reported, source has {bo}")
+    back = {level_param(g): g for g in tl}
+
+    def summ(x):
+        if x not in sol:
+            return [(x, 0)]
+        c, ps = level_raw(sol[x])
+        out = [("Set", c or 0)]
+        for p, k in ps.items():
+            if p not in back:
+                raise Mismatch(f"solution of {x} mentions {p}, not a parameter of the declaration")
+            out.append((back[p], k))
+        return out
+
+    def leq(lhs, rhs, k):
+        return all((a == "Set" and i + k == 0) or any(
+            (facts.entails(a, b, 0) or a == "Set") if i + k <= j else facts.entails(a, b, i + k - j) for b, j in rhs)
+            for a, i in lhs)
+
+    mine = set(tl) | set(sol) | {"Set"}
+    for (a, b), r in facts.rel.items():
+        if (a in sol or b in sol) and a in mine and b in mine:
+            if not leq(summ(a), summ(b), 1 if r == "lt" else 0):
+                raise Mismatch(f"proof-local level solution violates the native fact {a} {r} {b}")
 
 
 def closure_refs(t, acc):
@@ -976,7 +1026,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
         if r_.get("status") == "TRANSLATED_AND_CHECKED" and r_.get("level_params"):
             d_ = decls[s_]
             if d_["kind"] == "constant":
-                gen[r_["target"]] = sorted(source_globals([d_["type"], d_["body"]], set()))
+                gen[r_["target"]] = sorted(source_globals(d_["type"], set()))
             elif template_binding(d_) is None:
                 # non-template inductive with generalized levels: references obey R3 (type, constructors)
                 for n_ in [r_["target"]] + [c["name"] for c in r_.get("target_ctors", [])]:
@@ -987,10 +1037,13 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
             if r_.get("status") != "TRANSLATED_AND_CHECKED":
                 continue
             d_ = decls[s_]
-            own = set(source_globals([d_["type"], d_["body"]], set())) if d_["kind"] == "constant" else set()
+            own = set(source_globals(d_["type"], set())) if d_["kind"] == "constant" else set()
+            bl = {x["level"]: x["sigma"] for x in r_.get("body_levels", [])}
             exprs = [r_.get("target_type"), r_.get("target_value")] + [c["type"] for c in r_.get("target_ctors", [])]
             try:
-                univ_checked += check_universe_args(facts, own, gen, [x for x in exprs if x is not None])
+                if d_["kind"] == "constant":
+                    check_body_levels(facts, d_, bl)
+                univ_checked += check_universe_args(facts, own, gen, [x for x in exprs if x is not None], bl)
             except Mismatch as e:
                 problem("universe", f"{s_}: {e}")
     # Structural fidelity of every accepted translation.
@@ -1067,11 +1120,15 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     raise Mismatch(f"{d['body_state']} source emitted as {r['target_kind']}")
                 if r.get("target_type") is None or r.get("target_value") is None:
                     raise Mismatch("success claimed without target type/value")
-                want_lp = sorted(level_param(n) for n in source_globals([d["type"], d["body"]], set()))
+                want_lp = sorted(level_param(n) for n in source_globals(d["type"], set()))
                 if r.get("level_params", []) != want_lp:
                     raise Mismatch(f"universe parameters {r.get('level_params')} are not the generalized globals {want_lp}")
-                aud.check(d["type"], r["target_type"], ["type"])
-                aud.check(d["body"], r["target_value"], ["body"])
+                aud.body = {x["level"]: x["sigma"] for x in r.get("body_levels", [])}
+                try:
+                    aud.check(d["type"], r["target_type"], ["type"])
+                    aud.check(d["body"], r["target_value"], ["body"])
+                finally:
+                    aud.body = None
                 v["verdict"] = "MATCH"
             elif r["status"] == "BOOTSTRAP_RESOLVED":
                 b = BOOTSTRAP.get(d["name"])

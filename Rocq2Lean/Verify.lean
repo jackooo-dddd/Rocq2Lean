@@ -272,17 +272,17 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
       if nDefaults != 0 then
         problems := note "residual_levels" s!"{tgt}: {nDefaults} defaulted universe level(s) without a justification" problems
     | res =>
-      let parsed : Except String (List Name × Expr × Expr) := do
+      let parsed : Except String (List Name × List Level × Expr × Expr) := do
         let ps := (← res.getObjValAs? (Array String) "params").toList.map String.toName
-        return (ps, ← exprOfJson (← res.getObjVal? "generic_type"), ← exprOfJson (← res.getObjVal? "generic_value"))
+        let ds ← (← res.getObjValAs? (Array Json) "defaults").toList.mapM levelOfJson
+        return (ps, ds, ← exprOfJson (← res.getObjVal? "generic_type"), ← exprOfJson (← res.getObjVal? "generic_value"))
       match parsed, ci.value? (allowOpaque := true) with
-      | .ok (ps, gty, gval), some v =>
+      | .ok (ps, z, gty, gval), some v =>
         if ps.length != nDefaults || ps.any ci.levelParams.contains then
           problems := note "residual_levels" s!"{tgt}: residual parameters {ps} do not match {nDefaults} defaulted level(s)" problems
-        let z := ps.map fun _ => Level.zero
-        unless exprJson (gty.instantiateLevelParams ps z) == exprJson ci.type &&
+        unless z.length == ps.length && exprJson (gty.instantiateLevelParams ps z) == exprJson ci.type &&
             exprJson (gval.instantiateLevelParams ps z) == exprJson v do
-          problems := note "residual_levels" s!"{tgt}: the generic declaration with its residual levels at 0 is not the imported one" problems
+          problems := note "residual_levels" s!"{tgt}: the generic declaration with its residual levels at their defaults is not the imported one" problems
         let d ← liftTermElabM (mkConstDecl (tgt.toName ++ `_rocq2lean_residual_check) kind (ci.levelParams ++ ps) gty gval)
         match ← liftCoreM (checkOnly d) with
         | .accepted => residualsChecked := residualsChecked + 1
