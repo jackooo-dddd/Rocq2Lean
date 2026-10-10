@@ -407,6 +407,8 @@ class Auditor:
                 out.append(("tgt", lift(x[1], n)))
             elif x[0] == "expect":
                 out.append(("expect", x[1], Auditor.shift(x[2], n)))
+            elif x[0] == "accrec":           # the induction hypothesis' position moves with the binders
+                out.append(("accrec", dict(x[1], ih=x[1]["ih"] + n)))
             else:
                 out.append(x)
         return out
@@ -467,6 +469,8 @@ class Auditor:
             return
         if k == "app" and s["f"]["k"] == "rel" and s["f"]["i"] < len(env) and env[s["f"]["i"]][0] == "rec":
             return self.check_rec_call(s, e, path, env, env[s["f"]["i"]][1])
+        if k == "app" and s["f"]["k"] == "rel" and s["f"]["i"] < len(env) and env[s["f"]["i"]][0] == "accrec":
+            return self.check_rec_call_acc(s, e, path, env, env[s["f"]["i"]][1])
         if k == "app":
             args = s["args"]
             cur = e
@@ -713,6 +717,15 @@ class Auditor:
             lams.append(b)
             b = b["b"]
         nl = len(lams)
+        # M6 accessibility lowering (structural recursion on a proof, into data)
+        tgt_body = e
+        for _ in range(nl):
+            if tgt_body["k"] != "lam":
+                break
+            tgt_body = tgt_body["b"]
+        th, _ = self.unspine(tgt_body)
+        if th.get("k") == "const" and th.get("n") == "Acc.rec":
+            return self.check_fix_acc(s, e, path, env)
         if b["k"] != "case" or b["c"] != {"k": "rel", "i": nl - 1 - r}:
             raise Mismatch(f"{path}: UNAUDITABLE fixpoint shape")
         senv = [("forbid",)] + list(env)      # the source binds f; the target does not
@@ -836,6 +849,132 @@ class Auditor:
             benv.append(("rec", info))
             benv += self.shift(senv[nl + 1:], depth)
             self.check(br["body"], body, path + [f"minor{k}"], benv)
+
+    def check_fix_acc(self, s, e, path, env):
+        """fix f a0..a_{n-1} {struct a_r} := body, a_r a proof of a Prop inductive I (one or no index),
+           result data  ->  lam a0..a_{n-1}. Acc.rec C R motive intro major wf G Q, with
+           major = <idx, a_r> (PSigma.mk) or a_r, motive = lam s acc. forall G Q. T[s] and
+           intro = lam s h ih. lam G Q. body' where every recursive call f P.. y rest becomes
+           ih <j, y> cert G'' rest. C, R, wf and the certificates are types and proofs (forced by typing,
+           no computational content) and are not compared."""
+        d = s["defs"][0]
+        r = d["rarg"]
+        lams, b = [], d["body"]
+        while b["k"] == "lam":
+            lams.append(b)
+            b = b["b"]
+        nl = len(lams)
+        senv = [("forbid",)] + list(env)
+        cur = e
+        for i, lam in enumerate(lams):
+            if cur["k"] != "lam":
+                raise Mismatch(f"{path}: expected {nl} lambdas")
+            self.check(lam["ty"], cur["t"], path + [f"lam{i}"], senv)
+            senv = self.push(senv)
+            cur = cur["b"]
+        head, spine = self.unspine(cur)
+        xty = lams[r]["ty"]
+        xargs = []
+        while xty["k"] == "app":
+            xargs = xty["args"] + xargs
+            xty = xty["f"]
+        if xty["k"] != "ind":
+            raise Mismatch(f"{path}: decreasing argument is not of an inductive type")
+        mib = self.decls[xty["ind"]["mind"]]
+        nrec = (mib.get("native") or {}).get("nparams_rec", mib["npars"])
+        idx = xargs[nrec:]
+        if len(idx) > 1 or any(a["k"] != "rel" or a["i"] >= r for a in idx):
+            raise Mismatch(f"{path}: UNAUDITABLE accessibility lowering (indices)")
+        has_idx = len(idx) == 1
+        idx_pos = {r - 1 - a["i"] for a in idx}
+        gpos = sorted(changed_params(d["body"], nl, r) - idx_pos)
+        ng, nq = len(gpos), nl - r - 1
+        if len(spine) != 6 + ng + nq:
+            raise Mismatch(f"{path}: Acc.rec applied to {len(spine)} arguments")
+        # major
+        xb = {"k": "bvar", "i": nl - 1 - r}
+        maj = spine[4]
+        if has_idx:
+            mh, ma = self.unspine(maj)
+            if mh.get("n") != "PSigma.mk" or len(ma) != 4 or ma[3] != xb:
+                raise Mismatch(f"{path}: Acc.rec major is not <index, decreasing argument>")
+        elif maj != xb:
+            raise Mismatch(f"{path}: Acc.rec major is not the decreasing argument")
+        for j, i in enumerate(gpos):
+            if spine[6 + j] != {"k": "bvar", "i": nl - 1 - i}:
+                raise Mismatch(f"{path}: generalized argument {i} not passed on")
+        for j in range(nq):
+            if spine[6 + ng + j] != {"k": "bvar", "i": nq - 1 - j}:
+                raise Mismatch(f"{path}: trailing argument {j} not passed on")
+        proj = lambda i, sb: {"k": "proj", "s": "PSigma", "i": i, "e": {"k": "bvar", "i": sb}}
+
+        def lead(i, depth, sidx, gbase):
+            """Image of leading lambda i (< r) at `depth` binders below the lambdas: index -> s.1,
+            generalized -> its G binder (gbase: index of G_0), other -> the outer lambda."""
+            if i in idx_pos:
+                return ("tgt", proj(0, sidx))
+            if i in gpos:
+                return ("bvar", gbase - gpos.index(i), "gen", i)
+            return ("bvar", (nl - 1 - i) + depth, "param", i)
+
+        # motive: lam s acc. forall G.. Q.. T
+        mb = self.strip_lams(spine[2], 2, path + ["motive"])
+        for j, i in enumerate(gpos):           # forall G: the generalized arguments' source types
+            if mb["k"] != "forall":
+                raise Mismatch(f"{path}: motive lacks the generalized argument {i}")
+            depth = 2 + j
+            menv = [lead(k, depth, depth - 1, j - 1) for k in reversed(range(i))] + [("forbid",)] + self.shift(list(env), nl + depth)
+            self.check(lams[i]["ty"], mb["t"], path + [f"motive g{j}"], menv)
+            mb = mb["b"]
+        depth = 2 + ng
+        xent = ("tgt", proj(1, depth - 1)) if has_idx else ("bvar", depth - 1)
+        menv = [xent] + [lead(k, depth, depth - 1, ng - 1) for k in reversed(range(r))] + self.shift(list(env), nl + depth)
+        fty = d["ty"]
+        for _ in range(r + 1):
+            if fty["k"] != "prod":
+                raise Mismatch(f"{path}: fixpoint type has fewer than {r + 1} binders")
+            fty = fty["b"]
+        self.check(fty, mb, path + ["motive body"], menv)
+        # intro: lam s h ih. lam G.. Q.. body
+        ib = self.strip_lams(spine[3], 3 + ng + nq, path + ["intro"])
+        depth = 3 + ng + nq
+        sidx = depth - 1
+        xent = ("tgt", proj(1, sidx)) if has_idx else ("bvar", sidx)
+        benv = [("bvar", t) for t in range(nq)]                     # Q (innermost first)
+        benv += [xent] + [lead(k, depth, sidx, nq + ng - 1) for k in reversed(range(r))]
+        info = {"r": r, "ih": depth - 3, "gpos": gpos, "idx_pos": idx_pos, "has_idx": has_idx, "nq": nq}
+        benv += [("accrec", info)] + self.shift(list(env), nl + depth)
+        self.check(b, ib, path + ["intro"], benv)
+
+    def check_rec_call_acc(self, s, e, path, env, info):
+        """f P.. y rest  ->  ih <j, y> cert G'' rest   (j and cert forced by typing / proofs)."""
+        args, r = s["args"], info["r"]
+        if len(args) < r + 1:
+            raise Mismatch(f"{path}: recursive call without its decreasing argument")
+        for i in range(r):
+            if i in info["idx_pos"] or i in info["gpos"]:
+                continue
+            a = args[i]
+            ent = env[a["i"]] if a["k"] == "rel" and a["i"] < len(env) else None
+            if not (ent and ent[0] == "bvar" and ent[2:4] == ("param", i)):
+                raise Mismatch(f"{path}: recursive call changes parameter {i}")
+        head, sp = self.unspine(e)
+        # ih is bound at a fixed depth below the intro's binders; locate it through the env offset
+        rest = [args[i] for i in info["gpos"]] + args[r + 1:]
+        if len(sp) != 2 + len(rest) or head["k"] != "bvar":
+            raise Mismatch(f"{path}: recursive call must become ih <j, y> cert ...")
+        if head["i"] != info["ih"]:
+            raise Mismatch(f"{path}: recursive call does not use the induction hypothesis (bvar {info['ih']})")
+        pr = sp[0]
+        if info["has_idx"]:
+            ph, pa = self.unspine(pr)
+            if ph.get("n") != "PSigma.mk" or len(pa) != 4:
+                raise Mismatch(f"{path}: recursive call's argument is not a carrier pair")
+            self.check(args[r], pa[3], path + ["rec-arg"], env)
+        else:
+            self.check(args[r], pr, path + ["rec-arg"], env)
+        for j, a in enumerate(rest):
+            self.check(a, sp[2 + j], path + [f"rec-arg{j}"], env)
 
     def check_rec_call(self, s, e, path, env, info):
         args, r = s["args"], info["r"]

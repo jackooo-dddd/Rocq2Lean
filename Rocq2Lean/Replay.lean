@@ -28,7 +28,10 @@ partial def levelOfJson (j : Json) : Except String Level := do
   | k => throw s!"level kind {k} cannot be replayed"
 
 partial def exprOfJson (j : Json) : Except String Expr := do
-  let name (k : String) : Except String Name := return (← j.getObjValAs? String k).toName
+  -- (`exprJson` writes `Name.anonymous` as "[anonymous]", e.g. Rocq's anonymous binders)
+  let name (k : String) : Except String Name := do
+    let s ← j.getObjValAs? String k
+    return if s == "[anonymous]" then .anonymous else s.toName
   let sub (k : String) : Except String Expr := do exprOfJson (← j.getObjVal? k)
   match ← j.getObjValAs? String "k" with
   | "bvar" => return .bvar (← j.getObjValAs? Nat "i")

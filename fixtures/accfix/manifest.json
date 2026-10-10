@@ -1,0 +1,1 @@
+{"name": "accfix", "load_paths": [["-Q", ".", "AF"]], "files": ["AccFix.v"], "requires": ["AF.AccFix"]}

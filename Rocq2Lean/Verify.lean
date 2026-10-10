@@ -211,6 +211,12 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
           for cs in rule.target.ctors do for c in cs do allowed := allowed.insert c
     | _ => pure ()
   if accepted.isEmpty then problems := note "coverage" "no accepted declaration" problems
+  -- M6 construction primitives (docs/TRUST.md): Lean prelude inductive types used only by the
+  -- accessibility lowering (Acc, PSigma, Exists, Or, False) and the convoy lowering (Eq); they are
+  -- kernel-defined inductives without axioms (the axiom detector still runs on every target)
+  for c in [``Acc, ``Acc.intro, ``Acc.rec, ``PSigma, ``PSigma.mk, ``Exists, ``Exists.intro, ``Exists.rec,
+            ``Or, ``Or.inl, ``Or.inr, ``Or.rec, ``False, ``False.rec, ``Eq, ``Eq.refl, ``Eq.rec] do
+    allowed := allowed.insert c
   -- per declaration
   let env ← getEnv
   let mut recs : Std.HashMap Name RecursorVal := {}

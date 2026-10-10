@@ -2,7 +2,7 @@
 # Runs every stage suite in a fresh process each; writes reports/test_all.json.
 cd "$(dirname "$0")/.." || exit 2
 status=0; results=()
-for t in doctor test-smoke test-m1 test-m2 test-m3 test-negative test-holdout test-root-contract test-artifact-integrity test-universe-audit test-lowering-audit test-source-metadata test-cli-status test-assumptions test-holdout2 test-m4 test-m5; do
+for t in doctor test-smoke test-m1 test-m2 test-m3 test-negative test-holdout test-root-contract test-artifact-integrity test-universe-audit test-lowering-audit test-source-metadata test-cli-status test-assumptions test-holdout2 test-m4 test-m5 test-m6; do
   start=$(date +%s)
   ./scripts/$t > "reports/logs/$t.log" 2>&1; rc=$?
   if [ $rc -eq 0 ]; then r=PASS; else r=FAIL; status=1; fi

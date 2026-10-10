@@ -1,0 +1,90 @@
+{
+  "m6-poly": {
+    "roots": {
+      "PolyFx.Poly.use_set": "TRANSLATED_AND_CHECKED",
+      "PolyFx.Poly.use_lemma": "TRANSLATED_AND_CHECKED",
+      "PolyFx.Poly.use_twice_2": "TRANSLATED_AND_CHECKED",
+      "PolyFx.Poly.use_glob": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-nonuniform": {
+    "roots": {
+      "NU.NonUniform.cd_is_stop_ex": "TRANSLATED_AND_CHECKED",
+      "NU.NonUniform.cd_tail_ex": "TRANSLATED_AND_CHECKED",
+      "NU.NonUniform.accb_inv": "TRANSLATED_AND_CHECKED",
+      "NU.NonUniform.accb_start": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-nonuniform-fn": {
+    "roots": {
+      "NU.NonUniform.cd_is_stop": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "mutations": [
+    {
+      "mutation": "convoy-branch",
+      "declaration": "NU.NonUniform.cd_is_stop",
+      "kernel": "ACCEPTED",
+      "verify_exit": 2,
+      "detectors": [
+        "structure"
+      ]
+    },
+    {
+      "mutation": "acc-result",
+      "declaration": "AF.AccFix.search",
+      "kernel": "ACCEPTED",
+      "verify_exit": 2,
+      "detectors": [
+        "structure"
+      ]
+    }
+  ],
+  "m6-accfix": {
+    "roots": {
+      "AF.AccFix.search_ex": "TRANSLATED_AND_CHECKED",
+      "AF.AccFix.search_ex1": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-accfix-fn": {
+    "roots": {
+      "AF.AccFix.search": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-find-ex-minn": {
+    "roots": {
+      "mathcomp.boot.ssrnat.find_ex_minn": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.ssrnat.ex_minn": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  }
+}

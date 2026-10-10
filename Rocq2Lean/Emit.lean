@@ -476,7 +476,7 @@ where
       let mut out : Array Constructor := #[]
       for c in body.ctors, cn in cnames do
         let r ← (withReader (fun ctx => { ctx with locals := #[sv] })
-                   (withPath s!"ctor {c.name}" (do instLevelMVars (← trans c.type)))).run { genv, globalLevels := gl } |>.run
+                   (withPath s!"ctor {c.name}" (do return eraseBinderScopes (← instLevelMVars (← trans c.type))))).run { genv, globalLevels := gl } |>.run
         match r with
         | .ok cty =>
           -- R3″/R5S: unify level metavariables of the block by type-checking the constructor type

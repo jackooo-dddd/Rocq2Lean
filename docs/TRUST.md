@@ -65,6 +65,32 @@ kernel typing obligation made explicit; indices do not occur in the recursor's �
 motive's universe level and `Eq`'s template level (unique solutions without cumulativity; now
 also recomputed by the auditor and checked by the consumer, R4), and erased cast annotations (validated by `isDefEq` before erasure; a cast carries no term content).
 
+## M6 constructions
+
+* **Construction primitives.** The accessibility lowering uses Lean prelude inductives `Acc`,
+  `PSigma`, `Exists`, `Or` and `False`, and the convoy lowering uses `Eq` (with their constructors
+  and recursors). The consumer's dependency check admits exactly this fixed list in addition to the
+  run's accepted closure and the bootstrap targets. They are kernel-defined inductive types; the
+  axiom detector still runs on every target, and none is involved in any axiom.
+* **What the auditor does not compare** in an accessibility-lowered fixpoint: the carrier `C`, the
+  call-graph relation `R`, the well-foundedness proof and the call certificates. `C` is forced by
+  the major premise's type; `R` is a proposition and the others are proofs, so none can change
+  what is computed. The auditor compares the major premise, the passed-on arguments, the motive
+  (the source fixpoint type) and the minor premise's body (the source body, recursive calls as
+  `ih ⟨j, a⟩ _ G Q`). A type-correct mutation of the computed result is kernel-accepted and
+  audit-rejected (`test-m6`).
+* **Convoy lowering.** The auditor checks the shape (parameters, the non-uniform argument, the
+  `Eq.refl` convoy, the cast pattern of the return clause, each branch body under its `refl`
+  λ, the fields passed on). The inner `Eq.rec` motives only affect typing.
+* **Universe rules R6, R2⁺, R3G, R2F-c, R8 and the cumulativity tier**: each has an independent
+  copy in the auditor (`docs/UNIVERSE_TRANSLATION.md`). The cumulativity tier is applied only to
+  rows the strict rules reject, and is reported per row.
+* **Binder names.** Macro scopes are erased from binder names in every translated term (hygienic
+  names inherited from Lean's own declarations do not survive the report's string round trip).
+  Binder names carry no meaning, and the auditor does not compare them.
+* **Native `nparams_rec`.** It is exported from the kernel's `mind_nparams_rec` and re-checked by the
+  fresh-process round trip, like the other native fields.
+
 ## Assumptions
 
 Success admits no source axioms and no target axioms, including Lean's standard axioms.

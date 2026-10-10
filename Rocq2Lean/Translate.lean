@@ -80,8 +80,37 @@ structure GEnv where
   admitting : Std.HashMap Name (Array String) := {}
   deriving Inhabited
 
+/-- M6 accessibility lowering (`transFixAcc`): the recursive calls of the fixpoint being lowered.
+Inside `Acc.rec`'s minor premise the decreasing argument is the proof component of the carrier
+element `s`; a call `f … a …` becomes `ih ⟨j, a⟩ ?c …`, where `?c : R ⟨j, a⟩ s` is filled once the
+call-graph relation `R` is known (`sites` records each call's local context, pair and hole). -/
+structure AccSite where
+  f : FVarId
+  s : Expr
+  ih : Expr
+  R : Expr
+  nP : Nat
+  idxPos : Array (Option Nat)
+  gpos : Array Nat
+  expected : Array Expr
+  hasIdx : Bool
+  nparams : Nat
+  idxTy : Expr
+  idxLvl : Level
+  fam : Expr
+  /-- fvars of the context of `Acc.rec`'s minor premise (not part of a call's own context) -/
+  base : Array FVarId
+  /-- first pass: the call sites' disjuncts `D_c = λ y s, ∃ ctx_c, y = ⟨j_c, a_c⟩` are collected;
+  second pass: `ds` are known and each call proves its own disjunct -/
+  collect : Bool
+  dsRef : IO.Ref (Array Expr)
+  ds : Array Expr
+  counter : IO.Ref Nat
+
 structure TCtx where
   genv : GEnv
+  /-- M6: the accessibility-lowered fixpoint whose recursive calls are being translated. -/
+  accSite : Option AccSite := none
   /-- Global monomorphic levels of the declaration being translated, as Lean universe
   parameters (`Type@{l+n} ↦ Sort (u_l + n + 1)`). -/
   globalLevels : Std.HashMap String Level := {}
@@ -375,6 +404,278 @@ partial def changedParams (t : IR.Term) (nl r depth : Nat) (acc : Std.HashSet Na
   | .proj _ _ _ c => go c 0 acc
   | _ => acc
 
+
+/-! ## M6: accessibility lowering (structural recursion on a proof, into data) -/
+
+/-- `⟨j, a⟩ : Σ' i, I params i` (an inductive with one index) or `a` itself (no index). -/
+def accMk (hasIdx : Bool) (idxTy fam : Expr) (idxLvl : Level) (j a : Expr) : Expr :=
+  if hasIdx then mkAppN (mkConst ``PSigma.mk [idxLvl, .zero]) #[idxTy, fam, j, a] else a
+
+/-- The carrier element of a proof `a : I params j`. -/
+def accPairOf (hasIdx : Bool) (nparams : Nat) (idxTy fam : Expr) (idxLvl : Level) (a : Expr) : MetaM Expr := do
+  if !hasIdx then return a
+  let ty ← whnf (← inferType a)
+  let some j := ty.getAppArgs[nparams]? | throwError "accessibility lowering: proof without index"
+  return accMk hasIdx idxTy fam idxLvl j a
+
+/-- Binder names without macro scopes (hygienic names such as `mkArrow`'s `x✝` do not survive the
+report's string round trip; binder names carry no meaning). -/
+partial def eraseBinderScopes : Expr → Expr
+  | .lam n t b bi => .lam n.eraseMacroScopes (eraseBinderScopes t) (eraseBinderScopes b) bi
+  | .forallE n t b bi => .forallE n.eraseMacroScopes (eraseBinderScopes t) (eraseBinderScopes b) bi
+  | .letE n t v b nd => .letE n.eraseMacroScopes (eraseBinderScopes t) (eraseBinderScopes v) (eraseBinderScopes b) nd
+  | .app f a => .app (eraseBinderScopes f) (eraseBinderScopes a)
+  | .mdata d b => .mdata d (eraseBinderScopes b)
+  | .proj s i b => .proj s i (eraseBinderScopes b)
+  | e => e
+
+/-- Right-nested disjunction `D₀ ∨ (D₁ ∨ …)`; `False` when empty. -/
+def mkDisj : List Expr → Expr
+  | [] => mkConst ``False
+  | [d] => d
+  | d :: ds => mkApp2 (mkConst ``Or) d (mkDisj ds)
+
+/-- Proof of `mkDisj ds` from a proof `h` of its `r`-th disjunct. -/
+def mkDisjIntro : List Expr → Nat → Expr → Expr
+  | [_], _, h => h
+  | d :: ds, 0, h => mkApp3 (mkConst ``Or.inl) d (mkDisj ds) h
+  | d :: ds, r + 1, h => mkApp3 (mkConst ``Or.inr) d (mkDisj ds) (mkDisjIntro ds r h)
+  | [], _, h => h
+
+/-- `∃ x₁, … ∃ xₙ, body` over local variables (dependencies handled by abstraction). -/
+def mkExistsFVars (xs : Array Expr) (body : Expr) : MetaM Expr := do
+  let mut b := body
+  for x in xs.reverse do
+    let ty ← inferType x
+    b := mkApp2 (mkConst ``Exists [← getLevel ty]) ty (← mkLambdaFVars #[x] b)
+  return b
+
+/-- A proof of `∃ x₁ … xₙ, y = y` (as built by `mkExistsFVars`) with witnesses `ws` and `Eq.refl`. -/
+partial def mkExistsIntro (prop : Expr) (ws : List Expr) (refl : Expr) : MetaM Expr := do
+  match ws with
+  | [] => return refl
+  | w :: ws =>
+    let prop ← whnfR prop
+    let #[α, p] := prop.getAppArgs | throwError "accessibility lowering: unexpected existential"
+    let lvl := prop.getAppFn.constLevels!
+    let inner ← mkExistsIntro ((p.beta #[w])) ws refl
+    return mkAppN (mkConst ``Exists.intro lvl) #[α, p, w, inner]
+
+/-- A recursive call `f args` of an accessibility-lowered fixpoint: `ih ⟨j, a⟩ ⟨ctx, rfl⟩ G Q`. -/
+def accCallSite (ac : AccSite) (args : Array Expr) : TransM Expr := do
+  unless args.size ≥ ac.nP + 1 do failT "UNSUPPORTED_FEATURE" "recursive call without its decreasing argument"
+  let a := args[ac.nP]!
+  let mut gs : Array Expr := #[]
+  for i in [0:ac.nP] do
+    if ac.gpos.contains i then gs := gs.push args[i]!
+    else if ac.idxPos[i]!.isNone then
+      unless ← liftMeta (isDefEq args[i]! ac.expected[i]!) do
+        failT "UNSUPPORTED_FEATURE" s!"recursive call changes parameter {i}, which precedes the decreasing argument"
+  if a.containsFVar ac.ih.fvarId! || a.containsFVar ac.f || a.hasExprMVar then
+    failT "UNSUPPORTED_FEATURE" "accessibility lowering: nested recursive call in the decreasing argument"
+  let pr ← liftMeta (accPairOf ac.hasIdx ac.nparams ac.idxTy ac.fam ac.idxLvl a)
+  -- the call's own context: every local introduced after Acc.rec's minor premise (let-bound
+  -- locals are unfolded in the argument instead)
+  let lctx ← getLCtx
+  let ctx := lctx.getFVars.filter fun v => !ac.base.contains v.fvarId! && !(lctx.get! v.fvarId!).isLet
+  -- R's disjunct quantifies over the call's context; let-bound locals of that context are unfolded
+  -- there (only there: the call itself keeps the source term)
+  let unfoldLets (e : Expr) : Expr := Id.run do
+    let mut e := e
+    for _ in [0:lctx.numIndices] do
+      let e' := e.replace fun x => match x with
+        | .fvar id => match lctx.find? id with
+          | some (.ldecl (value := v) ..) => some v
+          | _ => none
+        | _ => none
+      if e' == e then break
+      e := e'
+    return e
+  let prZ := unfoldLets pr
+  let cTy ← liftMeta (inferType pr)
+  let cLvl ← liftMeta (getLevel cTy)
+  let c ← ac.counter.modifyGet fun n => (n, n + 1)
+  let cert ← if ac.collect then do
+      let d ← liftMeta <| withLocalDecl `y .default cTy fun y => do
+        mkLambdaFVars #[y, ac.s] (← mkExistsFVars ctx (mkApp3 (mkConst ``Eq [cLvl]) cTy y prZ))
+      if d.containsFVar ac.ih.fvarId! || d.containsFVar ac.f then
+        failT "UNSUPPORTED_FEATURE" "accessibility lowering: a recursive call's context mentions the recursion"
+      ac.dsRef.modify (·.push d)
+      pure (mkSort .zero)                                    -- (first pass: the term is discarded)
+    else do
+      let some dc := ac.ds[c]? | failT "TRANSLATION_FAILED" "accessibility lowering: call sites differ between passes"
+      let inst := ac.ds.toList.map fun d => d.beta #[pr, ac.s]
+      let ex ← liftMeta (mkExistsIntro (dc.beta #[pr, ac.s]) ctx.toList (mkApp2 (mkConst ``Eq.refl [cLvl]) cTy pr))
+      pure (mkDisjIntro inst c ex)
+  return mkAppN ac.ih (#[pr, cert] ++ gs ++ args.extract (ac.nP + 1) args.size)
+
+/-- `symm e : b = a` from `e : a = b`, with `Eq.rec` only. -/
+def mkEqSymm (lvl : Level) (α a b e : Expr) : Expr :=
+  let mot := Expr.lam `z α (Expr.lam `w (mkApp3 (mkConst ``Eq [lvl]) α a (.bvar 0)) (mkApp3 (mkConst ``Eq [lvl]) α (.bvar 1) a) .default) .default
+  mkAppN (mkConst ``Eq.rec [.zero, lvl]) #[α, a, mot, mkApp2 (mkConst ``Eq.refl [lvl]) α a, b, e]
+
+/-- Proof of `Acc R ⟨j, t⟩` for a term `t : I params j` evaluated at a constructor of the carrier
+(the well-foundedness proof): a recursive field of that constructor (its induction hypothesis,
+`rf`), a recursor application generalized over its major, indices and extra arguments and proved
+branch by branch (into `Prop`), or a β/ζ/δ/ι step. Mirrors Rocq's guard condition. -/
+partial def accCert (mkGoal : Expr → MetaM Expr) (t : Expr) (rf : Array (Expr × Expr)) : TransM Expr := do
+  let t := t.headBeta.consumeMData
+  if let some (_, ih) := rf.find? (·.1 == t) then return ih
+  match t with
+  | .letE _ _ v b _ => return ← accCert mkGoal (b.instantiate1 v) rf
+  | _ => pure ()
+  let t' ← liftMeta (whnfCore t)
+  if t' != t then return ← accCert mkGoal t' rf
+  let fn := t.getAppFn
+  if let .const c ls := fn then
+    match (← getEnv).find? c with
+    | some (.recInfo rv) =>
+      let args := t.getAppArgs
+      let np := rv.numParams; let nm := rv.numMinors; let ni := rv.numIndices
+      let base := np + 1 + nm + ni + 1
+      unless args.size ≥ base do failT "UNSUPPORTED_FEATURE" "accessibility lowering: partial recursor application"
+      let ps := args.extract 0 np
+      let mot := args[np]!
+      let mins := args.extract (np + 1) (np + 1 + nm)
+      let idxs := args.extract (np + 1 + nm) (np + 1 + nm + ni)
+      let maj := args[base - 1]!
+      let extras := args.extract base args.size
+      let indLvlCount := (← liftMeta (getConstInfoInduct rv.getMajorInduct)).levelParams.length
+      let large := rv.levelParams.length == indLvlCount + 1
+      let lsNew := if large then Level.zero :: ls.tail else ls
+      -- generalized motive λ idxs' z, ∀ extras', Acc R ⟨_, R.rec … idxs' z extras'⟩
+      let newMot ← liftMeta <| forallBoundedTelescope (← inferType mot) (some (ni + 1)) fun iz _ => do
+        forallBoundedTelescope (← whnf (mkAppN mot iz)) (some extras.size) fun ex' _ => do
+          let t' := mkAppN (mkConst rv.name ls) (ps ++ #[mot] ++ mins ++ iz ++ ex')
+          mkLambdaFVars iz (← mkForallFVars ex' (← mkGoal t'))
+      let newRec := mkConst rv.name lsNew
+      let mut ty ← liftMeta do instantiateForall (← inferType newRec) (ps.push newMot)
+      let mut minors : Array Expr := #[]
+      for k in [0:nm] do
+        let .forallE _ minorTy rest _ ← liftMeta (whnf ty) | failT "TRANSLATION_FAILED" "certificate: missing minor"
+        let nf := rv.rules[k]!.nfields
+        let minor ← forallTelescopeReducing minorTy fun xs _ => do
+          let fields := xs.extract 0 nf
+          let mut nih := 0
+          for q in [nf:xs.size] do
+            if (← liftMeta (inferType xs[q]!)).getAppFn == newMot then nih := nih + 1 else break
+          let ihs := xs.extract nf (nf + nih)
+          let ex := xs.extract (nf + nih) xs.size
+          let origIhs ← ihs.mapM fun h => do
+            let a := (← liftMeta (inferType h)).getAppArgs
+            pure (mkAppN (mkConst rv.name ls) (ps ++ #[mot] ++ mins ++ a))
+          let tk := (mkAppN mins[k]! (fields ++ origIhs ++ ex)).headBeta
+          let rfk := rf.map fun (r, ih) => match extras.findIdx? (· == r) with
+            | some q => (ex[q]!, ih) | none => (r, ih)
+          let cert ← accCert mkGoal tk rfk
+          liftMeta (mkLambdaFVars xs cert)
+        minors := minors.push minor
+        ty := rest.instantiate1 minor
+      return mkAppN newRec (ps ++ #[newMot] ++ minors ++ idxs ++ #[maj] ++ extras)
+    | some ci =>
+      if let some v := ci.value? (allowOpaque := true) then
+        return ← accCert mkGoal ((v.instantiateLevelParams ci.levelParams ls).beta t.getAppArgs) rf
+    | none => pure ()
+  failT "UNSUPPORTED_FEATURE"
+    s!"accessibility lowering: a recursive call's argument is not a structural subterm ({fn.constName?.getD `_})"
+
+
+/-- Eliminate `h : ∃ x₁ … xₙ, y = PR` (a call site's disjunct at a constructor of the carrier) into
+`Acc R y`: the witnesses are the call's context, and `Acc R PR` is `accCert` of the call's argument. -/
+partial def accElimExists (C : Expr) (cLvl : Level) (R y : Expr) (hasIdx : Bool)
+    (pairOf : Expr → MetaM Expr) (rf : Array (Expr × Expr)) (E h : Expr) : TransM Expr := do
+  let goal := mkApp3 (mkConst ``Acc [cLvl]) C R y
+  let E ← liftMeta (whnfR E)
+  if E.isAppOfArity ``Exists 2 then
+    let α := E.getArg! 0
+    let p := E.getArg! 1
+    let lvl := E.getAppFn.constLevels!
+    let minor ← withLocalDecl `w .default α fun w => do
+      let pw := p.beta #[w]
+      withLocalDecl `hw .default pw fun hw => do
+        liftMeta (mkLambdaFVars #[w, hw] (← accElimExists C cLvl R y hasIdx pairOf rf pw hw))
+    return mkAppN (mkConst ``Exists.rec lvl) #[α, p, .lam `_ E goal .default, minor, h]
+  if E.isAppOfArity ``Eq 3 then
+    let PR := E.getArg! 2
+    let a := if hasIdx then (if PR.isAppOfArity ``PSigma.mk 4 then PR.getArg! 3 else .proj ``PSigma 1 PR) else PR
+    let accP ← accCert (fun t => do pure (mkApp3 (mkConst ``Acc [cLvl]) C R (← pairOf t))) a rf
+    let mot := Expr.lam `z C (Expr.lam `w (mkApp3 (mkConst ``Eq [cLvl]) C PR (.bvar 0))
+      (mkApp3 (mkConst ``Acc [cLvl]) C R (.bvar 1)) .default) .default
+    return mkAppN (mkConst ``Eq.rec [.zero, cLvl]) #[C, PR, mot, accP, y, mkEqSymm cLvl C y PR h]
+  failT "TRANSLATION_FAILED" "accessibility lowering: unexpected shape of a call site's disjunct"
+
+/-- Eliminate `hy : D_i y sk ∨ … ∨ D_n y sk` into `Acc R y`. -/
+partial def accElimDisj (C : Expr) (cLvl : Level) (R y sk : Expr) (hasIdx : Bool) (pairOf : Expr → MetaM Expr)
+    (rf : Array (Expr × Expr)) (ds : Array Expr) (i : Nat) (hy : Expr) : TransM Expr := do
+  let goal := mkApp3 (mkConst ``Acc [cLvl]) C R y
+  let Di := ds[i]!.beta #[y, sk]
+  if i + 1 == ds.size then return ← accElimExists C cLvl R y hasIdx pairOf rf Di hy
+  let rest := mkDisj ((ds.toList.drop (i + 1)).map fun d => d.beta #[y, sk])
+  let l ← withLocalDecl `ha .default Di fun ha => do
+    liftMeta (mkLambdaFVars #[ha] (← accElimExists C cLvl R y hasIdx pairOf rf Di ha))
+  let r ← withLocalDecl `hb .default rest fun hb => do
+    liftMeta (mkLambdaFVars #[hb] (← accElimDisj C cLvl R y sk hasIdx pairOf rf ds (i + 1) hb))
+  return mkAppN (mkConst ``Or.rec) #[Di, rest, .lam `_ (mkApp2 (mkConst ``Or) Di rest) goal .default, l, r, hy]
+
+/-- `wf : ∀ s : C, Acc R s`, by `I.rec` into `Prop`: at each constructor `C_k fields` of the carrier,
+`Acc.intro`, and every `y` related to it is a call argument evaluated there (`accElimDisj`). -/
+def accWf (iname : Name) (indLvls : List Level) (rv : RecursorVal) (params : Array Expr) (hasIdx : Bool)
+    (idxTy : Expr) (idxLvl : Level) (fam C : Expr) (cLvl : Level) (R : Expr) (ds : Array Expr) : TransM Expr := do
+  let np := rv.numParams; let ni := rv.numIndices
+  let mk := accMk hasIdx idxTy fam idxLvl
+  let pairOf := accPairOf hasIdx np idxTy fam idxLvl
+  let recC := mkConst (iname.str "rec") indLvls
+  let ty0 ← liftMeta do instantiateForall (← inferType recC) params
+  let .forallE _ motTy _ _ := ty0 | failT "TRANSLATION_FAILED" s!"unexpected type of {iname}.rec"
+  let motive ← liftMeta <| forallBoundedTelescope motTy (some (ni + 1)) fun xs _ => do
+    let z := if hasIdx then mk xs[0]! xs[ni]! else xs[ni]!
+    mkLambdaFVars xs (mkApp3 (mkConst ``Acc [cLvl]) C R z)
+  let mut ty ← liftMeta do instantiateForall (← inferType recC) (params.push motive)
+  let mut minors : Array Expr := #[]
+  for k in [0:rv.numMinors] do
+    let .forallE _ minorTy rest _ ← liftMeta (whnf ty) | failT "TRANSLATION_FAILED" s!"{iname}.rec: missing minor {k}"
+    let nf := rv.rules[k]!.nfields
+    let minor ← forallTelescopeReducing minorTy fun xs _ => do
+      let fields := xs.extract 0 nf
+      let ihs := xs.extract nf xs.size
+      let mut rf : Array (Expr × Expr) := #[]
+      let mut q := 0
+      for fl in fields do
+        let fty ← liftMeta do whnf (← inferType fl)
+        if fty.getAppFn.isConstOf iname then
+          if h : q < ihs.size then
+            rf := rf.push (fl, ihs[q])
+            q := q + 1
+      let ctorApp := mkAppN (mkConst rv.rules[k]!.ctor indLvls) (params ++ fields)
+      let cIdx := (← liftMeta do whnf (← inferType ctorApp)).getAppArgs.extract np (np + ni)
+      let sk := if hasIdx then mk cIdx[0]! ctorApp else ctorApp
+      let pf ← withLocalDecl `y .default C fun y => do
+        withLocalDecl `hy .default (mkApp2 R y sk) fun hy => do
+          let body ← accElimDisj C cLvl R y sk hasIdx pairOf rf ds 0 hy
+          liftMeta (mkLambdaFVars #[y, hy] body)
+      liftMeta (mkLambdaFVars xs (mkAppN (mkConst ``Acc.intro [cLvl]) #[C, R, sk, pf]))
+    minors := minors.push minor
+    ty := rest.instantiate1 minor
+  liftMeta <| withLocalDecl `s .default C fun s => do
+    let (ixs, mj) := if hasIdx then (#[Expr.proj ``PSigma 0 s], Expr.proj ``PSigma 1 s) else (#[], s)
+    mkLambdaFVars #[s] (mkAppN recC (params ++ #[motive] ++ minors ++ ixs ++ #[mj]))
+
+/-- Open the binders of a fixpoint type `fty` at the values of `Acc.rec`'s minor premise: index
+positions ↦ `fst s`, generalized positions ↦ fresh locals, other leading positions ↦ `P`, the
+decreasing position ↦ `snd s`, trailing positions ↦ fresh locals. -/
+partial def accWalk {α} (fty : Expr) (n rarg : Nat) (P : Array Expr) (idxPos : Array (Option Nat)) (gpos : Array Nat)
+    (fstS sndS : Expr) (i : Nat) (vals fresh : Array Expr) (k : Array Expr → Array Expr → Expr → TransM α) : TransM α := do
+  if i == n then return ← k vals fresh fty
+  let fty ← if fty.isForall then pure fty else liftMeta (whnf fty)
+  let .forallE nm d bd bi := fty | failT "TRANSLATION_FAILED" "accessibility lowering: fixpoint type has too few binders"
+  let go (v : Expr) (fresh : Array Expr) := accWalk (bd.instantiate1 v) n rarg P idxPos gpos fstS sndS (i + 1) (vals.push v) fresh k
+  if i < rarg then
+    if idxPos[i]!.isSome then go fstS fresh
+    else if gpos.contains i then withLocalDecl nm bi d fun g => go g (fresh.push g)
+    else go P[i]! fresh
+  else if i == rarg then go sndS fresh
+  else withLocalDecl nm bi d fun q => go q (fresh.push q)
+
 mutual
 
 partial def trans (t : IR.Term) : TransM Expr := do
@@ -413,6 +714,12 @@ partial def trans (t : IR.Term) : TransM Expr := do
       bindFVars true #[x] b'
   | .app f args => withPath "app" do
     let args' ← args.mapIdxM fun k a => withPath s!"arg{k}" (trans a)
+    -- M6: a recursive call of an accessibility-lowered fixpoint
+    if let .rel i := f then
+      if let some ac := (← read).accSite then
+        let ls := (← read).locals
+        if i < ls.size && ls[ls.size - 1 - i]!.isFVarOf ac.f then
+          return ← accCallSite ac args'
     let f' ← withPath "f" (transHead f args')
     let e := mkAppN f' args'
     -- Universe arguments left as metavariables at a reference (generalized constants, generated
@@ -675,8 +982,8 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
   unless rarg < lams.size do
     failT "UNSUPPORTED_FEATURE" s!"decreasing argument {rarg} is not bound by the leading lambdas ({lams.size})"
   let .case cind cnpar _ _ _ _ _ (.rel sj) brs := b
-    | failT "UNSUPPORTED_FEATURE" "fixpoint body is not a match on the decreasing argument"
-  unless sj == lams.size - 1 - rarg do failT "UNSUPPORTED_FEATURE" "match scrutinee is not the decreasing argument"
+    | transFixAcc defs        -- M6: structural recursion on a proof, into data (else the same rejection)
+  unless sj == lams.size - 1 - rarg do return ← transFixAcc defs
   let outer := (← read).locals
   withLocalDecl (binderName fname) .default fty' fun fv => do
   withSourceLams lams (outer.push fv) 0 #[] fun as => do
@@ -715,7 +1022,8 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
     let motive ← bindFVars true (idx.push x) QT
     let large := rv.levelParams.length == indLvls.length + 1
     if !large && u != Level.zero then
-      failT "UNSUPPORTED_FEATURE" s!"recursion on {iname} into a non-Prop sort is not available in Lean"
+      -- M6: structural recursion on a proof into data: accessibility lowering
+      return ← transFixAcc defs
     let recConst := mkConst (iname.str "rec") (if large then u :: indLvls else indLvls)
     let mut ty ← liftMeta do instantiateForall (← inferType recConst) (params.push motive)
     let mut minors : Array Expr := #[]
@@ -755,6 +1063,115 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
       ty := rest.instantiate1 minor
     let res ← bindFVars true as (mkAppN (mkAppN recConst (params ++ #[motive] ++ minors ++ idx ++ #[x])) (G ++ Q))
     if res.containsFVar fv.fvarId! then
+      failT "UNSUPPORTED_FEATURE" "recursive function escapes the supported call pattern"
+    return res
+
+/-- M6 accessibility lowering: a structurally recursive `fix` whose decreasing argument is a proof
+(a `Prop` inductive without large elimination, e.g. MathComp `acc_nat`) and whose result is data.
+Lean cannot eliminate such a proof into `Type`, so the fixpoint is lowered to `Acc.rec` over the
+carrier `C = Σ' i, I params i` (or `I params`) and the call-graph relation of the body:
+
+    λ as, Acc.rec (r := R) (λ s _, ∀ G Q, T[s]) (λ s h ih, λ G Q, body′) ⟨j, x⟩ (wf ⟨j, x⟩) G Q
+    R y s := ∨_c ∃ ctx_c, y = ⟨j_c, a_c⟩        (one disjunct per recursive call site c)
+    wf : ∀ s, Acc R s   by I.rec into Prop
+
+`body′` is the source body with each recursive call `f … a_c …` replaced by `ih ⟨j_c, a_c⟩ ⟨ctx_c, rfl⟩
+…`. The well-foundedness proof evaluates each call argument at every constructor of the carrier
+and proves `Acc R` of it from the constructor's induction hypotheses (`accCert`): Rocq's guard
+condition, replayed as a proof. `R`, `wf` and the certificates are propositions or proofs; the
+computation is `body′` under `Acc.rec`, which unfolds exactly when the proof is a constructor. -/
+partial def transFixAcc (defs : Array (AName × IR.Term × IR.Term × Nat)) : TransM Expr := do
+  let notMatch : TransM Expr := failT "UNSUPPORTED_FEATURE" "fixpoint body is not a match on the decreasing argument"
+  let (fname, fty, fbody, rarg) := defs[0]!
+  let fty' ← withPath "type" (trans fty)
+  let (lams, b) := peelLams fbody
+  unless rarg < lams.size do return ← notMatch
+  let outer := (← read).locals
+  withLocalDecl (binderName fname) .default fty' fun fv => do
+  withSourceLams lams (outer.push fv) 0 #[] fun as => do
+    let P := as.extract 0 rarg
+    let x := as[rarg]!
+    let Q := as.extract (rarg + 1) as.size
+    let xty ← liftMeta do whnf (← inferType x)
+    let .const iname indLvls := xty.getAppFn | notMatch
+    let some (.inductInfo iv) := (← getEnv).find? iname | notMatch
+    let rv ← recursorOf iname
+    let large := rv.levelParams.length == indLvls.length + 1
+    let T ← liftMeta (instantiateForall fty' as)
+    let Tl ← liftMeta do instantiateLevelMVars (← getLevel T)
+    unless !large && Tl.normalize != .zero && (← liftMeta (isProp xty)) do return ← notMatch
+    let xargs := xty.getAppArgs
+    let params := xargs.extract 0 iv.numParams
+    let idx := xargs.extract iv.numParams xargs.size
+    unless idx.size ≤ 1 do failT "UNSUPPORTED_FEATURE" "accessibility lowering: decreasing argument with several indices"
+    unless idx.all (P.contains ·) do
+      failT "UNSUPPORTED_FEATURE" "indices of the decreasing argument are not distinct earlier parameters"
+    let idxPos : Array (Option Nat) := P.map fun p => idx.findIdx? (· == p)
+    let gpos := (changedParams fbody lams.size rarg 0).toArray.qsort (· < ·) |>.filter (idxPos[·]!.isNone)
+    let G := gpos.map (P[·]!)
+    for i in [0:rarg] do
+      unless gpos.contains i do
+        let t ← liftMeta do instantiateMVars (← inferType P[i]!)
+        if G.any (t.containsFVar ·.fvarId!) then
+          failT "UNSUPPORTED_FEATURE" s!"argument {i} depends on an argument that recursive calls change"
+    if G.any (xty.containsFVar ·.fvarId!) then
+      failT "UNSUPPORTED_FEATURE" "the decreasing argument's type depends on an argument that recursive calls change"
+    -- carrier
+    let hasIdx := idx.size == 1
+    let (idxTy, idxLvl) ← if hasIdx then liftMeta (do let t ← inferType idx[0]!; pure (t, ← getLevel t))
+      else pure (mkSort .zero, Level.zero)
+    let fam ← if hasIdx then liftMeta (withLocalDecl `i .default idxTy fun i =>
+        mkLambdaFVars #[i] (mkAppN (mkConst iname indLvls) (params.push i)))
+      else pure (mkAppN (mkConst iname indLvls) params)
+    let C := if hasIdx then mkApp2 (mkConst ``PSigma [idxLvl, .zero]) idxTy fam else fam
+    let cLvl ← liftMeta (getLevel C)
+    let mk := accMk hasIdx idxTy fam idxLvl
+    let fstOf (s : Expr) : Expr := .proj ``PSigma 0 s
+    let sndOf (s : Expr) : Expr := if hasIdx then .proj ``PSigma 1 s else s
+    let pairOf := accPairOf hasIdx iv.numParams idxTy fam idxLvl
+    let RTy := mkForall `y .default C (mkForall `s .default C (mkSort .zero))
+    withLocalDecl `R .default RTy fun Rv => do
+    let accTy (R s : Expr) := mkApp3 (mkConst ``Acc [cLvl]) C R s
+    -- Acc.rec's minor premise  λ s h ih, λ G Q, body′ (two passes: collect the call sites' disjuncts,
+    -- then translate with R known)
+    let dsRef ← IO.mkRef (#[] : Array Expr)
+    let minorWith (R : Expr) (collect : Bool) (ds : Array Expr) : TransM Expr := do
+      let motive ← withLocalDecl `s .default C fun s => withLocalDecl `acc .default (accTy R s) fun acc =>
+        accWalk fty' as.size rarg P idxPos gpos (fstOf s) (sndOf s) 0 #[] #[] fun _ fresh body => do
+          bindFVars true #[s, acc] (← bindFVars false fresh body)
+      withLocalDecl `s .default C fun s => do
+        let hTy ← liftMeta <| withLocalDecl `y .default C fun y => do mkForallFVars #[y] (← mkArrow (mkApp2 R y s) (accTy R y))
+        withLocalDecl `h .default hTy fun h => do
+        let ihTy ← liftMeta <| withLocalDecl `y .default C fun y => withLocalDecl `hy .default (mkApp2 R y s) fun hy =>
+          mkForallFVars #[y, hy] (mkApp2 motive y (mkApp2 h y hy))
+        withLocalDecl `ih .default ihTy fun ih => do
+        let baseF := (← getLCtx).getFVarIds
+        let counter ← IO.mkRef 0
+        accWalk fty' as.size rarg P idxPos gpos (fstOf s) (sndOf s) 0 #[] #[] fun vals fresh _ => do
+          let site : AccSite := { f := fv.fvarId!, s, ih, R, nP := rarg, idxPos, gpos, expected := vals,
+                                  hasIdx, nparams := iv.numParams, idxTy, idxLvl, fam, base := baseF,
+                                  collect, dsRef, ds, counter }
+          let body ← withPath "body" (withReader (fun c => { c with locals := outer ++ #[fv] ++ vals, accSite := some site }) (trans b))
+          bindFVars true #[s, h, ih] (← bindFVars true fresh body)
+    let _ ← minorWith Rv true #[]
+    let ds ← dsRef.get
+    if ds.isEmpty then failT "UNSUPPORTED_FEATURE" "accessibility lowering: no recursive call"
+    -- the call-graph relation  R y s := D₁ y s ∨ … ∨ Dₙ y s
+    let Rdef ← liftMeta <| withLocalDecl `y .default C fun y => withLocalDecl `s .default C fun sv => do
+      mkLambdaFVars #[y, sv] (mkDisj (ds.toList.map fun d => d.beta #[y, sv]))
+    let intro ← minorWith Rdef false ds
+    let motive ← withLocalDecl `s .default C fun s => withLocalDecl `acc .default (accTy Rdef s) fun acc =>
+      accWalk fty' as.size rarg P idxPos gpos (fstOf s) (sndOf s) 0 #[] #[] fun _ fresh body => do
+        bindFVars true #[s, acc] (← bindFVars false fresh body)
+    let uM ← liftMeta do
+      withLocalDecl `s .default C fun s => withLocalDecl `acc .default (accTy Rdef s) fun acc => do
+        pure (← getLevel (← whnf (mkApp2 motive s acc))).normalize
+    -- well-foundedness  wf : ∀ s, Acc R s   by I.rec into Prop
+    let wf ← accWf iname indLvls rv params hasIdx idxTy idxLvl fam C cLvl Rdef ds
+    let major := if hasIdx then mk idx[0]! x else x
+    let accRec := mkAppN (mkConst ``Acc.rec [uM, cLvl]) #[C, Rdef, motive, intro, major, mkApp wf major]
+    let res := eraseBinderScopes (← bindFVars true as (mkAppN accRec (G ++ Q)))
+    if res.containsFVar fv.fvarId! || res.containsFVar Rv.fvarId! then
       failT "UNSUPPORTED_FEATURE" "recursive function escapes the supported call pattern"
     return res
 
@@ -798,7 +1215,9 @@ end
 
 /-- Translate a closed term and check that no free or meta variable escapes. -/
 def transClosed (t : IR.Term) : TransM Expr := do
-  let e ← instLevelMVars (← trans t)
+  -- binder names without macro scopes (hygienic names inherited from Lean's own declarations, e.g.
+  -- the recursor types' `a✝`, do not survive the report's string round trip; names carry no meaning)
+  let e := eraseBinderScopes (← instLevelMVars (← trans t))
   if e.hasFVar then failT "TRANSLATION_FAILED" "translated term has escaping free variables"
   if e.hasExprMVar then failT "TRANSLATION_FAILED" "translated term has unresolved metavariables"
   return e
