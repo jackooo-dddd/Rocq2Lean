@@ -751,8 +751,11 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
         if ok_status(c) != "TRANSLATED_AND_CHECKED":
             problem("coverage", f"requested root {c} has status {ok_status(c)}")
     rep_roots = report.get("roots", [])
-    if [r.get("name") for r in rep_roots] != canon or any(r.get("status") != ok_status(r.get("name")) for r in rep_roots):
+    if [(r.get("requested"), r.get("name")) for r in rep_roots] != [(r["requested"], r["name"]) for r in src_roots] \
+            or any(r.get("status") != ok_status(r.get("name")) for r in rep_roots):
         problem("coverage", "report root records disagree with the contract or with the result rows")
+    if report.get("status") != "OK":
+        problem("coverage", f"report status is {report.get('status')!r}, not 'OK'")
     # Summary counts, recomputed.
     accepted = [s for s in closure if ok_status(s) == "TRANSLATED_AND_CHECKED"]
     want_summary = {"roots": len(canon),

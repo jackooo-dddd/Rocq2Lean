@@ -569,7 +569,7 @@ def solveLevels (ty val : Expr) : MetaM (Expr × Expr × Array String × Nat) :=
   let ((), ms) := ((levelMVarsOf ty *> levelMVarsOf val).run #[])
   -- Residual levels are unconstrained by unification; they are defaulted to 0 and *recorded*,
   -- and must still pass the universe obligations (rule R3) like every other argument.
-  for m in ms do assignLevelMVar m levelZero
+  for m in ms do assignLevelMVar m Level.zero
   return (← instantiateMVars ty, ← instantiateMVars val, diags, ms.size)
 
 end Rocq2Lean

@@ -15,6 +15,8 @@ Detectors (each recorded separately in `result.json`):
 * `coverage` — exactly one result per exported declaration; every declaration of the required
   closure accepted (`TRANSLATED_AND_CHECKED`, or `BOOTSTRAP_RESOLVED` for bootstrap rules);
   every requested root `TRANSLATED_AND_CHECKED`; at least one accepted declaration;
+* `roots` — the report's status is `OK` and its root records equal the contract's roots
+  (requested spelling and resolved declaration, in order), each with its result row's status;
 * `presence`, `kind`, `type`, `value`, `levels`, `ctors` — the imported declaration equals the
   reported one;
 * `safety` — not `unsafe`/`partial`;
@@ -114,6 +116,21 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
     let c := getStr r "canonical"
     if status c != "TRANSLATED_AND_CHECKED" then
       problems := note "coverage" s!"requested root {getStr r "requested"} ({c}) has status {status c}" problems
+  -- roots: the report's own root records are exactly the contract's roots (requested spelling
+  -- and resolution, in order), each with the status of its result row; the report status is OK.
+  let repRoots := (report.getObjValAs? (Array Json) "roots").toOption.getD #[]
+  if getStr report "status" != "OK" then
+    problems := note "roots" s!"report status is '{getStr report "status"}', not OK" problems
+  if repRoots.size != reqRoots.size then
+    problems := note "roots" s!"report has {repRoots.size} root record(s), the contract requests {reqRoots.size}" problems
+  for rr in repRoots, cr in reqRoots do
+    if getStr rr "requested" != getStr cr "requested" || getStr rr "name" != getStr cr "canonical" then
+      problems := note "roots" (s!"report root record {getStr rr "requested"} ↦ {getStr rr "name"} differs from " ++
+        s!"contract root {getStr cr "requested"} ↦ {getStr cr "canonical"}") problems
+  for rr in repRoots do
+    if getStr rr "status" != status (getStr rr "name") then
+      problems := note "roots" (s!"report root record {getStr rr "name"} says {getStr rr "status"}, " ++
+        s!"its result row says {status (getStr rr "name")}") problems
   -- allowed target constants
   let mut allowed : Std.HashSet Name := {}
   let mut accepted : Array (String × Json) := #[]
@@ -180,7 +197,7 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
     let axs ← liftCoreM (collectAxioms tgt.toName)
     unless axs.isEmpty do problems := note "axioms" s!"{tgt}: depends on axioms {axs}" problems
   for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)
-  let dets := ["binding", "coverage", "presence", "kind", "safety", "levels", "type", "value", "ctors",
+  let dets := ["binding", "coverage", "roots", "presence", "kind", "safety", "levels", "type", "value", "ctors",
                "target_deps", "axioms", "rec_indices"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
   let res := Json.mkObj [
     ("schema", "rocq2lean-consumer/1"), ("status", if problems.isEmpty then "OK" else "AUDIT_REJECTED"),

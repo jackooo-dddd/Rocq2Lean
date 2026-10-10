@@ -410,6 +410,13 @@ def _translate(inp, out):
     rep = json.loads(report.read_text())
     if rep.get("input_sha256") != in_sha or rep.get("run_id") != run_id:
         raise Rejected("TRANSLATION_FAILED", "report is not bound to this input/run")
+    if rep.get("status") == "ROOT_CONTRACT_REJECTED":
+        raise Rejected("ROOT_CONTRACT_REJECTED", f"translator refused the recorded request: {rep.get('reason')}")
+    if con_p.exists() and run_id == json.loads(con_p.read_text())["run_id"]:
+        want = [(r["requested"], r["canonical"]) for r in json.loads(con_p.read_text())["roots"]]
+        got = [(r.get("requested"), r.get("name")) for r in rep["roots"]]
+        if want != got:
+            raise Rejected("ROOT_CONTRACT_REJECTED", f"report roots {got} differ from the contract roots {want}")
     rep_roots = {r["name"]: r["status"] for r in rep["roots"]}
     for name, st in rep_roots.items():
         print(f"{st:24} {name}")
