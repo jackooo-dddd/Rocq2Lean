@@ -6,7 +6,7 @@
     "commit": "819816b2e0a3bf405af45ae5c7af2491d8f5bee6"
   },
   "rocq": {
-    "opam_switch": "rocq930",
+    "opam_switch": "rocq930-mc",
     "version_line": "The Rocq Prover, version 9.3.0",
     "ocaml": "4.14.2",
     "tag": "V9.3.0",
@@ -16,14 +16,22 @@
       "rocq-runtime": "9.3.0",
       "rocq-stdlib": "9.2.0",
       "ocaml-base-compiler": "4.14.2",
-      "coq-ext-lib": "0.13.2"
+      "coq-ext-lib": "0.13.2",
+      "dune": "3.23.1",
+      "elpi": "3.7.3",
+      "rocq-elpi": "3.5.1",
+      "rocq-hierarchy-builder": "1.10.3",
+      "rocq-mathcomp-boot": "2.6.0",
+      "rocq-mathcomp-order": "2.6.0",
+      "rocq-mathcomp-ssreflect": "2.6.0"
     },
     "opam_git_pins": {
       "rocq-equations": "d56dfc2c38feb5054d75ef43540ee89a6beb1a7e",
       "rocq-metarocq-utils": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81",
       "rocq-metarocq-common": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81",
       "rocq-metarocq-template": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81"
-    }
+    },
+    "note": "switch rocq930-mc (docs/ENVIRONMENT_M5.md): same pinned Rocq/MetaRocq/Equations/stdlib as rocq930, dune 3.23.1, MathComp 2.6.0"
   },
   "frontend": {
     "name": "metarocq-template",
