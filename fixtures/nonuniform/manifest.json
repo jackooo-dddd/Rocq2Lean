@@ -1,0 +1,1 @@
+{"name": "nonuniform", "load_paths": [["-Q", ".", "NU"]], "files": ["NonUniform.v"], "requires": ["NU.NonUniform"]}

@@ -53,6 +53,9 @@ structure IndTarget where
   /-- Indices of the universe parameters that are template levels (R5: instantiated from the
   arguments); the others are generalized non-template levels (R3 at references). -/
   templateLevelIdx : Array Nat := #[]
+  /-- M6: number of non-uniform source parameters (after the uniform ones); in Lean they are the
+  first indices of the inductive (Rocq's case binds them as parameters: convoy lowering). -/
+  nonUniform : Nat := 0
   deriving Inhabited, Repr
 
 structure GEnv where
@@ -450,6 +453,8 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
     (pctx : Array AName) (pret : IR.Term) (scrut : IR.Term) (brs : Array (Array AName × IR.Term)) :
     TransM Expr := do
   let tgt ← lookupInd ind
+  if tgt.nonUniform > 0 then
+    return ← transCaseNU tgt ind npar puinst pparams pctx pret scrut brs
   let iname := tgt.types[ind.idx]!
   let rv ← recursorOf iname
   unless rv.numParams == npar && pparams.size == npar do
@@ -498,6 +503,115 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
     minors := minors.push minor
     ty := rest.instantiate1 minor
   return mkAppN recConst (params ++ #[motive] ++ minors ++ idx ++ #[scrut'])
+
+/-- M6: a `match` on an inductive with one non-uniform parameter `u` (a Lean index). Rocq's case
+binds `u` as a parameter: every branch is typed at `u`. Lean's recursor generalizes the index, so
+the match is lowered with a convoy equation (only `Eq.rec`):
+
+    I.rec P (λ i' idx h, ∀ e : i' = u, RET[idx, a0 := cast h e]) minors u idx x (Eq.refl u)
+    minor_k = λ i' fs' ihs e,
+      (Eq.rec (motive := λ y _, ∀ fs : FT y, motive y (idx_k y fs) (C P y fs)) (λ fs e₀, B fs) i' (symm e)) fs' e
+
+where `cast h e = Eq.rec (motive := λ y _, I P y idx) h u e` and `symm e = Eq.rec (motive :=
+λ y _, y = u) (Eq.refl u) i' e`... (built with `u` on the left: `e : u = i'`, see below). `B fs` is
+the source branch at `u`; it has the expected type because `cast (C P u fs) e₀` reduces to
+`C P u fs` for `e₀ : u = u` (Lean's K-like reduction of `Eq`). Each constructor must conclude with
+the non-uniform parameter as its own variable (Rocq's parameter discipline). -/
+partial def transCaseNU (tgt : IndTarget) (ind : IndRef) (npar : Nat) (puinst : Array IR.Level)
+    (pparams : Array IR.Term) (pctx : Array AName) (pret : IR.Term) (scrut : IR.Term)
+    (brs : Array (Array AName × IR.Term)) : TransM Expr := do
+  let iname := tgt.types[ind.idx]!
+  let rv ← recursorOf iname
+  let k := tgt.nonUniform
+  unless k == 1 do failT "UNSUPPORTED_FEATURE" s!"match on an inductive with {k} non-uniform parameters"
+  let nu := npar - k
+  unless rv.numParams == nu && pparams.size == npar do
+    failT "EXPORT_VALIDATION_FAILED" s!"case has {pparams.size} parameters, {iname}.rec expects {rv.numParams} + {k} non-uniform"
+  let nridx := pctx.size - 1                      -- Rocq indices
+  unless rv.numIndices == k + nridx && brs.size == rv.numMinors do
+    failT "EXPORT_VALIDATION_FAILED" s!"case shape differs from {iname}.rec"
+  let params ← (pparams.extract 0 nu).mapIdxM fun j a => withPath s!"param{j}" (trans a)
+  let u ← withPath s!"param{nu}" (trans pparams[nu]!)
+  let scrut' ← withPath "scrutinee" (trans scrut)
+  let sty ← liftMeta do whnf (← instLevelMVars (← inferType scrut'))
+  unless sty.getAppFn.isConstOf iname && sty.getAppNumArgs == nu + k + nridx do
+    failT "TRANSLATION_FAILED" s!"scrutinee type is not an application of {iname}"
+  let indLvls := sty.getAppFn.constLevels!
+  let sargs := sty.getAppArgs
+  let idx := sargs.extract (nu + k) sargs.size
+  let U ← liftMeta do inferType u
+  let uLvl ← liftMeta do getLevel U
+  -- the sort level of the inductive (the cast's motive)
+  let iLvl ← liftMeta do getLevel sty
+  let eqTy (a b : Expr) := mkApp3 (mkConst ``Eq [uLvl]) U a b
+  -- e : u = i'  (u on the left, so that eliminating e substitutes i' := u in the branches)
+  -- cast (h : I P i' idx) (e : u = i') : I P u idx  :=  Eq.rec (λ y _, I P y idx → I P u idx)? — we
+  -- transport *back* along e: via symm e : i' = u, built as Eq.rec (λ y _, y = u) (refl u) i' e.
+  let symmOf (i' e : Expr) : Expr :=
+    mkAppN (mkConst ``Eq.rec [0, uLvl]) #[U, u, Expr.lam `y U (Expr.lam `w (eqTy u (.bvar 0)) (eqTy (.bvar 1) u) .default) .default,
+      mkApp2 (mkConst ``Eq.refl [uLvl]) U u, i', e]
+  let castOf (i' : Expr) (idxv : Array Expr) (h e : Expr) : MetaM Expr := do
+    -- Eq.rec {a := i'} (λ y _, I P y idx) h {b := u} (symm e)
+    let mot := Expr.lam `y U (Expr.lam `w (eqTy i' (.bvar 0)) (mkAppN (mkConst iname indLvls) (params ++ #[.bvar 1] ++ idxv)) .default) .default
+    return mkAppN (mkConst ``Eq.rec [iLvl, uLvl]) #[U, i', mot, h, u, symmOf i' e]
+  let large := rv.levelParams.length == indLvls.length + 1
+  -- motive' (built in the recursor's motive telescope: i', idx, h)
+  let ty0 ← liftMeta do instantiateForall (← inferType (mkConst (iname.str "rec") (if large then Level.zero :: indLvls else indLvls))) params
+  let .forallE _ motiveTy _ _ := ty0 | failT "TRANSLATION_FAILED" s!"unexpected type of {iname}.rec"
+  let (motive, v) ← forallTelescopeReducing motiveTy fun xs _ => do
+    unless xs.size == 1 + nridx + 1 do failT "TRANSLATION_FAILED" "motive arity differs from the case context"
+    let i' := xs[0]!
+    let idxv := xs.extract 1 (1 + nridx)
+    let h := xs[xs.size - 1]!
+    withLocalDecl `e .default (eqTy u i') fun e => do
+      let a0 ← liftMeta (castOf i' idxv h e)
+      let ret ← withPath "return" (withReader (fun c => { c with locals := c.locals ++ idxv ++ #[a0] }) (trans pret))
+      let body ← bindFVars false #[e] ret
+      let v ← liftMeta do instantiateLevelMVars (← getLevel body)
+      return (← bindFVars true xs body, v.normalize)
+  if !large && v != Level.zero then
+    failT "UNSUPPORTED_FEATURE" s!"elimination of {iname} into a non-Prop sort is not available in Lean"
+  let recConst := mkConst (iname.str "rec") (if large then v :: indLvls else indLvls)
+  let mut ty ← liftMeta do instantiateForall (← inferType recConst) (params.push motive)
+  let mut minors : Array Expr := #[]
+  for kk in [0:rv.numMinors] do
+    let .forallE _ minorTy rest _ ← liftMeta (whnf ty) | failT "TRANSLATION_FAILED" s!"{iname}.rec: missing minor {kk}"
+    let (bctx, bbody) := brs[kk]!
+    let nfields := rv.rules[kk]!.nfields                 -- k + Rocq fields
+    unless bctx.size + k == nfields do
+      failT "UNSUPPORTED_FEATURE" s!"branch {kk}: {bctx.size} binders for {nfields - k} fields (let-bound constructor arguments)"
+    let ctorC := mkConst tgt.ctors[ind.idx]![kk]! indLvls
+    let minor ← minorTelescope minorTy nfields iname params fun fields _ ihs _ => do
+      let i' := fields[0]!
+      -- Rocq's discipline: the constructor concludes at its own non-uniform variable
+      let cty ← liftMeta do whnf (← inferType (mkAppN ctorC (params ++ fields)))
+      unless cty.getAppArgs[nu]? == some i' do
+        failT "UNSUPPORTED_FEATURE" s!"constructor {kk} does not conclude at its non-uniform parameter"
+      withLocalDecl `e .default (eqTy u i') fun e => do
+        -- motiveE := λ y w, ∀ fs : FT y, motive y (idx_k y fs) (C P y fs)
+        let ctorTyAt (y : Expr) : MetaM Expr := do instantiateForall (← inferType ctorC) (params.push y)
+        let motE ← withLocalDecl `y .default U fun y => withLocalDecl `w .default (eqTy u y) fun w => do
+          let fty ← liftMeta (ctorTyAt y)
+          let body ← liftMeta <| forallBoundedTelescope fty (some (nfields - k)) fun fs concl => do
+            let concl ← whnf concl
+            let idxk := concl.getAppArgs.extract (nu + k) concl.getAppArgs.size
+            mkForallFVars fs (mkAppN motive (#[y] ++ idxk ++ #[mkAppN ctorC (params ++ #[y] ++ fs)]))
+          bindFVars true #[y, w] body
+        -- refl := λ fs e₀, B fs   (fields at u, the source branch translated there)
+        let reflT ← liftMeta (ctorTyAt u)
+        let reflE ← forallBoundedTelescope reflT (some (nfields - k)) fun fs _ => do
+          withLocalDecl `e0 .default (eqTy u u) fun e0 => do
+            let b ← withPath s!"branch{kk}" (withReader (fun c => { c with locals := c.locals ++ fs }) (trans bbody))
+            bindFVars true (fs.push e0) b
+        let motLvl ← liftMeta do
+          withLocalDecl `y .default U fun y => withLocalDecl `w .default (eqTy u y) fun w => do
+            getLevel (← whnf (mkApp2 motE y w))
+        let elim := mkAppN (mkConst ``Eq.rec [motLvl.normalize, uLvl]) #[U, u, motE, reflE, i', e]
+        let body := mkAppN elim (fields.extract 1 fields.size |>.push e)
+        bindFVars true (fields ++ ihs ++ #[e]) body
+    minors := minors.push minor
+    ty := rest.instantiate1 minor
+  return mkAppN recConst (params ++ #[motive] ++ minors ++ #[u] ++ idx ++ #[scrut', mkApp2 (mkConst ``Eq.refl [uLvl]) U u])
 
 /-- Replace each recursive call `f P… y rest` by `ih_y rest'`, where `y` is a direct recursive
 constructor field. Parameters before the decreasing argument must be the function's own

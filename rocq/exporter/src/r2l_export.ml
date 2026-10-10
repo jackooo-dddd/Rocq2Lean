@@ -347,6 +347,9 @@ and native_inductive_kn env rkn =
     let open Declarations in
     J.Obj
       [ ("polymorphic", J.Bool (Declareops.inductive_is_polymorphic mib));
+        (* M6: number of *uniform* parameters (recursive occurrences use them unchanged); the others
+           are non-uniform and become indices in Lean *)
+        ("nparams_rec", J.Int mib.mind_nparams_rec);
         ("template", J.Bool (Option.has_some mib.mind_template));
         ( "template_info",
           match mib.mind_template with None -> J.Null | Some t -> template_info_json t );

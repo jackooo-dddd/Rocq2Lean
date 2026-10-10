@@ -432,6 +432,10 @@ class Auditor:
             want = env[s["i"]]
             if want[0] == "expect":       # a source variable that denotes a source term here
                 return self.check(want[1], e, path + ["as-term"], want[2])
+            if want[0] == "castpat":      # M6 convoy: the major of the return clause is the cast
+                if not want[1](e):
+                    raise Mismatch(f"{path}: the return clause's major is not the convoy cast")
+                return
             if want[0] == "tgt":          # a target expression forced by typing (constructor parameters)
                 if e != want[1]:
                     raise Mismatch(f"{path}: expected the parameter {want[1]}, found {e}")
@@ -539,8 +543,15 @@ class Auditor:
             e = e["b"]
         return e
 
+    def nonuniform(self, ref):
+        """Number of non-uniform parameters of a source block (native nparams_rec, round-trip checked)."""
+        mib = self.decls[ref["mind"]]
+        return mib["npars"] - (mib.get("native") or {}).get("nparams_rec", mib["npars"])
+
     def check_case(self, s, e, path, env):
         ref = s["ci"]["ind"]
+        if self.nonuniform(ref):
+            return self.check_case_nu(s, e, path, env)
         tname, _, _ = self.ind_target(ref)
         spine = []
         cur = e
@@ -566,6 +577,83 @@ class Auditor:
             self.check(br["body"], body, path + [f"minor{k}"], self.shift(self.push(env, nf), nih))
         # Indices of the major premise are forced by the recursor's (kernel-checked) type.
         self.check(s["c"], spine[-1], path + ["major"], env)
+
+    def check_case_nu(self, s, e, path, env):
+        """M6 convoy lowering of a match on a block with one non-uniform parameter u (a Lean index):
+           I.rec P (λ i' idx h, ∀ e : u = i', RET[a0 := cast]) minors u idx major (Eq.refl u), with
+           cast = Eq.rec U i' (λ y w, I P y idx) h u (Eq.rec U u (λ y w, y = u) (Eq.refl U u) i' e) and
+           minor_k = λ i' fs ihs e, Eq.rec U u M (λ fs e0, B_k) i' e fs e  (M forced by kernel typing)."""
+        ref = s["ci"]["ind"]
+        tname, ctors, _ = self.ind_target(ref)
+        if self.nonuniform(ref) != 1:
+            raise Mismatch(f"{path}: UNAUDITABLE match with {self.nonuniform(ref)} non-uniform parameters")
+        head, spine = self.unspine(e)
+        if head["k"] != "const" or head["n"] != tname + ".rec":
+            raise Mismatch(f"{path}: match must lower to {tname}.rec, found {head.get('n', head['k'])}")
+        p, brs = s["p"], s["brs"]
+        npar, nridx, nmin = len(p["params"]), len(p["ctx"]) - 1, len(brs)
+        nu = npar - 1
+        if len(spine) != nu + 1 + nmin + 1 + nridx + 1 + 1:
+            raise Mismatch(f"{path}: {tname}.rec applied to {len(spine)} arguments (convoy shape)")
+        for i in range(nu):
+            self.check(p["params"][i], spine[i], path + [f"param{i}"], env)
+        ut = spine[nu + 1 + nmin]
+        self.check(p["params"][nu], ut, path + ["nonuniform"], env)
+        self.check(s["c"], spine[-2], path + ["major"], env)
+        rf, rargs = self.unspine(spine[-1])
+        if rf["k"] != "const" or rf["n"] != "Eq.refl" or len(rargs) != 2 or rargs[1] != ut:
+            raise Mismatch(f"{path}: convoy equation must be applied to Eq.refl u")
+        U = rargs[0]
+        # motive: λ i' idx.. h, ∀ e : Eq U (u) i', RET with a0 the cast
+        nb = 1 + nridx + 1
+        mb = self.strip_lams(spine[nu], nb, path + ["motive"])
+        if mb["k"] != "forall":
+            raise Mismatch(f"{path}: convoy motive lacks its equation binder")
+        eq_h, eq_a = self.unspine(mb["t"])
+        if eq_h.get("n") != "Eq" or eq_a != [lift(U, nb), lift(ut, nb), {"k": "bvar", "i": nb - 1}]:
+            raise Mismatch(f"{path}: convoy equation binder is not u = i'")
+        # expected cast at depth nb + 1 (below λ i' idx h and ∀ e): bvars i' = nb, h = 1, e = 0
+        params_t = [lift(spine[i], nb + 1) for i in range(nu)]
+        def is_cast(t):
+            h_, a_ = self.unspine(t)
+            if h_.get("n") != "Eq.rec" or len(a_) != 6:
+                return False
+            if a_[0] != lift(U, nb + 1) or a_[1] != {"k": "bvar", "i": nb} or a_[3] != {"k": "bvar", "i": 1} \
+                    or a_[4] != lift(ut, nb + 1):
+                return False
+            m = a_[2]
+            if m["k"] != "lam" or m["b"]["k"] != "lam":
+                return False
+            ih, ia = self.unspine(m["b"]["b"])
+            # below λ i' idx.. h, ∀ e, λ y w: Rocq index j (outermost first, j = 1..n) is bvar n - j + 4
+            if ih.get("n") != tname or [lift(x, 2) for x in params_t] != ia[:nu] or ia[nu] != {"k": "bvar", "i": 1} \
+                    or ia[nu + 1:] != [{"k": "bvar", "i": nridx - j + 4} for j in range(1, 1 + nridx)]:
+                return False
+            sh, sa = self.unspine(a_[5])
+            return sh.get("n") == "Eq.rec" and len(sa) == 6 and sa[0] == lift(U, nb + 1) and sa[1] == lift(ut, nb + 1) \
+                and sa[4] == {"k": "bvar", "i": nb} and sa[5] == {"k": "bvar", "i": 0}
+        # rel 0 = the major binder a0 -> the cast; rel 1.. = Rocq indices, innermost first (bvar 2..)
+        menv = [("castpat", is_cast)] + [("bvar", 2 + j) for j in range(nridx)] + self.shift(list(env), nb + 1)
+        self.check(p["ret"], mb["b"], path + ["motive"], menv)
+        # minors
+        for kk, br in enumerate(brs):
+            nf = len(br["ctx"])
+            nih = self.recursive_fields(ref, kk)
+            mn = self.strip_lams(spine[nu + 1 + kk], 1 + nf + nih + 1, path + [f"minor{kk}"])
+            depth = 1 + nf + nih + 1
+            eh, ea = self.unspine(mn)
+            # Eq.rec U u M reflE i' e  fields(1..) e
+            if eh.get("n") != "Eq.rec" or len(ea) != 6 + nf + 1:
+                raise Mismatch(f"{path}: minor {kk} is not the convoy elimination")
+            if ea[0] != lift(U, depth) or ea[1] != lift(ut, depth) or ea[4] != {"k": "bvar", "i": depth - 1} \
+                    or ea[5] != {"k": "bvar", "i": 0} or ea[-1] != {"k": "bvar", "i": 0}:
+                raise Mismatch(f"{path}: minor {kk}: convoy elimination arguments differ")
+            for q in range(nf):           # the constructor's own fields, passed on unchanged
+                if ea[6 + q] != {"k": "bvar", "i": depth - 2 - q}:
+                    raise Mismatch(f"{path}: minor {kk}: field {q} not passed on")
+            refl = self.strip_lams(ea[3], nf + 1, path + [f"minor{kk} refl"])
+            benv = [("bvar", 1 + q) for q in range(nf)] + self.shift(list(env), depth + nf + 1)
+            self.check(br["body"], refl, path + [f"minor{kk}"], benv)
 
     def check_rec_binders(self, head, spine, npar, nmin, nidx, path, nihs, nfs, nq):
         """Recursor identity/levels (kernel metadata) and the binder types of the motive and of
@@ -852,7 +940,14 @@ def anon(e):
 
 
 def same_mod_beta(a, b):
-    return anon(beta(a)) == anon(beta(b))
+    """Equal modulo beta, binder names and (documented) the semantic normal form of levels."""
+    x, y = anon(beta(a)), anon(beta(b))
+    if x == y:
+        return True
+    try:
+        return canon_levels(x) == canon_levels(y)
+    except Mismatch:
+        return False
 
 
 def foralls(e, n, path):
@@ -1522,8 +1617,11 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                 t, cs = generated_names(d["name"], b["name"], [c["name"] for c in b["ctors"]])
                 if r["target"] != t or [c["name"] for c in r["target_ctors"]] != cs:
                     raise Mismatch(f"target names {r['target']} / {r['target_ctors']} are not the images of the source")
-                if r.get("num_params") != d["npars"]:
-                    raise Mismatch("parameter count differs from the source")
+                # M6: non-uniform parameters are Lean indices; the uniform count is the native
+                # (round-trip-checked) nparams_rec
+                nrec = (d.get("native") or {}).get("nparams_rec", d["npars"])
+                if r.get("num_params") != nrec or nrec > d["npars"]:
+                    raise Mismatch("parameter count differs from the source's uniform parameters")
                 params0, sol0, _ = ind_params(d, r)
                 want_lp = [level_param(g) for g in params0]
                 if r.get("level_params", []) != want_lp:

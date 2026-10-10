@@ -568,7 +568,15 @@ where
       | .ok n => nchecks := nchecks + n
       | .error msg => return ({ base with status := "UNIVERSE_REJECTED", message := msg }, none)
     let base := { base with minimalLevels := ms.size, universeChecks := nchecks }
-    let decl := Declaration.inductDecl lparams i.npars [{ name := tname, type := ty, ctors := ctors.toList }] false
+    -- M6: non-uniform parameters (the native `nparams_rec`, round-trip checked) become the first
+    -- indices of the Lean inductive; the arity and constructor types are unchanged
+    let nparamsRec := (i.native.getObjValAs? Nat "nparams_rec").toOption.getD i.npars
+    unless nparamsRec ≤ i.npars do
+      return ({ base with status := "EXPORT_VALIDATION_FAILED", message := s!"nparams_rec {nparamsRec} exceeds npars {i.npars}" }, none)
+    if nparamsRec < i.npars && (isRecord || isTemplate) then
+      return ({ base with status := "UNSUPPORTED_FEATURE",
+                          message := "non-uniform parameters of a primitive record or template inductive" }, none)
+    let decl := Declaration.inductDecl lparams nparamsRec [{ name := tname, type := ty, ctors := ctors.toList }] false
     let base := { base with target := some tname, targetKind := "inductive",
                             rule := if isTemplate then "inductive/generated-template"
                                     else if lparams.isEmpty then "inductive/generated" else "inductive/generated-levels" }
@@ -578,8 +586,9 @@ where
       let tgt : IndTarget := { types := #[tname], ctors := #[cnames], univ, rule := "generated",
                                templateParamPos := templateParams.map (·.2), isStructure := isRecord,
                                templateLevelIdx := (List.range globals.size).toArray.filter
-                                 (fun k => templateParams.any (·.1 == globals[k]!)) }
-      return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty, numParams := i.npars, primitiveRecord := isRecord,
+                                 (fun k => templateParams.any (·.1 == globals[k]!)),
+                               nonUniform := i.npars - nparamsRec }
+      return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty, numParams := nparamsRec, primitiveRecord := isRecord,
                           levelParams := lparams, paramLevels := globals, isTemplate, templateParams,
                           implicitLevels := extraOwn.filter (!(globalsOfInd i).contains ·),
                           targetCtors := ctors.map fun c => (c.name, c.type) }, some tgt)
