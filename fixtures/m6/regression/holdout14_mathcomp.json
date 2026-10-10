@@ -1,0 +1,21 @@
+{
+ "name": "holdout14_mathcomp",
+ "manifest": "fixtures/m5/manifest.json",
+ "roots": [
+  "mathcomp.boot.ssrnat.addnC",
+  "mathcomp.boot.ssrnat.addnA",
+  "mathcomp.boot.ssrnat.addn0",
+  "mathcomp.boot.ssrnat.add0n",
+  "mathcomp.boot.ssrnat.leqnn",
+  "mathcomp.boot.ssrnat.leq_addr",
+  "mathcomp.boot.ssrnat.subnn",
+  "mathcomp.boot.seq.size_rev",
+  "mathcomp.boot.seq.rev_cat",
+  "mathcomp.boot.seq.count_rev",
+  "mathcomp.boot.seq.take_drop",
+  "mathcomp.boot.seq.cat_take_drop",
+  "mathcomp.boot.bigop.big_seq1",
+  "mathcomp.boot.bigop.big_nat1"
+ ],
+ "note": "MathComp holdouts (eqxx excluded: a notation)"
+}

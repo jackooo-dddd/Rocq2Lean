@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Strict M6 completion gate (five FinishTime roots, one fresh run). Nonzero unless VERIFIED_CURRENT.
+exec python3 -I "$(dirname "$0")/../tests/m6/finishtime_gate.py"

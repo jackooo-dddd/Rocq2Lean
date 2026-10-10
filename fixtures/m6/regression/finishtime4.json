@@ -1,0 +1,11 @@
+{
+ "name": "finishtime4",
+ "manifest": "fixtures/m6/manifest.json",
+ "roots": [
+  "prosa.analysis.definitions.finish_time.finish_time",
+  "prosa.analysis.definitions.finish_time.finished_at_finish_time",
+  "prosa.analysis.definitions.finish_time.earliest_finish_time",
+  "prosa.analysis.definitions.finish_time.response_time"
+ ],
+ "note": "M6.3 roots verified at 43baae6"
+}

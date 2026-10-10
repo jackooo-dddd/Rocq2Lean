@@ -1,0 +1,89 @@
+{
+  "gate": "M6_FINISHTIME_COMPLETE",
+  "verdict": "FAIL",
+  "steps": {
+    "export": 0,
+    "translate": 2,
+    "verify": 2,
+    "status": 2
+  },
+  "roots": {
+    "prosa.analysis.definitions.finish_time.finish_time": "TRANSLATED_AND_CHECKED",
+    "prosa.analysis.definitions.finish_time.finished_at_finish_time": "TRANSLATED_AND_CHECKED",
+    "prosa.analysis.definitions.finish_time.earliest_finish_time": "TRANSLATED_AND_CHECKED",
+    "prosa.analysis.definitions.finish_time.response_time": "TRANSLATED_AND_CHECKED",
+    "prosa.analysis.definitions.finish_time.completes_at_finish_time": "BLOCKED_DEPENDENCY"
+  },
+  "required_closure": null,
+  "verify_status": "AUDIT_REJECTED",
+  "root_failures_in_closure": {
+    "Corelib.BinNums.PosDef/Pos.compare_cont": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "fixpoint body is not a match on the decreasing argument"
+    },
+    "Corelib.BinNums.PosDef/Pos.add": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "mutual fixpoint (2 functions)"
+    },
+    "Corelib.BinNums.IntDef/Z.pos_sub": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "fixpoint body is not a match on the decreasing argument"
+    },
+    "Corelib.BinNums.PosDef/Pos.sub_mask": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "mutual fixpoint (2 functions)"
+    },
+    "Corelib.BinNums.PosDef/Pos.add_carry": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "mutual fixpoint (2 functions)"
+    },
+    "Corelib.BinNums.PosDef/Pos.sub_mask_carry": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "mutual fixpoint (2 functions)"
+    },
+    "Stdlib.PArith.BinPos/Pos.peano_rect": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "fixpoint body is not a match on the decreasing argument"
+    },
+    "Corelib.BinNums.PosDef/Pos.eqb": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "fixpoint body is not a match on the decreasing argument"
+    },
+    "Corelib.Init.Wf.Acc_rect": {
+      "status": "EXPORT_VALIDATION_FAILED",
+      "message": "match metadata disagrees with the recursor"
+    },
+    "Corelib.Init.Wf.Acc_inv": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "functional recursive constructor field"
+    },
+    "Stdlib.micromega.ZMicromega.ZArithProof": {
+      "status": "KERNEL_REJECTED",
+      "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.micromega.RingMicromega.PolC Rocq.Corelib.Numbers.BinNums.Z\nargument has type\n  Type\nbut function has type\n  Type u_Stdlib_micromega_RingMicromega_22 \u2192 Type u_Stdlib_micromega_RingMicromega_22"
+    },
+    "Stdlib.micromega.Tauto.xcnf": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "recursive call without its decreasing argument"
+    },
+    "Stdlib.micromega.RingMicromega.SORaddon": {
+      "status": "KERNEL_REJECTED",
+      "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.setoid_ring.Ring_theory.ring_morph R rO rI rplus rtimes rminus ropp req C\nargument has type\n  Type u_Stdlib_micromega_RingMicromega_22\nbut function has type\n  (C : Type (max u_Stdlib_micromega_RingMicromega_21 0)) \u2192\n    C \u2192\n      C \u2192\n        (C \u2192 C \u2192"
+    },
+    "Corelib.Lists.ListDef.nth": {
+      "status": "UNSUPPORTED_FEATURE",
+      "message": "fixpoint body is not a match on the decreasing argument"
+    },
+    "Stdlib.setoid_ring.Ring_theory.IDmorph": {
+      "status": "KERNEL_REJECTED",
+      "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.setoid_ring.Ring_theory.ring_morph R rO rI radd rmul rsub ropp req R\nargument has type\n  Type u_Stdlib_setoid_ring_Ring_theory_41\nbut function has type\n  (C : Type (max u_Stdlib_setoid_ring_Ring_theory_41 u_Stdlib_setoid_ring_Ring_theory_98)) \u2192\n    C"
+    }
+  },
+  "blocked_dependents": 909,
+  "binding": {
+    "git_head": "b29ab03763dc11c58408697c7ad6163054945a0a",
+    "git_dirty": true,
+    "impl_tree_sha256": "f9e01c6531b316d0f10e20fdace8cbf189f244c904768ae54eaf30cbee691416",
+    "toolchain_fingerprint": null,
+    "source_ir_sha256": "45c0e04b44c83a9eafd8a72d1885f8213807c4c4bc6fbf6804cc3134def2c425"
+  }
+}

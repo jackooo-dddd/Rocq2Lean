@@ -1,0 +1,295 @@
+{
+  "git_head": "b29ab03763dc11c58408697c7ad6163054945a0a",
+  "git_dirty": true,
+  "runs": {
+    "behavior61": {
+      "request": "behavior61",
+      "roots": {
+        "prosa.analysis.facts.behavior.arrivals.arrived_between_before": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrived_before_has_arrived": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.consistent_times_valid_arrival": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.uniq_valid_arrival": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrivals_between_cat": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrivals_P_cat": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrivals_between_mem_cat": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrivals_between_sub": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.job_arrival_arrives_at": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.job_arrival_at": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.job_in_arrivals_at": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.job_arrival_between": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.job_arrival_between_ge": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.job_arrival_between_lt": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrivals_between_filter_nil": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.in_arrivals_implies_arrived": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.in_arrseq_implies_arrives": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.in_arrivals_implies_arrived_between": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.in_arrivals_implies_arrived_before": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrived_between_implies_in_arrivals": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.job_arrival_between_P": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.job_in_arrivals_between": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrivals_between_geq": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrivals_between_nonempty": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrival_lt_implies_job_in_arrivals_between_P": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.job_arrival_in_bounds": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrives_in_jobs_come_from_arrival_sequence": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrived_between_jobs_must_arrive_to_execute": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.arrivals.arrivals_before_scheduled_at": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_during_geq": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_during_ge": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service0": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_during_instant": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_during_cat": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_cat": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_during_first_plus_later": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_during_last_plus_before": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_last_plus_before": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_split_at_point": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_at_most_one": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_is_zero_or_one": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.ideal_progress_inside_supplies": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.service_monotonic": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.not_scheduled_before_arrival": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.constant_service_implies_no_service_during": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.service.served_at_and_receives_service_consistent": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.completion_monotonic": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.incompletion_monotonic": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.less_service_than_cost_is_incomplete": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.incomplete_is_positive_remaining_cost": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.incomplete_implies_positive_cost": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.scheduled_implies_positive_cost": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.service_lt_cost": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.scheduled_implies_serviced": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.scheduled_implies_not_completed": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.completed_implies_not_scheduled": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.not_pending_earlier_and_at_0": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.unit_service": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.has_arrived_scheduled": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.scheduled_implies_pending": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.completion.ideal_progress_completed_jobs": "TRANSLATED_AND_CHECKED"
+      },
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verify": "VERIFIED",
+      "required_closure": 426,
+      "accepted_by_kind": {
+        "definition": 203,
+        "theorem/opaque": 186,
+        "inductive": 35
+      },
+      "blocked_root_causes": {},
+      "source_ir_sha256": "4444b625e83b0ce5dc13e15a78fb41c1df95e36c6591f18595c71a17ac18d7c7"
+    },
+    "finishtime4": {
+      "request": "finishtime4",
+      "roots": {
+        "prosa.analysis.definitions.finish_time.finish_time": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.definitions.finish_time.finished_at_finish_time": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.definitions.finish_time.earliest_finish_time": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.definitions.finish_time.response_time": "TRANSLATED_AND_CHECKED"
+      },
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verify": "VERIFIED",
+      "required_closure": 123,
+      "accepted_by_kind": {
+        "definition": 77,
+        "theorem/opaque": 23,
+        "inductive": 21
+      },
+      "blocked_root_causes": {},
+      "source_ir_sha256": "6799ebd43cddcb5d327921ff467d36ceddf92dfa9f837e7be9b7e4e651f1e19c"
+    },
+    "holdout13_prosa": {
+      "request": "holdout13_prosa",
+      "roots": {
+        "prosa.analysis.facts.behavior.deadlines.incomplete_implies_later_deadline": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.deadlines.scheduled_at_implies_later_deadline": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.deadlines.service_invariant_implies_deadline_met": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.service_at_le_supply_at": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.pos_service_impl_pos_supply": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.blackout_or_supply": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.supply_at_complement": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.is_blackout_complement": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.supply_at_le_1": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.supply_during_last_plus_before": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.blackout_during_last_plus_before": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.blackout_during_unit_growth": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.progress_inside_supplies": "TRANSLATED_AND_CHECKED"
+      },
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verify": "VERIFIED",
+      "required_closure": 411,
+      "accepted_by_kind": {
+        "definition": 216,
+        "theorem/opaque": 151,
+        "inductive": 42
+      },
+      "blocked_root_causes": {},
+      "source_ir_sha256": "569aea1f023f82507285add0be2a7d578a27225662ab972278ec1147188f56e8"
+    },
+    "holdout14_mathcomp": {
+      "request": "holdout14_mathcomp",
+      "roots": {
+        "mathcomp.boot.ssrnat.addnC": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.ssrnat.addnA": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.ssrnat.addn0": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.ssrnat.add0n": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.ssrnat.leqnn": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.ssrnat.leq_addr": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.ssrnat.subnn": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.seq.size_rev": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.seq.rev_cat": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.seq.count_rev": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.seq.take_drop": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.seq.cat_take_drop": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.bigop.big_seq1": "TRANSLATED_AND_CHECKED",
+        "mathcomp.boot.bigop.big_nat1": "TRANSLATED_AND_CHECKED"
+      },
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verify": "VERIFIED",
+      "required_closure": 132,
+      "accepted_by_kind": {
+        "definition": 58,
+        "theorem/opaque": 58,
+        "inductive": 14
+      },
+      "blocked_root_causes": {},
+      "source_ir_sha256": "7bd48a03f36e2a3b098f46f4957a48c6e0d55d70ac16d454415da6463a611498"
+    },
+    "holdout20_prosa": {
+      "request": "holdout20_prosa",
+      "roots": {
+        "prosa.analysis.facts.behavior.deadlines.incomplete_implies_later_deadline": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.deadlines.incomplete_implies_scheduled_later": "BLOCKED_DEPENDENCY",
+        "prosa.analysis.facts.behavior.deadlines.scheduled_at_implies_later_deadline": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.deadlines.service_invariant_implies_deadline_met": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.service_at_le_supply_at": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.pos_service_impl_pos_supply": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.blackout_or_supply": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.supply_at_complement": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.is_blackout_complement": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.supply_at_le_1": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.unit_supply_proc_service_case": "BLOCKED_DEPENDENCY",
+        "prosa.analysis.facts.behavior.supply.supply_during_bound": "BLOCKED_DEPENDENCY",
+        "prosa.analysis.facts.behavior.supply.blackout_during_bound": "BLOCKED_DEPENDENCY",
+        "prosa.analysis.facts.behavior.supply.supply_during_last_plus_before": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.blackout_during_last_plus_before": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.supply_during_complement": "BLOCKED_DEPENDENCY",
+        "prosa.analysis.facts.behavior.supply.blackout_during_complement": "BLOCKED_DEPENDENCY",
+        "prosa.analysis.facts.behavior.supply.blackout_during_cat": "BLOCKED_DEPENDENCY",
+        "prosa.analysis.facts.behavior.supply.blackout_during_unit_growth": "TRANSLATED_AND_CHECKED",
+        "prosa.analysis.facts.behavior.supply.progress_inside_supplies": "TRANSLATED_AND_CHECKED"
+      },
+      "exit_codes": {
+        "export": 0,
+        "translate": 2,
+        "verify": 2,
+        "status": 2
+      },
+      "verify": "AUDIT_REJECTED",
+      "required_closure": null,
+      "accepted_by_kind": {
+        "definition": 555,
+        "theorem/opaque": 479,
+        "inductive": 84
+      },
+      "blocked_root_causes": {
+        "mathcomp.boot.ssrnat.leqif": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "template inductive Corelib.Init.Datatypes.prod instantiated at quality Prop: parameter 0 receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without"
+        },
+        "Corelib.ssr.ssrbool.manifest_simpl_pred": {
+          "status": "KERNEL_REJECTED",
+          "message": "(kernel) application type mismatch\n  @Rocq.Corelib.ssr.ssrbool.simpl_pred T\nargument has type\n  Type u_Corelib_ssr_ssrbool_1253\nbut function has type\n  Type (max u_Corelib_ssr_ssrbool_1126 u_Corelib_s"
+        },
+        "Corelib.ssr.ssreflect_rw.nary_congruence_statement": {
+          "status": "UNIVERSE_REJECTED",
+          "message": "defaulted universe level(s) [u_residual_0] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  k (A \u2192 B)\nargument has type\n  Type (max u_residual_0 u_Core"
+        },
+        "Corelib.BinNums.PosDef/Pos.compare_cont": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "fixpoint body is not a match on the decreasing argument"
+        },
+        "Corelib.BinNums.PosDef/Pos.sub_mask": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "mutual fixpoint (2 functions)"
+        },
+        "Corelib.BinNums.PosDef/Pos.add": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "mutual fixpoint (2 functions)"
+        },
+        "Corelib.BinNums.PosDef/Pos.add_carry": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "mutual fixpoint (2 functions)"
+        },
+        "Corelib.BinNums.PosDef/Pos.sub_mask_carry": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "mutual fixpoint (2 functions)"
+        },
+        "Corelib.BinNums.IntDef/Z.pos_sub": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "fixpoint body is not a match on the decreasing argument"
+        },
+        "Stdlib.PArith.BinPos/Pos.peano_rect": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "fixpoint body is not a match on the decreasing argument"
+        },
+        "Corelib.BinNums.PosDef/Pos.eqb": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "fixpoint body is not a match on the decreasing argument"
+        },
+        "Corelib.Init.Wf.Acc_rect": {
+          "status": "EXPORT_VALIDATION_FAILED",
+          "message": "match metadata disagrees with the recursor"
+        },
+        "Corelib.Init.Wf.Acc_inv": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "functional recursive constructor field"
+        },
+        "Stdlib.micromega.ZMicromega.ZArithProof": {
+          "status": "KERNEL_REJECTED",
+          "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.micromega.RingMicromega.PolC Rocq.Corelib.Numbers.BinNums.Z\nargument has type\n  Type\nbut function has type\n  Type u_Stdlib_micromega_RingMicromega_22 "
+        },
+        "Stdlib.micromega.Tauto.xcnf": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "recursive call without its decreasing argument"
+        },
+        "Stdlib.micromega.RingMicromega.SORaddon": {
+          "status": "KERNEL_REJECTED",
+          "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.setoid_ring.Ring_theory.ring_morph R rO rI rplus rtimes rminus ropp req C\nargument has type\n  Type u_Stdlib_micromega_RingMicromega_22\nbut function ha"
+        },
+        "Corelib.Lists.ListDef.nth": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "fixpoint body is not a match on the decreasing argument"
+        },
+        "Stdlib.setoid_ring.Ring_theory.IDmorph": {
+          "status": "KERNEL_REJECTED",
+          "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.setoid_ring.Ring_theory.ring_morph R rO rI radd rmul rsub ropp req R\nargument has type\n  Type u_Stdlib_setoid_ring_Ring_theory_41\nbut function has typ"
+        },
+        "mathcomp.boot.bigop.big_const_seq": {
+          "status": "UNIVERSE_REJECTED",
+          "message": "proof-local level mathcomp.boot.bigop.1120 solved as (some u_mathcomp_boot_bigop_2719): native fact mathcomp.boot.bigop.2716 le mathcomp.boot.bigop.1120 does not hold for the solution"
+        }
+      },
+      "source_ir_sha256": "ca446fdfbecd0103d21796f5ef9fdc16c45fff5f9c3c2eb4cbeba86254b58306"
+    }
+  }
+}

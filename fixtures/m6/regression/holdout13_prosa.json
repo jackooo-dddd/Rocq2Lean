@@ -1,0 +1,20 @@
+{
+ "name": "holdout13_prosa",
+ "manifest": "fixtures/m6/holdout_manifest.json",
+ "roots": [
+  "prosa.analysis.facts.behavior.deadlines.incomplete_implies_later_deadline",
+  "prosa.analysis.facts.behavior.deadlines.scheduled_at_implies_later_deadline",
+  "prosa.analysis.facts.behavior.deadlines.service_invariant_implies_deadline_met",
+  "prosa.analysis.facts.behavior.supply.service_at_le_supply_at",
+  "prosa.analysis.facts.behavior.supply.pos_service_impl_pos_supply",
+  "prosa.analysis.facts.behavior.supply.blackout_or_supply",
+  "prosa.analysis.facts.behavior.supply.supply_at_complement",
+  "prosa.analysis.facts.behavior.supply.is_blackout_complement",
+  "prosa.analysis.facts.behavior.supply.supply_at_le_1",
+  "prosa.analysis.facts.behavior.supply.supply_during_last_plus_before",
+  "prosa.analysis.facts.behavior.supply.blackout_during_last_plus_before",
+  "prosa.analysis.facts.behavior.supply.blackout_during_unit_growth",
+  "prosa.analysis.facts.behavior.supply.progress_inside_supplies"
+ ],
+ "note": "the 13 roots of holdout20_prosa that translated; its own run"
+}

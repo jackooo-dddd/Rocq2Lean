@@ -1,0 +1,634 @@
+{
+  "target": "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+  "run": "runs/m6-gate-finishtime5",
+  "closure_size": 1716,
+  "accepted": 792,
+  "leaves_by_category": {
+    "missing_feature": 30,
+    "exporter_or_metadata_defect": 1,
+    "universe_solving": 3
+  },
+  "leaves": {
+    "Corelib.BinNums.PosDef/Pos.add": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "mutual fixpoint (2 functions)",
+      "blocks": 722,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Corelib.BinNums.IntDef/Z.add",
+        "Corelib.BinNums.PosDef/Pos.add"
+      ]
+    },
+    "Corelib.BinNums.PosDef/Pos.compare_cont": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on the decreasing argument",
+      "blocks": 710,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.ZArith.Znat/Nat2Z.is_nonneg",
+        "Corelib.BinNums.IntDef/Z.compare",
+        "Corelib.BinNums.PosDef/Pos.compare",
+        "Corelib.BinNums.PosDef/Pos.compare_cont"
+      ]
+    },
+    "Corelib.BinNums.PosDef/Pos.add_carry": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "mutual fixpoint (2 functions)",
+      "blocks": 562,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.ZArith.Znat/Nat2Z.is_nonneg",
+        "Stdlib.ZArith.BinInt/Z.le_preorder",
+        "Stdlib.ZArith.BinInt/Z.le_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_succ_r",
+        "Stdlib.ZArith.BinInt/Z.sub_succ_r",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc_pos",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.pos_sub_add",
+        "Stdlib.ZArith.BinInt/Z.pos_sub_spec",
+        "Stdlib.PArith.BinPos/Pos.sub_xO_xO",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos'",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos_iff",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_add_diag_l",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_spec",
+        "Corelib.BinNums.PosDef/Pos.add_carry"
+      ]
+    },
+    "Corelib.BinNums.PosDef/Pos.sub_mask": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "mutual fixpoint (2 functions)",
+      "blocks": 539,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.ZArith.Znat/Nat2Z.is_nonneg",
+        "Stdlib.ZArith.BinInt/Z.le_preorder",
+        "Stdlib.ZArith.BinInt/Z.le_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_succ_r",
+        "Stdlib.ZArith.BinInt/Z.sub_succ_r",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc_pos",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.pos_sub_add",
+        "Stdlib.ZArith.BinInt/Z.pos_sub_spec",
+        "Corelib.BinNums.PosDef/Pos.sub_mask"
+      ]
+    },
+    "Corelib.BinNums.PosDef/Pos.sub_mask_carry": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "mutual fixpoint (2 functions)",
+      "blocks": 511,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.ZArith.Znat/Nat2Z.is_nonneg",
+        "Stdlib.ZArith.BinInt/Z.le_preorder",
+        "Stdlib.ZArith.BinInt/Z.le_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_succ_r",
+        "Stdlib.ZArith.BinInt/Z.sub_succ_r",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc_pos",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.pos_sub_add",
+        "Stdlib.ZArith.BinInt/Z.pos_sub_spec",
+        "Stdlib.PArith.BinPos/Pos.sub_xO_xO",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos'",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos_iff",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_add_diag_l",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_spec",
+        "Corelib.BinNums.PosDef/Pos.sub_mask_carry"
+      ]
+    },
+    "Stdlib.PArith.BinPos/Pos.peano_rect": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on the decreasing argument",
+      "blocks": 432,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.ZArith.Znat/Nat2Z.is_nonneg",
+        "Stdlib.ZArith.BinInt/Z.le_preorder",
+        "Stdlib.ZArith.BinInt/Z.le_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_succ_r",
+        "Stdlib.ZArith.BinInt/Z.sub_succ_r",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc_pos",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.pos_sub_add",
+        "Stdlib.PArith.BinPos/Pos.add_compare_mono_r",
+        "Stdlib.PArith.BinPos/Pos.add_compare_mono_l",
+        "Stdlib.PArith.BinPos/Pos.peano_ind",
+        "Stdlib.PArith.BinPos/Pos.peano_rect"
+      ]
+    },
+    "Corelib.BinNums.IntDef/Z.pos_sub": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on the decreasing argument",
+      "blocks": 429,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Corelib.BinNums.IntDef/Z.add",
+        "Corelib.BinNums.IntDef/Z.pos_sub"
+      ]
+    },
+    "Stdlib.PArith.BinPos/Pos.add_no_neutral": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "mutual fixpoint",
+      "blocks": 404,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.ZArith.Znat/Nat2Z.is_nonneg",
+        "Stdlib.ZArith.BinInt/Z.le_preorder",
+        "Stdlib.ZArith.BinInt/Z.le_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_succ_r",
+        "Stdlib.ZArith.BinInt/Z.sub_succ_r",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc_pos",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.pos_sub_add",
+        "Stdlib.ZArith.BinInt/Z.pos_sub_spec",
+        "Stdlib.PArith.BinPos/Pos.sub_xO_xO",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos'",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos_iff",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_add_diag_l",
+        "Stdlib.PArith.BinPos/Pos.add_no_neutral"
+      ]
+    },
+    "Stdlib.PArith.BinPos/Pos.add_reg_r": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "mutual fixpoint",
+      "blocks": 357,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.ZArith.Znat/Nat2Z.is_nonneg",
+        "Stdlib.ZArith.BinInt/Z.le_preorder",
+        "Stdlib.ZArith.BinInt/Z.le_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_trans",
+        "Stdlib.ZArith.BinInt/Z.lt_succ_r",
+        "Stdlib.ZArith.BinInt/Z.sub_succ_r",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.add_assoc_pos",
+        "Stdlib.ZArith.BinInt/Z/Private_BootStrap.pos_sub_add",
+        "Stdlib.ZArith.BinInt/Z.pos_sub_spec",
+        "Stdlib.PArith.BinPos/Pos.sub_xO_xO",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos'",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_pos_iff",
+        "Stdlib.PArith.BinPos/Pos.sub_mask_add_diag_l",
+        "Stdlib.PArith.BinPos/Pos.add_cancel_l",
+        "Stdlib.PArith.BinPos/Pos.add_reg_l",
+        "Stdlib.PArith.BinPos/Pos.add_reg_r"
+      ]
+    },
+    "Corelib.Init.Wf.Acc_inv": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "functional recursive constructor field",
+      "blocks": 154,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZifyBool.Z_of_nat_eqb_iff",
+        "Stdlib.ZArith.Znat/Nat2Z.inj_compare",
+        "Stdlib.NArith.Nnat/Nat2N.inj_compare",
+        "Stdlib.NArith.Nnat/N2Nat.inj_compare",
+        "Stdlib.PArith.Pnat/Pos2Nat.inj_compare",
+        "Stdlib.PArith.Pnat/Pos2Nat.is_pos",
+        "Stdlib.Arith.PeanoNat/Nat.lt_0_succ",
+        "Stdlib.Arith.PeanoNat/Nat.induction",
+        "Stdlib.Arith.PeanoNat/Nat.right_induction",
+        "Stdlib.Arith.PeanoNat/Nat.strong_right_induction",
+        "Stdlib.Arith.PeanoNat/Nat.lt_wf",
+        "Corelib.Classes.Morphisms_Prop.Acc_pt_morphism",
+        "Corelib.Init.Wf.Acc_inv"
+      ]
+    },
+    "Corelib.Init.Wf.Acc_rect": {
+      "kind": "translation",
+      "status": "EXPORT_VALIDATION_FAILED",
+      "category": "exporter_or_metadata_defect",
+      "message": "match metadata disagrees with the recursor",
+      "blocks": 151,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZifyBool.Z_of_nat_eqb_iff",
+        "Stdlib.ZArith.Znat/Nat2Z.inj_compare",
+        "Stdlib.NArith.Nnat/Nat2N.inj_compare",
+        "Stdlib.NArith.Nnat/N2Nat.inj_compare",
+        "Stdlib.PArith.Pnat/Pos2Nat.inj_compare",
+        "Stdlib.PArith.Pnat/Pos2Nat.is_pos",
+        "Stdlib.Arith.PeanoNat/Nat.lt_0_succ",
+        "Stdlib.Arith.PeanoNat/Nat.induction",
+        "Stdlib.Arith.PeanoNat/Nat.right_induction",
+        "Stdlib.Arith.PeanoNat/Nat.strong_right_induction",
+        "Corelib.Init.Wf.well_founded_induction",
+        "Corelib.Init.Wf.well_founded_induction_type",
+        "Corelib.Init.Wf.Acc_rect"
+      ]
+    },
+    "Stdlib.setoid_ring.Ring_polynom.Peq": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on its decreasing argument",
+      "blocks": 98,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.genCuttingPlaneNone",
+        "Stdlib.micromega.ZMicromega.Zgcd_pol_correct_lt",
+        "Stdlib.setoid_ring.Ring_polynom.Peq"
+      ]
+    },
+    "Corelib.BinNums.PosDef/Pos.eqb": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on the decreasing argument",
+      "blocks": 95,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZifyBool.Z_of_nat_eqb_iff",
+        "Stdlib.ZArith.BinInt/Z.eqb_compare",
+        "Stdlib.ZArith.BinInt/Z.eqb_eq",
+        "Corelib.BinNums.PosDef/Pos.eqb"
+      ]
+    },
+    "Stdlib.setoid_ring.Ring_polynom.Padd": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "recursive function used other than in a call",
+      "blocks": 78,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.genCuttingPlaneNone",
+        "Stdlib.micromega.ZMicromega.Zgcd_pol_correct_lt",
+        "Stdlib.setoid_ring.ZArithRing.Zr_ring_lemma1",
+        "Stdlib.setoid_ring.Ring_polynom.ring_correct",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_ok",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_spec",
+        "Stdlib.setoid_ring.Ring_polynom.norm_aux",
+        "Stdlib.setoid_ring.Ring_polynom.Padd"
+      ]
+    },
+    "Stdlib.micromega.EnvRing.Peq": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on its decreasing argument",
+      "blocks": 73,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.normalise_correct",
+        "Stdlib.micromega.ZMicromega.xnormalise_correct",
+        "Stdlib.micromega.ZMicromega.psub",
+        "Stdlib.micromega.RingMicromega.psub",
+        "Stdlib.micromega.EnvRing.Psub",
+        "Stdlib.micromega.EnvRing.mkPX",
+        "Stdlib.micromega.EnvRing.Peq"
+      ]
+    },
+    "Stdlib.setoid_ring.Ring_polynom.Pmul": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "recursive function used other than in a call",
+      "blocks": 73,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.genCuttingPlaneNone",
+        "Stdlib.micromega.ZMicromega.Zgcd_pol_correct_lt",
+        "Stdlib.setoid_ring.ZArithRing.Zr_ring_lemma1",
+        "Stdlib.setoid_ring.Ring_polynom.ring_correct",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_ok",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_spec",
+        "Stdlib.setoid_ring.Ring_polynom.norm_aux",
+        "Stdlib.setoid_ring.Ring_polynom.Pmul"
+      ]
+    },
+    "Stdlib.setoid_ring.Ring_polynom.PNSubst1": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on its decreasing argument",
+      "blocks": 60,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.genCuttingPlaneNone",
+        "Stdlib.micromega.ZMicromega.Zgcd_pol_correct_lt",
+        "Stdlib.setoid_ring.ZArithRing.Zr_ring_lemma1",
+        "Stdlib.setoid_ring.Ring_polynom.ring_correct",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_ok",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_spec",
+        "Stdlib.setoid_ring.Ring_polynom.PNSubstL",
+        "Stdlib.setoid_ring.Ring_polynom.PSubstL",
+        "Stdlib.setoid_ring.Ring_polynom.PSubstL1",
+        "Stdlib.setoid_ring.Ring_polynom.PNSubst1"
+      ]
+    },
+    "Stdlib.setoid_ring.Ring_polynom.Psub": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "recursive function used other than in a call",
+      "blocks": 57,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.genCuttingPlaneNone",
+        "Stdlib.micromega.ZMicromega.Zgcd_pol_correct_lt",
+        "Stdlib.setoid_ring.ZArithRing.Zr_ring_lemma1",
+        "Stdlib.setoid_ring.Ring_polynom.ring_correct",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_ok",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_spec",
+        "Stdlib.setoid_ring.Ring_polynom.norm_aux",
+        "Stdlib.setoid_ring.Ring_polynom.Psub"
+      ]
+    },
+    "Stdlib.setoid_ring.Ring_polynom.POneSubst_ok": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "recursive function used other than in a call",
+      "blocks": 54,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.genCuttingPlaneNone",
+        "Stdlib.micromega.ZMicromega.Zgcd_pol_correct_lt",
+        "Stdlib.setoid_ring.ZArithRing.Zr_ring_lemma1",
+        "Stdlib.setoid_ring.Ring_polynom.ring_correct",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_ok",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_spec",
+        "Stdlib.setoid_ring.Ring_polynom.PNSubstL_ok",
+        "Stdlib.setoid_ring.Ring_polynom.PSubstL_ok",
+        "Stdlib.setoid_ring.Ring_polynom.PSubstL1_ok",
+        "Stdlib.setoid_ring.Ring_polynom.PNSubst1_ok",
+        "Stdlib.setoid_ring.Ring_polynom.POneSubst_ok"
+      ]
+    },
+    "Stdlib.setoid_ring.Ring_polynom.norm_aux": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "recursive call on a term that is not a direct recursive constructor field",
+      "blocks": 54,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.genCuttingPlaneNone",
+        "Stdlib.micromega.ZMicromega.Zgcd_pol_correct_lt",
+        "Stdlib.setoid_ring.ZArithRing.Zr_ring_lemma1",
+        "Stdlib.setoid_ring.Ring_polynom.ring_correct",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_ok",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_spec",
+        "Stdlib.setoid_ring.Ring_polynom.norm_aux"
+      ]
+    },
+    "Stdlib.setoid_ring.Ring_polynom.PNSubstL": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on its decreasing argument",
+      "blocks": 52,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.genCuttingPlaneNone",
+        "Stdlib.micromega.ZMicromega.Zgcd_pol_correct_lt",
+        "Stdlib.setoid_ring.ZArithRing.Zr_ring_lemma1",
+        "Stdlib.setoid_ring.Ring_polynom.ring_correct",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_ok",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_spec",
+        "Stdlib.setoid_ring.Ring_polynom.PNSubstL"
+      ]
+    },
+    "Stdlib.setoid_ring.Ring_polynom.PNSubst_ok": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on its decreasing argument",
+      "blocks": 51,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.genCuttingPlaneNone",
+        "Stdlib.micromega.ZMicromega.Zgcd_pol_correct_lt",
+        "Stdlib.setoid_ring.ZArithRing.Zr_ring_lemma1",
+        "Stdlib.setoid_ring.Ring_polynom.ring_correct",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_ok",
+        "Stdlib.setoid_ring.Ring_polynom.norm_subst_spec",
+        "Stdlib.setoid_ring.Ring_polynom.PNSubstL_ok",
+        "Stdlib.setoid_ring.Ring_polynom.PSubstL_ok",
+        "Stdlib.setoid_ring.Ring_polynom.PNSubst_ok"
+      ]
+    },
+    "Stdlib.micromega.EnvRing.Padd": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "recursive function used other than in a call",
+      "blocks": 50,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.normalise_correct",
+        "Stdlib.micromega.ZMicromega.xnnormalise_correct",
+        "Stdlib.micromega.ZMicromega.normZ",
+        "Stdlib.micromega.RingMicromega.norm",
+        "Stdlib.micromega.EnvRing.norm_aux",
+        "Stdlib.micromega.EnvRing.Padd"
+      ]
+    },
+    "Stdlib.micromega.RingMicromega.SORaddon": {
+      "kind": "translation",
+      "status": "KERNEL_REJECTED",
+      "category": "universe_solving",
+      "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.setoid_ring.Ring_theory.ring_morph R rO rI rplus rtimes rminus ropp req C\nargument has type\n  Type u_Stdlib_micromega_RingMicromega_22\nbut function has type\n  (C : Type (max u_Stdlib_micromega_RingMicromega_21 0)) \u2192\n    C \u2192\n      C \u2192\n        (C \u2192 C \u2192 C) \u2192 (C \u2192 C \u2192 C) \u2192 (C \u2192 C \u2192 C) \u2192 (C \u2192 C) \u2192 (C \u2192 C \u2192 Rocq.Corelib.Init.Datatypes.bool) \u2192 (C \u2192 R) \u2192 P",
+      "blocks": 39,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZSORaddon",
+        "Stdlib.micromega.RingMicromega.SORaddon"
+      ]
+    },
+    "Stdlib.micromega.EnvRing.Pmul": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "recursive function used other than in a call",
+      "blocks": 37,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.normalise_correct",
+        "Stdlib.micromega.ZMicromega.xnnormalise_correct",
+        "Stdlib.micromega.ZMicromega.normZ",
+        "Stdlib.micromega.RingMicromega.norm",
+        "Stdlib.micromega.EnvRing.norm_aux",
+        "Stdlib.micromega.EnvRing.Pmul"
+      ]
+    },
+    "Stdlib.micromega.EnvRing.Psub": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "recursive function used other than in a call",
+      "blocks": 31,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.normalise_correct",
+        "Stdlib.micromega.ZMicromega.xnormalise_correct",
+        "Stdlib.micromega.ZMicromega.psub",
+        "Stdlib.micromega.RingMicromega.psub",
+        "Stdlib.micromega.EnvRing.Psub"
+      ]
+    },
+    "Stdlib.micromega.EnvRing.norm_aux": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "recursive call on a term that is not a direct recursive constructor field",
+      "blocks": 20,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.normalise_correct",
+        "Stdlib.micromega.ZMicromega.xnnormalise_correct",
+        "Stdlib.micromega.ZMicromega.normZ",
+        "Stdlib.micromega.RingMicromega.norm",
+        "Stdlib.micromega.EnvRing.norm_aux"
+      ]
+    },
+    "Stdlib.setoid_ring.Ring_theory.IDmorph": {
+      "kind": "translation",
+      "status": "KERNEL_REJECTED",
+      "category": "universe_solving",
+      "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.setoid_ring.Ring_theory.ring_morph R rO rI radd rmul rsub ropp req R\nargument has type\n  Type u_Stdlib_setoid_ring_Ring_theory_41\nbut function has type\n  (C : Type (max u_Stdlib_setoid_ring_Ring_theory_41 u_Stdlib_setoid_ring_Ring_theory_98)) \u2192\n    C \u2192\n      C \u2192\n        (C \u2192 C \u2192 C) \u2192 (C \u2192 C \u2192 C) \u2192 (C \u2192 C \u2192 C) \u2192 (C \u2192 C) \u2192 (C \u2192 C \u2192 Rocq.Corelib.Init.",
+      "blocks": 11,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.genCuttingPlaneNone",
+        "Stdlib.micromega.ZMicromega.Zgcd_pol_correct_lt",
+        "Stdlib.setoid_ring.ZArithRing.Zr_ring_lemma1",
+        "Stdlib.setoid_ring.Ring_theory.IDmorph"
+      ]
+    },
+    "Corelib.Lists.ListDef.nth": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on the decreasing argument",
+      "blocks": 10,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.eval_Psatz",
+        "Stdlib.micromega.RingMicromega.eval_Psatz",
+        "Corelib.Lists.ListDef.nth"
+      ]
+    },
+    "Stdlib.micromega.Tauto.xcnf": {
+      "kind": "translation",
+      "status": "UNSUPPORTED_FEATURE",
+      "category": "missing_feature",
+      "message": "recursive call without its decreasing argument",
+      "blocks": 9,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.Tauto.tauto_checker_sound",
+        "Stdlib.micromega.Tauto.xcnf"
+      ]
+    },
+    "Stdlib.micromega.ZMicromega.ZArithProof": {
+      "kind": "translation",
+      "status": "KERNEL_REJECTED",
+      "category": "universe_solving",
+      "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.micromega.RingMicromega.PolC Rocq.Corelib.Numbers.BinNums.Z\nargument has type\n  Type\nbut function has type\n  Type u_Stdlib_micromega_RingMicromega_22 \u2192 Type u_Stdlib_micromega_RingMicromega_22",
+      "blocks": 6,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZArithProof"
+      ]
+    },
+    "Stdlib.micromega.RingMicromega.eval_Psatz_Sound": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "fixpoint body is not a match on its decreasing argument",
+      "blocks": 4,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.eval_Psatz_sound",
+        "Stdlib.micromega.RingMicromega.eval_Psatz_Sound"
+      ]
+    },
+    "Stdlib.micromega.ZMicromega.ZChecker": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "match on a nested inductive",
+      "blocks": 4,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker"
+      ]
+    },
+    "Stdlib.micromega.ZMicromega.ZArithProof_ind": {
+      "kind": "static",
+      "status": "UNSUPPORTED_FEATURE (preflight)",
+      "category": "missing_feature",
+      "message": "match on a nested inductive",
+      "blocks": 3,
+      "path_from_target": [
+        "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+        "Stdlib.micromega.ZMicromega.ZTautoChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZChecker_sound",
+        "Stdlib.micromega.ZMicromega.ZArithProof_ind"
+      ]
+    }
+  },
+  "pending_only_by_dependencies": 890
+}
