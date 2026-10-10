@@ -1,0 +1,315 @@
+{
+  "m4-datatypes": {
+    "roots": {
+      "Corelib.Init.Datatypes.list": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Datatypes.option": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Datatypes.prod": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Datatypes.bool": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "closure": 4
+  },
+  "m4-theorems": {
+    "roots": {
+      "Stdlib.Lists.List.app_nil_r": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.app_assoc": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.length_app": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.map_app": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.length_map": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.rev_app_distr": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.rev_involutive": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.map_map": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.map_id": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.in_map": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.fold_left_app": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.combine_split": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.length_fst_split": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.app_inv_head": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.in_app_or": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.map_ext": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "closure": 47
+  },
+  "m4-functions": {
+    "roots": {
+      "Stdlib.Lists.List.rev": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.fold_left": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.fold_right": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.combine": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.split": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.hd_error": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.existsb": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.forallb": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.filter": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.concat": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.last": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.removelast": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.nth_error": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.rev_append": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.flat_map": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.partition": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.list_prod": "TRANSLATED_AND_CHECKED",
+      "Corelib.Lists.ListDef.firstn": "TRANSLATED_AND_CHECKED",
+      "Corelib.Lists.ListDef.skipn": "TRANSLATED_AND_CHECKED",
+      "Corelib.Lists.ListDef.repeat": "TRANSLATED_AND_CHECKED",
+      "Corelib.Lists.ListDef.seq": "TRANSLATED_AND_CHECKED",
+      "Corelib.Lists.ListDef.map": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Datatypes.option_map": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Datatypes.negb": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Datatypes.andb": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Datatypes.orb": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Datatypes.xorb": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Datatypes.fst": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Datatypes.snd": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "closure": 35
+  },
+  "computation": {
+    "cases": 39,
+    "disagreements": 0,
+    "results": [
+      {
+        "case": "[1;2] ++ [3]",
+        "agree": true
+      },
+      {
+        "case": "length [4;5;6]",
+        "agree": true
+      },
+      {
+        "case": "List.map S [0;2]",
+        "agree": true
+      },
+      {
+        "case": "rev [1;2;3]",
+        "agree": true
+      },
+      {
+        "case": "fold_left Nat.add [1;2;3] 0",
+        "agree": true
+      },
+      {
+        "case": "fold_right Nat.add 0 [1;2;3]",
+        "agree": true
+      },
+      {
+        "case": "combine [1;2] [true;false]",
+        "agree": true
+      },
+      {
+        "case": "split [(1,true);(2,false)]",
+        "agree": true
+      },
+      {
+        "case": "hd_error (@nil nat)",
+        "agree": true
+      },
+      {
+        "case": "hd_error [5;6]",
+        "agree": true
+      },
+      {
+        "case": "existsb (Nat.eqb 2) [1;2]",
+        "agree": true
+      },
+      {
+        "case": "forallb (Nat.eqb 2) [1;2]",
+        "agree": true
+      },
+      {
+        "case": "filter (fun x => Nat.ltb x 2) [0;3;1;2]",
+        "agree": true
+      },
+      {
+        "case": "firstn 2 [1;2;3]",
+        "agree": true
+      },
+      {
+        "case": "skipn 1 [1;2;3]",
+        "agree": true
+      },
+      {
+        "case": "concat [[1];[2;3];[]]",
+        "agree": true
+      },
+      {
+        "case": "repeat 7 3",
+        "agree": true
+      },
+      {
+        "case": "last [1;2;3] 0",
+        "agree": true
+      },
+      {
+        "case": "removelast [1;2;3]",
+        "agree": true
+      },
+      {
+        "case": "seq 2 3",
+        "agree": true
+      },
+      {
+        "case": "nth_error [4;5;6] 1",
+        "agree": true
+      },
+      {
+        "case": "nth_error [4] 3",
+        "agree": true
+      },
+      {
+        "case": "rev_append [1;2] [3]",
+        "agree": true
+      },
+      {
+        "case": "flat_map (fun x => [x;x]) [1;2]",
+        "agree": true
+      },
+      {
+        "case": "partition (Nat.eqb 1) [1;2;1]",
+        "agree": true
+      },
+      {
+        "case": "list_prod [1;2] [true]",
+        "agree": true
+      },
+      {
+        "case": "option_map S (Some 3)",
+        "agree": true
+      },
+      {
+        "case": "option_map S (@None nat)",
+        "agree": true
+      },
+      {
+        "case": "negb true",
+        "agree": true
+      },
+      {
+        "case": "andb true false",
+        "agree": true
+      },
+      {
+        "case": "orb false true",
+        "agree": true
+      },
+      {
+        "case": "xorb true true",
+        "agree": true
+      },
+      {
+        "case": "fst (3, false)",
+        "agree": true
+      },
+      {
+        "case": "snd (3, false)",
+        "agree": true
+      },
+      {
+        "case": "list_rect (fun _ => nat) 0 (fun _ _ r => S r) [7;8;9]",
+        "agree": true
+      },
+      {
+        "case": "option_rect (fun _ => nat) S 0 (Some 4)",
+        "agree": true
+      },
+      {
+        "case": "option_rect (fun _ => nat) S 0 None",
+        "agree": true
+      },
+      {
+        "case": "prod_rect (fun _ => nat) (fun a b => a + b) (2,3)",
+        "agree": true
+      },
+      {
+        "case": "bool_rect (fun _ => nat) 1 0 false",
+        "agree": true
+      }
+    ]
+  },
+  "mutations": [
+    {
+      "mutation": "template-binding",
+      "declaration": "Corelib.Init.Datatypes.prod",
+      "kernel": "ACCEPTED",
+      "detector": "structure"
+    },
+    {
+      "mutation": "inductive-level-params",
+      "declaration": "Corelib.Init.Datatypes.list",
+      "kernel": "REJECTED",
+      "detector": "structure"
+    },
+    {
+      "mutation": "template-level-raised",
+      "declaration": "Stdlib.Lists.List.app_nil_r",
+      "kernel": "REJECTED",
+      "detector": "instance_levels"
+    },
+    {
+      "mutation": "proof-local-solution",
+      "declaration": "Stdlib.Lists.List.app_nil_r",
+      "kernel": "ACCEPTED",
+      "detector": "universe"
+    },
+    {
+      "mutation": "proof-local-set",
+      "declaration": "Stdlib.Lists.List.app_nil_r",
+      "kernel": "ACCEPTED",
+      "detector": "universe"
+    },
+    {
+      "mutation": "seq-generalized-argument",
+      "declaration": "Corelib.Lists.ListDef.seq",
+      "kernel": "ACCEPTED",
+      "detector": "structure"
+    },
+    {
+      "mutation": "seq-recursive-call-argument",
+      "declaration": "Corelib.Lists.ListDef.seq",
+      "kernel": "ACCEPTED",
+      "detector": "structure"
+    }
+  ],
+  "blockers": [
+    {
+      "root": "Corelib.Lists.ListDef.nth",
+      "reasons": [
+        "fixpoint body is not a match on its decreasing argument"
+      ],
+      "dependency_path": [
+        "Corelib.Lists.ListDef.nth"
+      ]
+    },
+    {
+      "root": "Stdlib.Lists.List.length_rev",
+      "reasons": [
+        "universe instance"
+      ],
+      "dependency_path": [
+        "Stdlib.Lists.List.length_rev",
+        "Stdlib.Arith.PeanoNat/Nat.add_comm",
+        "Stdlib.Arith.PeanoNat/Nat.add_0_r",
+        "Stdlib.Arith.PeanoNat/Nat.succ_inj_wd",
+        "Stdlib.Arith.PeanoNat/Nat.succ_inj",
+        "Corelib.Classes.Morphisms.subrelation_proper"
+      ]
+    }
+  ]
+}

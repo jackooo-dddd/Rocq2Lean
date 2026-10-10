@@ -7,7 +7,8 @@ import Rocq2Lean.IR
 `trans` maps a source IR term to a Lean `Expr`. Binders are opened with fresh free variables
 (`withLocalDecl`/`withLetDecl`) so that Lean type inference is available where the source
 leaves information implicit (the universe of a template-polymorphic inductive, cast
-validation). Terms are closed again with `mkForallFVars`/`mkLambdaFVars`/`mkLetFVars`;
+validation). Terms are closed again by plain de Bruijn abstraction (`bindFVars`, not
+`mkLambdaFVars`, which β-reduces binder types containing universe metavariables);
 `usedLetOnly := false` keeps every source `let`.
 
 Every failure is a structured `TransError` carrying a status and the node path.
@@ -177,6 +178,38 @@ def checkTemplateArgs (mind : String) (t : IndTarget) (args : Array Expr) : Tran
       if l.normalize == .zero then
         failT "UNSUPPORTED_FEATURE" s!"template inductive {mind} instantiated at quality Prop (parameter {k} is a proposition)"
 
+/-- Instantiate assigned *universe-level* metavariables only, without touching term structure.
+(`instantiateMVars` also β-reduces applications whose head becomes or is a λ once metavariables
+in it are instantiated, which would change the translated term: a source `(fun _ => nat) l` must
+stay a β-redex in the target.) Translated terms contain no expression metavariables. -/
+partial def instLevelMVars (e : Expr) : MetaM Expr := do
+  if !e.hasLevelMVar then return e
+  match e with
+  | .sort l => return .sort (← instantiateLevelMVars l)
+  | .const n ls => return .const n (← ls.mapM instantiateLevelMVars)
+  | .app f a => return .app (← instLevelMVars f) (← instLevelMVars a)
+  | .lam n t b bi => return .lam n (← instLevelMVars t) (← instLevelMVars b) bi
+  | .forallE n t b bi => return .forallE n (← instLevelMVars t) (← instLevelMVars b) bi
+  | .letE n t v b nd => return .letE n (← instLevelMVars t) (← instLevelMVars v) (← instLevelMVars b) nd
+  | .mdata d b => return .mdata d (← instLevelMVars b)
+  | .proj sn i b => return .proj sn i (← instLevelMVars b)
+  | _ => return e
+
+/-- Close `e` over the free variables `xs` (lambdas, foralls, or lets for let-bound locals) by plain
+de Bruijn abstraction of the local declarations, keeping every `let`. Unlike `mkLambdaFVars`/
+`mkForallFVars`, it never rewrites the binder types (those instantiate metavariables and β-reduce
+types that mention universe metavariables, which would change the translated term). -/
+def bindFVars (isLambda : Bool) (xs : Array Expr) (e : Expr) : MetaM Expr := do
+  let mut r := e.abstract xs
+  for i' in [0:xs.size] do
+    let i := xs.size - 1 - i'
+    let d ← xs[i]!.fvarId!.getDecl
+    let ty := d.type.abstractRange i xs
+    r := match d with
+      | .ldecl (value := v) .. => .letE d.userName ty (v.abstractRange i xs) r false
+      | _ => if isLambda then .lam d.userName ty r d.binderInfo else .forallE d.userName ty r d.binderInfo
+  return r
+
 /-! ## Terms -/
 
 /-- Leading lambdas of a source term. -/
@@ -265,20 +298,20 @@ partial def trans (t : IR.Term) : TransM Expr := do
     let ty' ← withPath "ty" (trans ty)
     withLocalDecl (binderName n) .default ty' fun x => do
       let b' ← withPath "b" (withLocal x (trans b))
-      mkForallFVars #[x] b'
+      bindFVars false #[x] b'
   | .lam n ty b => withPath "lam" do
     checkRelevant n
     let ty' ← withPath "ty" (trans ty)
     withLocalDecl (binderName n) .default ty' fun x => do
       let b' ← withPath "b" (withLocal x (trans b))
-      mkLambdaFVars #[x] b'
+      bindFVars true #[x] b'
   | .letIn n v ty b => withPath "let" do
     checkRelevant n
     let ty' ← withPath "ty" (trans ty)
     let v' ← withPath "v" (trans v)
     withLetDecl (binderName n) ty' v' fun x => do
       let b' ← withPath "b" (withLocal x (trans b))
-      mkLetFVars #[x] b' (usedLetOnly := false)
+      bindFVars true #[x] b'
   | .app f args => withPath "app" do
     let args' ← args.mapIdxM fun k a => withPath s!"arg{k}" (trans a)
     let f' ← withPath "f" (transHead f args')
@@ -288,7 +321,7 @@ partial def trans (t : IR.Term) : TransM Expr := do
     -- so that later lowering sees concrete levels; `solveLevels` finishes and the kernel re-checks.
     if f'.isConst && f'.constLevels!.any (·.hasMVar) then
       liftMeta do try Meta.check e catch _ => pure ()
-    instantiateMVars e
+    liftMeta (instLevelMVars e)
   | .const .. | .ind .. | .construct .. => transHead t #[]
   | .case ind npar _ puinst pparams pctx pret scrut brs =>
     withPath "case" (transCase ind npar puinst pparams pctx pret scrut brs)
@@ -321,7 +354,7 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
     failT "EXPORT_VALIDATION_FAILED" s!"case has {brs.size} branches, {iname}.rec has {rv.numMinors} minors"
   let params ← pparams.mapIdxM fun k a => withPath s!"param{k}" (trans a)
   let scrut' ← withPath "scrutinee" (trans scrut)
-  let sty ← liftMeta do whnf (← instantiateMVars (← inferType scrut'))
+  let sty ← liftMeta do whnf (← instLevelMVars (← inferType scrut'))
   -- Inductives with level parameters: the recursor's inductive levels are those of the
   -- scrutinee's type (kernel-forced); otherwise from the universe rule.
   let indLvls ← match tgt.univ with
@@ -341,7 +374,7 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
     unless xs.size == pctx.size do failT "TRANSLATION_FAILED" "motive arity differs from the case context"
     let ret ← withPath "return" (withReader (fun c => { c with locals := c.locals ++ xs }) (trans pret))
     let u ← liftMeta do instantiateLevelMVars (← getLevel ret)
-    return (← mkLambdaFVars xs ret, u.normalize)
+    return (← bindFVars true xs ret, u.normalize)
   if !large && u != Level.zero then
     failT "UNSUPPORTED_FEATURE" s!"elimination of {iname} into a non-Prop sort is not available in Lean"
   let recConst := mkConst (iname.str "rec") (recLvls u)
@@ -355,7 +388,7 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
       failT "UNSUPPORTED_FEATURE" s!"branch {k}: {bctx.size} binders for {nfields} fields (let-bound constructor arguments)"
     let minor ← minorTelescope minorTy nfields iname params fun fields _ ihs _ => do
       let body ← withPath s!"branch{k}" (withReader (fun c => { c with locals := c.locals ++ fields }) (trans bbody))
-      mkLambdaFVars (fields ++ ihs) body
+      bindFVars true (fields ++ ihs) body
     minors := minors.push minor
     ty := rest.instantiate1 minor
   return mkAppN recConst (params ++ #[motive] ++ minors ++ idx ++ #[scrut'])
@@ -457,9 +490,9 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
     if G.any (xty.containsFVar ·.fvarId!) then
       failT "UNSUPPORTED_FEATURE" "the decreasing argument's type depends on an argument that recursive calls change"
     let indLvls := xty.getAppFn.constLevels!
-    let QT ← mkForallFVars (G ++ Q) T
+    let QT ← bindFVars false (G ++ Q) T
     let u := (← liftMeta do instantiateLevelMVars (← getLevel QT)).normalize
-    let motive ← mkLambdaFVars (idx.push x) QT
+    let motive ← bindFVars true (idx.push x) QT
     let large := rv.levelParams.length == indLvls.length + 1
     if !large && u != Level.zero then
       failT "UNSUPPORTED_FEATURE" s!"recursion on {iname} into a non-Prop sort is not available in Lean"
@@ -488,10 +521,10 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
           let locals := outer ++ #[fv] ++ P' ++ #[x] ++ qs ++ fields
           let body ← withPath s!"branch{k}" (withReader (fun c => { c with locals := locals }) (trans bbody))
           let body ← replaceRecCalls fv.fvarId! P' idxPos fieldIH gpos body
-          mkLambdaFVars (fields ++ ihs ++ gs ++ qs) body
+          bindFVars true (fields ++ ihs ++ gs ++ qs) body
       minors := minors.push minor
       ty := rest.instantiate1 minor
-    let res ← mkLambdaFVars as (mkAppN (mkAppN recConst (params ++ #[motive] ++ minors ++ idx ++ #[x])) (G ++ Q))
+    let res ← bindFVars true as (mkAppN (mkAppN recConst (params ++ #[motive] ++ minors ++ idx ++ #[x])) (G ++ Q))
     if res.containsFVar fv.fvarId! then
       failT "UNSUPPORTED_FEATURE" "recursive function escapes the supported call pattern"
     return res
@@ -527,7 +560,7 @@ end
 
 /-- Translate a closed term and check that no free or meta variable escapes. -/
 def transClosed (t : IR.Term) : TransM Expr := do
-  let e ← instantiateMVars (← trans t)
+  let e ← instLevelMVars (← trans t)
   if e.hasFVar then failT "TRANSLATION_FAILED" "translated term has escaping free variables"
   if e.hasExprMVar then failT "TRANSLATION_FAILED" "translated term has unresolved metavariables"
   return e
@@ -697,8 +730,8 @@ def solveLevels (ty val : Expr) (dflt : LMVarId → Level := fun _ => .zero) :
     unless ← withTransparency .all <| isDefEq (← inferType val) ty do
       diags := diags.push "value type not unified with the declared type by Meta.isDefEq"
   catch e => diags := diags.push s!"isDefEq: {← e.toMessageData.toString}"
-  let ty ← instantiateMVars ty
-  let val ← instantiateMVars val
+  let ty ← instLevelMVars ty
+  let val ← instLevelMVars val
   let ((), ms) := ((levelMVarsOf ty *> levelMVarsOf val).run #[])
   -- Residual levels are unconstrained by unification; they are defaulted to 0 and *recorded*,
   -- must still pass the universe obligations (rule R3) like every other argument, and are only
@@ -711,6 +744,6 @@ def solveLevels (ty val : Expr) (dflt : LMVarId → Level := fun _ => .zero) :
   let gty := ty.replaceLevel sub
   let gval := val.replaceLevel sub
   for m in ms do assignLevelMVar m (dflt m)
-  return (← instantiateMVars ty, ← instantiateMVars val, diags, ps, gty, gval, ms.toList.map dflt)
+  return (← instLevelMVars ty, ← instLevelMVars val, diags, ps, gty, gval, ms.toList.map dflt)
 
 end Rocq2Lean

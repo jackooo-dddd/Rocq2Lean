@@ -141,6 +141,8 @@ def walk(t, found, inds, path):
     if k == "fix":
         fix_blockers(t, found, inds, path)
     for key, v in t.items():
+        if key == "u" and k in ("const", "ind", "construct"):
+            continue                      # a universe instance (levels), not a term
         if isinstance(v, (dict, list)):
             walk(v, found, inds, path + [key])
 
