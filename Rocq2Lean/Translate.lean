@@ -48,6 +48,8 @@ structure IndTarget where
   rule : String
   /-- Template inductives: positions (regular order) of the parameters binding template levels. -/
   templateParamPos : Array Nat := #[]
+  /-- A primitive record translated to a structure-like inductive (projections allowed). -/
+  isStructure : Bool := false
   deriving Inhabited, Repr
 
 structure GEnv where
@@ -152,13 +154,28 @@ def lookupInd (i : IndRef) : TransM IndTarget := do
     return t
   | none => failT "TRANSLATION_FAILED" s!"reference to inductive {i.mind}, which has no accepted translation"
 
-def univArgs (mind : String) (t : IndTarget) (u : Array IR.Level) (args : Array Expr) :
+/-- Universe arguments at a reference to a declaration whose parameters stand for the source global
+levels `globals` (in parameter order): a level that is also one of the referring declaration's own
+levels is *the same level* in monomorphic Rocq, so the reference uses the referring declaration's
+own variable for it (coherence by construction, R3/R2S); any other level gets a fresh metavariable,
+solved from the arguments and checked by R3 (no raising). -/
+def sharedOrFreshLevels (globals : Array String) : TransM (List Level) := do
+  let own := (← read).globalLevels
+  globals.toList.mapM fun l => match own[l]? with
+    | some v => pure v
+    | none => liftMeta mkFreshLevelMVar
+
+def univArgs (mind : String) (t : IndTarget) (u : Array IR.Level) (args : Array Expr) (target : Name := .anonymous) :
     TransM (List Level) := do
   unless u.isEmpty do
     failT "UNSUPPORTED_FEATURE" s!"non-empty universe instance on {mind} (pilot supports monomorphic references only)"
   match t.univ with
   | .mono => pure []
-  | .params n _ => liftMeta do (List.range n).mapM fun _ => mkFreshLevelMVar
+  | .params n false =>
+    match (← read).genv.constGlobals[target]? with
+    | some gs => if gs.size == n then sharedOrFreshLevels gs else liftMeta do (List.range n).mapM fun _ => mkFreshLevelMVar
+    | none => liftMeta do (List.range n).mapM fun _ => mkFreshLevelMVar
+  | .params n true => liftMeta do (List.range n).mapM fun _ => mkFreshLevelMVar
   | .templateFromArg k =>
     if h : k < args.size then
       -- The level may still contain metavariables (proof-local levels, R2B; references to
@@ -332,7 +349,17 @@ partial def trans (t : IR.Term) : TransM Expr := do
   | .const .. | .ind .. | .construct .. => transHead t #[]
   | .case ind npar _ puinst pparams pctx pret scrut brs =>
     withPath "case" (transCase ind npar puinst pparams pctx pret scrut brs)
-  | .proj .. => failT "UNSUPPORTED_FEATURE" "primitive projection"
+  | .proj ind npars arg t => withPath "proj" do
+    -- M5: a primitive projection of a primitive record (a generated structure-like inductive)
+    -- becomes Lean's kernel projection `Expr.proj` on the same field.
+    let tgt ← lookupInd ind
+    unless tgt.rule == "generated" && tgt.isStructure do
+      failT "UNSUPPORTED_FEATURE" s!"projection of {ind.mind}, which is not a translated primitive record"
+    let some (.inductInfo iv) := (← getEnv).find? tgt.types[ind.idx]!
+      | failT "TRANSLATION_FAILED" s!"no inductive {tgt.types[ind.idx]!} in the target environment"
+    unless iv.numParams == npars do
+      failT "EXPORT_VALIDATION_FAILED" s!"projection of {ind.mind} with {npars} parameters, the record has {iv.numParams}"
+    return .proj tgt.types[ind.idx]! arg (← trans t)
   | .fix defs idx => withPath "fix" (transFix defs idx)
   | .cofix .. => failT "UNSUPPORTED_FEATURE" "cofixpoint"
   | .prim k _ => failT "UNSUPPORTED_FEATURE" s!"primitive {k}"
@@ -544,23 +571,25 @@ partial def transHead (f : IR.Term) (args : Array Expr) : TransM Expr := do
     unless u.isEmpty do failT "UNSUPPORTED_FEATURE" s!"non-empty universe instance on constant {c}"
     match (← read).genv.consts[c]? with
     | some n =>
-      -- Universe parameters of a generalized constant are instantiated by fresh level
-      -- metavariables, solved by Lean's unifier after translation (`solveLevels`).
+      -- Universe parameters of a generalized constant: the referring declaration's own variable for
+      -- a shared source level, otherwise a fresh metavariable solved by Lean's unifier (`solveLevels`).
       let k := (← read).genv.constLevels[c]?.getD 0
-      let lvls ← liftMeta do (List.range k).mapM fun _ => mkFreshLevelMVar
+      let lvls ← match (← read).genv.constGlobals[n]? with
+        | some gs => if gs.size == k then sharedOrFreshLevels gs else liftMeta do (List.range k).mapM fun _ => mkFreshLevelMVar
+        | none => liftMeta do (List.range k).mapM fun _ => mkFreshLevelMVar
       pure (mkConst n lvls)
     | none => failT "TRANSLATION_FAILED" s!"reference to constant {c}, which has no accepted translation"
   | .ind i u =>
     let t ← lookupInd i
     checkTemplateArgs i.mind t args
-    return mkConst t.types[i.idx]! (← univArgs i.mind t u args)
+    return mkConst t.types[i.idx]! (← univArgs i.mind t u args t.types[i.idx]!)
   | .construct i c u =>
     let t ← lookupInd i
     let cs := t.ctors[i.idx]!
     unless c < cs.size do
       failT "EXPORT_VALIDATION_FAILED" s!"constructor index {c} out of range for {i.mind}"
     checkTemplateArgs i.mind t args
-    return mkConst cs[c]! (← univArgs i.mind t u args)
+    return mkConst cs[c]! (← univArgs i.mind t u args cs[c]!)
   | _ => trans f
 
 end
@@ -691,14 +720,36 @@ def checkBodyLevel (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std
 /-- Minimal-model default of an unconstrained proof-local level `m` (R2B/R3′): the least level
 satisfying its native lower bounds from `Set` and the type levels (`Set < m` gives 1, `l ≤ m`
 gives `u_l`, `l < m` gives `u_l + 1`). -/
-def minimalModelLevel (f : IR.UniverseFacts) (typeLevels : Array String) (m : String) : Level := Id.run do
+def minimalModelLevel (f : IR.UniverseFacts) (typeLevels : Std.HashMap String Level) (m : String) : Level := Id.run do
   let mut acc : Level := .zero
   for (a, r, b) in f.relations do
     unless b == m do continue
     let k := if r == "lt" then 1 else 0
     if a == "Set" then acc := mkLevelMax' acc (Level.ofNat k)
-    else if typeLevels.contains a then acc := mkLevelMax' acc ((Level.param (levelParamName a)).addOffset k)
+    else if let some v := typeLevels[a]? then acc := mkLevelMax' acc (v.addOffset k)
   return acc.normalize
+
+/-- Rule R2F (inductives): the Lean level standing for each own source level `l` of an inductive
+block is `ι l = max (u_l, ι m + k …)` over the native facts `m ≤ l` (k = 0) / `m < l` (k = 1)
+between own levels (facts with `Set` are not used, as in R2). Every such fact then holds for all
+values of the parameters. Mutually `≤` levels (equal in the source) contribute their parameters
+directly; the remaining strict/one-way edges form a DAG, so the recursion terminates. -/
+partial def ownLevelInterp (f : IR.UniverseFacts) (own : Array String) : Std.HashMap String Level := Id.run do
+  let leq (a b : String) := f.rel a b == "le" || f.rel a b == "lt"
+  let rec go (fuel : Nat) (l : String) : Level :=
+    match fuel with
+    | 0 => .param (levelParamName l)
+    | fuel + 1 => Id.run do
+      let mut acc : Level := .param (levelParamName l)
+      for m in own do
+        if m == l || !leq m l then continue
+        let k := if f.rel m l == "lt" then 1 else 0
+        if leq l m then acc := mkLevelMax' acc ((Level.param (levelParamName m)).addOffset k)   -- equal levels
+        else acc := mkLevelMax' acc ((go fuel m).addOffset k)
+      return acc.normalize
+  let mut out : Std.HashMap String Level := {}
+  for l in own do out := out.insert l (go (own.size + 1) l)
+  return out
 
 /-- All constant occurrences of `e` with their universe arguments. -/
 partial def constOccurrences (e : Expr) (acc : Array (Name × List Level) := #[]) : Array (Name × List Level) :=
@@ -728,7 +779,7 @@ def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr)
 type-check with Lean's checker (which unifies universe levels; terms are not changed) and
 unify the value's type with the declared type; any level left unconstrained is set to `0`.
 The kernel re-checks the result. -/
-def solveLevels (ty val : Expr) (dflt : LMVarId → Level := fun _ => .zero) :
+def solveLevels (ty val : Expr) (dflt : LMVarId → MetaM Level := fun _ => pure .zero) (beforeDefault : MetaM Unit := pure ()) :
     MetaM (Expr × Expr × Array String × List Name × Expr × Expr × List Level) := do
   let mut diags : Array String := #[]
   try Meta.check ty catch e => diags := diags.push s!"Meta.check type: {← e.toMessageData.toString}"
@@ -737,6 +788,8 @@ def solveLevels (ty val : Expr) (dflt : LMVarId → Level := fun _ => .zero) :
     unless ← withTransparency .all <| isDefEq (← inferType val) ty do
       diags := diags.push "value type not unified with the declared type by Meta.isDefEq"
   catch e => diags := diags.push s!"isDefEq: {← e.toMessageData.toString}"
+  -- Own type levels still unassigned after unification become universe parameters (R2S).
+  beforeDefault
   let ty ← instLevelMVars ty
   let val ← instLevelMVars val
   let ((), ms) := ((levelMVarsOf ty *> levelMVarsOf val).run #[])
@@ -750,7 +803,8 @@ def solveLevels (ty val : Expr) (dflt : LMVarId → Level := fun _ => .zero) :
     | _ => none
   let gty := ty.replaceLevel sub
   let gval := val.replaceLevel sub
-  for m in ms do assignLevelMVar m (dflt m)
-  return (← instLevelMVars ty, ← instLevelMVars val, diags, ps, gty, gval, ms.toList.map dflt)
+  let ds ← ms.toList.mapM dflt
+  for m in ms, d in ds do assignLevelMVar m d
+  return (← instLevelMVars ty, ← instLevelMVars val, diags, ps, gty, gval, ds)
 
 end Rocq2Lean

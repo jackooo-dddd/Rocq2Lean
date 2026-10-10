@@ -69,7 +69,7 @@ check(rcs == [0, 0, 0, 0] and all(R[t]["status"] == "TRANSLATED_AND_CHECKED" for
 aud = json.loads((run_t / "audit.json").read_text())
 check(aud["status"] == "OK" and aud["instance_levels"]["deferred_to_consumer"] == 0 and aud["instance_levels"]["checked"] > 0,
       f"independent audit: {aud['instance_levels']} typing-determined levels, {aud['universe_arguments_checked']} R3 arguments")
-pl = [x for x in R.values() if x.get("body_levels")]
+pl = [x for x in R.values() if x.get("solved_levels")]
 check(len(pl) >= 2 and all(x["universe_level_defaults"] == 0 for x in R.values()),
       f"proof-local levels (R2B) solved in {len(pl)} declarations ({', '.join(x['source'].split('.')[-1] for x in pl)}); no defaults")
 run_f, rcs, R = pipeline("m4-functions", FUNCTIONS)
@@ -170,9 +170,9 @@ def raise_list_level(r, rep):
     go(r["target_type"])
 forged(run_t, "template-level-raised", f"{L}.app_nil_r", raise_list_level, "instance_levels", "template level")
 forged(run_t, "proof-local-solution", f"{L}.app_nil_r",
-       lambda r, rep: [b.update(sigma={"k": "zero"}) for b in r["body_levels"]], "universe", "violates the native fact")
-forged(run_t, "proof-local-set", f"{L}.app_nil_r", lambda r, rep: r.update(body_levels=r["body_levels"][1:]), "universe",
-       "proof-local levels")
+       lambda r, rep: [b.update(sigma={"k": "zero"}) for b in r["solved_levels"]], "universe", "violates the native fact")
+forged(run_t, "proof-local-set", f"{L}.app_nil_r", lambda r, rep: r.update(solved_levels=r["solved_levels"][1:]), "universe",
+       "do not partition the own levels")
 
 
 # 8. Negative: type-correct mutations of the generalized fixpoint lowering (seq), kernel-accepted, through verify.

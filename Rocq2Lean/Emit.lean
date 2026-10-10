@@ -53,8 +53,14 @@ structure DeclResult where
   /-- Generated inductives with level parameters: whether the source is template polymorphic, and
   for each template level the parameter (regular order) whose sort binds it (R5). -/
   isTemplate : Bool := false
-  /-- Proof-local levels (in the body only) and their solutions (R2B). -/
+  /-- Own source levels solved rather than generalized, with their solutions (R2S/R2B). -/
   bodyLevels : Array (String × Level) := #[]
+  /-- Source levels of the universe parameters, in parameter order (R3 at references). -/
+  paramLevels : Array String := #[]
+  primitiveRecord : Bool := false
+  /-- Inductive declarations: reference levels left unconstrained by typing, set to their least
+  R3-admissible value 0 (R3″; every universe argument is R3-checked). -/
+  minimalLevels : Nat := 0
   templateParams : Array (String × Nat) := #[]
   residualType : Option Expr := none
   residualValue : Option Expr := none
@@ -142,37 +148,55 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let name := targetName c.name
     if (← getEnv).contains name then
       return { base with status := "TRANSLATION_FAILED", message := s!"target name {name} already in use" }
-    -- Global monomorphic levels of the *type* become universe parameters (R2); levels occurring
-    -- only in the body are proof-local: level metavariables solved by Lean's unifier (R2B).
-    let globals := (globalsOf c.type).toArray.qsort (· < ·)
-    let bodyOnly := (globalsOf body).toArray.filter (!globals.contains ·) |>.qsort (· < ·)
-    let lparams := globals.toList.map levelParamName
-    let mut gl : Std.HashMap String Level :=
-      globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
-    let mut bodyMVars : Array (String × Level) := #[]
-    for m in bodyOnly do
+    -- R2S: every own global level (type and body) starts as a level metavariable; references to a
+    -- declaration sharing a source level use that variable (coherence by construction). After
+    -- Lean's unifier has identified the levels typing forces together, the type levels still free
+    -- become universe parameters `u_l`; the others are *solved* (σ l over the parameters), and the
+    -- native facts among the declaration's levels must hold for the solution (R2S/R2B obligation).
+    -- Body-only levels left free default to their minimal model (R2B, justified by R3′).
+    let typeLevels := (globalsOf c.type).toArray.qsort (· < ·)
+    let own := (globalsOf body (globalsOf c.type)).toArray.qsort (· < ·)
+    let mut gl : Std.HashMap String Level := {}
+    let mut ownMVars : Array (String × Level) := #[]
+    for m in own do
       let v ← mkFreshLevelMVar
       gl := gl.insert m v
-      bodyMVars := bodyMVars.push (m, v)
+      ownMVars := ownMVars.push (m, v)
     let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl with
       | .ok e => pure e
       | .error e => return fromTransError base e
     let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    -- Unassigned proof-local levels default to their minimal model (R2B); others to 0 (R3′).
-    let mut dflts : Std.HashMap LMVarId Level := {}
-    for (m, v) in bodyMVars do
-      if let .mvar id := v then dflts := dflts.insert id (minimalModelLevel genv.facts globals m)
-    let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val (fun id => dflts.getD id .zero)
+    let keepParams : MetaM Unit := do
+      for (m, v) in ownMVars do
+        if typeLevels.contains m then
+          if let .mvar r ← instantiateLevelMVars v then assignLevelMVar r (.param (levelParamName m))
+    -- default of a still-free proof-local level: its minimal model over the *current* values of the
+    -- type levels (parameters or solutions)
+    let dflt (id : LMVarId) : MetaM Level := do
+      match ownMVars.find? (fun (_, v) => v == .mvar id) with
+      | some (m, _) =>
+        let mut cur : Std.HashMap String Level := {}
+        for (t, v) in ownMVars do
+          if typeLevels.contains t then cur := cur.insert t (← instantiateLevelMVars v)
+        pure (minimalModelLevel genv.facts cur m)
+      | none => pure .zero
+    let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt keepParams
     let base := { base with levelDiagnostics := diags, levelDefaults := resid.length }
     let mut sol : Std.HashMap String Level := {}
-    for (m, v) in bodyMVars do
-      sol := sol.insert m (← instantiateLevelMVars v).normalize
-    let base := { base with bodyLevels := bodyMVars.map fun (p : String × Level) => (p.1, sol[p.1]!) }
-    for m in bodyOnly do
-      if let .error msg := checkBodyLevel genv.facts globals sol m then
-        return { base with status := "UNIVERSE_REJECTED", message := msg }
+    let mut paramLevels : Array String := #[]
+    for (m, v) in ownMVars do
+      let s ← instantiateLevelMVars v
+      if s == .param (levelParamName m) then paramLevels := paramLevels.push m
+      else sol := sol.insert m s.normalize
+    let globals := paramLevels
+    let lparams := globals.toList.map levelParamName
+    let base := { base with bodyLevels := own.filterMap fun m => sol[m]?.map (m, ·) }
+    for m in own do
+      if sol.contains m then
+        if let .error msg := checkBodyLevel genv.facts globals sol m then
+          return { base with status := "UNIVERSE_REJECTED", message := msg }
     let nchecks ← match checkUniverseObligations genv globals ty sol, checkUniverseObligations genv globals val sol with
       | .ok a, .ok b => pure (a + b)
       | .error msg, _ | _, .error msg =>
@@ -188,7 +212,7 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
       else { base with residualParams := resid, residualDefaults := rdefaults, residualType := gty, residualValue := gval }
     match ← addChecked (← mkConstDecl name kind lparams ty val) with
     | .accepted => return { base with status := "TRANSLATED_AND_CHECKED", targetType := ty, targetValue := val,
-                                      levelParams := lparams }
+                                      levelParams := lparams, paramLevels := globals }
     | .rejected msg => return { base with status := "KERNEL_REJECTED", message := msg }
   | st, _ =>
     return { base with status := "EXPORT_VALIDATION_FAILED", message := s!"body state '{st}' inconsistent with body" }
@@ -261,7 +285,12 @@ where
     if i.finite == "CoFinite" then return unsupported "coinductive type"
     unless i.bodies.size == 1 do return unsupported s!"mutual block of {i.bodies.size} inductives"
     let body := i.bodies[0]!
-    unless body.projs.isEmpty do return unsupported "primitive record (projections)"
+    -- Primitive records (M5): structure-like (one constructor, no indices, non-recursive), so Lean's
+    -- kernel projections and structure eta apply; projections are translated to `Expr.proj`.
+    let isRecord := !body.projs.isEmpty
+    if isRecord then
+      unless body.ctors.size == 1 && body.indices.isEmpty && body.projs.size == body.ctors[0]!.args.size do
+        return unsupported "primitive record that is not structure-like (one constructor, no indices, one projection per field)"
     if (← getEnv).contains (inductiveNames i.name body.name #[]).1 then
       return ({ base with status := "TRANSLATION_FAILED", message := "target name already in use" }, none)
     let (tname, cnames) := inductiveNames i.name body.name (body.ctors.map (·.name))
@@ -269,8 +298,11 @@ where
     -- inductive they must be exactly its template levels, each bound by one parameter sort (R5).
     let globals := globalsOfInd i
     let lparams := globals.toList.map levelParamName
-    let gl : Std.HashMap String Level := globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
     let isTemplate := (i.native.getObjValAs? Bool "template").toOption == some true
+    -- R2F: non-template inductives read each own level through its fact-respecting interpretation
+    let gl : Std.HashMap String Level :=
+      if isTemplate then globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
+      else ownLevelInterp genv.facts globals
     let templateParams ← if isTemplate then
         match templateBinding i globals with
         | .ok b => pure b
@@ -287,6 +319,26 @@ where
       match r with
       | .ok cty => ctors := ctors.push { name := cn, type := cty }
       | .error e => return (fromTransError base e, none)
+    -- R3″: references inside the block (to generalized constants / level-parameter inductives) carry
+    -- level metavariables; unify them by type-checking the arity and constructor types, set the
+    -- remaining (unconstrained) ones to their least R3-admissible value 0, and check R3 on every
+    -- universe argument of the block.
+    for e in #[ty] ++ ctors.map (·.type) do
+      try Meta.check e catch _ => pure ()
+    let mut ms : Array LMVarId := #[]
+    for e in #[ty] ++ ctors.map (·.type) do
+      let e ← instLevelMVars e
+      let ((), m) := (levelMVarsOf e).run ms
+      ms := m
+    for m in ms do assignLevelMVar m .zero
+    let ty ← instLevelMVars ty
+    ctors ← ctors.mapM fun c => do return { c with type := ← instLevelMVars c.type }
+    let mut nchecks := 0
+    for e in #[ty] ++ ctors.map (·.type) do
+      match checkUniverseObligations genv globals e with
+      | .ok n => nchecks := nchecks + n
+      | .error msg => return ({ base with status := "UNIVERSE_REJECTED", message := msg }, none)
+    let base := { base with minimalLevels := ms.size, universeChecks := nchecks }
     let decl := Declaration.inductDecl lparams i.npars [{ name := tname, type := ty, ctors := ctors.toList }] false
     let base := { base with target := some tname, targetKind := "inductive",
                             rule := if isTemplate then "inductive/generated-template"
@@ -295,8 +347,8 @@ where
     | .accepted =>
       let univ := if lparams.isEmpty then UnivRule.mono else .params lparams.length isTemplate
       let tgt : IndTarget := { types := #[tname], ctors := #[cnames], univ, rule := "generated",
-                               templateParamPos := templateParams.map (·.2) }
-      return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty, numParams := i.npars,
+                               templateParamPos := templateParams.map (·.2), isStructure := isRecord }
+      return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty, numParams := i.npars, primitiveRecord := isRecord,
                           levelParams := lparams, isTemplate, templateParams,
                           targetCtors := ctors.map fun c => (c.name, c.type) }, some tgt)
     | .rejected msg => return ({ base with status := "KERNEL_REJECTED", message := msg }, none)
@@ -314,7 +366,7 @@ def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
           genv := { genv with consts := genv.consts.insert c.name n,
                               constLevels := genv.constLevels.insert c.name r.levelParams.length,
                               constGlobals := if r.levelParams.isEmpty then genv.constGlobals
-                                else genv.constGlobals.insert n ((globalsOf' c).qsort (· < ·)) }
+                                else genv.constGlobals.insert n r.paramLevels }
         pure r
       | .inductive i =>
         let (r, t?) ← processInductive genv results i src.rawDecls[i.name]!
@@ -370,7 +422,9 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("level_params", Json.arr (r.levelParams.map (Json.str ·.toString)).toArray),
     ("num_params", r.numParams),
     ("template", r.isTemplate),
-    ("body_levels", Json.arr (r.bodyLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
+    ("primitive_record", r.primitiveRecord),
+    ("universe_minimal_levels", r.minimalLevels),
+    ("solved_levels", Json.arr (r.bodyLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
     ("template_params", Json.arr (r.templateParams.map fun (l, k) => Json.mkObj [("level", l), ("param", k)])),
     ("universe_level_defaults", r.levelDefaults),
     ("universe_checks", r.universeChecks),

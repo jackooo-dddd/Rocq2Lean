@@ -43,6 +43,9 @@ class Mismatch(Exception):
     pass
 
 
+FACTS = None     # native universe facts of the audited export (set by main)
+
+
 def target_name(key):
     comps = [c for part in key.split("/") for c in part.split(".")]
     return "Rocq." + ".".join(comps)
@@ -144,6 +147,28 @@ def ind_globals(d):
     """Source global levels of an inductive block (arity and constructor types), sorted: they
     become the Lean universe parameters u_<name> (rule R2T)."""
     return sorted(source_globals([[b["type"], [c["type"] for c in b["ctors"]]] for b in d["bodies"]], set()))
+
+
+def own_level_interp(facts, own):
+    """Independent copy of rule R2F: the Lean level standing for each own level l of a non-template
+    inductive block is max(u_l, interp(m) + k) over native facts m <= l (k = 0) / m < l (k = 1)
+    between own levels; mutually <= (equal) levels contribute their parameter directly."""
+    rel = lambda a, b: facts.rel.get((a, b))
+    leq = lambda a, b: rel(a, b) in ("le", "lt")
+
+    def go(l, fuel):
+        acc = {"k": "param", "n": level_param(l)}
+        if fuel == 0:
+            return acc
+        for m in own:
+            if m == l or not leq(m, l):
+                continue
+            base = {"k": "param", "n": level_param(m)} if leq(l, m) else go(m, fuel - 1)
+            if rel(m, l) == "lt":
+                base = {"k": "succ", "l": base}
+            acc = {"k": "max", "a": acc, "b": base}
+        return acc
+    return {l: go(l, len(own) + 1) for l in own}
 
 
 def template_binding(d):
@@ -318,6 +343,12 @@ class Auditor:
             return self.check_head(s, e, path, env)
         if k == "case":
             return self.check_case(s, e, path, env)
+        if k == "proj":
+            # primitive projection -> Lean kernel projection on the same field of the generated structure
+            tname, _, _ = self.ind_target(s["p"]["ind"])
+            if e["k"] != "proj" or e["s"] != tname or e["i"] != s["p"]["arg"]:
+                raise Mismatch(f"{path}: projection {s['p']['arg']} of {tname} expected, found {e.get('k')}")
+            return C(s["t"], e["e"], "proj")
         if k == "fix":
             return self.check_fix(s, e, path, env)
         raise Mismatch(f"{path}: UNAUDITABLE source node '{k}'")
@@ -954,15 +985,31 @@ def check_residuals(r):
         raise Mismatch("generic declaration with residual levels at their defaults differs from the reported declaration")
 
 
-def check_body_levels(facts, d, sol):
-    """Rule R2B, independently: the proof-local levels of a constant (in its body, not its type) are
-    exactly the reported ones; each solution is a level over the type's parameters, and every native
-    fact between a proof-local level and Set / a type level / another proof-local level holds with
-    proof-local levels read as their solutions (summand-wise entailment in the native graph)."""
-    tl = sorted(source_globals(d["type"], set()))
-    bo = sorted(source_globals(d["body"], set()) - set(tl))
-    if sorted(sol) != bo:
-        raise Mismatch(f"proof-local levels {sorted(sol)} reported, source has {bo}")
+def own_partition(d, r):
+    """Rule R2S, independently: the own global levels of a constant (type and body) are exactly the
+    union of its parameters (reported `level_params`, which must come from the type's levels) and
+    its solved levels (reported `solved_levels`); returns (parameter levels, solutions)."""
+    tl = set(source_globals(d["type"], set()))
+    own = tl | source_globals(d["body"], set())
+    sol = {x["level"]: x["sigma"] for x in r.get("solved_levels", [])}
+    back = {level_param(g): g for g in own}
+    lps = r.get("level_params", [])
+    if any(p not in back for p in lps):
+        raise Mismatch(f"universe parameters {lps} are not parameters for source levels")
+    params = [back[p] for p in lps]
+    if set(params) & set(sol) or set(params) | set(sol) != own or not set(params) <= tl:
+        raise Mismatch(f"parameters {params} and solved levels {sorted(sol)} do not partition the own levels "
+                       f"{sorted(own)} (parameters must be type levels)")
+    if lps != [level_param(g) for g in sorted(params)]:
+        raise Mismatch(f"universe parameters {lps} are not in source-level order")
+    return params, sol
+
+
+def check_body_levels(facts, d, sol, params=None):
+    """Rules R2S/R2B, independently: each solution is a level over the declaration's parameters, and
+    every native fact between a solved level and Set / a parameter / another solved level holds with
+    solved levels read as their solutions (summand-wise entailment in the native graph)."""
+    tl = sorted(params if params is not None else source_globals(d["type"], set()))
     back = {level_param(g): g for g in tl}
 
     def summ(x):
@@ -1113,6 +1160,8 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
         problem("coverage", "no accepted declaration")
     # Universe interpretation (rule R3), checked independently of the translator.
     facts = Facts(lines[4]) if lines[4].get("kind") == "universe_facts" else None
+    global FACTS
+    FACTS = facts
     if facts is None:
         problem("universe", "source IR has no native universe facts")
     gen = {}
@@ -1120,7 +1169,10 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
         if r_.get("status") == "TRANSLATED_AND_CHECKED" and r_.get("level_params"):
             d_ = decls[s_]
             if d_["kind"] == "constant":
-                gen[r_["target"]] = sorted(source_globals(d_["type"], set()))
+                try:
+                    gen[r_["target"]] = sorted(own_partition(d_, r_)[0])
+                except Mismatch:
+                    gen[r_["target"]] = sorted(source_globals(d_["type"], set()))
             elif template_binding(d_) is None:
                 # non-template inductive with generalized levels: references obey R3 (type, constructors)
                 for n_ in [r_["target"]] + [c["name"] for c in r_.get("target_ctors", [])]:
@@ -1131,12 +1183,15 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
             if r_.get("status") != "TRANSLATED_AND_CHECKED":
                 continue
             d_ = decls[s_]
-            own = set(source_globals(d_["type"], set())) if d_["kind"] == "constant" else set()
-            bl = {x["level"]: x["sigma"] for x in r_.get("body_levels", [])}
+            own, bl = set(), {}
             exprs = [r_.get("target_type"), r_.get("target_value")] + [c["type"] for c in r_.get("target_ctors", [])]
             try:
                 if d_["kind"] == "constant":
-                    check_body_levels(facts, d_, bl)
+                    params, bl = own_partition(d_, r_)
+                    own = set(params)
+                    check_body_levels(facts, d_, bl, params)
+                else:
+                    own = set(ind_globals(d_))     # an inductive block's own levels are its parameters
                 univ_checked += check_universe_args(facts, own, gen, [x for x in exprs if x is not None], bl)
             except Mismatch as e:
                 problem("universe", f"{s_}: {e}")
@@ -1195,15 +1250,23 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                 want_lp = [level_param(g) for g in ind_globals(d)]
                 if r.get("level_params", []) != want_lp:
                     raise Mismatch(f"universe parameters {r.get('level_params')} are not the generalized globals {want_lp}")
+                if bool(b["projs"]) != bool(r.get("primitive_record")) or (b["projs"] and (
+                        len(b["ctors"]) != 1 or b["indices"] or len(b["projs"]) != len(b["ctors"][0]["args"]))):
+                    raise Mismatch("primitive-record status differs from the source or the record is not structure-like")
                 tb = template_binding(d)
                 if bool(r.get("template")) != (tb is not None) or \
                         sorted((x["level"], x["param"]) for x in r.get("template_params", [])) != \
                         sorted((l, kn[0]) for l, kn in (tb or {}).items()):
                     raise Mismatch("template status/binding differs from the source kernel record")
-                aud.check(b["type"], r["target_type"], ["arity"])
-                self_ref = ("const", t, [{"k": "param", "n": l} for l in want_lp])
-                for c, tc in zip(b["ctors"], r["target_ctors"]):
-                    aud.check(c["type"], tc["type"], ["ctor " + c["name"]], [self_ref])
+                # R2F: sorts of a non-template block are read through the fact-respecting interpretation
+                aud.body = own_level_interp(FACTS, ind_globals(d)) if tb is None and FACTS is not None else None
+                try:
+                    aud.check(b["type"], r["target_type"], ["arity"])
+                    self_ref = ("const", t, [{"k": "param", "n": l} for l in want_lp])
+                    for c, tc in zip(b["ctors"], r["target_ctors"]):
+                        aud.check(c["type"], tc["type"], ["ctor " + c["name"]], [self_ref])
+                finally:
+                    aud.body = None
                 v["verdict"] = "MATCH"
             elif r["status"] == "TRANSLATED_AND_CHECKED":
                 if d["kind"] != "constant":
@@ -1215,10 +1278,8 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     raise Mismatch(f"{d['body_state']} source emitted as {r['target_kind']}")
                 if r.get("target_type") is None or r.get("target_value") is None:
                     raise Mismatch("success claimed without target type/value")
-                want_lp = sorted(level_param(n) for n in source_globals(d["type"], set()))
-                if r.get("level_params", []) != want_lp:
-                    raise Mismatch(f"universe parameters {r.get('level_params')} are not the generalized globals {want_lp}")
-                aud.body = {x["level"]: x["sigma"] for x in r.get("body_levels", [])}
+                params, sol = own_partition(d, r)
+                aud.body = sol
                 try:
                     aud.check(d["type"], r["target_type"], ["type"])
                     aud.check(d["body"], r["target_value"], ["body"])

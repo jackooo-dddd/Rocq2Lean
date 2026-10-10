@@ -142,7 +142,7 @@ ONE = {"k": "succ", "l": {"k": "zero"}}
 # minimal model (Set < ur gives 1), justified by the kernel for every value, re-checked by the consumer.
 check(rcs == [0, 0, 0] and uc["level_params"] == [] and uc["universe_level_defaults"] == 1
       and uc["universe_residuals"]["params"] == ["u_residual_0"] and uc["universe_residuals"]["defaults"] == [ONE]
-      and [b["sigma"] for b in uc["body_levels"]] == [ONE] and cons["residual_levels_checked"] == 1
+      and [b["sigma"] for b in uc["solved_levels"]] == [ONE] and cons["residual_levels_checked"] == 1
       and RR["U.UnivResidual.use_cst"]["universe_level_defaults"] == 0,
       "residual proof-local level: cst defaults ur to its minimal model (1), justified (kernel, every value) and re-checked by the consumer — VERIFIED")
 

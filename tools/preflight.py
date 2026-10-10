@@ -24,7 +24,7 @@ import json
 import sys
 
 # Node kinds the current build translates (case/fix only in the shapes checked below).
-SUPPORTED_NODES = {"rel", "sort", "cast", "prod", "lam", "let", "app", "const", "ind", "construct", "case", "fix"}
+SUPPORTED_NODES = {"rel", "sort", "cast", "prod", "lam", "let", "app", "const", "ind", "construct", "case", "fix", "proj"}
 BOOTSTRAP = {"Corelib.Init.Datatypes.nat", "Corelib.Init.Logic.eq"}
 
 
@@ -310,8 +310,9 @@ def classify(d, inds):
             found.add("coinductive type", [])
         if len(d["bodies"]) != 1:
             found.add("mutual inductive block", [])
-        if any(b["projs"] for b in d["bodies"]):
-            found.add("primitive record", [])
+        if any(b["projs"] and (len(b["ctors"]) != 1 or b["indices"] or len(b["projs"]) != len(b["ctors"][0]["args"]))
+               for b in d["bodies"]):
+            found.add("primitive record that is not structure-like", [])
         for i, b in enumerate(d["bodies"]):
             walk(b["type"], found, inds, ["bodies", i, "type"])
             for j, c in enumerate(b["ctors"]):
