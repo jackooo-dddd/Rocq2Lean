@@ -340,6 +340,11 @@ def _export(manifest, roots, raw_roots, out, log_name):
     export_v.write_text("\n".join(lines) + "\n")
     p = run(["rocq", "compile", "-I", str(EXPORTER / "src"), "-Q", str(EXPORTER / "theories"), "Rocq2LeanExport",
              *lp, str(export_v)], log, env=oenv, check=False)
+    blockers = ir.with_name(ir.name + ".blockers.json")
+    if p.returncode != 0 and blockers.exists():
+        b = json.loads(blockers.read_text())
+        raise Rejected("UNSUPPORTED_FEATURE", f"{b['reason']}; " + "; ".join(
+            f"root {r['requested']} via {' -> '.join(r['path'])}" for r in b["roots"]))
     if p.returncode != 0 or not ir.exists():
         raise Rejected("EXPORT_VALIDATION_FAILED", f"export process failed (exit {p.returncode}); see {log}")
     first = json.loads(ir.open().readline())
@@ -388,11 +393,24 @@ def _export(manifest, roots, raw_roots, out, log_name):
 
 def inspect(manifest, roots):
     import tempfile
+    sys.path.insert(0, str(ROOT / "tools"))
+    import preflight
     with tempfile.TemporaryDirectory(prefix="rocq2lean-inspect-") as td:
-        ir = export(manifest, roots, td)
-        sys.path.insert(0, str(ROOT / "tools"))
-        import preflight
-        report = preflight.preflight(ir)
+        unquotable = {}
+        try:
+            ir = export(manifest, roots, td)
+        except Rejected:
+            bp = Path(td) / "source.ndjson.blockers.json"
+            if not bp.exists():
+                raise
+            b = json.loads(bp.read_text())
+            unquotable = {r["requested"]: {"status": "UNSUPPORTED_FEATURE", "reasons": [b["reason"]],
+                                           "dependency_path": r["path"], "blocked_declaration": r["path"][-1],
+                                           "locations": {b["reason"]: "<declaration>"}} for r in b["roots"]}
+            rest = [r for r in roots if r.strip() not in unquotable]
+            ir = export(manifest, rest, Path(td) / "rest") if rest else None
+        report = preflight.preflight(ir) if ir else {"schema": "rocq2lean-preflight/2", "roots": {}, "declarations": {}}
+        report["roots"].update(unquotable)
     print(json.dumps(report, indent=2))
     blocked = [r for r, v in report["roots"].items() if v["status"] != "CANDIDATE_SUPPORTED"]
     if blocked:

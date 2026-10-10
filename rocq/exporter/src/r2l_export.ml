@@ -227,6 +227,53 @@ let flags_json (f : Declarations.typing_flags) =
       ("sprop_allowed", J.Bool f.sprop_allowed);
       ("allow_uip", J.Bool f.allow_uip) ]
 
+(* ---------- prepared environment (M5) ----------
+   Two documented, kernel-validated preparations of the native environment before quotation:
+   1. Sealed-module implementations: a parameter of a module sealed by a signature
+      (`Module M : T. ... End M`, e.g. MathComp's HB.lock) has no body in the environment; its
+      implementation's body is read from the module's structure.
+   2. Lowering of `Corelib.ssr.ssreflect_rw.ssr_have_upoly` (sort-polymorphic, cannot be quoted by
+      MetaRocq c18395ad): a fully applied `ssr_have_upoly P G step rest args` is replaced by its
+      delta-beta reduct `rest step args`. Nothing else is changed.
+   Every prepared body is re-checked by Rocq's kernel against the declared type. *)
+let ssr_have_upoly = "Corelib.ssr.ssreflect_rw.ssr_have_upoly"
+
+let rec lower c =
+  match Constr.kind c with
+  | Constr.App (f, args)
+    when Array.length args >= 4
+         && (match Constr.kind f with
+             | Constr.Const (cst, _) -> Names.KerName.to_string (Names.Constant.user cst) = ssr_have_upoly
+             | _ -> false) ->
+    let n = Array.length args in
+    Constr.mkApp (lower args.(3), Array.append [| lower args.(2) |] (Array.map lower (Array.sub args 4 (n - 4))))
+  | _ -> Constr.map lower c
+
+let sealed_impl env c =
+  let cb = Environ.lookup_constant c env in
+  match cb.Declarations.const_body with
+  | Declarations.Undef _ ->
+    let kn = Names.Constant.user c in
+    (try
+       match Mod_declarations.mod_expr (Environ.lookup_module (Names.KerName.modpath kn) env) with
+       | Mod_declarations.Struct (_, sb) ->
+         (match List.assoc_opt (Names.Label.to_id (Names.KerName.label kn)) sb with
+          | Some (Declarations.SFBconst icb) -> Some icb
+          | _ -> None)
+       | _ -> None
+     with Not_found -> None)
+  | _ -> None
+
+(* (prepared body, sealed implementation?, lowered?) *)
+let prepared_body ~opaque_access env c =
+  let cb = Environ.lookup_constant c env in
+  let sealed, src = match sealed_impl env c with Some icb -> (true, icb) | None -> (false, cb) in
+  match Global.body_of_constant_body opaque_access src with
+  | None -> None
+  | Some (b, _, _) ->
+    let b' = lower b in
+    Some (b', sealed, not (Constr.equal b b'))
+
 let rec native_constant ~opaque_access env kn = native_constant_kn ~opaque_access env (to_rocq_kn kn)
 
 and native_constant_kn ~opaque_access env rkn =
@@ -238,8 +285,13 @@ and native_constant_kn ~opaque_access env rkn =
       | Some (_, Opaqueproof.PrivatePolymorphic _, _) -> "polymorphic_private"
       | None -> "no_body"
     in
+    let c = Names.Constant.make1 rkn in
+    let sealed, lowered =
+      match prepared_body ~opaque_access env c with Some (_, s, l) -> (s, l) | None -> (false, false)
+    in
     let kind =
       match cb.Declarations.const_body with
+      | Declarations.Undef _ when sealed -> "sealed_implementation"
       | Declarations.Undef _ -> "assumption"
       | Declarations.Def _ -> "transparent"
       | Declarations.OpaqueDef _ -> "opaque"
@@ -249,6 +301,7 @@ and native_constant_kn ~opaque_access env rkn =
     ( Some kind,
       J.Obj
         [ ("body_kind", J.Str kind);
+          ("prepared", J.Obj [ ("sealed_implementation", J.Bool sealed); ("lowered_ssr_have_upoly", J.Bool lowered) ]);
           ("polymorphic", J.Bool (Declareops.constant_is_polymorphic cb));
           ("private_universes", J.Str private_univs);
           ("typing_flags", flags_json cb.Declarations.const_typing_flags) ] )
@@ -307,6 +360,7 @@ let body_state native_kind (body : A.term option) =
   match (native_kind, body) with
   | Some "transparent", Some _ -> "transparent"
   | Some "opaque", Some _ -> "opaque_present"
+  | Some "sealed_implementation", Some _ -> "sealed_implementation"
   | Some "assumption", None -> "assumption"
   | Some ("primitive" | "symbol"), _ -> "unsupported_primitive"
   | _, None -> "unavailable"
@@ -435,7 +489,9 @@ let decl_json ~opaque_access env ((kn : K.kername), (d : E.global_decl)) =
   let ident = [ ("name", J.Str key); ("mp", mp_json (fst kn)); ("id", J.Str (bs (snd kn))) ] in
   match d with
   | E.ConstantDecl cb ->
-    let native_kind, native = native_constant ~opaque_access env kn in
+    (* native metadata always from the original environment (not the prepared one): body kind,
+       sealed implementation / lowering provenance, typing flags *)
+    let native_kind, native = native_constant ~opaque_access (Global.env ()) kn in
     let tdeps = deps SS.empty cb.E.cst_type in
     let bdeps = match cb.E.cst_body with None -> SS.empty | Some b -> deps SS.empty b in
     J.Obj
@@ -497,7 +553,7 @@ let decl_json ~opaque_access env ((kn : K.kername), (d : E.global_decl)) =
           ("universes", udecl_json mib.E.ind_universes);
           ("variance", J.opt (fun l -> J.Arr (List.map variance_json l)) mib.E.ind_variance);
           ("deps", J.Obj [ ("type", set_json (SS.remove key tdeps)) ]);
-          ("native", native_inductive env kn) ])
+          ("native", native_inductive (Global.env ()) kn) ])
 
 (* ---------- driver ---------- *)
 
@@ -519,9 +575,148 @@ let rec mp_file = function
   | K.MPdot (mp, _) -> mp_file mp
   | K.MPbound _ -> None
 
+(* ---------- native closure scan (quotability, before MetaRocq quoting) ----------
+   MetaRocq c18395ad cannot quote a declaration whose universe context binds sort qualities (Rocq
+   9.x sort polymorphism); [quote_term_rec] then aborts the whole export. The scan walks each root's
+   native dependency closure (types, bodies incl. opaque ones, inductive arities and constructors)
+   and reports the first such declaration with its dependency path, so that the CLI can report a
+   precise blocker instead of an opaque failure. *)
+let gref_name = function
+  | Names.GlobRef.ConstRef c -> Names.KerName.to_string (Names.Constant.user c)
+  | Names.GlobRef.IndRef (m, _) -> Names.KerName.to_string (Names.MutInd.user m)
+  | _ -> "?"
+
+let gref_key g = (match g with Names.GlobRef.ConstRef _ -> "c:" | _ -> "i:") ^ gref_name g
+
+let rec constr_refs acc c =
+  let acc =
+    match Constr.kind c with
+    | Constr.Const (cst, _) -> Names.GlobRef.ConstRef cst :: acc
+    | Constr.Ind ((m, _), _) -> Names.GlobRef.IndRef (m, 0) :: acc
+    | Constr.Construct (((m, _), _), _) -> Names.GlobRef.IndRef (m, 0) :: acc
+    | Constr.Case (ci, _, _, _, _, _, _) -> Names.GlobRef.IndRef (fst ci.Constr.ci_ind, 0) :: acc
+    | Constr.Proj (p, _, _) -> Names.GlobRef.IndRef (fst (Names.Projection.inductive p), 0) :: acc
+    | _ -> acc
+  in
+  Constr.fold constr_refs acc c
+
+let decl_refs ~opaque_access env = function
+  | Names.GlobRef.ConstRef c ->
+    let cb = Environ.lookup_constant c env in
+    let acc = constr_refs [] cb.Declarations.const_type in
+    (match Global.body_of_constant_body opaque_access cb with Some (b, _, _) -> constr_refs acc b | None -> acc)
+  | Names.GlobRef.IndRef (m, _) ->
+    let mib = Environ.lookup_mind m env in
+    Array.fold_left
+      (fun acc oib ->
+        Array.fold_left constr_refs (constr_refs acc oib.Declarations.mind_user_arity) oib.Declarations.mind_user_lc)
+      [] mib.Declarations.mind_packets
+  | _ -> []
+
+(* Number of sort-quality variables bound by a polymorphic declaration (None if monomorphic). *)
+let sort_qualities env = function
+  | Names.GlobRef.ConstRef c ->
+    (match (Environ.lookup_constant c env).Declarations.const_universes with
+     | Declarations.Polymorphic a -> Some (fst (UVars.AbstractContext.size a))
+     | _ -> None)
+  | Names.GlobRef.IndRef (m, _) ->
+    (match (Environ.lookup_mind m env).Declarations.mind_universes with
+     | Declarations.Polymorphic a -> Some (fst (UVars.AbstractContext.size a))
+     | _ -> None)
+  | _ -> None
+
+let scan_root ~opaque_access env root =
+  let parent = Hashtbl.create 97 and q = Queue.create () and found = ref None in
+  Hashtbl.replace parent (gref_key root) None;
+  Queue.add root q;
+  while Option.is_empty !found && not (Queue.is_empty q) do
+    let g = Queue.pop q in
+    match sort_qualities env g with
+    | Some nq when nq > 0 -> found := Some g
+    | _ ->
+      List.iter
+        (fun d ->
+          let k = gref_key d in
+          if not (Hashtbl.mem parent k) then begin Hashtbl.replace parent k (Some g); Queue.add d q end)
+        (decl_refs ~opaque_access env g)
+  done;
+  match !found with
+  | None -> None
+  | Some g ->
+    let rec path g acc =
+      match Hashtbl.find parent (gref_key g) with None -> g :: acc | Some p -> path p (g :: acc)
+    in
+    Some (path g [])
+
+(* The prepared environment for a set of roots: every constant of the (prepared) closure with a sealed
+   implementation or a lowering gets its prepared body; then each prepared body is re-checked by the
+   kernel against its declared type (after all replacements, so that a sealed `unlock := erefl`
+   sees its transparent `body`). *)
+let prepare_env ~opaque_access env0 roots =
+  let env = ref env0 and seen = Hashtbl.create 97 and q = Queue.create () and changed = ref [] in
+  List.iter (fun g -> Queue.add g q) roots;
+  while not (Queue.is_empty q) do
+    let g = Queue.pop q in
+    let k = gref_key g in
+    if not (Hashtbl.mem seen k) then begin
+      Hashtbl.add seen k ();
+      (match g with
+       | Names.GlobRef.ConstRef c ->
+         (match prepared_body ~opaque_access !env c with
+          | Some (b', sealed, lowered) when sealed || lowered ->
+            let cb = Environ.lookup_constant c !env in
+            env := Environ.add_constant c { cb with Declarations.const_body = Declarations.Def b' } !env;
+            changed := (g, b', cb.Declarations.const_type) :: !changed
+          | _ -> ())
+       | _ -> ());
+      List.iter (fun d -> Queue.add d q) (decl_refs ~opaque_access !env g)
+    end
+  done;
+  List.iter
+    (fun (g, b', ty) ->
+      let ok =
+        try
+          let j = Typeops.infer !env b' in
+          Conversion.conv_leq !env j.Environ.uj_type ty = Ok ()
+        with _ -> false
+      in
+      if not ok then
+        CErrors.user_err Pp.(str ("ROCQ2LEAN_PREPARE: the prepared body of " ^ gref_name g ^ " is not accepted by the kernel at its declared type")))
+    !changed;
+  !env
+
 let export ~opaque_access file (roots : Libnames.qualid list) =
-  let env = Global.env () in
+  let env = prepare_env ~opaque_access (Global.env ()) (List.map Nametab.global roots) in
   let sigma = Evd.from_env env in
+  let blocked =
+    List.filter_map
+      (fun qid ->
+        match scan_root ~opaque_access env (Nametab.global qid) with
+        | Some p -> Some (qid, p)
+        | None -> None)
+      roots
+  in
+  if blocked <> [] then begin
+    let oc = open_out (file ^ ".blockers.json") in
+    output_string oc
+      (J.to_string
+         (J.Obj
+            [ ("kind", J.Str "unquotable");
+              ( "reason",
+                J.Str "sort-polymorphic universe context: MetaRocq c18395ad cannot quote it" );
+              ( "roots",
+                J.Arr
+                  (List.map
+                     (fun (qid, p) ->
+                       J.Obj
+                         [ ("requested", J.Str (Libnames.string_of_qualid qid));
+                           ("path", J.Arr (List.map (fun g -> J.Str (gref_name g)) p)) ])
+                     blocked) ) ]));
+    close_out oc;
+    CErrors.user_err
+      Pp.(str "ROCQ2LEAN_UNQUOTABLE: " ++ int (List.length blocked)
+          ++ str " root(s) depend on a sort-polymorphic declaration; see " ++ str file ++ str ".blockers.json")
+  end;
   let quoted =
     List.map
       (fun qid ->
@@ -616,3 +811,16 @@ let export ~opaque_access file (roots : Libnames.qualid list) =
   Feedback.msg_info
     Pp.(str "Rocq2Lean Export: wrote " ++ int (List.length decls) ++ str " declarations for "
         ++ int (List.length roots) ++ str " root(s) to " ++ str file)
+
+(* Fresh-process recomputation for the round trip: the prepared type and body of one constant, quoted,
+   after the kernel re-check (prepare_env raises otherwise). *)
+let check_prepared ~opaque_access key =
+  let rkn = kername_of_key key in
+  let c = Names.Constant.make1 rkn in
+  let env = prepare_env ~opaque_access (Global.env ()) [ Names.GlobRef.ConstRef c ] in
+  let sigma = Evd.from_env env in
+  let cb = Environ.lookup_constant c env in
+  let q t = snd (Ast_quoter.quote_term_rec ~bypass:true ~opaque_access env sigma t) in
+  let body = match cb.Declarations.const_body with Declarations.Def b -> term_json (q b) | _ -> J.Null in
+  Feedback.msg_info
+    Pp.(str ("PREPARED " ^ key ^ " " ^ J.to_string (J.Obj [ ("type", term_json (q cb.Declarations.const_type)); ("body", body) ])))

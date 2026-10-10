@@ -240,6 +240,41 @@ def check_native_meta(decls, out, loadpaths, requires):
     return {"status": "OK" if not problems else "MISMATCH", "problems": problems}
 
 
+def check_prepared(decls, out, loadpaths, requires):
+    """Prepared constants (sealed-module implementation and/or lowered ssr_have_upoly, see
+    rocq/exporter): a fresh Rocq process re-prepares each one natively (`Rocq2Lean CheckPrepared`),
+    re-checks the prepared body with Rocq's kernel against the declared type, quotes type and body,
+    and they must equal the IR's field by field."""
+    if not decls:
+        return {"results": {}, "problems": []}
+    plugin = Path(__file__).resolve().parent.parent / "rocq" / "exporter"
+    v = ["From Rocq2LeanExport Require Import Loader.", *[f"Require {r}." for r in requires]]
+    v += [f'Rocq2Lean CheckPrepared "{d["name"]}".' for d in decls]
+    vfile = out / "RoundTripPrepared.v"
+    vfile.write_text("\n".join(v) + "\n")
+    p = subprocess.run(["rocq", "compile", "-I", str(plugin / "src"), "-Q", str(plugin / "theories"), "Rocq2LeanExport",
+                        *loadpaths, str(vfile)], capture_output=True, text=True)
+    (out / "logs").mkdir(exist_ok=True)
+    (out / "logs" / "roundtrip_prepared.log").write_text(p.stdout + p.stderr)
+    got = {}
+    for line in (p.stdout + p.stderr).splitlines():
+        if line.startswith("PREPARED "):
+            _, key, js = line.split(" ", 2)
+            got[key] = json.loads(js)
+    results, problems = {}, []
+    for d in decls:
+        g = got.get(d["name"])
+        if g is None:
+            results[d["name"]] = "RT_PREPARED_NOT_RECOMPUTED"
+        elif g["type"] != d["type"] or g["body"] != d["body"]:
+            results[d["name"]] = "RT_PREPARED_MISMATCH"
+        else:
+            results[d["name"]] = "RT_OK"
+    if p.returncode != 0:
+        problems.append(f"prepared-constant process exited with {p.returncode}")
+    return {"results": results, "problems": problems}
+
+
 def check_universes(lines, out, loadpaths, requires):
     """Native re-check of the universe facts, and consistency of MetaRocq's universe record."""
     facts = lines[4]
@@ -309,7 +344,11 @@ def main(argv):
          "From Rocq2LeanRoundTrip Require Import RtEq.",
          *[f"Require {r}." for r in requires],
          "Import MonadNotation.", "Open Scope bs_scope.", ""]
+    prepared = [d for d in decls if d["kind"] == "constant"
+                and any(((d.get("native") or {}).get("prepared") or {}).values())]
     for i, d in enumerate(decls):
+        if d in prepared:
+            continue       # sealed implementation / lowered body: checked by check_prepared below
         try:
             if d["kind"] == "constant":
                 val = dec.constant(d)
@@ -345,6 +384,9 @@ def main(argv):
         parts = line.split()
         if len(parts) == 2 and parts[0].startswith("RT_") and parts[1].isdigit():
             results[decls[int(parts[1])]["name"]] = parts[0]
+    pr = check_prepared(prepared, out, loadpaths, requires)
+    results.update(pr["results"])
+    problems += pr["problems"]
     for d in decls:
         st = results.get(d["name"], "NOT_CHECKED")
         if st != "RT_OK":

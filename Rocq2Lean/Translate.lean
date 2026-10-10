@@ -50,6 +50,9 @@ structure IndTarget where
   templateParamPos : Array Nat := #[]
   /-- A primitive record translated to a structure-like inductive (projections allowed). -/
   isStructure : Bool := false
+  /-- Indices of the universe parameters that are template levels (R5: instantiated from the
+  arguments); the others are generalized non-template levels (R3 at references). -/
+  templateLevelIdx : Array Nat := #[]
   deriving Inhabited, Repr
 
 structure GEnv where
@@ -58,6 +61,8 @@ structure GEnv where
   constLevels : Std.HashMap String Nat := {}
   /-- Source global level of each universe parameter of each accepted constant, by target name. -/
   constGlobals : Std.HashMap Name (Array String) := {}
+  /-- Template levels of the translated template inductives (R5, exempt from R3). -/
+  templateLevels : Std.HashSet String := {}
   /-- Native universe facts of the export. -/
   facts : IR.UniverseFacts := { levels := #[], relations := #[] }
   inds : Std.HashMap String IndTarget := {}
@@ -175,7 +180,15 @@ def univArgs (mind : String) (t : IndTarget) (u : Array IR.Level) (args : Array 
     match (← read).genv.constGlobals[target]? with
     | some gs => if gs.size == n then sharedOrFreshLevels gs else liftMeta do (List.range n).mapM fun _ => mkFreshLevelMVar
     | none => liftMeta do (List.range n).mapM fun _ => mkFreshLevelMVar
-  | .params n true => liftMeta do (List.range n).mapM fun _ => mkFreshLevelMVar
+  | .params n true =>
+    -- template levels: fresh (R5, from the arguments); other levels: shared or fresh (R3)
+    let gs := (← read).genv.constGlobals[target]?.getD #[]
+    let own := (← read).globalLevels
+    (List.range n).mapM fun k => do
+      if t.templateLevelIdx.contains k || gs.size != n then liftMeta mkFreshLevelMVar
+      else match own[gs[k]!]? with
+        | some v => pure v
+        | none => liftMeta mkFreshLevelMVar
   | .templateFromArg k =>
     if h : k < args.size then
       -- The level may still contain metavariables (proof-local levels, R2B; references to
@@ -548,11 +561,20 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
           unless gqs.size == G.size + Q.size do failT "TRANSLATION_FAILED" "minor result has fewer binders than the motive"
           let gs := gqs.extract 0 G.size
           let qs := gqs.extract G.size gqs.size
+          -- The recursor runs this branch at every recursion depth: here the decreasing argument
+          -- *is* the constructor applied to the fields, and the index variables of its type are
+          -- that application's indices (not the outermost call's arguments).
+          let xk := mkAppN (mkConst tgt.ctors[cind.idx]![k]! indLvls) (params ++ fields)
+          let xkIdx ← liftMeta do
+            let t ← whnf (← inferType xk)
+            pure (t.getAppArgs.extract rv.numParams t.getAppArgs.size)
           let P' := Id.run do
             let mut P' := P
             for i in gpos, g in gs do P' := P'.set! i g
+            for i in [0:P.size] do
+              if let some j := idxPos[i]! then P' := P'.set! i xkIdx[j]!
             return P'
-          let locals := outer ++ #[fv] ++ P' ++ #[x] ++ qs ++ fields
+          let locals := outer ++ #[fv] ++ P' ++ #[xk] ++ qs ++ fields
           let body ← withPath s!"branch{k}" (withReader (fun c => { c with locals := locals }) (trans bbody))
           let body ← replaceRecCalls fv.fvarId! P' idxPos fieldIH gpos body
           bindFVars true (fields ++ ihs ++ gs ++ qs) body
@@ -770,6 +792,7 @@ def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr)
     if let some globals := genv.constGlobals[c]? then
       unless globals.size == ls.length do throw s!"{c}: {ls.length} universe arguments for {globals.size} parameters"
       for l in globals, σ in ls do
+        if genv.templateLevels.contains l then continue      -- R5, not R3
         match checkInstantiation genv.facts own l σ body with
         | .ok () => n := n + 1
         | .error msg => throw s!"reference to {c}: {msg}"

@@ -118,14 +118,19 @@ for name, lines in (("drop-ua<=ub", mutate_facts(drop=(ua, ub))),
     else:
         check("binding" in dets, f"[{name}] auditor rejects the mutated IR (binding to the contract digest)")
 
-# (6) Strict inclusion that the generalized translation cannot express: honest rejection.
+# (6) Strict inclusion Type@{ub} : Type@{uc} (ub < uc). Under R2 alone (independent parameters) this was
+#     an honest kernel rejection; under R2S (since M5) Lean's unifier solves uc := u_ub + 1, which
+#     satisfies the native fact ub < uc, so the declaration translates and verifies with that solution.
 big = ROOT / "runs" / "hu-univ-big"
 shutil.rmtree(big, ignore_errors=True)
-assert cli("export", "--manifest", MAN, "--roots", "U.Univ.big", "--out", big)[0] == 0
-rc, _ = cli("translate", "--input", big / "source.ndjson", "--out", big)
+rcs = [cli("export", "--manifest", MAN, "--roots", "U.Univ.big", "--out", big)[0],
+       cli("translate", "--input", big / "source.ndjson", "--out", big)[0], cli("verify", "--run", big)[0]]
 R, _ = results(big)
-check(rc != 0 and R["U.Univ.big"]["status"] in ("KERNEL_REJECTED", "UNIVERSE_REJECTED"),
-      f"Type@{{ub}} : Type@{{uc}} (strict inclusion) rejected honestly ({R['U.Univ.big']['status']}) — documented limitation")
+bg = R["U.Univ.big"]
+sol = {x["level"]: x["sigma"] for x in bg.get("solved_levels", [])}
+check(rcs == [0, 0, 0] and bg["level_params"] == ["u_U_Univ_22"] and
+      sol.get("U.Univ.23") == {"k": "succ", "l": {"k": "param", "n": "u_U_Univ_22"}},
+      f"Type@{{ub}} : Type@{{uc}} (ub < uc): R2S solves uc := u_ub + 1 (native fact holds) and the run VERIFIES {rcs}")
 
 # (7) Defaulted (residual) levels: justified by a kernel check of the generic declaration, re-checked
 #     by the consumer; forged or missing justifications are rejected through the full pipeline.

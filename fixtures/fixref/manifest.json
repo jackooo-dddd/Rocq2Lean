@@ -1,0 +1,1 @@
+{"name": "fixref", "load_paths": [["-Q", "../m3", "M3"], ["-Q", ".", "FR"]], "files": ["../m3/M3Types.v", "FixRef.v"], "requires": ["FR.FixRef"]}

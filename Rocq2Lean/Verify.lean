@@ -287,8 +287,10 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
       | .ok (ps, z, gty, gval), some v =>
         if ps.length != nDefaults || ps.any ci.levelParams.contains then
           problems := note "residual_levels" s!"{tgt}: residual parameters {ps} do not match {nDefaults} defaulted level(s)" problems
-        unless z.length == ps.length && exprJson (gty.instantiateLevelParams ps z) == exprJson ci.type &&
-            exprJson (gval.instantiateLevelParams ps z) == exprJson v do
+        -- compared up to universe-level normalization (instantiation may spell levels differently)
+        let nl (e : Expr) : Json := exprJson (e.replaceLevel fun l => some l.normalize)
+        unless z.length == ps.length && nl (gty.instantiateLevelParams ps z) == nl ci.type &&
+            nl (gval.instantiateLevelParams ps z) == nl v do
           problems := note "residual_levels" s!"{tgt}: the generic declaration with its residual levels at their defaults is not the imported one" problems
         let d ← liftTermElabM (mkConstDecl (tgt.toName ++ `_rocq2lean_residual_check) kind (ci.levelParams ++ ps) gty gval)
         match ← liftCoreM (checkOnly d) with

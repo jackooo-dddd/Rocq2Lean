@@ -171,6 +171,23 @@ def own_level_interp(facts, own):
     return {l: go(l, len(own) + 1) for l in own}
 
 
+def ind_params(d, r):
+    """Universe parameters (source levels) of a generated inductive: for a non-template block all its
+    levels (R2T); for a template block its levels minus the reported solved ones (R5S), which must
+    include every template level. Returns (params, solutions, template binding or None)."""
+    tb = template_binding(d)
+    if tb is None:
+        return ind_globals(d), {}, None
+    sol = {x["level"]: x["sigma"] for x in r.get("solved_levels", [])}
+    params = sorted(set(ind_globals(d)) - set(sol))
+    if not set(sol) <= set(ind_globals(d)) - set(tb) or not set(tb) <= set(params):
+        raise Mismatch(f"solved levels {sorted(sol)} must be non-template levels of the block")
+    return params, sol, tb
+
+
+TEMPLATE_LEVELS = set()     # template levels of the export's template inductives (R5, not R3)
+
+
 def template_binding(d):
     """For a template inductive, from the Rocq kernel's own record (native.template_info, round-trip
     checked): {level name: parameter position (regular order)}; None if not template."""
@@ -192,7 +209,7 @@ def template_binding(d):
         if t != {"k": "sort", "s": {"k": "type", "u": [{"l": {"k": "global", "n": us[0]["l"]}, "n": 0}]}}:
             raise Mismatch(f"template parameter {k} is not an arity ending in Type@{{{us[0]['l']}}}")
         out[us[0]["l"]] = (k, nz)
-    if sorted(out) != sorted(ti.get("defaults", [])) or not set(ind_globals(d)) <= set(out):
+    if sorted(out) != sorted(ti.get("defaults", [])):
         raise Mismatch("template binding does not cover exactly the template levels")
     return out
 
@@ -255,7 +272,7 @@ class Auditor:
         if r is not None and r["status"] == "TRANSLATED_AND_CHECKED" and self.decls[mind]["kind"] == "inductive":
             body = self.decls[mind]["bodies"][idx]
             t, cs = generated_names(mind, body["name"], [c["name"] for c in body["ctors"]])
-            n = len(ind_globals(self.decls[mind]))
+            n = len(ind_params(self.decls[mind], r)[0])
             return t, cs, ("mono" if n == 0 else ("params", n))
         raise Mismatch(f"inductive {mind} has no audited realisation")
 
@@ -282,7 +299,17 @@ class Auditor:
     @staticmethod
     def shift(env, n):
         """The target has `n` extra binders that the source does not."""
-        return [("bvar", x[1] + n, *x[2:]) if x[0] == "bvar" else x for x in env]
+        out = []
+        for x in env:
+            if x[0] == "bvar":
+                out.append(("bvar", x[1] + n, *x[2:]))
+            elif x[0] == "tgt":
+                out.append(("tgt", lift(x[1], n)))
+            elif x[0] == "expect":
+                out.append(("expect", x[1], Auditor.shift(x[2], n)))
+            else:
+                out.append(x)
+        return out
 
     @classmethod
     def push(cls, env, n=1):
@@ -303,6 +330,12 @@ class Auditor:
             if s["i"] >= len(env):
                 raise Mismatch(f"{path}: source rel {s['i']} out of scope")
             want = env[s["i"]]
+            if want[0] == "expect":       # a source variable that denotes a source term here
+                return self.check(want[1], e, path + ["as-term"], want[2])
+            if want[0] == "tgt":          # a target expression forced by typing (constructor parameters)
+                if e != want[1]:
+                    raise Mismatch(f"{path}: expected the parameter {want[1]}, found {e}")
+                return
             if want[0] not in ("bvar", "const"):
                 raise Mismatch(f"{path}: source rel {s['i']} refers to {want[0]} binder outside a supported call")
             ok = (e == {"k": "bvar", "i": want[1]}) if want[0] == "bvar" else \
@@ -580,12 +613,26 @@ class Auditor:
             body = self.strip_lams(spine[npar + 1 + k], nf + nih + ng + nq, path + [f"minor{k}"])
             depth = nf + nih + ng + nq
             benv = [("bvar", q + nih + ng + nq, "field", k, q) for q in range(nf)]   # q: innermost-first
+            # In branch k (run at every recursion depth) the decreasing argument denotes the
+            # constructor applied to the parameters and fields, and its index variables denote that
+            # constructor's indices (source `ctor.indices`, in the context params + fields).
+            ctor_env = [("bvar", q + nih + ng + nq) for q in range(nf)] + \
+                [("tgt", lift(spine[npar - 1 - qq], depth)) for qq in range(npar)] + [("forbid",)]
+            xk = {"k": "construct", "ind": ref, "c": k, "u": []}
+            if npar + nf:
+                xk = {"k": "app", "f": xk, "args": [{"k": "rel", "i": nf + npar - 1 - pi} for pi in range(npar)]
+                      + [{"k": "rel", "i": nf - 1 - pp} for pp in range(nf)]}
+            cidx = self.decls[ref["mind"]]["bodies"][ref["i"]]["ctors"][k]["indices"]
             for t in range(nl):                                               # a_{nl-1} .. a_0
                 i = nl - 1 - t
                 if i > r:
                     benv.append(("bvar", nq - 1 - (i - r - 1)))
+                elif i == r:
+                    benv.append(("expect", xk, ctor_env))
                 elif i in gpos:
                     benv.append(("bvar", nq + ng - 1 - gpos.index(i), "gen", i))
+                elif i in idx_of:
+                    benv.append(("expect", cidx[idx_of[i]], ctor_env))
                 else:
                     benv.append(("bvar", senv[t][1] + depth, "param", i))
             info = {"minor": k, "r": r, "nf": nf, "nq": nq, "rec_q": [nf - 1 - p for p in rpos], "idx_pos": idx_pos,
@@ -774,6 +821,8 @@ def check_universe_args(facts, own, gen, exprs, body=None):
             if len(us) != len(ls):
                 raise Mismatch(f"{name}: {len(us)} universe arguments for {len(ls)} parameters")
             for l, sigma in zip(ls, us):
+                if l in TEMPLATE_LEVELS:
+                    continue                      # R5: instantiated from the arguments, checked by InstanceLevels
                 c, ps = level_nf(sigma)
                 if body and l in body:
                     if (c, ps) != level_nf(body[l]):
@@ -963,6 +1012,20 @@ class InstanceLevels:
         return mt["k"] == "sort" and bool(rec["level_params"]) and mt["l"] == {"k": "param", "n": rec["level_params"][0]}
 
 
+def canon_levels(e):
+    """Expression JSON with every universe level replaced by its semantic normal form (comparison
+    up to level normalization)."""
+    if isinstance(e, list):
+        return [canon_levels(x) for x in e]
+    if not isinstance(e, dict):
+        return e
+    if e.get("k") == "sort":
+        return {"k": "sort", "l": repr(level_nf(e["l"]))}
+    if e.get("k") == "const":
+        return {"k": "const", "n": e["n"], "u": [repr(level_nf(u)) for u in e["u"]]}
+    return {k: canon_levels(v) for k, v in e.items()}
+
+
 def check_residuals(r):
     """Defaulted universe levels carry a justification record whose generic declaration, with its
     residual parameters set to zero, is exactly the reported one (the kernel acceptance of the
@@ -980,8 +1043,8 @@ def check_residuals(r):
     if len(ds) != n or any(p in json.dumps(d_) for d_ in ds for p in ps):
         raise Mismatch("residual defaults missing or mentioning residual parameters")
     dflt = dict(zip(ps, ds))
-    if inst_levels(res.get("generic_type"), dflt) != r.get("target_type") or \
-            inst_levels(res.get("generic_value"), dflt) != r.get("target_value"):
+    if canon_levels(inst_levels(res.get("generic_type"), dflt)) != canon_levels(r.get("target_type")) or \
+            canon_levels(inst_levels(res.get("generic_value"), dflt)) != canon_levels(r.get("target_value")):
         raise Mismatch("generic declaration with residual levels at their defaults differs from the reported declaration")
 
 
@@ -997,9 +1060,15 @@ def own_partition(d, r):
     if any(p not in back for p in lps):
         raise Mismatch(f"universe parameters {lps} are not parameters for source levels")
     params = [back[p] for p in lps]
-    if set(params) & set(sol) or set(params) | set(sol) != own or not set(params) <= tl:
+    def mentions(j, name):
+        if isinstance(j, dict):
+            return (j.get("k") == "param" and j.get("n") == name) or any(mentions(v, name) for v in j.values())
+        return isinstance(j, list) and any(mentions(v, name) for v in j)
+    in_type = [sol[l] for l in tl if l in sol]
+    if set(params) & set(sol) or set(params) | set(sol) != own or any(
+            p not in tl and not mentions(in_type, level_param(p)) for p in params):
         raise Mismatch(f"parameters {params} and solved levels {sorted(sol)} do not partition the own levels "
-                       f"{sorted(own)} (parameters must be type levels)")
+                       f"{sorted(own)} (a parameter must be a type level or occur in a type level's solution)")
     if lps != [level_param(g) for g in sorted(params)]:
         raise Mismatch(f"universe parameters {lps} are not in source-level order")
     return params, sol
@@ -1173,10 +1242,16 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     gen[r_["target"]] = sorted(own_partition(d_, r_)[0])
                 except Mismatch:
                     gen[r_["target"]] = sorted(source_globals(d_["type"], set()))
-            elif template_binding(d_) is None:
-                # non-template inductive with generalized levels: references obey R3 (type, constructors)
+            else:
+                # level-parameter inductive: references obey R3 (type, constructors) on its non-template
+                # levels; its template levels obey R5 (TEMPLATE_LEVELS, skipped by R3)
+                try:
+                    params_, _, tb_ = ind_params(d_, r_)
+                except Mismatch:
+                    params_, tb_ = ind_globals(d_), None
+                TEMPLATE_LEVELS.update(tb_ or {})
                 for n_ in [r_["target"]] + [c["name"] for c in r_.get("target_ctors", [])]:
-                    gen[n_] = ind_globals(d_)
+                    gen[n_] = params_
     univ_checked = 0
     if facts is not None:
         for s_, r_ in rows.items():
@@ -1191,7 +1266,9 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     own = set(params)
                     check_body_levels(facts, d_, bl, params)
                 else:
-                    own = set(ind_globals(d_))     # an inductive block's own levels are its parameters
+                    # an inductive block's own levels: its parameters, and (template blocks) its solved levels
+                    params_i, bl, _ = ind_params(d_, r_)
+                    own = set(params_i)
                 univ_checked += check_universe_args(facts, own, gen, [x for x in exprs if x is not None], bl)
             except Mismatch as e:
                 problem("universe", f"{s_}: {e}")
@@ -1209,8 +1286,12 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
             except Mismatch:
                 tb = None
             if tb:
-                lps = [level_param(g) for g in ind_globals(d_)]
-                bind = [(lps.index(level_param(l)), k, nz) for l, (k, nz) in tb.items()]
+                try:
+                    params_ = ind_params(d_, r_)[0]
+                except Mismatch:
+                    params_ = sorted(tb)
+                lps = [level_param(g) for g in params_]
+                bind = [(lps.index(level_param(l)), k, nz) for l, (k, nz) in tb.items() if level_param(l) in lps]
                 inst.template[r_["target"]] = (bind, 0)
                 for c in r_.get("target_ctors", []):
                     inst.template[c["name"]] = (bind, 0)
@@ -1247,7 +1328,8 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     raise Mismatch(f"target names {r['target']} / {r['target_ctors']} are not the images of the source")
                 if r.get("num_params") != d["npars"]:
                     raise Mismatch("parameter count differs from the source")
-                want_lp = [level_param(g) for g in ind_globals(d)]
+                params0, sol0, _ = ind_params(d, r)
+                want_lp = [level_param(g) for g in params0]
                 if r.get("level_params", []) != want_lp:
                     raise Mismatch(f"universe parameters {r.get('level_params')} are not the generalized globals {want_lp}")
                 if bool(b["projs"]) != bool(r.get("primitive_record")) or (b["projs"] and (
@@ -1259,7 +1341,14 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                         sorted((l, kn[0]) for l, kn in (tb or {}).items()):
                     raise Mismatch("template status/binding differs from the source kernel record")
                 # R2F: sorts of a non-template block are read through the fact-respecting interpretation
-                aud.body = own_level_interp(FACTS, ind_globals(d)) if tb is None and FACTS is not None else None
+                # R2F (non-template): sorts read through the fact-respecting interpretation;
+                # R5S (template): other levels read through their reported solutions (fact-checked)
+                if tb is None:
+                    aud.body = own_level_interp(FACTS, ind_globals(d)) if FACTS is not None else None
+                else:
+                    if FACTS is not None:
+                        check_body_levels(FACTS, d, sol0, params0)
+                    aud.body = sol0
                 try:
                     aud.check(b["type"], r["target_type"], ["arity"])
                     self_ref = ("const", t, [{"k": "param", "n": l} for l in want_lp])
@@ -1273,7 +1362,8 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     raise Mismatch("UNAUDITABLE: declaration kind")
                 if r["target"] != target_name(d["name"]):
                     raise Mismatch(f"target name {r['target']} is not the image of {d['name']}")
-                want_kinds = {"transparent": {"def"}, "opaque_present": {"theorem", "opaque"}}.get(d["body_state"], set())
+                want_kinds = {"transparent": {"def"}, "opaque_present": {"theorem", "opaque"},
+                              "sealed_implementation": {"def"}}.get(d["body_state"], set())
                 if r["target_kind"] not in want_kinds:
                     raise Mismatch(f"{d['body_state']} source emitted as {r['target_kind']}")
                 if r.get("target_type") is None or r.get("target_value") is None:

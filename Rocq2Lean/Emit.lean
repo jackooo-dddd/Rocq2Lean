@@ -143,7 +143,7 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
   | "unsupported_primitive", _ =>
     return { base with status := "UNSUPPORTED_FEATURE", message := "primitive or symbol constant" }
   | st, some body =>
-    unless st == "transparent" || st == "opaque_present" do
+    unless st == "transparent" || st == "opaque_present" || st == "sealed_implementation" do
       return { base with status := "EXPORT_VALIDATION_FAILED", message := s!"unknown body state '{st}'" }
     let name := targetName c.name
     if (← getEnv).contains name then
@@ -168,10 +168,18 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl with
       | .ok e => pure e
       | .error e => return fromTransError base e
+    -- after unification: every own level still free that occurs in the (solved) type becomes a
+    -- parameter — a type level, or a body level that a type level's solution now mentions
     let keepParams : MetaM Unit := do
+      -- type levels first, so that a class of levels identified by unification is represented by
+      -- a type level (its source level is what R3 checks at references)
       for (m, v) in ownMVars do
         if typeLevels.contains m then
           if let .mvar r ← instantiateLevelMVars v then assignLevelMVar r (.param (levelParamName m))
+      let ((), tyMVars) := (levelMVarsOf (← instLevelMVars ty)).run #[]
+      for (m, v) in ownMVars do
+        if let .mvar r ← instantiateLevelMVars v then
+          if tyMVars.contains r then assignLevelMVar r (.param (levelParamName m))
     -- default of a still-free proof-local level: its minimal model over the *current* values of the
     -- type levels (parameters or solutions)
     let dflt (id : LMVarId) : MetaM Level := do
@@ -204,7 +212,11 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let base := { base with universeChecks := nchecks }
     unless (← whnf (← inferType ty)).isSort do
       return { base with status := "TRANSLATION_FAILED", message := "translated type is not a type" }
-    let kind ← if c.bodyState == "transparent" then pure "def" else if ← isProp ty then pure "theorem" else pure "opaque"
+    -- a sealed-module implementation (e.g. HB.lock) is translated as a transparent definition: its
+    -- implementation's unlock lemma is `erefl` and needs the δ-rule (the target gains a definitional
+    -- unfolding that the sealed source hides; every source proof still checks)
+    let kind ← if c.bodyState == "transparent" || c.bodyState == "sealed_implementation" then pure "def"
+      else if ← isProp ty then pure "theorem" else pure "opaque"
     let base := { base with target := some name, targetKind := kind, rule := s!"constant/{c.bodyState}" }
     if let some msg ← justifyResiduals name kind lparams resid gty gval then
       return { base with status := "UNIVERSE_REJECTED", message := msg }
@@ -226,8 +238,8 @@ def templateBinding (i : IR.InductiveDecl) (globals : Array String) :
   let ti := i.native.getObjValD "template_info"
   let some defaults := (ti.getObjValAs? (Array String) "defaults").toOption | throw ("EXPORT_VALIDATION_FAILED", "template inductive without template_info")
   let some pargs := (ti.getObjValAs? (Array Json) "param_arguments").toOption | throw ("EXPORT_VALIDATION_FAILED", "template_info without param_arguments")
-  unless globals.all defaults.contains do
-    throw ("UNSUPPORTED_FEATURE", s!"template inductive with non-template global levels {globals.filter (!defaults.contains ·)}")
+  -- other (non-template) global levels are allowed: they are solved by unification (R5S)
+  let _ := globals
   if i.params.any (·.body.isSome) then throw ("UNSUPPORTED_FEATURE", "template inductive with let-bound parameters")
   unless pargs.size == i.params.size do throw ("EXPORT_VALIDATION_FAILED", "template_info parameter count differs from the quoted parameters")
   let mut out : Array (String × Nat) := #[]
@@ -296,35 +308,81 @@ where
     let (tname, cnames) := inductiveNames i.name body.name (body.ctors.map (·.name))
     -- Source global levels of the declaration become universe parameters (R2T); for a template
     -- inductive they must be exactly its template levels, each bound by one parameter sort (R5).
-    let globals := globalsOfInd i
-    let lparams := globals.toList.map levelParamName
+    let allGlobals := globalsOfInd i
     let isTemplate := (i.native.getObjValAs? Bool "template").toOption == some true
-    -- R2F: non-template inductives read each own level through its fact-respecting interpretation
-    let gl : Std.HashMap String Level :=
-      if isTemplate then globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
-      else ownLevelInterp genv.facts globals
     let templateParams ← if isTemplate then
-        match templateBinding i globals with
+        match templateBinding i allGlobals with
         | .ok b => pure b
         | .error (st, msg) => return ({ base with status := st, message := msg }, none)
       else pure #[]
+    -- Template inductives: the template levels are the parameters (R5); any other global level of
+    -- the block (e.g. Corelib mem_pred's conclusion Type@{max(Set, pred.u0)}, where pred is used on
+    -- the parameter by cumulativity) is solved by unifying the constructor types (R5S).
+    -- Non-template inductives: every global level is a parameter, read through its fact-respecting
+    -- interpretation (R2F).
+    let globals := if isTemplate then (templateParams.map (·.1)).qsort (· < ·) else allGlobals
+    let extra := allGlobals.filter (!globals.contains ·)
+    let lparams := globals.toList.map levelParamName
+    let mut gl : Std.HashMap String Level :=
+      if isTemplate then globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
+      else ownLevelInterp genv.facts globals
+    let mut extraMVars : Array (String × Level) := #[]
+    for m in extra do
+      let v ← mkFreshLevelMVar
+      gl := gl.insert m v
+      extraMVars := extraMVars.push (m, v)
     let ty ← match ← runTrans genv (withPath "arity" (transClosed body.type)) gl with
       | .ok e => pure e
       | .error e => return (fromTransError base e, none)
+    -- constructor types are translated and type-checked against a local `self` of the arity type
+    -- (the block is not declared yet), which is then replaced by the constant at the parameters
+    let r : Except TransError (Array Constructor × FVarId) ← withLocalDeclD `self ty fun sv => do
+      let mut out : Array Constructor := #[]
+      for c in body.ctors, cn in cnames do
+        let r ← (withReader (fun ctx => { ctx with locals := #[sv] })
+                   (withPath s!"ctor {c.name}" (do instLevelMVars (← trans c.type)))).run { genv, globalLevels := gl } |>.run
+        match r with
+        | .ok cty =>
+          -- R3″/R5S: unify level metavariables of the block by type-checking the constructor type
+          try Meta.check cty catch _ => pure ()
+          out := out.push { name := cn, type := cty }
+        | .error e => return .error e
+      return .ok (out, sv.fvarId!)
+    let (rawCtors, selfId) ← match r with
+      | .ok cs => pure cs
+      | .error e => return (fromTransError base e, none)
+    try Meta.check ty catch _ => pure ()
+    -- a non-template level that unification leaves free is a genuine independent level of the
+    -- block: it becomes a (non-template) universe parameter, R3 applies at references (R2T)
+    let mut sol : Std.HashMap String Level := {}
+    let mut freeExtra : Array String := #[]
+    for (m, v) in extraMVars do
+      if let .mvar r ← instantiateLevelMVars v then
+        assignLevelMVar r (.param (levelParamName m))
+        freeExtra := freeExtra.push m
+    for (m, v) in extraMVars do
+      let s ← instantiateLevelMVars v
+      if s.hasMVar then
+        return ({ base with status := "UNSUPPORTED_FEATURE",
+                            message := s!"level {m} of the template inductive is only partly determined by its constructors" }, none)
+      unless freeExtra.contains m do sol := sol.insert m s.normalize
+    let globals := (globals ++ freeExtra).qsort (· < ·)
+    let lparams := globals.toList.map levelParamName
     let self := mkConst tname (lparams.map Level.param)
     let mut ctors : Array Constructor := #[]
-    for c in body.ctors, cn in cnames do
-      let r ← (withReader (fun ctx => { ctx with locals := #[self] })
-                 (withPath s!"ctor {c.name}" (transClosed c.type))).run { genv, globalLevels := gl } |>.run
-      match r with
-      | .ok cty => ctors := ctors.push { name := cn, type := cty }
-      | .error e => return (fromTransError base e, none)
+    for c in rawCtors do
+      let cty ← instLevelMVars (c.type.replaceFVar (mkFVar selfId) self)
+      if cty.hasFVar || cty.hasExprMVar then
+        return ({ base with status := "TRANSLATION_FAILED", message := s!"constructor {c.name} has escaping free or meta variables" }, none)
+      ctors := ctors.push { c with type := cty }
+    let ty ← instLevelMVars ty
+    for m in extra.filter (!freeExtra.contains ·) do
+      if let .error msg := checkBodyLevel genv.facts globals sol m then
+        return ({ base with status := "UNIVERSE_REJECTED", message := msg }, none)
+    let base := { base with bodyLevels := extra.filterMap fun m => sol[m]?.map (m, ·) }
     -- R3″: references inside the block (to generalized constants / level-parameter inductives) carry
-    -- level metavariables; unify them by type-checking the arity and constructor types, set the
-    -- remaining (unconstrained) ones to their least R3-admissible value 0, and check R3 on every
-    -- universe argument of the block.
-    for e in #[ty] ++ ctors.map (·.type) do
-      try Meta.check e catch _ => pure ()
+    -- level metavariables; those not fixed by type-checking take their least R3-admissible value 0,
+    -- and R3 is checked on every universe argument of the block.
     let mut ms : Array LMVarId := #[]
     for e in #[ty] ++ ctors.map (·.type) do
       let e ← instLevelMVars e
@@ -347,9 +405,11 @@ where
     | .accepted =>
       let univ := if lparams.isEmpty then UnivRule.mono else .params lparams.length isTemplate
       let tgt : IndTarget := { types := #[tname], ctors := #[cnames], univ, rule := "generated",
-                               templateParamPos := templateParams.map (·.2), isStructure := isRecord }
+                               templateParamPos := templateParams.map (·.2), isStructure := isRecord,
+                               templateLevelIdx := (List.range globals.size).toArray.filter
+                                 (fun k => templateParams.any (·.1 == globals[k]!)) }
       return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty, numParams := i.npars, primitiveRecord := isRecord,
-                          levelParams := lparams, isTemplate, templateParams,
+                          levelParams := lparams, paramLevels := globals, isTemplate, templateParams,
                           targetCtors := ctors.map fun c => (c.name, c.type) }, some tgt)
     | .rejected msg => return ({ base with status := "KERNEL_REJECTED", message := msg }, none)
 
@@ -373,11 +433,12 @@ def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
         if let some t := t? then genv := { genv with inds := genv.inds.insert i.name t }
         -- Non-template inductives with generalized global levels: references obey R3 like
         -- generalized constants (the type and its constructors carry the same parameters).
-        if r.ok && !r.isTemplate && !r.levelParams.isEmpty then
+        if r.ok && !r.levelParams.isEmpty then
           if let some tn := r.target then
-            -- `levelParams` are `globalsOfInd i` mapped by `levelParamName`, in the same order.
             for n in #[tn] ++ r.targetCtors.map (·.1) do
-              genv := { genv with constGlobals := genv.constGlobals.insert n (globalsOfInd i) }
+              genv := { genv with constGlobals := genv.constGlobals.insert n r.paramLevels }
+            for (l, _) in r.templateParams do
+              genv := { genv with templateLevels := genv.templateLevels.insert l }
         pure r
     results := results.insert r.source r
     out := out.push r

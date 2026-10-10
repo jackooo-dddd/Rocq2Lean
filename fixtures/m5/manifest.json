@@ -1,0 +1,1 @@
+{"name": "m5", "load_paths": [["-Q", ".", "M5"]], "files": ["M5MC.v"], "requires": ["M5.M5MC", "mathcomp.boot.eqtype", "mathcomp.boot.seq", "mathcomp.boot.fintype", "mathcomp.boot.bigop"]}
