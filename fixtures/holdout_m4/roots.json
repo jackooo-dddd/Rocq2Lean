@@ -1,0 +1,18 @@
+[
+ "Stdlib.Lists.List.app_comm_cons",
+ "Stdlib.Lists.List.app_eq_nil",
+ "Stdlib.Lists.List.in_or_app",
+ "Stdlib.Lists.List.in_rev",
+ "Stdlib.Lists.List.map_rev",
+ "Stdlib.Lists.List.concat_app",
+ "Stdlib.Lists.List.flat_map_app",
+ "Stdlib.Lists.List.existsb_app",
+ "Stdlib.Lists.List.forallb_app",
+ "Stdlib.Lists.List.fold_right_app",
+ "Stdlib.Lists.List.firstn_skipn",
+ "Stdlib.Lists.List.length_seq",
+ "Stdlib.Lists.List.nth_error_In",
+ "Stdlib.Lists.List.app_inv_tail",
+ "Corelib.Init.Datatypes.sum",
+ "Corelib.Init.Specif.sigT"
+]
