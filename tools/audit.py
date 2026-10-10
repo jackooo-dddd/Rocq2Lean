@@ -131,6 +131,31 @@ def source_globals(t, acc):
     return acc
 
 
+def ind_globals(d):
+    """Source global levels of an inductive block (arity and constructor types), sorted: they
+    become the Lean universe parameters u_<name> (rule R2T)."""
+    return sorted(source_globals([[b["type"], [c["type"] for c in b["ctors"]]] for b in d["bodies"]], set()))
+
+
+def template_binding(d):
+    """For a template inductive, from the Rocq kernel's own record (native.template_info, round-trip
+    checked): {level name: parameter position (regular order)}; None if not template."""
+    if not (d.get("native") or {}).get("template"):
+        return None
+    ti = d["native"].get("template_info") or {}
+    out = {}
+    for k, pa in enumerate(ti.get("param_arguments", [])):
+        if pa is None:
+            continue
+        us = pa.get("u", [])
+        if pa.get("k") not in ("type", "quality_sort") or len(us) != 1 or us[0].get("n") != 0 or us[0].get("bound") is None:
+            raise Mismatch(f"template parameter {k} outside the audited fragment")
+        out[us[0]["l"]] = k
+    if sorted(out) != sorted(ti.get("defaults", [])) or not set(ind_globals(d)) <= set(out):
+        raise Mismatch("template binding does not cover exactly the template levels")
+    return out
+
+
 class Auditor:
     def __init__(self, decls, results, recursors=None):
         self.recursors = recursors
@@ -147,7 +172,8 @@ class Auditor:
         if r is not None and r["status"] == "TRANSLATED_AND_CHECKED" and self.decls[mind]["kind"] == "inductive":
             body = self.decls[mind]["bodies"][idx]
             t, cs = generated_names(mind, body["name"], [c["name"] for c in body["ctors"]])
-            return t, cs, "mono"
+            n = len(ind_globals(self.decls[mind]))
+            return t, cs, ("mono" if n == 0 else ("params", n))
         raise Mismatch(f"inductive {mind} has no audited realisation")
 
     def head(self, t):
@@ -196,7 +222,8 @@ class Auditor:
             want = env[s["i"]]
             if want[0] not in ("bvar", "const"):
                 raise Mismatch(f"{path}: source rel {s['i']} refers to {want[0]} binder outside a supported call")
-            ok = (e == {"k": "bvar", "i": want[1]}) if want[0] == "bvar" else (e == {"k": "const", "n": want[1], "u": []})
+            ok = (e == {"k": "bvar", "i": want[1]}) if want[0] == "bvar" else \
+                (e == {"k": "const", "n": want[1], "u": want[2] if len(want) > 2 else []})
             if not ok:
                 raise Mismatch(f"{path}: source rel {s['i']} should be {want}, found {e}")
             return
@@ -680,6 +707,8 @@ class InstanceLevels:
                 self.types[c["name"]] = (c["type"], [])
         self.recursors = recursors or {}
         self.checked = self.deferred = 0
+        # template inductives (R5): head -> ([(level index, parameter position)], level offset)
+        self.template = {}
 
     def head_type(self, h):
         t = self.types.get(h["n"])
@@ -753,6 +782,16 @@ class InstanceLevels:
             n, us = head["n"], head["u"]
             if n in ("Eq", "Eq.refl") and args and len(us) == 1:
                 self.expect(us[0], self.sort_of_type(args[0], ctx), f"{where}: {n}", problems)
+            if n in self.template:
+                # R5: each template level is the level of its template parameter's argument (A : Sort (σ+1))
+                bind, off = self.template[n]
+                if off is None:
+                    rec_ = self.recursors.get(n)
+                    off = 1 if rec_ is not None and self.large(rec_) else 0
+                for j, k in bind:
+                    if k < len(args) and j + off < len(us):
+                        self.expect({"k": "succ", "l": us[j + off]}, self.sort_of_type(args[k], ctx),
+                                    f"{where}: {n} (template level {j} from parameter {k})", problems)
             rec = self.recursors.get(n)
             if rec is not None and rec["num_motives"] == 1 and us:
                 if n == "Eq.rec" and args and len(us) == 2:
@@ -936,7 +975,12 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
     for s_, r_ in rows.items():
         if r_.get("status") == "TRANSLATED_AND_CHECKED" and r_.get("level_params"):
             d_ = decls[s_]
-            gen[r_["target"]] = sorted(source_globals([d_["type"], d_["body"]], set()))
+            if d_["kind"] == "constant":
+                gen[r_["target"]] = sorted(source_globals([d_["type"], d_["body"]], set()))
+            elif template_binding(d_) is None:
+                # non-template inductive with generalized levels: references obey R3 (type, constructors)
+                for n_ in [r_["target"]] + [c["name"] for c in r_.get("target_ctors", [])]:
+                    gen[n_] = ind_globals(d_)
     univ_checked = 0
     if facts is not None:
         for s_, r_ in rows.items():
@@ -955,6 +999,20 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
         recursors = {r["name"]: r for r in json.load(open(metadata_path)).get("recursors", [])}
     # Defaulted universe levels (justification records) and typing-determined instance levels.
     inst = InstanceLevels(list(rows.values()), recursors)
+    for s_, r_ in rows.items():
+        d_ = decls[s_]
+        if r_.get("status") == "TRANSLATED_AND_CHECKED" and d_["kind"] == "inductive":
+            try:
+                tb = template_binding(d_)
+            except Mismatch:
+                tb = None
+            if tb:
+                lps = [level_param(g) for g in ind_globals(d_)]
+                bind = [(lps.index(level_param(l)), k) for l, k in tb.items()]
+                inst.template[r_["target"]] = (bind, 0)
+                for c in r_.get("target_ctors", []):
+                    inst.template[c["name"]] = (bind, 0)
+                inst.template[r_["target"] + ".rec"] = (bind, None)       # offset 1 for large eliminators
     for s_, r_ in rows.items():
         if r_.get("status") != "TRANSLATED_AND_CHECKED":
             continue
@@ -987,9 +1045,17 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     raise Mismatch(f"target names {r['target']} / {r['target_ctors']} are not the images of the source")
                 if r.get("num_params") != d["npars"]:
                     raise Mismatch("parameter count differs from the source")
+                want_lp = [level_param(g) for g in ind_globals(d)]
+                if r.get("level_params", []) != want_lp:
+                    raise Mismatch(f"universe parameters {r.get('level_params')} are not the generalized globals {want_lp}")
+                tb = template_binding(d)
+                if bool(r.get("template")) != (tb is not None) or \
+                        sorted((x["level"], x["param"]) for x in r.get("template_params", [])) != sorted((tb or {}).items()):
+                    raise Mismatch("template status/binding differs from the source kernel record")
                 aud.check(b["type"], r["target_type"], ["arity"])
+                self_ref = ("const", t, [{"k": "param", "n": l} for l in want_lp])
                 for c, tc in zip(b["ctors"], r["target_ctors"]):
-                    aud.check(c["type"], tc["type"], ["ctor " + c["name"]], [("const", t)])
+                    aud.check(c["type"], tc["type"], ["ctor " + c["name"]], [self_ref])
                 v["verdict"] = "MATCH"
             elif r["status"] == "TRANSLATED_AND_CHECKED":
                 if d["kind"] != "constant":

@@ -256,6 +256,38 @@ and native_constant_kn ~opaque_access env rkn =
 
 let rec native_inductive env kn = native_inductive_kn env (to_rocq_kn kn)
 
+(* Template polymorphism as the Rocq kernel records it (Declarations.template_universes): the
+   default instance (the levels MetaRocq substitutes into the quoted terms), and for each
+   LocalAssum parameter in regular order whether its sort binds template levels, with every bound
+   level variable named by its default level. The conclusion sort likewise. *)
+and template_info_json (t : Declarations.template_universes) =
+  let open Declarations in
+  let level_name l = if Univ.Level.is_set l then "Set" else Univ.Level.to_string l in
+  let defaults = snd (UVars.Instance.to_array t.template_defaults) in
+  let univ_json u =
+    J.Arr
+      (List.map
+         (fun (l, k) ->
+           match Univ.Level.var_index l with
+           | Some i when i < Array.length defaults ->
+             J.Obj [ ("l", J.Str (level_name defaults.(i))); ("bound", J.Int i); ("n", J.Int k) ]
+           | _ -> J.Obj [ ("l", J.Str (level_name l)); ("bound", J.Null); ("n", J.Int k) ])
+         (Univ.Universe.repr u))
+  in
+  let sort_json (s : Sorts.t) =
+    match s with
+    | Sorts.SProp -> J.Obj [ ("k", J.Str "sprop") ]
+    | Sorts.Prop -> J.Obj [ ("k", J.Str "prop") ]
+    | Sorts.Set -> J.Obj [ ("k", J.Str "set") ]
+    | Sorts.Type u -> J.Obj [ ("k", J.Str "type"); ("u", univ_json u) ]
+    | Sorts.GSort (_, u) | Sorts.VSort (_, u) -> J.Obj [ ("k", J.Str "quality_sort"); ("u", univ_json u) ]
+  in
+  J.Obj
+    [ ("defaults", J.Arr (Array.to_list (Array.map (fun l -> J.Str (level_name l)) defaults)));
+      ( "param_arguments",
+        J.Arr (List.map (function None -> J.Null | Some s -> sort_json s) t.template_param_arguments) );
+      ("concl", sort_json t.template_concl) ]
+
 and native_inductive_kn env rkn =
   match Environ.lookup_mind (Names.MutInd.make1 rkn) env with
   | mib ->
@@ -263,6 +295,8 @@ and native_inductive_kn env rkn =
     J.Obj
       [ ("polymorphic", J.Bool (Declareops.inductive_is_polymorphic mib));
         ("template", J.Bool (Option.has_some mib.mind_template));
+        ( "template_info",
+          match mib.mind_template with None -> J.Null | Some t -> template_info_json t );
         ( "private",
           match mib.mind_private with None -> J.Null | Some b -> J.Bool b );
         ("typing_flags", flags_json mib.mind_typing_flags) ]

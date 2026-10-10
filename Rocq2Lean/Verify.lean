@@ -68,7 +68,7 @@ def checkRecIndices (v : Expr) : MetaM (Nat × Array String) := do
 `Eq.rec.{_, u} A`, `u` is the sort level of `A`'s type; at every application of a large recursor
 `I.rec.{v, …} params motive …`, `v` is the level of the motive's codomain. Returns the number of
 checked arguments and any violations. -/
-def checkInstanceLevels (v : Expr) : MetaM (Nat × Array String) := do
+def checkInstanceLevels (tmpl : Std.HashMap Name (Array (Nat × Nat))) (v : Expr) : MetaM (Nat × Array String) := do
   let checked ← IO.mkRef 0
   let bad ← IO.mkRef (#[] : Array String)
   let same (what : String) (got want : Level) : MetaM Unit := do
@@ -81,13 +81,25 @@ def checkInstanceLevels (v : Expr) : MetaM (Nat × Array String) := do
         same s!"{c}" us[0]! (← getLevel args[0]!)
       if c == ``Eq.rec && args.size ≥ 1 && us.length == 2 then
         same s!"{c} (type level)" us[1]! (← getLevel args[0]!)
+      let large ← match (← getEnv).find? c with
+        | some (.recInfo rv) =>
+          if rv.numMotives == 1 && !us.isEmpty then
+            -- large eliminator: the motive's codomain is the recursor's first universe parameter
+            forallBoundedTelescope rv.type (some (rv.numParams + 1)) fun xs _ => do
+              if xs.size != rv.numParams + 1 then return false
+              forallTelescopeReducing (← inferType xs.back!) fun _ b => do
+                return b.isSort && b.sortLevel! == .param rv.levelParams.head!
+          else pure false
+        | _ => pure false
+      -- R5: a template inductive's level is the level of its template parameter (A : Sort (σ+1))
+      if let some bind := tmpl[c]? then
+        let off := if large then 1 else 0
+        for (j, k) in bind do
+          if h : k < args.size then
+            if j + off < us.length then
+              same s!"{c} (template level {j} from parameter {k})" (.succ us[j + off]!) (← getLevel args[k])
       if let some (.recInfo rv) := (← getEnv).find? c then
         if rv.numMotives == 1 && args.size > rv.numParams && !us.isEmpty then
-          -- large eliminator: the motive's codomain is the recursor's first universe parameter
-          let large ← forallBoundedTelescope rv.type (some (rv.numParams + 1)) fun xs _ => do
-            if xs.size != rv.numParams + 1 then return false
-            forallTelescopeReducing (← inferType xs.back!) fun _ b => do
-              return b.isSort && b.sortLevel! == .param rv.levelParams.head!
           if large then
             let mty ← inferType args[rv.numParams]!
             forallTelescopeReducing mty fun _ b => do
@@ -196,6 +208,19 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
   let env ← getEnv
   let mut recs : Std.HashMap Name RecursorVal := {}
   let mut recApps : Nat := 0
+  -- template inductives of this run (report): head ↦ [(level index, template parameter)]
+  let mut tmpl : Std.HashMap Name (Array (Nat × Nat)) := {}
+  for (_, r) in accepted do
+    if (r.getObjValAs? Bool "template").toOption == some true then
+      let lps := (r.getObjValAs? (Array String) "level_params").toOption.getD #[]
+      let bind := ((r.getObjValAs? (Array Json) "template_params").toOption.getD #[]).filterMap fun x => do
+        let l ← (x.getObjValAs? String "level").toOption
+        let k ← (x.getObjValAs? Nat "param").toOption
+        let j ← lps.findIdx? (· == (levelParamName l).toString)
+        return (j, k)
+      let t := (getStr r "target").toName
+      for n in #[t, t.str "rec"] ++ ((r.getObjValAs? (Array Json) "target_ctors").toOption.getD #[]).map (fun c => (getStr c "name").toName) do
+        tmpl := tmpl.insert n bind
   let mut residualsChecked : Nat := 0
   let mut instChecked : Nat := 0
   for (s, r) in accepted do
@@ -237,7 +262,7 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
       recApps := recApps + n
       for b in bad do problems := note "rec_indices" s!"{tgt}: {b}" problems
     for e in ci.type :: (ci.value? (allowOpaque := true)).toList do
-      let (n, bad) ← liftTermElabM (checkInstanceLevels e)
+      let (n, bad) ← liftTermElabM (checkInstanceLevels tmpl e)
       instChecked := instChecked + n
       for b in bad do problems := note "instance_levels" s!"{tgt}: {b}" problems
     -- residual_levels

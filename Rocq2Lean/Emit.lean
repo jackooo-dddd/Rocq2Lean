@@ -49,6 +49,10 @@ structure DeclResult where
   /-- Defaulted (residual) universe levels: the fresh parameters standing for them and the
   declaration's type/value with those parameters, which the kernel accepted (justification). -/
   residualParams : List Name := []
+  /-- Generated inductives with level parameters: whether the source is template polymorphic, and
+  for each template level the parameter (regular order) whose sort binds it (R5). -/
+  isTemplate : Bool := false
+  templateParams : Array (String × Nat) := #[]
   residualType : Option Expr := none
   residualValue : Option Expr := none
   deriving Inhabited
@@ -77,6 +81,10 @@ private def blockedDeps (results : Std.HashMap String DeclResult) (deps : Array 
     match results[d]? with
     | none => (missing.push d, failed)
     | some r => if r.ok then (missing, failed) else (missing, failed.push d)
+
+/-- Global levels of an inductive block (single body): arity and constructor types, sorted. -/
+def globalsOfInd (i : IR.InductiveDecl) : Array String :=
+  (i.bodies.foldl (fun acc (b : IR.OneInd) => b.ctors.foldl (fun acc c => globalsOf c.type acc) (globalsOf b.type acc)) {}).toArray.qsort (· < ·)
 
 /-- Global levels of a constant, as generalized (sorted). -/
 def globalsOf' (c : IR.ConstantDecl) : Array String :=
@@ -165,6 +173,41 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
   | st, _ =>
     return { base with status := "EXPORT_VALIDATION_FAILED", message := s!"body state '{st}' inconsistent with body" }
 
+/-- Template binding of a template inductive (R5), from the Rocq kernel's own record
+(`native.template_info`, round-trip checked): each template level is bound by exactly one
+parameter whose sort is exactly `Type@{l}`, every global level of the declaration is a template
+level, and the quoted parameter types agree. Returns `(level, parameter position)` pairs. -/
+def templateBinding (i : IR.InductiveDecl) (globals : Array String) :
+    Except (String × String) (Array (String × Nat)) := do
+  let ti := i.native.getObjValD "template_info"
+  let some defaults := (ti.getObjValAs? (Array String) "defaults").toOption | throw ("EXPORT_VALIDATION_FAILED", "template inductive without template_info")
+  let some pargs := (ti.getObjValAs? (Array Json) "param_arguments").toOption | throw ("EXPORT_VALIDATION_FAILED", "template_info without param_arguments")
+  unless globals.all defaults.contains do
+    throw ("UNSUPPORTED_FEATURE", s!"template inductive with non-template global levels {globals.filter (!defaults.contains ·)}")
+  if i.params.any (·.body.isSome) then throw ("UNSUPPORTED_FEATURE", "template inductive with let-bound parameters")
+  unless pargs.size == i.params.size do throw ("EXPORT_VALIDATION_FAILED", "template_info parameter count differs from the quoted parameters")
+  let mut out : Array (String × Nat) := #[]
+  for pa in pargs, k in [0:pargs.size] do
+    if pa.isNull then continue
+    let us := (pa.getObjValAs? (Array Json) "u").toOption.getD #[]
+    -- `quality_sort`: the parameter also binds a sort quality (Rocq: "can be instantiated to
+    -- Prop"); the kernel's template defaults fix the quality to Type, which is the instance
+    -- translated here. References instantiating it at Prop are rejected explicitly (R5).
+    let kind := (pa.getObjValAs? String "k").toOption
+    let ok := (kind == some "type" || kind == some "quality_sort") && us.size == 1 &&
+      (us[0]!.getObjValAs? Nat "n").toOption == some 0 && !(us[0]!.getObjValD "bound").isNull
+    unless ok do throw ("UNSUPPORTED_FEATURE", s!"template parameter {k} binds a level with an offset or an algebraic universe")
+    let l := (us[0]!.getObjValAs? String "l").toOption.getD ""
+    -- the quoted parameter (MetaRocq, innermost-first) must have exactly that sort
+    match i.params[i.params.size - 1 - k]!.type with
+    | .sort (.type #[{ level := .global l', offset := 0 }]) =>
+      unless l' == l do throw ("EXPORT_VALIDATION_FAILED", s!"template parameter {k}: quoted sort level {l'} differs from the kernel's {l}")
+    | _ => throw ("EXPORT_VALIDATION_FAILED", s!"template parameter {k}: quoted type is not Type@\{{l}}")
+    out := out.push (l, k)
+  for d in defaults do
+    unless (out.filter (·.1 == d)).size == 1 do throw ("UNSUPPORTED_FEATURE", s!"template level {d} is not bound by exactly one parameter")
+  return out
+
 def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
     (raw : Json) :
     MetaM (DeclResult × Option IndTarget) := do
@@ -198,22 +241,39 @@ where
     if (← getEnv).contains (inductiveNames i.name body.name #[]).1 then
       return ({ base with status := "TRANSLATION_FAILED", message := "target name already in use" }, none)
     let (tname, cnames) := inductiveNames i.name body.name (body.ctors.map (·.name))
-    let ty ← match ← runTrans genv (withPath "arity" (transClosed body.type)) with
+    -- Source global levels of the declaration become universe parameters (R2T); for a template
+    -- inductive they must be exactly its template levels, each bound by one parameter sort (R5).
+    let globals := globalsOfInd i
+    let lparams := globals.toList.map levelParamName
+    let gl : Std.HashMap String Level := globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
+    let isTemplate := (i.native.getObjValAs? Bool "template").toOption == some true
+    let templateParams ← if isTemplate then
+        match templateBinding i globals with
+        | .ok b => pure b
+        | .error (st, msg) => return ({ base with status := st, message := msg }, none)
+      else pure #[]
+    let ty ← match ← runTrans genv (withPath "arity" (transClosed body.type)) gl with
       | .ok e => pure e
       | .error e => return (fromTransError base e, none)
+    let self := mkConst tname (lparams.map Level.param)
     let mut ctors : Array Constructor := #[]
     for c in body.ctors, cn in cnames do
-      let r ← (withReader (fun ctx => { ctx with locals := #[mkConst tname] })
-                 (withPath s!"ctor {c.name}" (transClosed c.type))).run { genv } |>.run
+      let r ← (withReader (fun ctx => { ctx with locals := #[self] })
+                 (withPath s!"ctor {c.name}" (transClosed c.type))).run { genv, globalLevels := gl } |>.run
       match r with
       | .ok cty => ctors := ctors.push { name := cn, type := cty }
       | .error e => return (fromTransError base e, none)
-    let decl := Declaration.inductDecl [] i.npars [{ name := tname, type := ty, ctors := ctors.toList }] false
-    let base := { base with target := some tname, targetKind := "inductive", rule := "inductive/generated" }
+    let decl := Declaration.inductDecl lparams i.npars [{ name := tname, type := ty, ctors := ctors.toList }] false
+    let base := { base with target := some tname, targetKind := "inductive",
+                            rule := if isTemplate then "inductive/generated-template"
+                                    else if lparams.isEmpty then "inductive/generated" else "inductive/generated-levels" }
     match ← addChecked decl with
     | .accepted =>
-      let tgt : IndTarget := { types := #[tname], ctors := #[cnames], univ := .mono, rule := "generated" }
+      let univ := if lparams.isEmpty then UnivRule.mono else .params lparams.length isTemplate
+      let tgt : IndTarget := { types := #[tname], ctors := #[cnames], univ, rule := "generated",
+                               templateParamPos := templateParams.map (·.2) }
       return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty, numParams := i.npars,
+                          levelParams := lparams, isTemplate, templateParams,
                           targetCtors := ctors.map fun c => (c.name, c.type) }, some tgt)
     | .rejected msg => return ({ base with status := "KERNEL_REJECTED", message := msg }, none)
 
@@ -235,6 +295,13 @@ def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
       | .inductive i =>
         let (r, t?) ← processInductive genv results i src.rawDecls[i.name]!
         if let some t := t? then genv := { genv with inds := genv.inds.insert i.name t }
+        -- Non-template inductives with generalized global levels: references obey R3 like
+        -- generalized constants (the type and its constructors carry the same parameters).
+        if r.ok && !r.isTemplate && !r.levelParams.isEmpty then
+          if let some tn := r.target then
+            -- `levelParams` are `globalsOfInd i` mapped by `levelParamName`, in the same order.
+            for n in #[tn] ++ r.targetCtors.map (·.1) do
+              genv := { genv with constGlobals := genv.constGlobals.insert n (globalsOfInd i) }
         pure r
     results := results.insert r.source r
     out := out.push r
@@ -278,6 +345,8 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("target_value", match r.targetValue with | some e => exprJson e | none => .null),
     ("level_params", Json.arr (r.levelParams.map (Json.str ·.toString)).toArray),
     ("num_params", r.numParams),
+    ("template", r.isTemplate),
+    ("template_params", Json.arr (r.templateParams.map fun (l, k) => Json.mkObj [("level", l), ("param", k)])),
     ("universe_level_defaults", r.levelDefaults),
     ("universe_checks", r.universeChecks),
     ("universe_diagnostics", Json.arr (r.levelDiagnostics.map Json.str)),

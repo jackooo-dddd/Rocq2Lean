@@ -31,6 +31,11 @@ inductive UnivRule where
   /-- One universe parameter: the sort level of the type of argument `arg`
   (source template polymorphism, where Rocq computes the level from the arguments). -/
   | templateFromArg (arg : Nat)
+  /-- A generated inductive whose source global levels became `n` Lean universe parameters
+  (docs/UNIVERSE_TRANSLATION.md, R2T/R5): references get fresh level metavariables, solved by
+  Lean's unifier from the arguments and re-checked (template levels: determined by the template
+  parameters' sorts, R5; other global levels: R3 against the native universe graph). -/
+  | params (n : Nat) (template : Bool)
   deriving Repr, Inhabited, BEq
 
 /-- How a source inductive block is realised in Lean. -/
@@ -40,6 +45,8 @@ structure IndTarget where
   univ : UnivRule
   /-- Rule identifier: a bootstrap rule id, or `generated`. -/
   rule : String
+  /-- Template inductives: positions (regular order) of the parameters binding template levels. -/
+  templateParamPos : Array Nat := #[]
   deriving Inhabited, Repr
 
 structure GEnv where
@@ -150,6 +157,7 @@ def univArgs (mind : String) (t : IndTarget) (u : Array IR.Level) (args : Array 
     failT "UNSUPPORTED_FEATURE" s!"non-empty universe instance on {mind} (pilot supports monomorphic references only)"
   match t.univ with
   | .mono => pure []
+  | .params n _ => liftMeta do (List.range n).mapM fun _ => mkFreshLevelMVar
   | .templateFromArg k =>
     if h : k < args.size then
       let l ← liftMeta (do instantiateLevelMVars (← getLevel args[k]))
@@ -157,6 +165,15 @@ def univArgs (mind : String) (t : IndTarget) (u : Array IR.Level) (args : Array 
       pure [l.normalize]
     else
       failT "UNSUPPORTED_FEATURE" s!"{mind} used with fewer than {k + 1} arguments: its universe is undetermined"
+
+/-- R5: a template inductive is translated at the template defaults' quality Type; an argument for a
+template parameter that is a proposition (a Prop-quality instance in Rocq) is rejected explicitly. -/
+def checkTemplateArgs (mind : String) (t : IndTarget) (args : Array Expr) : TransM Unit := do
+  for k in t.templateParamPos do
+    if h : k < args.size then
+      let l ← liftMeta do instantiateLevelMVars (← getLevel args[k])
+      if l.normalize == .zero then
+        failT "UNSUPPORTED_FEATURE" s!"template inductive {mind} instantiated at quality Prop (parameter {k} is a proposition)"
 
 /-! ## Terms -/
 
@@ -230,7 +247,13 @@ partial def trans (t : IR.Term) : TransM Expr := do
   | .app f args => withPath "app" do
     let args' ← args.mapIdxM fun k a => withPath s!"arg{k}" (trans a)
     let f' ← withPath "f" (transHead f args')
-    pure (mkAppN f' args')
+    let e := mkAppN f' args'
+    -- Universe arguments left as metavariables at a reference (generalized constants, generated
+    -- inductives with level parameters) are solved here from the argument types when possible,
+    -- so that later lowering sees concrete levels; `solveLevels` finishes and the kernel re-checks.
+    if f'.isConst && f'.constLevels!.any (·.hasMVar) then
+      liftMeta do try Meta.check e catch _ => pure ()
+    instantiateMVars e
   | .const .. | .ind .. | .construct .. => transHead t #[]
   | .case ind npar _ puinst pparams pctx pret scrut brs =>
     withPath "case" (transCase ind npar puinst pparams pctx pret scrut brs)
@@ -262,9 +285,14 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
   unless brs.size == rv.numMinors do
     failT "EXPORT_VALIDATION_FAILED" s!"case has {brs.size} branches, {iname}.rec has {rv.numMinors} minors"
   let params ← pparams.mapIdxM fun k a => withPath s!"param{k}" (trans a)
-  let indLvls ← univArgs ind.mind tgt puinst params
   let scrut' ← withPath "scrutinee" (trans scrut)
-  let sty ← liftMeta do whnf (← inferType scrut')
+  let sty ← liftMeta do whnf (← instantiateMVars (← inferType scrut'))
+  -- Inductives with level parameters: the recursor's inductive levels are those of the
+  -- scrutinee's type (kernel-forced); otherwise from the universe rule.
+  let indLvls ← match tgt.univ with
+    | .params .. => if sty.getAppFn.isConstOf iname then pure sty.getAppFn.constLevels!
+                    else failT "TRANSLATION_FAILED" s!"scrutinee type is not an application of {iname}"
+    | _ => univArgs ind.mind tgt puinst params
   let sargs := sty.getAppArgs
   unless sty.getAppFn.isConstOf iname && sargs.size == npar + rv.numIndices do
     failT "TRANSLATION_FAILED" s!"scrutinee type is not an application of {iname}"
@@ -431,12 +459,14 @@ partial def transHead (f : IR.Term) (args : Array Expr) : TransM Expr := do
     | none => failT "TRANSLATION_FAILED" s!"reference to constant {c}, which has no accepted translation"
   | .ind i u =>
     let t ← lookupInd i
+    checkTemplateArgs i.mind t args
     return mkConst t.types[i.idx]! (← univArgs i.mind t u args)
   | .construct i c u =>
     let t ← lookupInd i
     let cs := t.ctors[i.idx]!
     unless c < cs.size do
       failT "EXPORT_VALIDATION_FAILED" s!"constructor index {c} out of range for {i.mind}"
+    checkTemplateArgs i.mind t args
     return mkConst cs[c]! (← univArgs i.mind t u args)
   | _ => trans f
 
