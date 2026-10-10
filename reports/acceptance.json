@@ -1,7 +1,7 @@
 {
   "schema": "rocq2lean-acceptance/1",
   "verdict": "HARDENED_M1_M3_ACCEPTED",
-  "head": "de0bfcd7c24550d2068bbef53150d0ee148c70f0",
+  "head": "6c7e763014baafca826f2758f4fdcc42cd5d13ba",
   "gates": {
     "clean_rebuild": {
       "ok": true,
