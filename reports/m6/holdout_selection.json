@@ -40,5 +40,12 @@
   "mathcomp.boot.bigop.big_seq1",
   "mathcomp.boot.bigop.big_nat1"
  ],
- "note": "Roots never requested during development; chosen after tagging m6-freeze-1 and run once on the frozen implementation."
+ "note": "Roots never requested during development; chosen after tagging m6-freeze-1 and run once on the frozen implementation.",
+ "excluded": {
+  "mathcomp.boot.eqtype.eqxx": "not a declaration: a notation in MathComp 2.6 (export: 'Unexpected reference to a notation'); excluded, not replaced"
+ },
+ "manifests": {
+  "prosa_m6": "fixtures/m6/holdout_manifest.json (requires prosa.analysis.facts.behavior.all; the first run used fixtures/m6/manifest.json, which does not load deadlines.v)",
+  "mathcomp_m5": "fixtures/m5/manifest.json"
+ }
 }
