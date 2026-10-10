@@ -39,6 +39,23 @@ parameter (R3′, re-checked by the consumer); and **every** resulting argument 
 Typing-determined levels (`Eq` template level, large-recursor motive level) are recomputed by the
 auditor and checked at every occurrence by the consumer (R4).
 
+## Universe interpretation added in M4 (standard-library inductives and proofs)
+
+* **Template inductives (R5).** The binding of template levels to parameters is read from the Rocq
+  kernel's own `template_universes` record (exported natively and re-checked by the fresh-process
+  round trip), not inferred from MetaRocq's quotation. Translated at the template defaults' quality
+  Type; Prop instances are rejected. Instance levels are forced by the Lean kernel and recomputed by
+  the auditor and the consumer.
+* **Proof-local levels (R2B).** Body-only levels are solved, not generalized; the solution must
+  satisfy the native facts (translator and auditor independently). This changes no statement: only
+  levels invisible in the type are solved.
+* **Term structure.** Binder construction never β-reduces (`bindFVars`): an independent-audit
+  failure exposed that Lean's `mkLambdaFVars`/`instantiateMVars` β-reduce binder types mentioning
+  universe metavariables; the translator no longer uses them on translated terms.
+* **Fixpoints with changed leading arguments.** The generalized set `G` is decided from the source
+  syntax by the translator and recomputed independently by the auditor; binder types, `G`
+  arguments and recursive-result applications are compared.
+
 ## Lowering of `match` and `fix`
 
 The auditor reconstructs everything it can (G5 of the invariants). Remaining determined-by-typing

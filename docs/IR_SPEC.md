@@ -60,6 +60,10 @@ native{body_kind, polymorphic, private_universes, typing_flags}`.
 | `unavailable` | body expected but absent |
 | `unsupported_primitive` | primitive operation or symbol |
 
+`native.template_info` (inductives, M4): `null`, or for a template inductive
+`{defaults: [level], param_arguments: [null | {k: type|quality_sort, u: [{l, bound, n}]}], concl}` from
+the kernel's `template_universes` record (bound levels named by their default level).
+
 `inductive`: `name` (key of the block = first body), `finite`, `npars`, `params`, `bodies[{name,
 indices, sort, type, kelim, ctors[{name, args, indices, type, arity}], projs, r}]`, `universes`,
 `variance`, `deps{type}`, `native{polymorphic, template, private, typing_flags}`.

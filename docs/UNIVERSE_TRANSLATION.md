@@ -43,6 +43,41 @@ maps every source sort exactly to the target sort. Consequently a source declara
 patched (no lifts, no level axioms). Generated inductives must not mention global levels
 (rejected otherwise).
 
+## R2B — Proof-local levels (M4)
+
+A global level that occurs in a constant's body but **not** in its type is not generalized (clients
+never see it): it becomes a level metavariable, solved by Lean's unifier with the rest of the
+declaration. Every native fact between such a level and `Set`, a type level or another proof-local
+level must hold with each proof-local level read as its solution (summand-wise entailment in the
+native graph) — checked by the translator (`checkBodyLevel`, `UNIVERSE_REJECTED`) and independently
+by the auditor (`check_body_levels`), which also checks that the reported proof-local set is exactly
+the source's. If unconstrained, the solution is the level's **minimal model** (`Set < m` gives 1,
+`l ≤ m` gives `u_l`, `l < m` gives `u_l + 1`), recorded with a kernel justification (R3′). Typical
+source: the `f_equal` tactic leaves `@eq Type@{m} A A` with `A : Type@{l}` in a proof term, typed in
+Rocq by cumulativity (`l ≤ m`); the solution is `σ(m) = u_l`. R3 coherence: an argument for a
+proof-local level of the referring declaration must equal its solution.
+
+## R2T — Inductives with global levels (M4)
+
+The global levels of an inductive block (arity and constructor types) become universe parameters
+of the generated Lean inductive, in sorted order, and the constructors refer to the inductive at
+exactly those parameters. Non-template inductives obey R3 at references (type and constructors).
+
+## R5 — Template inductives (M4)
+
+Rocq 9.3 represents template polymorphism as an abstracted universe context with a default instance
+(`template_defaults`, substituted by MetaRocq into the quoted terms) and, per parameter, the sort
+binding a template level (`template_param_arguments`). The exporter records this natively
+(`native.template_info`), checked by the round trip. Rule: each template level `l` is bound by exactly
+one parameter of sort `Type@{l}` (offset 0); every global level of the block is a template level.
+At a reference (type, constructor or recursor) the target argument `σ` for `l` is determined by the
+argument `A` of that parameter: `A : Sort (σ+1)` — exactly Rocq's template instantiation (the level
+is substituted by the argument's level, without R3's no-raising condition). The kernel forces it;
+the auditor recomputes it (`InstanceLevels`, from the *source* template record, deferred count
+reported) and the consumer checks every occurrence (`instance_levels`). Parameters that also bind a
+sort quality (`prod`: "can be instantiated to Prop") are translated at the template defaults'
+quality Type; an argument that is a proposition is rejected explicitly (`UNSUPPORTED_FEATURE`).
+
 ## R3 — Reference instantiation (checked by translator and auditor)
 
 A reference from declaration `d` to a generalized constant `c` carries one target level `σ`
