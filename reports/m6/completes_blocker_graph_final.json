@@ -1,0 +1,9 @@
+{
+  "target": "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+  "run": "runs/m6-gate-finishtime5",
+  "closure_size": 1716,
+  "accepted": 1716,
+  "leaves_by_category": {},
+  "leaves": {},
+  "pending_only_by_dependencies": 0
+}

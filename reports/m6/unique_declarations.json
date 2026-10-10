@@ -1,0 +1,22 @@
+{
+ "runs": {
+  "finishtime5": 1717,
+  "behavior61": 426,
+  "finishtime4": 123,
+  "holdout13_prosa": 411,
+  "holdout14_mathcomp": 132
+ },
+ "sum_of_closures": 2809,
+ "unique": 2067,
+ "unique_by_kind": {
+  "theorem/opaque": 1209,
+  "definition": 773,
+  "inductive": 85
+ },
+ "unique_prosa": 152,
+ "unique_prosa_by_kind": {
+  "theorem/opaque": 85,
+  "definition": 65,
+  "inductive": 2
+ }
+}

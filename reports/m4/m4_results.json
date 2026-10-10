@@ -301,15 +301,10 @@
       "detector": "structure"
     }
   ],
-  "blockers": [
+  "former_blockers": [
     {
       "root": "Corelib.Lists.ListDef.nth",
-      "reasons": [
-        "fixpoint body is not a match on its decreasing argument"
-      ],
-      "dependency_path": [
-        "Corelib.Lists.ListDef.nth"
-      ]
+      "status": "CANDIDATE_SUPPORTED"
     }
   ],
   "former_blockers_verified": {

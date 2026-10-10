@@ -1,0 +1,85 @@
+{
+ "target": "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+ "gate_closure": 1717,
+ "accepted_by_kind": {
+  "inductive": 70,
+  "definition": 642,
+  "theorem/opaque": 1005
+ },
+ "rule_usage": {
+  "universe_lowered (R3-down)": 1,
+  "plain_levels (inductives)": 45,
+  "delta_inlined": 4,
+  "sort_lowered_levels (R2B-S)": 5,
+  "statement specializations (R2B-P in_type)": 159,
+  "R2B-P proof-local": 0,
+  "cumulativity tier": 164,
+  "bounded solver assignments": 0
+ },
+ "source_instances": {
+  "checked": 159,
+  "INSTANCE_OK": 159
+ },
+ "steps": [
+  {
+   "step": "baseline (b29ab03)",
+   "accepted": 792,
+   "closure": 1716,
+   "leaves": 34
+  },
+  {
+   "step": "+ iota-generalized and mutual fixpoints (dev)",
+   "accepted": 1192,
+   "closure": 1716,
+   "leaves": 22
+  },
+  {
+   "step": "+ zeta, functional fields, non-uniform fix, delta-beta, course-of-values, R3-down, plain inductive levels, R2B-S, specializations (dev)",
+   "accepted": 1555,
+   "closure": 1716,
+   "leaves": 8
+  },
+  {
+   "step": "final (33ed468)",
+   "accepted": 1716,
+   "closure": 1716,
+   "leaves": 0
+  }
+ ],
+ "baseline_leaves_resolved": [
+  "Corelib.BinNums.IntDef/Z.pos_sub",
+  "Corelib.BinNums.PosDef/Pos.add",
+  "Corelib.BinNums.PosDef/Pos.add_carry",
+  "Corelib.BinNums.PosDef/Pos.compare_cont",
+  "Corelib.BinNums.PosDef/Pos.eqb",
+  "Corelib.BinNums.PosDef/Pos.sub_mask",
+  "Corelib.BinNums.PosDef/Pos.sub_mask_carry",
+  "Corelib.Init.Wf.Acc_inv",
+  "Corelib.Init.Wf.Acc_rect",
+  "Corelib.Lists.ListDef.nth",
+  "Stdlib.PArith.BinPos/Pos.add_no_neutral",
+  "Stdlib.PArith.BinPos/Pos.add_reg_r",
+  "Stdlib.PArith.BinPos/Pos.peano_rect",
+  "Stdlib.micromega.EnvRing.Padd",
+  "Stdlib.micromega.EnvRing.Peq",
+  "Stdlib.micromega.EnvRing.Pmul",
+  "Stdlib.micromega.EnvRing.Psub",
+  "Stdlib.micromega.EnvRing.norm_aux",
+  "Stdlib.micromega.RingMicromega.SORaddon",
+  "Stdlib.micromega.RingMicromega.eval_Psatz_Sound",
+  "Stdlib.micromega.Tauto.xcnf",
+  "Stdlib.micromega.ZMicromega.ZArithProof",
+  "Stdlib.micromega.ZMicromega.ZArithProof_ind",
+  "Stdlib.micromega.ZMicromega.ZChecker",
+  "Stdlib.setoid_ring.Ring_polynom.PNSubst1",
+  "Stdlib.setoid_ring.Ring_polynom.PNSubstL",
+  "Stdlib.setoid_ring.Ring_polynom.PNSubst_ok",
+  "Stdlib.setoid_ring.Ring_polynom.POneSubst_ok",
+  "Stdlib.setoid_ring.Ring_polynom.Padd",
+  "Stdlib.setoid_ring.Ring_polynom.Peq",
+  "Stdlib.setoid_ring.Ring_polynom.Pmul",
+  "Stdlib.setoid_ring.Ring_polynom.Psub",
+  "Stdlib.setoid_ring.Ring_polynom.norm_aux",
+  "Stdlib.setoid_ring.Ring_theory.IDmorph"
+ ]
+}

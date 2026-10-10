@@ -53,12 +53,83 @@
       "detectors": [
         "structure"
       ]
+    },
+    {
+      "mutation": "acc-empty-relation",
+      "declaration": "AF.AccFix.search",
+      "kernel": "REJECTED",
+      "verify_exit": 2,
+      "detectors": []
+    },
+    {
+      "mutation": "iota-swapped-minors",
+      "declaration": "IF.IotaFix.eqb",
+      "kernel": "ACCEPTED",
+      "verify_exit": 2,
+      "detectors": [
+        "structure"
+      ]
+    },
+    {
+      "mutation": "cov-wrong-subterm",
+      "declaration": "IF.IotaFix.norm",
+      "kernel": "ACCEPTED",
+      "verify_exit": 2,
+      "detectors": [
+        "structure"
+      ]
+    },
+    {
+      "mutation": "zeta-generalized-argument",
+      "declaration": "IF.IotaFix.sumto",
+      "kernel": "ACCEPTED",
+      "verify_exit": 2,
+      "detectors": [
+        "structure"
+      ]
+    },
+    {
+      "mutation": "functional-field-argument",
+      "declaration": "IF.IotaFix.walk",
+      "kernel": "ACCEPTED",
+      "verify_exit": 2,
+      "detectors": [
+        "structure"
+      ]
+    },
+    {
+      "mutation": "delta-beta-inlined-call",
+      "declaration": "IF.IotaFix.count",
+      "kernel": "ACCEPTED",
+      "verify_exit": 2,
+      "detectors": [
+        "structure"
+      ]
+    },
+    {
+      "mutation": "mutual-wrong-projection",
+      "declaration": "MF.MutFix.add",
+      "kernel": "ACCEPTED",
+      "verify_exit": 2,
+      "detectors": [
+        "structure"
+      ]
+    },
+    {
+      "mutation": "mutual-wrong-cross-call",
+      "declaration": "MF.MutFix.add",
+      "kernel": "ACCEPTED",
+      "verify_exit": 2,
+      "detectors": [
+        "structure"
+      ]
     }
   ],
   "m6-accfix": {
     "roots": {
       "AF.AccFix.search_ex": "TRANSLATED_AND_CHECKED",
-      "AF.AccFix.search_ex1": "TRANSLATED_AND_CHECKED"
+      "AF.AccFix.search_ex1": "TRANSLATED_AND_CHECKED",
+      "AF.AccFix.search_step0": "TRANSLATED_AND_CHECKED"
     },
     "exit_codes": [
       0,
@@ -69,6 +140,290 @@
   "m6-accfix-fn": {
     "roots": {
       "AF.AccFix.search": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-iotafix": {
+    "roots": {
+      "IF.IotaFix.eqb_ex": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.eqb_ex2": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.cmp_ex": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.cmp_ex2": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.nth_ex": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.nth_ex2": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.dep_ex": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.dep_ex2": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.size_ex": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.eqb_step": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.eqb_mixed": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.cmp_step": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.nth_step": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.size_step": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.sumto_ex": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.sumto_step": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.walk_ex": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.walk_step": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.padd_ex": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.padd_step": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.count_ex": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.count_step": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.norm_ex": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.norm_ex2": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.norm_step": "TRANSLATED_AND_CHECKED",
+      "IF.IotaFix.norm_step3": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-iotafix-fn": {
+    "roots": {
+      "IF.IotaFix.eqb": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-iotafix-norm": {
+    "roots": {
+      "IF.IotaFix.norm": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-iotafix-sumto": {
+    "roots": {
+      "IF.IotaFix.sumto": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-iotafix-walk": {
+    "roots": {
+      "IF.IotaFix.walk": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-iotafix-count": {
+    "roots": {
+      "IF.IotaFix.count": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-stdfix": {
+    "roots": {
+      "SF.StdFix.add_ex": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.add_carry_ex": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.sub_mask_ex": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.sub_mask_ex2": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.compare_ex": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.compare_cont_ex": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.eqb_ex": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.pos_sub_ex": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.peano_ex": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.nth_ex": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.add_step": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.sub_mask_step": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.compare_cont_step": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.eqb_step": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.pos_sub_step": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.peano_step": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.nth_step": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.acc_rect_step": "TRANSLATED_AND_CHECKED",
+      "SF.StdFix.acc_inv_step": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-cast-repair": {
+    "roots": {
+      "Stdlib.setoid_ring.Ring_polynom.norm_aux_PEadd": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-nested": {
+    "roots": {
+      "Stdlib.micromega.ZMicromega.ZArithProof_ind": "TRANSLATED_AND_CHECKED",
+      "Stdlib.micromega.ZMicromega.ZChecker": "TRANSLATED_AND_CHECKED",
+      "Stdlib.micromega.RingMicromega.SORaddon": "TRANSLATED_AND_CHECKED",
+      "Stdlib.setoid_ring.Ring_theory.IDmorph": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-delta-inline": {
+    "roots": {
+      "Stdlib.Arith.PeanoNat.Nat.strong_right_induction": null,
+      "Stdlib.ZArith.BinInt.Z.strong_left_induction": null
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-nested-neg": {
+    "roots": {
+      "IF.IotaFix.rsize": "UNSUPPORTED_FEATURE"
+    },
+    "exit_codes": [
+      0,
+      2,
+      null
+    ]
+  },
+  "m6-mutfix": {
+    "roots": {
+      "MF.MutFix.add_ex": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.add_carry_ex": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.sub_ex": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.sub_ex2": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.sub_ex3": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.evens_s_ex": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.odds_s_ex": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.alt_ex": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.alt_ex2": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.add_step": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.add_carry_step": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.sub_step": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.odds_s_step": "TRANSLATED_AND_CHECKED",
+      "MF.MutFix.alt_step": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-mutfix-neg": {
+    "roots": {
+      "MF.MutFix.evens": "UNSUPPORTED_FEATURE"
+    },
+    "exit_codes": [
+      0,
+      2,
+      null
+    ]
+  },
+  "m6-mutfix-fn": {
+    "roots": {
+      "MF.MutFix.add": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-r3down": {
+    "roots": {
+      "Cu.Cumul.box_len": "TRANSLATED_AND_CHECKED",
+      "Cu.Cumul.steps_ex": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-cumul-pos": {
+    "roots": {
+      "Cu.Cumul.uses_n": "TRANSLATED_AND_CHECKED",
+      "Cu.Cumul.up": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-cumul-neg": {
+    "roots": {
+      "Cu.Cumul.prop_in_m": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      2
+    ]
+  },
+  "m6-cumul-sort": {
+    "roots": {
+      "Cu.Cumul.up_nat": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-cumul-sortneg": {
+    "roots": {
+      "Cu.Cumul.up_binder": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      2
+    ]
+  },
+  "m6-specialized": {
+    "roots": {
+      "Stdlib.Lists.List.length_rev": "TRANSLATED_AND_CHECKED",
+      "Stdlib.Lists.List.in_rev": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m6-specialized-root": {
+    "roots": {
+      "Corelib.Classes.Morphisms.trans_co_impl_morphism_obligation_1": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      2
+    ]
+  },
+  "m6-r3up": {
+    "roots": {
+      "mathcomp.boot.bigop.Monoid.isLaw.phant_axioms": null,
+      "mathcomp.boot.bigop.Monoid.isComLaw.phant_axioms": null
     },
     "exit_codes": [
       0,
