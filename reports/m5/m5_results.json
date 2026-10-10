@@ -1,0 +1,132 @@
+{
+  "m5-eq": {
+    "roots": {
+      "mathcomp.boot.eqtype.eqP": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.eqtype.eq_refl": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.eqtype.eq_sym": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.eqtype.eqVneq": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.ssrnat.eqnP": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.ssrnat.eqnE": "TRANSLATED_AND_CHECKED",
+      "Corelib.ssr.ssrbool.andP": "TRANSLATED_AND_CHECKED",
+      "Corelib.ssr.ssrbool.orP": "TRANSLATED_AND_CHECKED",
+      "Corelib.ssr.ssrbool.negP": "TRANSLATED_AND_CHECKED",
+      "Corelib.ssr.ssrbool.idP": "TRANSLATED_AND_CHECKED",
+      "Corelib.ssr.ssrbool.introT": "TRANSLATED_AND_CHECKED",
+      "Corelib.ssr.ssrbool.elimT": "TRANSLATED_AND_CHECKED",
+      "Corelib.ssr.ssrbool.iffP": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "closure": 57
+  },
+  "m5-seq": {
+    "roots": {
+      "mathcomp.boot.seq.count_cat": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.filter_cat": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.size_cat": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.cat0s": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.cats0": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.catA": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.size_map": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.map_cat": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.count_filter": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.size_filter": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.has_count": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.all_count": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.count_predT": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.size_iota": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.bigop.index_iota": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "closure": 93
+  },
+  "m5-big": {
+    "roots": {
+      "mathcomp.boot.bigop.big_nil": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.bigop.big_cons": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.mem_iota": "TRANSLATED_AND_CHECKED",
+      "mathcomp.boot.seq.mem_cat": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "closure": 121
+  },
+  "prepared": {
+    "sealed": [
+      "mathcomp.boot.bigop/bigop.body",
+      "mathcomp.boot.bigop/bigop.unlock"
+    ],
+    "lowered": [
+      "mathcomp.boot.ssrnat.ltngtP"
+    ]
+  },
+  "m5-fixref": {
+    "roots": {
+      "FR.FixRef.keep_3": "TRANSLATED_AND_CHECKED",
+      "FR.FixRef.subx_3_3": "TRANSLATED_AND_CHECKED",
+      "FR.FixRef.subx_5_2": "TRANSLATED_AND_CHECKED",
+      "FR.FixRef.vlen_2": "TRANSLATED_AND_CHECKED",
+      "FR.FixRef.sub_3_3": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "closure": 12
+  },
+  "m5-fixref-def": {
+    "roots": {
+      "FR.FixRef.keep": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "closure": 2
+  },
+  "blockers": [
+    {
+      "root": "mathcomp.boot.bigop.big_ord_recr",
+      "status": "UNSUPPORTED_FEATURE",
+      "reasons": [
+        "universe instance"
+      ],
+      "dependency_path": [
+        "mathcomp.boot.bigop.big_ord_recr",
+        "mathcomp.boot.fintype.fintype_ordinal__canonical__fintype_Finite",
+        "mathcomp.boot.fintype.HB_unnamed_factory_66",
+        "mathcomp.boot.fintype.HB_unnamed_mixin_63",
+        "mathcomp.boot.fintype.HB_unnamed_factory_59"
+      ]
+    },
+    {
+      "root": "mathcomp.boot.fintype.card_ord",
+      "status": "UNSUPPORTED_FEATURE",
+      "reasons": [
+        "template inductive with unbound or non-template global levels"
+      ],
+      "dependency_path": [
+        "mathcomp.boot.fintype.card_ord",
+        "Corelib.ssr.ssrbool.mem",
+        "Corelib.ssr.ssrbool.mem_pred"
+      ]
+    }
+  ]
+}

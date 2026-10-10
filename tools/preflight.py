@@ -275,8 +275,9 @@ def template_blockers(d, found):
             return
         bound.append(us[0]["l"])
     defaults = ti.get("defaults", [])
-    if sorted(bound) != sorted(defaults) or not gs <= set(defaults):
-        found.add("template inductive with unbound or non-template global levels", ["native", "template_info"])
+    # other (non-template) levels are solved by unification or kept as non-template parameters (R5S)
+    if sorted(bound) != sorted(defaults):
+        found.add("template inductive with unbound template levels", ["native", "template_info"])
 
 
 def relaxed_flags(d):

@@ -1,0 +1,114 @@
+{
+  "schema": "rocq2lean-regression/1",
+  "lost": 0,
+  "stages": [
+    {
+      "stage": "smoke-idnat",
+      "roots_before": 1,
+      "roots_after": 1,
+      "accepted_before": 2,
+      "accepted_after": 2,
+      "same_roots": true,
+      "same_accepted": true,
+      "lost_roots": [],
+      "lost_declarations": [],
+      "gained_declarations": []
+    },
+    {
+      "stage": "m1",
+      "roots_before": 7,
+      "roots_after": 7,
+      "accepted_before": 12,
+      "accepted_after": 12,
+      "same_roots": true,
+      "same_accepted": true,
+      "lost_roots": [],
+      "lost_declarations": [],
+      "gained_declarations": []
+    },
+    {
+      "stage": "m2",
+      "roots_before": 12,
+      "roots_after": 12,
+      "accepted_before": 20,
+      "accepted_after": 20,
+      "same_roots": true,
+      "same_accepted": true,
+      "lost_roots": [],
+      "lost_declarations": [],
+      "gained_declarations": []
+    },
+    {
+      "stage": "m3a",
+      "roots_before": 4,
+      "roots_after": 4,
+      "accepted_before": 4,
+      "accepted_after": 4,
+      "same_roots": true,
+      "same_accepted": true,
+      "lost_roots": [],
+      "lost_declarations": [],
+      "gained_declarations": []
+    },
+    {
+      "stage": "m3b",
+      "roots_before": 7,
+      "roots_after": 7,
+      "accepted_before": 16,
+      "accepted_after": 16,
+      "same_roots": true,
+      "same_accepted": true,
+      "lost_roots": [],
+      "lost_declarations": [],
+      "gained_declarations": []
+    },
+    {
+      "stage": "m3c",
+      "roots_before": 11,
+      "roots_after": 11,
+      "accepted_before": 21,
+      "accepted_after": 21,
+      "same_roots": true,
+      "same_accepted": true,
+      "lost_roots": [],
+      "lost_declarations": [],
+      "gained_declarations": []
+    },
+    {
+      "stage": "m3d",
+      "roots_before": 5,
+      "roots_after": 5,
+      "accepted_before": 22,
+      "accepted_after": 22,
+      "same_roots": true,
+      "same_accepted": true,
+      "lost_roots": [],
+      "lost_declarations": [],
+      "gained_declarations": []
+    },
+    {
+      "stage": "holdout",
+      "roots_before": 9,
+      "roots_after": 9,
+      "accepted_before": 40,
+      "accepted_after": 40,
+      "same_roots": true,
+      "same_accepted": true,
+      "lost_roots": [],
+      "lost_declarations": [],
+      "gained_declarations": []
+    },
+    {
+      "stage": "m3-compute",
+      "roots_before": 78,
+      "roots_after": 78,
+      "accepted_before": 95,
+      "accepted_after": 95,
+      "same_roots": true,
+      "same_accepted": true,
+      "lost_roots": [],
+      "lost_declarations": [],
+      "gained_declarations": []
+    }
+  ]
+}
