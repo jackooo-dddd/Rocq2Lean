@@ -153,13 +153,20 @@ def template_binding(d):
         return None
     ti = d["native"].get("template_info") or {}
     out = {}
+    params = list(reversed(d["params"]))              # regular order
     for k, pa in enumerate(ti.get("param_arguments", [])):
         if pa is None:
             continue
         us = pa.get("u", [])
         if pa.get("k") not in ("type", "quality_sort") or len(us) != 1 or us[0].get("n") != 0 or us[0].get("bound") is None:
             raise Mismatch(f"template parameter {k} outside the audited fragment")
-        out[us[0]["l"]] = k
+        # the quoted parameter is an arity `∀ zs, Type@{l}`; record how many binders precede the sort
+        t, nz = params[k]["ty"], 0
+        while t["k"] == "prod":
+            t, nz = t["b"], nz + 1
+        if t != {"k": "sort", "s": {"k": "type", "u": [{"l": {"k": "global", "n": us[0]["l"]}, "n": 0}]}}:
+            raise Mismatch(f"template parameter {k} is not an arity ending in Type@{{{us[0]['l']}}}")
+        out[us[0]["l"]] = (k, nz)
     if sorted(out) != sorted(ti.get("defaults", [])) or not set(ind_globals(d)) <= set(out):
         raise Mismatch("template binding does not cover exactly the template levels")
     return out
@@ -839,6 +846,22 @@ class InstanceLevels:
             return self.result_sort(ctx[head["i"]], len(args))
         return None
 
+    def arity_level(self, a, nz, ctx):
+        """Codomain sort level of the type of a type family `a` taking `nz` arguments (nz = 0: the
+        sort level of the type `a`)."""
+        for _ in range(nz):
+            if a["k"] != "lam":
+                head, args = Auditor.unspine(a)
+                if head["k"] == "const":
+                    return self.result_sort(self.head_type(head), len(args) + nz)
+                if head["k"] == "bvar" and head["i"] < len(ctx):
+                    return self.result_sort(ctx[head["i"]], len(args) + nz)
+                return None
+            ctx = [a["t"]] + ctx
+            a = a["b"]
+            nz -= 1
+        return self.sort_of_type(a, ctx)
+
     def expect(self, got, want, what, problems):
         if want is None:
             self.deferred += 1
@@ -872,9 +895,9 @@ class InstanceLevels:
                 if off is None:
                     rec_ = self.recursors.get(n)
                     off = 1 if rec_ is not None and self.large(rec_) else 0
-                for j, k in bind:
+                for j, k, nz in bind:
                     if k < len(args) and j + off < len(us):
-                        self.expect({"k": "succ", "l": us[j + off]}, self.sort_of_type(args[k], ctx),
+                        self.expect({"k": "succ", "l": us[j + off]}, self.arity_level(args[k], nz, ctx),
                                     f"{where}: {n} (template level {j} from parameter {k})", problems)
             rec = self.recursors.get(n)
             if rec is not None and rec["num_motives"] == 1 and us:
@@ -1132,7 +1155,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                 tb = None
             if tb:
                 lps = [level_param(g) for g in ind_globals(d_)]
-                bind = [(lps.index(level_param(l)), k) for l, k in tb.items()]
+                bind = [(lps.index(level_param(l)), k, nz) for l, (k, nz) in tb.items()]
                 inst.template[r_["target"]] = (bind, 0)
                 for c in r_.get("target_ctors", []):
                     inst.template[c["name"]] = (bind, 0)
@@ -1174,7 +1197,8 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     raise Mismatch(f"universe parameters {r.get('level_params')} are not the generalized globals {want_lp}")
                 tb = template_binding(d)
                 if bool(r.get("template")) != (tb is not None) or \
-                        sorted((x["level"], x["param"]) for x in r.get("template_params", [])) != sorted((tb or {}).items()):
+                        sorted((x["level"], x["param"]) for x in r.get("template_params", [])) != \
+                        sorted((l, kn[0]) for l, kn in (tb or {}).items()):
                     raise Mismatch("template status/binding differs from the source kernel record")
                 aud.check(b["type"], r["target_type"], ["arity"])
                 self_ref = ("const", t, [{"k": "param", "n": l} for l in want_lp])

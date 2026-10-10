@@ -97,7 +97,14 @@ def checkInstanceLevels (tmpl : Std.HashMap Name (Array (Nat × Nat))) (v : Expr
         for (j, k) in bind do
           if h : k < args.size then
             if j + off < us.length then
-              same s!"{c} (template level {j} from parameter {k})" (.succ us[j + off]!) (← getLevel args[k])
+              -- the codomain sort of the argument's type (arity parameters: of the type family)
+              let s ← forallTelescopeReducing (← inferType args[k]) fun _ b => do
+                match ← whnf b with
+                | .sort s => pure (some s)
+                | _ => pure none
+              match s with
+              | some s => same s!"{c} (template level {j} from parameter {k})" (.succ us[j + off]!) s
+              | none => bad.modify (·.push s!"{c}: template parameter {k} does not have an arity type")
       if let some (.recInfo rv) := (← getEnv).find? c then
         if rv.numMotives == 1 && args.size > rv.numParams && !us.isEmpty then
           if large then

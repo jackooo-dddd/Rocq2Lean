@@ -174,9 +174,16 @@ template parameter that is a proposition (a Prop-quality instance in Rocq) is re
 def checkTemplateArgs (mind : String) (t : IndTarget) (args : Array Expr) : TransM Unit := do
   for k in t.templateParamPos do
     if h : k < args.size then
-      let l ← liftMeta do instantiateLevelMVars (← getLevel args[k])
+      -- the codomain sort of the argument's type (the argument itself for `Type@{l}`, the result
+      -- of the type family for an arity parameter)
+      let l ← liftMeta do
+        forallTelescopeReducing (← inferType args[k]) fun _ b => do
+          match ← whnf b with
+          | .sort s => instantiateLevelMVars s
+          | _ => pure (Level.succ .zero)
       if l.normalize == .zero then
-        failT "UNSUPPORTED_FEATURE" s!"template inductive {mind} instantiated at quality Prop (parameter {k} is a proposition)"
+        failT "UNSUPPORTED_FEATURE" (s!"template inductive {mind} instantiated at quality Prop: parameter {k} receives a " ++
+          "proposition (a Prop instance, or Rocq's Prop ≤ Type cumulativity), which Lean cannot express without a lift")
 
 /-- Instantiate assigned *universe-level* metavariables only, without touching term structure.
 (`instantiateMVars` also β-reduces applications whose head becomes or is a λ once metavariables

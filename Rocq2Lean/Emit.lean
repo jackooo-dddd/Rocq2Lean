@@ -218,11 +218,15 @@ def templateBinding (i : IR.InductiveDecl) (globals : Array String) :
       (us[0]!.getObjValAs? Nat "n").toOption == some 0 && !(us[0]!.getObjValD "bound").isNull
     unless ok do throw ("UNSUPPORTED_FEATURE", s!"template parameter {k} binds a level with an offset or an algebraic universe")
     let l := (us[0]!.getObjValAs? String "l").toOption.getD ""
-    -- the quoted parameter (MetaRocq, innermost-first) must have exactly that sort
-    match i.params[i.params.size - 1 - k]!.type with
+    -- the quoted parameter (MetaRocq, innermost-first) must be an arity ending in exactly that
+    -- sort: `Type@{l}` or `∀ zs, Type@{l}` (e.g. sigT's `P : A → Type@{l}`)
+    let rec codomain : IR.Term → IR.Term
+      | .prod _ _ b => codomain b
+      | t => t
+    match codomain i.params[i.params.size - 1 - k]!.type with
     | .sort (.type #[{ level := .global l', offset := 0 }]) =>
       unless l' == l do throw ("EXPORT_VALIDATION_FAILED", s!"template parameter {k}: quoted sort level {l'} differs from the kernel's {l}")
-    | _ => throw ("EXPORT_VALIDATION_FAILED", s!"template parameter {k}: quoted type is not Type@\{{l}}")
+    | _ => throw ("UNSUPPORTED_FEATURE", s!"template parameter {k}: its type is not an arity ending in Type@\{{l}}")
     out := out.push (l, k)
   for d in defaults do
     unless (out.filter (·.1 == d)).size == 1 do throw ("UNSUPPORTED_FEATURE", s!"template level {d} is not bound by exactly one parameter")

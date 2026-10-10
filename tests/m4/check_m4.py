@@ -104,6 +104,20 @@ Rn, _ = results(neg)
 check(rc == 2 and Rn["M4.M4Neg.pp"]["status"] == "UNSUPPORTED_FEATURE" and "quality Prop" in Rn["M4.M4Neg.pp"]["message"],
       f"prod instantiated at Prop rejected explicitly ({Rn['M4.M4Neg.pp']['status']}: {Rn['M4.M4Neg.pp']['message'][:70]})")
 
+# 5b. Template parameter of arity type (sigT's P : A -> Type): genuine Corelib sigT with projT1/projT2
+#     verifies; a Prop-valued family (Rocq: Prop <= Type cumulativity) is rejected explicitly.
+st, rcs, Rs = pipeline("m4-sigt", ["Corelib.Init.Specif.sigT", "Corelib.Init.Specif.projT1", "Corelib.Init.Specif.projT2"])
+sg = Rs.get("Corelib.Init.Specif.sigT", {})
+check(rcs == [0, 0, 0, 0] and sg.get("template") is True and sorted(x["param"] for x in sg.get("template_params", [])) == [0, 1],
+      f"Corelib sigT (template levels bound by A : Type and the arity P : A -> Type), projT1, projT2 VERIFIED {rcs}")
+neg2 = ROOT / "runs" / "m4-neg-sigprop"
+shutil.rmtree(neg2, ignore_errors=True)
+assert cli("export", "--manifest", MAN, "--roots", "M4.M4Neg.sig_prop", "--out", neg2)[0] == 0
+rc, _ = cli("translate", "--input", neg2 / "source.ndjson", "--out", neg2)
+r2 = results(neg2)[0]["M4.M4Neg.sig_prop"]
+check(rc == 2 and r2["status"] == "UNSUPPORTED_FEATURE" and "cumulativity" in r2["message"],
+      f"Prop-valued family for sigT rejected explicitly ({r2['status']})")
+
 # 6. Negative: mutated native template metadata is caught by the fresh-process round trip.
 lines = [json.loads(l) for l in open(run / "source.ndjson")]
 lst = next(x for x in lines if x.get("name") == f"{D}.list")

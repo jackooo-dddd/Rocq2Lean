@@ -243,6 +243,20 @@
       }
     ]
   },
+  "m4-sigt": {
+    "roots": {
+      "Corelib.Init.Specif.sigT": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Specif.projT1": "TRANSLATED_AND_CHECKED",
+      "Corelib.Init.Specif.projT2": "TRANSLATED_AND_CHECKED"
+    },
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "closure": 3
+  },
   "mutations": [
     {
       "mutation": "template-binding",
