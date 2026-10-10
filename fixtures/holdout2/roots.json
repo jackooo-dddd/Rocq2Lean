@@ -1,0 +1,16 @@
+[
+ "H2.Holdout2.add_comm'",
+ "H2.Holdout2.points_flip",
+ "H2.Holdout2.fin_val_lift",
+ "H2.Holdout2.tmax_comm",
+ "H2.Holdout2.tmax_idem",
+ "H2.Holdout2.tri_neq",
+ "H2.Holdout2.S_inj'",
+ "H2.Holdout2.ev_dbl",
+ "H2.Holdout2.ev_plus4",
+ "H2.Holdout2.ev_sum",
+ "H2.Holdout2.len_revA",
+ "H2.Holdout2.len_mapL",
+ "H2.Holdout2.three_eq",
+ "H2.Holdout2.use_three"
+]
