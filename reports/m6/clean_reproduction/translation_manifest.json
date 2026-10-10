@@ -1,0 +1,14 @@
+{
+  "schema": "rocq2lean-translation-manifest/1",
+  "run_id": "e1e0a7fe-49b7-451b-91ab-75e54e7bae44",
+  "input": "/home/shunqwang4/research/r2l-m6clean-33ed4686a7c0/runs/m6-gate-finishtime5/source.ndjson",
+  "input_sha256": "b2e9caf3224b0b975c8a4632a4656d77128b79a59e6f156a190c064cee28f369",
+  "report_sha256": "956ebd5783f1151dcc371f4b99108eea069ddcac9c982eeaf3d97bfdb623330b",
+  "module_lean_sha256": "bf8fd86ec8197de30b17b71413103bf287af78dfc7559e00f278f4000a72b444",
+  "module_olean_sha256": "d43abc93e32a7b3e9055b2a2f87c267f7d2cdba1d5131e825e010a85f5951d87",
+  "module_ilean_sha256": "54bbe751dd4db4105032c0fe4dcab1f24ef00cf30916361eca651495dc7ba59e",
+  "translator_build_sha256": "52dff7180e84b962a756e8e34e21ee2fcf7ce46db32d7b48261b7e32ace0999e",
+  "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+  "toolchain_sha256": "b3abee0cf3aaa40a9cf2cb36f1a1f93e35bd435cf13707eb9ba496880bc42922",
+  "lean_exit": 0
+}

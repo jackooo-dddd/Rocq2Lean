@@ -16,6 +16,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests"))
 from lib import cli  # noqa: E402
 
+# the patched Prosa build the manifest requires (as scripts/test-m6-prosa does)
+if not (ROOT / ".work" / "prosa-0.6-rocq93" / "analysis" / "facts" / "behavior" / "all.vo").exists():
+    subprocess.run([str(ROOT / "scripts" / "setup-prosa"), "--full"], check=True)
 REQ = json.loads((ROOT / "fixtures" / "m6" / "regression" / "finishtime5.json").read_text())
 RUN = ROOT / "runs" / "m6-gate-finishtime5"
 

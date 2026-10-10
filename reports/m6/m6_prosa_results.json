@@ -1,5 +1,5 @@
 {
-  "git_head": "b29ab03763dc11c58408697c7ad6163054945a0a",
+  "git_head": "33ed4686a7c0790ae2d7244ee62c999a2309ac70",
   "git_dirty": true,
   "runs": {
     "behavior61": {
@@ -187,14 +187,14 @@
         "prosa.analysis.facts.behavior.supply.supply_at_complement": "TRANSLATED_AND_CHECKED",
         "prosa.analysis.facts.behavior.supply.is_blackout_complement": "TRANSLATED_AND_CHECKED",
         "prosa.analysis.facts.behavior.supply.supply_at_le_1": "TRANSLATED_AND_CHECKED",
-        "prosa.analysis.facts.behavior.supply.unit_supply_proc_service_case": "BLOCKED_DEPENDENCY",
+        "prosa.analysis.facts.behavior.supply.unit_supply_proc_service_case": "TRANSLATED_AND_CHECKED",
         "prosa.analysis.facts.behavior.supply.supply_during_bound": "BLOCKED_DEPENDENCY",
         "prosa.analysis.facts.behavior.supply.blackout_during_bound": "BLOCKED_DEPENDENCY",
         "prosa.analysis.facts.behavior.supply.supply_during_last_plus_before": "TRANSLATED_AND_CHECKED",
         "prosa.analysis.facts.behavior.supply.blackout_during_last_plus_before": "TRANSLATED_AND_CHECKED",
         "prosa.analysis.facts.behavior.supply.supply_during_complement": "BLOCKED_DEPENDENCY",
         "prosa.analysis.facts.behavior.supply.blackout_during_complement": "BLOCKED_DEPENDENCY",
-        "prosa.analysis.facts.behavior.supply.blackout_during_cat": "BLOCKED_DEPENDENCY",
+        "prosa.analysis.facts.behavior.supply.blackout_during_cat": "TRANSLATED_AND_CHECKED",
         "prosa.analysis.facts.behavior.supply.blackout_during_unit_growth": "TRANSLATED_AND_CHECKED",
         "prosa.analysis.facts.behavior.supply.progress_inside_supplies": "TRANSLATED_AND_CHECKED"
       },
@@ -207,86 +207,18 @@
       "verify": "AUDIT_REJECTED",
       "required_closure": null,
       "accepted_by_kind": {
-        "definition": 555,
-        "theorem/opaque": 479,
-        "inductive": 84
+        "definition": 774,
+        "theorem/opaque": 1200,
+        "inductive": 89
       },
       "blocked_root_causes": {
         "mathcomp.boot.ssrnat.leqif": {
           "status": "UNSUPPORTED_FEATURE",
           "message": "template inductive Corelib.Init.Datatypes.prod instantiated at quality Prop: parameter 0 receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without"
         },
-        "Corelib.ssr.ssrbool.manifest_simpl_pred": {
-          "status": "KERNEL_REJECTED",
-          "message": "(kernel) application type mismatch\n  @Rocq.Corelib.ssr.ssrbool.simpl_pred T\nargument has type\n  Type u_Corelib_ssr_ssrbool_1253\nbut function has type\n  Type (max u_Corelib_ssr_ssrbool_1126 u_Corelib_s"
-        },
-        "Corelib.ssr.ssreflect_rw.nary_congruence_statement": {
-          "status": "UNIVERSE_REJECTED",
-          "message": "defaulted universe level(s) [u_residual_0] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  k (A \u2192 B)\nargument has type\n  Type (max u_residual_0 u_Core"
-        },
-        "Corelib.BinNums.PosDef/Pos.compare_cont": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "fixpoint body is not a match on the decreasing argument"
-        },
-        "Corelib.BinNums.PosDef/Pos.sub_mask": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "mutual fixpoint (2 functions)"
-        },
-        "Corelib.BinNums.PosDef/Pos.add": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "mutual fixpoint (2 functions)"
-        },
-        "Corelib.BinNums.PosDef/Pos.add_carry": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "mutual fixpoint (2 functions)"
-        },
-        "Corelib.BinNums.PosDef/Pos.sub_mask_carry": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "mutual fixpoint (2 functions)"
-        },
-        "Corelib.BinNums.IntDef/Z.pos_sub": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "fixpoint body is not a match on the decreasing argument"
-        },
-        "Stdlib.PArith.BinPos/Pos.peano_rect": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "fixpoint body is not a match on the decreasing argument"
-        },
-        "Corelib.BinNums.PosDef/Pos.eqb": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "fixpoint body is not a match on the decreasing argument"
-        },
-        "Corelib.Init.Wf.Acc_rect": {
-          "status": "EXPORT_VALIDATION_FAILED",
-          "message": "match metadata disagrees with the recursor"
-        },
-        "Corelib.Init.Wf.Acc_inv": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "functional recursive constructor field"
-        },
-        "Stdlib.micromega.ZMicromega.ZArithProof": {
-          "status": "KERNEL_REJECTED",
-          "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.micromega.RingMicromega.PolC Rocq.Corelib.Numbers.BinNums.Z\nargument has type\n  Type\nbut function has type\n  Type u_Stdlib_micromega_RingMicromega_22 "
-        },
-        "Stdlib.micromega.Tauto.xcnf": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "recursive call without its decreasing argument"
-        },
-        "Stdlib.micromega.RingMicromega.SORaddon": {
-          "status": "KERNEL_REJECTED",
-          "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.setoid_ring.Ring_theory.ring_morph R rO rI rplus rtimes rminus ropp req C\nargument has type\n  Type u_Stdlib_micromega_RingMicromega_22\nbut function ha"
-        },
-        "Corelib.Lists.ListDef.nth": {
-          "status": "UNSUPPORTED_FEATURE",
-          "message": "fixpoint body is not a match on the decreasing argument"
-        },
-        "Stdlib.setoid_ring.Ring_theory.IDmorph": {
-          "status": "KERNEL_REJECTED",
-          "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.setoid_ring.Ring_theory.ring_morph R rO rI radd rmul rsub ropp req R\nargument has type\n  Type u_Stdlib_setoid_ring_Ring_theory_41\nbut function has typ"
-        },
         "mathcomp.boot.bigop.big_const_seq": {
           "status": "UNIVERSE_REJECTED",
-          "message": "proof-local level mathcomp.boot.bigop.1120 solved as (some u_mathcomp_boot_bigop_2719): native fact mathcomp.boot.bigop.2716 le mathcomp.boot.bigop.1120 does not hold for the solution"
+          "message": "proof-local level mathcomp.boot.bigop.1120 solved as (some u_mathcomp_boot_bigop_2719): native fact mathcomp.boot.bigop.2716 le mathcomp.boot.bigop.1120 does not hold for the solution [last tier: UNIV"
         }
       },
       "source_ir_sha256": "ca446fdfbecd0103d21796f5ef9fdc16c45fff5f9c3c2eb4cbeba86254b58306"

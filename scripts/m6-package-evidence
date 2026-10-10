@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# M6 completion: package the five-root evidence of the strict gate's run (runs/m6-gate-finishtime5,
+# produced by scripts/m6-finishtime-gate at HEAD) with hashes, manifests, source/IR preparation
+# records, the translation report, target artifacts, audit/consumer logs and the exact commands.
+#   reports/m6/evidence/rocq2lean-m6-evidence-<commit>.tar.gz (+ .sha256; not in git, too large)
+#   reports/m6/evidence/package.json (committed: the inventory with every file's sha256)
+set -euo pipefail
+cd "$(dirname "$0")/.."
+R=runs/m6-gate-finishtime5
+# the commit the gate run is bound to (later commits may only add scripts, docs and reports)
+C=$(python3 -c 'import json; print(json.load(open("reports/m6/finishtime_gate.json"))["binding"]["git_head"])')
+CS=${C:0:7}
+python3 - "$R" <<'PY'
+import json, sys
+v = json.load(open(f"{sys.argv[1]}/verify.json")); g = json.load(open("reports/m6/finishtime_gate.json"))
+assert v["status"] == "VERIFIED" and g["verdict"] == "PASS", (v["status"], g["verdict"])
+PY
+# the run must still be current for the implementation in place (artifact-currency check)
+./scripts/rocq2lean status --run "$R" > /dev/null
+OUT=reports/m6/evidence; STAGE=$(mktemp -d); E=$STAGE/rocq2lean-m6-evidence-$CS
+rm -rf "$OUT"; mkdir -p "$OUT" "$E"/{source,run,run/lean,reports,compat,prosa}
+git archive --format=tar "$C" | tar -x -C "$E/source"
+cp toolchains.lock.json "$E/"
+for f in source.ndjson contract.json source_snapshot.json roundtrip.json translation_report.json translation_manifest.json \
+         consumer_result.json audit.json verify.json source_instances.json status.json Export.v RoundTrip*.v SourceInstances.v; do
+  for g in $R/$f; do [ -e "$g" ] && cp "$g" "$E/run/"; done; done
+cp -r "$R/logs" "$E/run/logs"
+cp "$R"/lean/Rocq2LeanOut.{lean,olean,ilean} "$E/run/lean/"
+cp "$R"/lean/Rocq2LeanConsumer.lean "$E/run/lean/" 2>/dev/null || true
+cp fixtures/m6/regression/finishtime5.json fixtures/m6/manifest.json "$E/run/"
+cp reports/m6/finishtime_gate.json reports/m6/m6_prosa_results.json reports/test_all.json "$E/reports/" 2>/dev/null || true
+cp -r reports/m6/clean_reproduction "$E/reports/" 2>/dev/null || true
+cp -r compat/prosa-0.6 "$E/compat/"
+cp .work/prosa-0.6-rocq93/R2L_PATCHED.json "$E/prosa/" 2>/dev/null || true
+sha512sum .work/rt-proofs-v0.6.tar.gz > "$E/prosa/release.sha512" 2>/dev/null || true
+cat > "$E/COMMANDS.md" <<MD
+# Commands (commit $C)
+
+    scripts/setup-prosa            # Prosa v0.6 from the sha512-checked release + compat/prosa-0.6/patches
+    scripts/m6-finishtime-gate     # = the four commands below, in one fresh run
+    scripts/rocq2lean export --manifest fixtures/m6/manifest.json \\
+        --roots prosa.analysis.definitions.finish_time.{finish_time,finished_at_finish_time,earliest_finish_time,response_time,completes_at_finish_time} \\
+        --out runs/m6-gate-finishtime5
+    scripts/rocq2lean translate --input runs/m6-gate-finishtime5/source.ndjson --out runs/m6-gate-finishtime5
+    scripts/rocq2lean verify --run runs/m6-gate-finishtime5
+    scripts/rocq2lean status --run runs/m6-gate-finishtime5
+
+run/ is that run directory: the exported IR (source.ndjson) and its source snapshot and contract, the
+round-trip and source-instance checks, the translation report, the Lean artifact
+(lean/Rocq2LeanOut.{lean,olean,ilean}), the consumer result, the independent audit and verify.json.
+MD
+( cd "$E" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+tar -C "$STAGE" -czf "$OUT/rocq2lean-m6-evidence-$CS.tar.gz" "rocq2lean-m6-evidence-$CS"
+( cd "$OUT" && sha256sum "rocq2lean-m6-evidence-$CS.tar.gz" > "rocq2lean-m6-evidence-$CS.tar.gz.sha256" )
+python3 - "$E" "$OUT" "$C" <<'PY'
+import json, sys, os
+e, out, c = sys.argv[1:4]
+files = [l.split(None, 1) for l in open(os.path.join(e, "SHA256SUMS")).read().splitlines()]
+arch = open(os.path.join(out, [f for f in os.listdir(out) if f.endswith(".sha256")][0])).read().split()
+json.dump({"schema": "rocq2lean-m6-evidence/1", "commit": c, "archive": arch[1], "archive_sha256": arch[0],
+           "archive_bytes": os.path.getsize(os.path.join(out, arch[1])), "files": len(files),
+           "inventory": {p.strip()[2:]: h for h, p in files}}, open(os.path.join(out, "package.json"), "w"), indent=1)
+PY
+rm -rf "$STAGE"
+echo "packaged $OUT/rocq2lean-m6-evidence-$CS.tar.gz"

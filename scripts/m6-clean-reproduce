@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# M6 completion: reproduce the strict five-root gate from a clean checkout. Fresh `git clone` of
+# COMMIT (default HEAD) into ~/research/r2l-m6clean-<commit>; `lake build Rocq2Lean` from scratch
+# (no .lake, no runs/, no compiled exporter); Prosa v0.6 rebuilt from the checksum-verified release
+# with compat/prosa-0.6/patches (scripts/setup-prosa); then scripts/m6-finishtime-gate.
+# Results go to reports/m6/clean_reproduction/. Not rebuilt: the toolchains (elan Lean v4.33.1, opam
+# switch rocq930-mc with Rocq 9.3.0, MathComp 2.6.0, MetaRocq), checked by doctor against the lock
+# and bound by content digest in every run snapshot.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+REPO=$(pwd); C=$(git rev-parse "${1:-HEAD}"); D=$HOME/research/r2l-m6clean-${C:0:12}
+OUT=$REPO/reports/m6/clean_reproduction
+rm -rf "$D" "$OUT"; mkdir -p "$OUT"
+T0=$(date -Is); S0=$(date +%s)
+git clone -q --no-local "$REPO" "$D" && git -C "$D" checkout -q "$C"
+cd "$D" || exit 2
+export PATH=$HOME/.elan/bin:$HOME/.local/bin:$PATH
+lake build Rocq2Lean > "$OUT/lake-build.log" 2>&1; RB=$?
+./scripts/setup-prosa --full -j16 > "$OUT/setup-prosa.log" 2>&1; RP=$?
+./scripts/m6-finishtime-gate > "$OUT/gate.stdout" 2>&1; RG=$?
+cp reports/m6/finishtime_gate.json "$OUT/" 2>/dev/null
+R=runs/m6-gate-finishtime5
+for f in verify.json consumer_result.json translation_manifest.json source_snapshot.json contract.json source_instances.json; do
+  [ -e "$R/$f" ] && cp "$R/$f" "$OUT/"; done
+IR=$(sha256sum "$R/source.ndjson" 2>/dev/null | cut -d' ' -f1)
+cat > "$OUT/clean_reproduction.json" <<JSON
+{"schema": "rocq2lean-m6-clean-reproduction/1", "commit": "$C", "fresh_clone": true, "clone_path": "$D",
+ "started": "$T0", "finished": "$(date -Is)", "seconds": $(( $(date +%s) - S0 )),
+ "lake_build_exit": $RB, "setup_prosa_exit": $RP, "gate_exit": $RG, "source_ir_sha256": "$IR",
+ "rebuilt": ["Lean translator (lake build from an empty .lake)", "Rocq exporter plugin (built by export)",
+             "Prosa v0.6 from the verified release archive with the compatibility patches"],
+ "reused": ["elan toolchain Lean v4.33.1", "opam switch rocq930-mc (Rocq 9.3.0, MathComp 2.6.0, MetaRocq)",
+            "the opam download cache entry of the Prosa release (sha512-checked)"]}
+JSON
+cat "$OUT/gate.stdout" | tail -3; echo "lake build $RB, setup-prosa $RP, gate $RG ($D)"
+[ $RB -eq 0 ] && [ $RP -eq 0 ] && [ $RG -eq 0 ]

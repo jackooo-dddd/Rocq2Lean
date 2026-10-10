@@ -1,0 +1,39 @@
+{
+  "gate": "M6_FINISHTIME_COMPLETE",
+  "verdict": "PASS",
+  "steps": {
+    "export": 0,
+    "translate": 0,
+    "verify": 0,
+    "status": 0
+  },
+  "roots": {
+    "prosa.analysis.definitions.finish_time.finish_time": "TRANSLATED_AND_CHECKED",
+    "prosa.analysis.definitions.finish_time.finished_at_finish_time": "TRANSLATED_AND_CHECKED",
+    "prosa.analysis.definitions.finish_time.earliest_finish_time": "TRANSLATED_AND_CHECKED",
+    "prosa.analysis.definitions.finish_time.response_time": "TRANSLATED_AND_CHECKED",
+    "prosa.analysis.definitions.finish_time.completes_at_finish_time": "TRANSLATED_AND_CHECKED"
+  },
+  "required_closure": 1717,
+  "verify_status": "VERIFIED",
+  "root_failures_in_closure": {},
+  "blocked_dependents": 0,
+  "binding": {
+    "git_head": "33ed4686a7c0790ae2d7244ee62c999a2309ac70",
+    "git_dirty": false,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "toolchain_fingerprint": {
+      "digest": "b3abee0cf3aaa40a9cf2cb36f1a1f93e35bd435cf13707eb9ba496880bc42922",
+      "files": 93,
+      "components": {
+        "lean:bin/lake": "60330ab6f07dce20f3fa9ebb08e8b984ea9549eac172afeb15d9d2227060e2b3",
+        "lean:bin/lean": "e8baaa71855a616dc351028f3ad2200051b0671f423a1696a100e809302d5550",
+        "lean:lib/lean/libleanshared.so": "23d636cac1cadcba37beac30eff9b9b20d66cee726cf5defb4ae39f1284a3e5a",
+        "metarocq:rocq-metarocq-template-ocaml/metarocq_template_plugin.cmxs": "d1c11b94be106cd4a844a47bcc8d72297227c6e88910e76674d73fba49063daf",
+        "metarocq:rocq-metarocq-template-rocq/template_rocq.cmxs": "3734a57805afe9849a238d54ef25fa272e1d80ac687d1da2310a6c0968ca317f",
+        "rocq:bin/rocq": "4506777669f7518e89afe7cc19099d28a1086db588760c16d7532d1c4074d80f"
+      }
+    },
+    "source_ir_sha256": "b2e9caf3224b0b975c8a4632a4656d77128b79a59e6f156a190c064cee28f369"
+  }
+}

@@ -1,0 +1,371 @@
+{
+  "schema": "rocq2lean-source-snapshot/3",
+  "run_id": "e1e0a7fe-49b7-451b-91ab-75e54e7bae44",
+  "manifest": "/home/shunqwang4/research/r2l-m6clean-33ed4686a7c0/fixtures/m6/manifest.json",
+  "manifest_sha256": "eee62954936915fedc7ddf95c6290405a8ab990de673e60f47c4debed2b877be",
+  "request": [
+    "prosa.analysis.definitions.finish_time.finish_time",
+    "prosa.analysis.definitions.finish_time.finished_at_finish_time",
+    "prosa.analysis.definitions.finish_time.earliest_finish_time",
+    "prosa.analysis.definitions.finish_time.response_time",
+    "prosa.analysis.definitions.finish_time.completes_at_finish_time"
+  ],
+  "request_raw": [
+    "prosa.analysis.definitions.finish_time.finish_time",
+    "prosa.analysis.definitions.finish_time.finished_at_finish_time",
+    "prosa.analysis.definitions.finish_time.earliest_finish_time",
+    "prosa.analysis.definitions.finish_time.response_time",
+    "prosa.analysis.definitions.finish_time.completes_at_finish_time"
+  ],
+  "request_normalization": "strip surrounding whitespace",
+  "ir": "/home/shunqwang4/research/r2l-m6clean-33ed4686a7c0/runs/m6-gate-finishtime5/source.ndjson",
+  "ir_sha256": "b2e9caf3224b0b975c8a4632a4656d77128b79a59e6f156a190c064cee28f369",
+  "contract_sha256": "e09b78571224e5a0da742e981c00126ef7fcb701de468ccf15e663d0f86dc94a",
+  "roundtrip": "OK",
+  "roundtrip_sha256": "5a89477be3570cc5e1e04d17a4c25cb6b92bec982c3bf9050ce49c1cb614e40c",
+  "frontend": {
+    "name": "metarocq-template",
+    "metarocq_commit": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81",
+    "quoter": "Ast_quoter.quote_term_rec ~bypass:true",
+    "opaque_access": "vernac STATE opaque_access"
+  },
+  "rocq_version": "9.3.0",
+  "exporter_plugin_sha256": "2e4c0dbb98e9a328c619df82d34b8e3cba2b8fa1e4ebecde1bd01f03e13baa00",
+  "sources": [],
+  "libraries": [
+    {
+      "dirpath": "Corelib.Program.Basics",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Program/Basics.vo",
+      "sha256": "e137094fb4995ad244b8231f8642de396897355eaadc94ed8654d29d20078730"
+    },
+    {
+      "dirpath": "Stdlib.ZArith.BinInt",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/ZArith/BinInt.vo",
+      "sha256": "7e70a557ca1c38d1bd93a4172e7b8518b3b63306af3fd18765b7592054e80aa2"
+    },
+    {
+      "dirpath": "Stdlib.ZArith.BinIntDef",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/ZArith/BinIntDef.vo",
+      "sha256": "1744053f102893c1f4620c667e367290601d965f910ad685465e3d4a714a5516"
+    },
+    {
+      "dirpath": "Stdlib.setoid_ring.BinList",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/setoid_ring/BinList.vo",
+      "sha256": "2ae62ccd80aa426537d0e4c4204158cfdf11641450beef9cabebb7a86d2234e0"
+    },
+    {
+      "dirpath": "Stdlib.NArith.BinNat",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/NArith/BinNat.vo",
+      "sha256": "42870fb85ec511e50d8648422a3a1eebda4791f56c2657c20240559fd0e5a1a5"
+    },
+    {
+      "dirpath": "Stdlib.NArith.BinNatDef",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/NArith/BinNatDef.vo",
+      "sha256": "943288ea8512e8975662a69cbd354e9d39e7a97ae583972f4848e22aa98f3341"
+    },
+    {
+      "dirpath": "Corelib.Numbers.BinNums",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Numbers/BinNums.vo",
+      "sha256": "2791026868c16662050d6cab144aa25bc1b8e4dd1f86600ca27e87e1ff491693"
+    },
+    {
+      "dirpath": "Stdlib.PArith.BinPos",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/PArith/BinPos.vo",
+      "sha256": "823d09a55c0ddc98c07683337939602bff94afbd1ff5d7c2a0d4826c53c933f8"
+    },
+    {
+      "dirpath": "Stdlib.PArith.BinPosDef",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/PArith/BinPosDef.vo",
+      "sha256": "2ed24b7e8a0f6196b6f0455a83b7914bf57ff983a697166ee295054a144bdc4a"
+    },
+    {
+      "dirpath": "Stdlib.Bool.Bool",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/Bool/Bool.vo",
+      "sha256": "1855bfd0c5b914b609a0546ac37c405e0c98070e10a5209885d081ba4bd141b4"
+    },
+    {
+      "dirpath": "Corelib.Init.Datatypes",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Init/Datatypes.vo",
+      "sha256": "11af845b655c93c3421465f977ae1b520e3befe2638e409663591ae37bb92132"
+    },
+    {
+      "dirpath": "Stdlib.Logic.Decidable",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/Logic/Decidable.vo",
+      "sha256": "69bd8a0df8825a822e736c8b8f98b42a8faee2db2a14d24b6743bbdca91c28b8"
+    },
+    {
+      "dirpath": "Stdlib.micromega.Env",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/Env.vo",
+      "sha256": "f0c8a46d7408b60877d7c6593a467e768f4e86944931c53b11d39b99b75afe6a"
+    },
+    {
+      "dirpath": "Stdlib.micromega.EnvRing",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/EnvRing.vo",
+      "sha256": "917aa79181425c2b46009d9c4598e51ac1d3e07749409f1ef6cf3b3be32d3168"
+    },
+    {
+      "dirpath": "Corelib.Classes.Init",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Classes/Init.vo",
+      "sha256": "7ce4824a2c2b6bc0bed3f628a24010c0d940155538d74e4a3582b616b73be8b5"
+    },
+    {
+      "dirpath": "Stdlib.setoid_ring.InitialRing",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/setoid_ring/InitialRing.vo",
+      "sha256": "a046a1e93784b3f5bbb87f2a7081d390a6366e7bc3c2a97353ca348a74db155a"
+    },
+    {
+      "dirpath": "Corelib.BinNums.IntDef",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/BinNums/IntDef.vo",
+      "sha256": "527e8367ca67dbc5b296964341f6e793a6e086947c79b466f12de3d1f4c96593"
+    },
+    {
+      "dirpath": "Stdlib.Lists.List",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/Lists/List.vo",
+      "sha256": "170cf00a7ceef6e1e8f5d37aa8263c8c1fd22ef3c64c71b2aadbf50e9cb8e2b0"
+    },
+    {
+      "dirpath": "Corelib.Lists.ListDef",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Lists/ListDef.vo",
+      "sha256": "61225a1d80ec1bc60775d8e9b35bdfec2841387430257c24c912007a74404a8b"
+    },
+    {
+      "dirpath": "Corelib.Init.Logic",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Init/Logic.vo",
+      "sha256": "fe93f8feff08080cd3e731f690e24de8d2f1f9684d8be7417a86b38f3779ef39"
+    },
+    {
+      "dirpath": "Corelib.Classes.Morphisms",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Classes/Morphisms.vo",
+      "sha256": "13e9a69841d2e97bb89918a2e53deeccd74ca8d12a393d1323a3c33684cd5c22"
+    },
+    {
+      "dirpath": "Corelib.Classes.Morphisms_Prop",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Classes/Morphisms_Prop.vo",
+      "sha256": "122227068c7e8de4458ab47dc882615e6d1f331ba4586fe0d37a6cdc030be0ea"
+    },
+    {
+      "dirpath": "Corelib.Init.Nat",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Init/Nat.vo",
+      "sha256": "73a9c953bcc5ec623e0e61bad62bab087b8010f66aa807c7dcc27609b77e865c"
+    },
+    {
+      "dirpath": "Corelib.BinNums.NatDef",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/BinNums/NatDef.vo",
+      "sha256": "f981e94400380eab0093ca97e5d417e39fe79db86be7f2b818941e853ba78580"
+    },
+    {
+      "dirpath": "Stdlib.NArith.Nnat",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/NArith/Nnat.vo",
+      "sha256": "8dbf93b88a75e8c8a1de4fecc56ad12ff67966bb8834ff91da8db8b83169d467"
+    },
+    {
+      "dirpath": "Stdlib.micromega.OrderedRing",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/OrderedRing.vo",
+      "sha256": "6ef8a405538043b89ae1fd81ea053ebf93848b5099b248dfc1586b77f451a9fe"
+    },
+    {
+      "dirpath": "Stdlib.Structures.OrdersTac",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/Structures/OrdersTac.vo",
+      "sha256": "0cc2d3ff07331cd599c47a21e853f88540942a664a517fbb8e2a33ccdb631220"
+    },
+    {
+      "dirpath": "Corelib.Init.Peano",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Init/Peano.vo",
+      "sha256": "e763f82825d6367ffc39e765de44e13deccce2ffc148c14880c1394190a1dd47"
+    },
+    {
+      "dirpath": "Stdlib.Arith.PeanoNat",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/Arith/PeanoNat.vo",
+      "sha256": "6eb813e14b18cfff4e9e47e5c8fece3526507186e68fcd896e74f657a66d1252"
+    },
+    {
+      "dirpath": "Stdlib.PArith.Pnat",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/PArith/Pnat.vo",
+      "sha256": "1fe25ab0add51cc84e25593658cb33f2eef89b1f0f2280a1e1173559c93c81c1"
+    },
+    {
+      "dirpath": "Corelib.BinNums.PosDef",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/BinNums/PosDef.vo",
+      "sha256": "d90ed516bf3e3bd800de07de3c38e94a3d15d1ec7592915d5da65292d705a05a"
+    },
+    {
+      "dirpath": "Stdlib.micromega.Refl",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/Refl.vo",
+      "sha256": "a447782260457ac7dc0740088e7bc2071de3c220b086a31f488f6087f6c42816"
+    },
+    {
+      "dirpath": "Corelib.Classes.RelationClasses",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Classes/RelationClasses.vo",
+      "sha256": "85a4ed2d3784244d91fa219d2933210fb294e427e08956d94ab88132fac484b4"
+    },
+    {
+      "dirpath": "Corelib.Relations.Relation_Definitions",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Relations/Relation_Definitions.vo",
+      "sha256": "b33bc6a61dc0037b85007428f4c2ca8ee616b53eb9171ca2e916ade83f572d81"
+    },
+    {
+      "dirpath": "Stdlib.micromega.RingMicromega",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/RingMicromega.vo",
+      "sha256": "5af085ea2969df9cd89a4baae8a5d6aa11abb08ffb70c7da6f257476404a8d9e"
+    },
+    {
+      "dirpath": "Stdlib.setoid_ring.Ring_polynom",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/setoid_ring/Ring_polynom.vo",
+      "sha256": "498213a90235e65c7930760bc96a27b7357e612983ce4f36b3532e1c284c504e"
+    },
+    {
+      "dirpath": "Stdlib.setoid_ring.Ring_tac",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/setoid_ring/Ring_tac.vo",
+      "sha256": "3c50d46648069340ae51a331718d4a3188de9eae2471837fb84831de3a7b5322"
+    },
+    {
+      "dirpath": "Stdlib.setoid_ring.Ring_theory",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/setoid_ring/Ring_theory.vo",
+      "sha256": "a1bbea1bc5ac085c1a9799d8dc84aceb8608f6d64231aceda824b63d8d9eedff"
+    },
+    {
+      "dirpath": "Corelib.Setoids.Setoid",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Setoids/Setoid.vo",
+      "sha256": "6f2f7cc8569853ce73afc0ac77307a0b677d3707712b5134975c8ef77dd0a727"
+    },
+    {
+      "dirpath": "Corelib.Classes.SetoidTactics",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Classes/SetoidTactics.vo",
+      "sha256": "7de2ba6cdecb7c863c4d3b196a34b06ea094bb56eb90659d86d9cd420045da7d"
+    },
+    {
+      "dirpath": "Corelib.Init.Specif",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Init/Specif.vo",
+      "sha256": "99b17af490294577068dd662713dccfd49c9cde90eed309f0e892be22d80399c"
+    },
+    {
+      "dirpath": "Stdlib.micromega.Tauto",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/Tauto.vo",
+      "sha256": "d44e6af99535398dbcd6d26c30e6aa45be9d5c96a08cb10e81073b77c2124221"
+    },
+    {
+      "dirpath": "Stdlib.micromega.VarMap",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/VarMap.vo",
+      "sha256": "713ccaeb3adf7811bd0c753d2bfa46cc5611146ba2ff451a3db7f9efb41f788e"
+    },
+    {
+      "dirpath": "Corelib.Init.Wf",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/Init/Wf.vo",
+      "sha256": "e1a52ec60d1dd7be66133734d535a91ca011b65151bfd855fb1d3edff17ad8ad"
+    },
+    {
+      "dirpath": "Stdlib.setoid_ring.ZArithRing",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/setoid_ring/ZArithRing.vo",
+      "sha256": "8c39b6c1baa296c601a967ec07ca16d9eb583dea190be5db4e9ce64875843e38"
+    },
+    {
+      "dirpath": "Stdlib.micromega.ZMicromega",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/ZMicromega.vo",
+      "sha256": "df492b734fc813d459e3563737168aa27c50ae4de76920adcb2345849c618d20"
+    },
+    {
+      "dirpath": "Stdlib.micromega.ZifyBool",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/ZifyBool.vo",
+      "sha256": "626c5e4b58bc713634bbaa760eb19a35e71cd5ce4fbeb3e8f7f7e022563c1abe"
+    },
+    {
+      "dirpath": "Stdlib.micromega.ZifyClasses",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/ZifyClasses.vo",
+      "sha256": "734fe1e18960383e0a63f003bc45293f7358d59534c3d41d3078485c308f933e"
+    },
+    {
+      "dirpath": "Stdlib.micromega.ZifyInst",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/micromega/ZifyInst.vo",
+      "sha256": "727eb40232997391331c6b97ae151ef69b268d9c6969093786bbf2cfe4fd2728"
+    },
+    {
+      "dirpath": "Stdlib.ZArith.Znat",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/Stdlib/ZArith/Znat.vo",
+      "sha256": "f46a2782bd73ad6331984242cc2b3be09af7298ecac7efb51eceab504c514b9b"
+    },
+    {
+      "dirpath": "mathcomp.boot.bigop",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/mathcomp/boot/bigop.vo",
+      "sha256": "95812f2b5c1235ccfa1cb4f939ffceab87e09ebc3b639574d2ed8ae6810fa452"
+    },
+    {
+      "dirpath": "mathcomp.boot.choice",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/mathcomp/boot/choice.vo",
+      "sha256": "ed19ab90c19bdd6f990735d557fea9b558b6270d118fb22afea38aa38b605f30"
+    },
+    {
+      "dirpath": "mathcomp.boot.eqtype",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/mathcomp/boot/eqtype.vo",
+      "sha256": "08d4c83b1262ca7d34946662e28492bdbd07a2a6307e3b87ed66e3d8772f8814"
+    },
+    {
+      "dirpath": "prosa.analysis.definitions.finish_time",
+      "vo": "/home/shunqwang4/research/r2l-m6clean-33ed4686a7c0/.work/prosa-0.6-rocq93/analysis/definitions/finish_time.vo",
+      "sha256": "9b26b2559da145865e5794459ff233027c87e868f174184dab51bf853c11135f"
+    },
+    {
+      "dirpath": "mathcomp.boot.fintype",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/mathcomp/boot/fintype.vo",
+      "sha256": "ff26c1d90451f89fdd0faf664a58d3df86608fe7f2d315028af708952b4f48c3"
+    },
+    {
+      "dirpath": "prosa.behavior.job",
+      "vo": "/home/shunqwang4/research/r2l-m6clean-33ed4686a7c0/.work/prosa-0.6-rocq93/behavior/job.vo",
+      "sha256": "97abfab932f73b946e5420a60a63428186d67eae9a701f7e559523962fbc390f"
+    },
+    {
+      "dirpath": "prosa.behavior.schedule",
+      "vo": "/home/shunqwang4/research/r2l-m6clean-33ed4686a7c0/.work/prosa-0.6-rocq93/behavior/schedule.vo",
+      "sha256": "a81aac4c9583054d0486280aefe8ad412fc8f70b8dddfddde5f7dbd3b38e77bd"
+    },
+    {
+      "dirpath": "mathcomp.boot.seq",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/mathcomp/boot/seq.vo",
+      "sha256": "2fe2d525cd904ccf7259d80c2a6d6e423bd98beab27d6a878f8d160919d24d86"
+    },
+    {
+      "dirpath": "prosa.behavior.service",
+      "vo": "/home/shunqwang4/research/r2l-m6clean-33ed4686a7c0/.work/prosa-0.6-rocq93/behavior/service.vo",
+      "sha256": "8e784565937712c751d057874b056123cac09223ab004526bf86e243dd36d126"
+    },
+    {
+      "dirpath": "Corelib.ssr.ssrbool",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/ssr/ssrbool.vo",
+      "sha256": "e1a435b909b15e08ff8378fcf77e1b8007ecf8c0974beee603e5e8e381d2fa13"
+    },
+    {
+      "dirpath": "Corelib.ssr.ssreflect_rw",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/ssr/ssreflect_rw.vo",
+      "sha256": "de27cc7b2525148c253c0b6dff5fc504ffaa6cbf2439a872b4670d7c0011a4e1"
+    },
+    {
+      "dirpath": "Corelib.ssr.ssrfun",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/theories/ssr/ssrfun.vo",
+      "sha256": "87b5ef794b4d56d22564757b8a2f31bcc438c328104a7cbe88277ea8cecfa83d"
+    },
+    {
+      "dirpath": "mathcomp.boot.ssrnat",
+      "vo": "/home/shunqwang4/.opam/rocq930-mc/lib/coq/user-contrib/mathcomp/boot/ssrnat.vo",
+      "sha256": "3cb4665b24f9e69bdc564ddc90e449a3cb6372ef9473e164845fb936a94d00b4"
+    },
+    {
+      "dirpath": "prosa.behavior.time",
+      "vo": "/home/shunqwang4/research/r2l-m6clean-33ed4686a7c0/.work/prosa-0.6-rocq93/behavior/time.vo",
+      "sha256": "4f95a23537822ef1b47bfe8f51a9a4b574ef23cb4cfb07655a0f9b2097e26c8e"
+    }
+  ],
+  "toolchains_lock_sha256": "9fd40a1d021c990e7062abc958e5ebb4719d21ebb556a35ecb3fedf715b9d573",
+  "toolchain_fingerprint": {
+    "digest": "b3abee0cf3aaa40a9cf2cb36f1a1f93e35bd435cf13707eb9ba496880bc42922",
+    "files": 93,
+    "components": {
+      "lean:bin/lake": "60330ab6f07dce20f3fa9ebb08e8b984ea9549eac172afeb15d9d2227060e2b3",
+      "lean:bin/lean": "e8baaa71855a616dc351028f3ad2200051b0671f423a1696a100e809302d5550",
+      "lean:lib/lean/libleanshared.so": "23d636cac1cadcba37beac30eff9b9b20d66cee726cf5defb4ae39f1284a3e5a",
+      "metarocq:rocq-metarocq-template-ocaml/metarocq_template_plugin.cmxs": "d1c11b94be106cd4a844a47bcc8d72297227c6e88910e76674d73fba49063daf",
+      "metarocq:rocq-metarocq-template-rocq/template_rocq.cmxs": "3734a57805afe9849a238d54ef25fa272e1d80ac687d1da2310a6c0968ca317f",
+      "rocq:bin/rocq": "4506777669f7518e89afe7cc19099d28a1086db588760c16d7532d1c4074d80f"
+    }
+  },
+  "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb"
+}

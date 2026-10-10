@@ -13,3 +13,4 @@ runs/
 reports/logs/
 reports/evidence/
 __pycache__/
+reports/m6/evidence/*.tar.gz*

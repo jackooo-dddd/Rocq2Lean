@@ -1,89 +1,39 @@
 {
   "gate": "M6_FINISHTIME_COMPLETE",
-  "verdict": "FAIL",
+  "verdict": "PASS",
   "steps": {
     "export": 0,
-    "translate": 2,
-    "verify": 2,
-    "status": 2
+    "translate": 0,
+    "verify": 0,
+    "status": 0
   },
   "roots": {
     "prosa.analysis.definitions.finish_time.finish_time": "TRANSLATED_AND_CHECKED",
     "prosa.analysis.definitions.finish_time.finished_at_finish_time": "TRANSLATED_AND_CHECKED",
     "prosa.analysis.definitions.finish_time.earliest_finish_time": "TRANSLATED_AND_CHECKED",
     "prosa.analysis.definitions.finish_time.response_time": "TRANSLATED_AND_CHECKED",
-    "prosa.analysis.definitions.finish_time.completes_at_finish_time": "BLOCKED_DEPENDENCY"
+    "prosa.analysis.definitions.finish_time.completes_at_finish_time": "TRANSLATED_AND_CHECKED"
   },
-  "required_closure": null,
-  "verify_status": "AUDIT_REJECTED",
-  "root_failures_in_closure": {
-    "Corelib.BinNums.PosDef/Pos.compare_cont": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "fixpoint body is not a match on the decreasing argument"
-    },
-    "Corelib.BinNums.PosDef/Pos.add": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "mutual fixpoint (2 functions)"
-    },
-    "Corelib.BinNums.IntDef/Z.pos_sub": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "fixpoint body is not a match on the decreasing argument"
-    },
-    "Corelib.BinNums.PosDef/Pos.sub_mask": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "mutual fixpoint (2 functions)"
-    },
-    "Corelib.BinNums.PosDef/Pos.add_carry": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "mutual fixpoint (2 functions)"
-    },
-    "Corelib.BinNums.PosDef/Pos.sub_mask_carry": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "mutual fixpoint (2 functions)"
-    },
-    "Stdlib.PArith.BinPos/Pos.peano_rect": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "fixpoint body is not a match on the decreasing argument"
-    },
-    "Corelib.BinNums.PosDef/Pos.eqb": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "fixpoint body is not a match on the decreasing argument"
-    },
-    "Corelib.Init.Wf.Acc_rect": {
-      "status": "EXPORT_VALIDATION_FAILED",
-      "message": "match metadata disagrees with the recursor"
-    },
-    "Corelib.Init.Wf.Acc_inv": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "functional recursive constructor field"
-    },
-    "Stdlib.micromega.ZMicromega.ZArithProof": {
-      "status": "KERNEL_REJECTED",
-      "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.micromega.RingMicromega.PolC Rocq.Corelib.Numbers.BinNums.Z\nargument has type\n  Type\nbut function has type\n  Type u_Stdlib_micromega_RingMicromega_22 \u2192 Type u_Stdlib_micromega_RingMicromega_22"
-    },
-    "Stdlib.micromega.Tauto.xcnf": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "recursive call without its decreasing argument"
-    },
-    "Stdlib.micromega.RingMicromega.SORaddon": {
-      "status": "KERNEL_REJECTED",
-      "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.setoid_ring.Ring_theory.ring_morph R rO rI rplus rtimes rminus ropp req C\nargument has type\n  Type u_Stdlib_micromega_RingMicromega_22\nbut function has type\n  (C : Type (max u_Stdlib_micromega_RingMicromega_21 0)) \u2192\n    C \u2192\n      C \u2192\n        (C \u2192 C \u2192"
-    },
-    "Corelib.Lists.ListDef.nth": {
-      "status": "UNSUPPORTED_FEATURE",
-      "message": "fixpoint body is not a match on the decreasing argument"
-    },
-    "Stdlib.setoid_ring.Ring_theory.IDmorph": {
-      "status": "KERNEL_REJECTED",
-      "message": "(kernel) application type mismatch\n  @Rocq.Stdlib.setoid_ring.Ring_theory.ring_morph R rO rI radd rmul rsub ropp req R\nargument has type\n  Type u_Stdlib_setoid_ring_Ring_theory_41\nbut function has type\n  (C : Type (max u_Stdlib_setoid_ring_Ring_theory_41 u_Stdlib_setoid_ring_Ring_theory_98)) \u2192\n    C"
-    }
-  },
-  "blocked_dependents": 909,
+  "required_closure": 1717,
+  "verify_status": "VERIFIED",
+  "root_failures_in_closure": {},
+  "blocked_dependents": 0,
   "binding": {
-    "git_head": "b29ab03763dc11c58408697c7ad6163054945a0a",
+    "git_head": "33ed4686a7c0790ae2d7244ee62c999a2309ac70",
     "git_dirty": true,
-    "impl_tree_sha256": "f9e01c6531b316d0f10e20fdace8cbf189f244c904768ae54eaf30cbee691416",
-    "toolchain_fingerprint": null,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "toolchain_fingerprint": {
+      "digest": "b3abee0cf3aaa40a9cf2cb36f1a1f93e35bd435cf13707eb9ba496880bc42922",
+      "files": 93,
+      "components": {
+        "lean:bin/lake": "60330ab6f07dce20f3fa9ebb08e8b984ea9549eac172afeb15d9d2227060e2b3",
+        "lean:bin/lean": "e8baaa71855a616dc351028f3ad2200051b0671f423a1696a100e809302d5550",
+        "lean:lib/lean/libleanshared.so": "23d636cac1cadcba37beac30eff9b9b20d66cee726cf5defb4ae39f1284a3e5a",
+        "metarocq:rocq-metarocq-template-ocaml/metarocq_template_plugin.cmxs": "d1c11b94be106cd4a844a47bcc8d72297227c6e88910e76674d73fba49063daf",
+        "metarocq:rocq-metarocq-template-rocq/template_rocq.cmxs": "3734a57805afe9849a238d54ef25fa272e1d80ac687d1da2310a6c0968ca317f",
+        "rocq:bin/rocq": "4506777669f7518e89afe7cc19099d28a1086db588760c16d7532d1c4074d80f"
+      }
+    },
     "source_ir_sha256": "45c0e04b44c83a9eafd8a72d1885f8213807c4c4bc6fbf6804cc3134def2c425"
   }
 }

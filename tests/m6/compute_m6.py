@@ -88,6 +88,11 @@ def canon(v):
 def main():
     shutil.rmtree(RUN, ignore_errors=True)
     RUN.mkdir(parents=True)
+    # the fixtures the cases load are compiled here (not left to an earlier run: no order dependence)
+    env0 = dict(os.environ, PATH=f"{Path.home()}/.local/bin:" + os.environ["PATH"])
+    for d, prefix, f in ((AF, "AF", "AccFix.v"), (IF, "IF", "IotaFix.v"), (MFX, "MF", "MutFix.v")):
+        subprocess.run(["opam", "exec", "--switch=" + SWITCH, "--", "rocq", "compile", "-Q", ".", prefix, f], cwd=d,
+                       check=True, env=env0, capture_output=True)
     lines = ["Require AF.AccFix.", "Require IF.IotaFix.", "Require MF.MutFix.", "Require Stdlib.Lists.List.", "From Stdlib Require Import PArith.BinPos ZArith.BinInt.",
              "Import Stdlib.Lists.List.ListNotations.", "Open Scope list_scope."]
     lines += [f"Definition case{i} := {c}." for i, c in enumerate(CASES)]
