@@ -310,20 +310,17 @@
       "dependency_path": [
         "Corelib.Lists.ListDef.nth"
       ]
-    },
-    {
-      "root": "Stdlib.Lists.List.length_rev",
-      "reasons": [
-        "universe instance"
-      ],
-      "dependency_path": [
-        "Stdlib.Lists.List.length_rev",
-        "Stdlib.Arith.PeanoNat/Nat.add_comm",
-        "Stdlib.Arith.PeanoNat/Nat.add_0_r",
-        "Stdlib.Arith.PeanoNat/Nat.succ_inj_wd",
-        "Stdlib.Arith.PeanoNat/Nat.succ_inj",
-        "Corelib.Classes.Morphisms.subrelation_proper"
-      ]
     }
-  ]
+  ],
+  "former_blockers_verified": {
+    "roots": [
+      "Stdlib.Lists.List.length_rev",
+      "Stdlib.Lists.List.in_rev"
+    ],
+    "exit_codes": [
+      0,
+      0,
+      0
+    ]
+  }
 }
