@@ -55,7 +55,6 @@ check(rc == 3 and "TOOL_FAILURE" in out, "preflight: invalid input exits 3")
 # with structured diagnostics: status, blocked declaration, dependency path, reasons and node paths.
 NEG = {"M3.M3Neg.evenR": "mutual fixpoint",
        "M3.M3Neg.half": "recursive call on a term that is not a direct recursive constructor field",
-       "M3.M3Neg.addPre": "recursive call changes a parameter before the decreasing argument",
        "M3.M3Neg.Stream": "coinductive type", "M3.M3Neg.sprop_id": "SProp",
        "M3.M3Neg.pid": "universe-polymorphic constant", "M3.M3Neg.rose_size": "match on a nested inductive"}
 rc, out = run(PY + ["inspect", "--manifest", M3, "--roots", ",".join(NEG)])

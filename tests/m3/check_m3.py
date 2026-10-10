@@ -112,9 +112,17 @@ check(rc == 0, "negative M3 inputs export and round-trip faithfully")
 rc, _ = cli("translate", "--input", neg / "source.ndjson", "--out", neg)
 R, _ = results(neg)
 want = {"evenR": "mutual fixpoint", "half": "not a direct recursive constructor field",
-        "addPre": "changes parameter", "Stream": "coinductive", "sprop_id": "SProp", "pid": "universe-polymorphic",
+        "Stream": "coinductive", "sprop_id": "SProp", "pid": "universe-polymorphic",
         "rose_size": "mutual or nested"}
 for n, msg in want.items():
     r = R["M3.M3Neg." + n]
     check(rc != 0 and r["status"] == "UNSUPPORTED_FEATURE" and msg in r["message"], f"rejected explicitly: {n} ({msg})")
+# addPre (recursion changes the argument k before the decreasing n) was a blocker of the pilot; since M4
+# the changed argument is generalized in the motive (docs/SUPPORT_PROFILE.md). It must now translate,
+# verify and pass the audit on its own.
+ap = ROOT / "runs" / "m3-addpre"
+shutil.rmtree(ap, ignore_errors=True)
+rcs = [cli("export", "--manifest", MAN, "--roots", "M3.M3Neg.addPre", "--out", ap)[0],
+       cli("translate", "--input", ap / "source.ndjson", "--out", ap)[0], cli("verify", "--run", ap)[0]]
+check(rcs == [0, 0, 0], f"addPre (changed earlier argument, generalized in the motive since M4) VERIFIED {rcs}")
 finish("test-m3")

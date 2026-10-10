@@ -13,7 +13,8 @@ Statically detected blockers (the translator rejects the same shapes during tran
   template inductives with unbound template levels; `match` on a mutual block, a nested inductive, an inductive with
   functional recursive fields or let-bound constructor arguments; `fix` that is mutual, whose body
   is not a match on its decreasing argument, or whose recursive calls change a parameter before the
-  decreasing argument, are not on a direct recursive constructor field, or use the function other
+  decreasing argument while a type depends on that argument (otherwise the argument is generalized),
+  are not on a direct recursive constructor field, or use the function other
   than in a call.
 Shape conditions that need typing (e.g. large elimination of a Prop-only inductive) are only
 detected by the translator.
@@ -169,21 +170,28 @@ def fix_blockers(t, found, inds, path):
     xty = lams[r]["ty"]
     xargs = xty["args"] if xty["k"] == "app" else []
     idx_pos = {r - 1 - a["i"] for a in xargs[npar:] if a["k"] == "rel" and a["i"] < r}
+    changed = set()
     for k, br in enumerate(b["brs"]):
         nf = len(br["ctx"])
         rec_q = {nf - 1 - p for p in inds.recursive_positions(ref, k)}
-        calls(br["body"], 0, nl, nf, r, idx_pos, rec_q, found, path + ["defs", 0, "body", f"branch{k}"])
+        calls(br["body"], 0, nl, nf, r, idx_pos, rec_q, found, path + ["defs", 0, "body", f"branch{k}"], changed)
+    # Changed leading arguments are generalized in the motive (supported), unless the decreasing
+    # argument's type, or the type of a leading argument kept fixed, depends on them.
+    for i in changed:
+        if mentions_rel(lams[r]["ty"], r - 1 - i) or any(
+                j not in changed and mentions_rel(lams[j]["ty"], j - 1 - i) for j in range(i + 1, r)):
+            found.add("a type depends on an argument that recursive calls change", path)
 
 
-def calls(t, depth, nl, nf, r, idx_pos, rec_q, found, path):
+def calls(t, depth, nl, nf, r, idx_pos, rec_q, found, path, changed):
     """Check every occurrence of the fixpoint variable inside a branch body (binder `depth` below the
     branch's fields): f = rel(nl + nf + depth), parameter i = rel(nl - 1 - i + nf + depth),
     field q = rel(q + depth)."""
     fi = nl + nf + depth
-    go = lambda x, dd, seg: calls(x, depth + dd, nl, nf, r, idx_pos, rec_q, found, path + [seg])
+    go = lambda x, dd, seg: calls(x, depth + dd, nl, nf, r, idx_pos, rec_q, found, path + [seg], changed)
     if isinstance(t, list):
         for i, v in enumerate(t):
-            calls(v, depth, nl, nf, r, idx_pos, rec_q, found, path + [i])
+            calls(v, depth, nl, nf, r, idx_pos, rec_q, found, path + [i], changed)
         return
     if not isinstance(t, dict):
         return
@@ -199,7 +207,7 @@ def calls(t, depth, nl, nf, r, idx_pos, rec_q, found, path):
         else:
             for i in range(r):
                 if i not in idx_pos and args[i] != {"k": "rel", "i": nl - 1 - i + nf + depth}:
-                    found.add("recursive call changes a parameter before the decreasing argument", path)
+                    changed.add(i)
             y = args[r]
             if not (y["k"] == "rel" and y["i"] - depth in rec_q):
                 found.add("recursive call on a term that is not a direct recursive constructor field", path)

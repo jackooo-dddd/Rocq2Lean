@@ -165,6 +165,47 @@ def template_binding(d):
     return out
 
 
+def changed_params(t, nl, r, depth=0, acc=None):
+    """Independent copy of the rule deciding generalized fixpoint arguments: positions i < r of the
+    leading arguments that some recursive call changes (`depth` binders below the fix binder: the
+    function is rel depth, leading lambda i is rel depth-1-i)."""
+    acc = set() if acc is None else acc
+    if isinstance(t, list):
+        for v in t:
+            changed_params(v, nl, r, depth, acc)
+        return acc
+    if not isinstance(t, dict):
+        return acc
+    k = t.get("k")
+    go = lambda u, d: changed_params(u, nl, r, depth + d, acc)
+    if k == "app":
+        if t["f"] == {"k": "rel", "i": depth} and depth >= nl:
+            for i, a in enumerate(t["args"][:r]):
+                if a != {"k": "rel", "i": depth - 1 - i}:
+                    acc.add(i)
+        go(t["f"], 0)
+        for a in t["args"]:
+            go(a, 0)
+    elif k in ("prod", "lam"):
+        go(t["ty"], 0); go(t["b"], 1)
+    elif k == "let":
+        go(t["v"], 0); go(t["ty"], 0); go(t["b"], 1)
+    elif k == "case":
+        for x in t["p"]["params"]:
+            go(x, 0)
+        go(t["p"]["ret"], len(t["p"]["ctx"])); go(t["c"], 0)
+        for br in t["brs"]:
+            go(br["body"], len(br["ctx"]))
+    elif k in ("fix", "cofix"):
+        for d in t["defs"]:
+            go(d["ty"], 0); go(d["body"], len(t["defs"]))
+    else:
+        for key, v in t.items():
+            if isinstance(v, (dict, list)) and key not in ("n",):
+                go(v, 0)
+    return acc
+
+
 class Auditor:
     def __init__(self, decls, results, recursors=None):
         self.body = None          # proof-local level solutions of the declaration being audited
@@ -424,15 +465,20 @@ class Auditor:
         ref = b["ci"]["ind"]
         npar = b["ci"]["npar"]
         idx_pos = {r - 1 - a["i"] for a in xargs[npar:] if a["k"] == "rel" and a["i"] < r}
+        # Leading arguments changed by recursive calls (not indices) are generalized in the motive.
+        gpos = sorted(changed_params(d["body"], nl, r) - idx_pos)
+        ng = len(gpos)
         head, spine = self.unspine(cur)
         tname, _, _ = self.ind_target(ref)
         if head["k"] != "const" or head["n"] != tname + ".rec":
             raise Mismatch(f"{path}: fixpoint must lower to {tname}.rec")
         nmin, nq, nidx = len(b["brs"]), nl - r - 1, len(b["p"]["ctx"]) - 1
-        if len(spine) != npar + 1 + nmin + nidx + 1 + nq:
+        if len(spine) != npar + 1 + nmin + nidx + 1 + ng + nq:
             raise Mismatch(f"{path}: {tname}.rec applied to {len(spine)} arguments")
-        # Major premise and trailing arguments are the decreasing argument and Q, in order.
+        # Major premise, then the generalized arguments, then Q, in order.
         self.check({"k": "rel", "i": nl - 1 - r}, spine[npar + 1 + nmin + nidx], path + ["major"], senv)
+        for j, i in enumerate(gpos):
+            self.check({"k": "rel", "i": nl - 1 - i}, spine[npar + 1 + nmin + nidx + 1 + j], path + [f"g{j}"], senv)
         for j in range(nq):
             self.check({"k": "rel", "i": nq - 1 - j}, spine[len(spine) - nq + j], path + [f"q{j}"], senv)
         # Parameters and indices given to the recursor are those of the decreasing argument's
@@ -453,34 +499,59 @@ class Auditor:
         for j, a in enumerate(xargs[npar:]):
             if a["k"] == "rel" and a["i"] < r:
                 idx_of[r - 1 - a["i"]] = j
-        menv = [("bvar", 0)]
+        def lead_env(i, extra):
+            """Target images of the source context of leading lambda i's type (lambdas 0..i-1, then
+            the fix binder, then the outer context), at `extra` binders below the motive's
+            binders (idx, x): generalized arguments map to their motive foralls."""
+            e = []
+            for kk in reversed(range(i)):
+                if kk in gpos:
+                    e.append(("bvar", extra - 1 - gpos.index(kk)))
+                elif kk in idx_of:
+                    e.append(("bvar", extra + nidx - idx_of[kk]))
+                else:
+                    e.append(("bvar", (nl - 1 - kk) + nidx + 1 + extra))
+            return e + [("forbid",)] + self.shift(list(env), nl + nidx + 1 + extra)
+
+        menv = [("bvar", ng)]
         for i in reversed(range(r)):
-            menv.append(("bvar", nidx - idx_of[i]) if i in idx_of else ("bvar", (nl - 1 - i) + nidx + 1))
-        menv += self.shift(list(env), nl + nidx + 1)
+            if i in gpos:
+                menv.append(("bvar", ng - 1 - gpos.index(i)))
+            else:
+                menv.append(("bvar", ng + nidx - idx_of[i]) if i in idx_of else ("bvar", (nl - 1 - i) + nidx + 1 + ng))
+        menv += self.shift(list(env), nl + nidx + 1 + ng)
         fty = d["ty"]
         for _ in range(r + 1):
             if fty["k"] != "prod":
                 raise Mismatch(f"{path}: fixpoint type has fewer than {r + 1} binders")
             fty = fty["b"]
         mbody = self.strip_lams(spine[npar], nidx + 1, path + ["motive"])
+        for j, i in enumerate(gpos):          # ∀ G: the generalized arguments' source types
+            if mbody["k"] != "forall":
+                raise Mismatch(f"{path}: motive lacks the generalized argument {i}")
+            self.check(lams[i]["ty"], mbody["t"], path + [f"motive g{j}"], lead_env(i, j))
+            mbody = mbody["b"]
         self.check(fty, mbody, path + ["motive body"], menv)
         self.check_rec_binders(head, spine, npar, nmin, nidx, path,
                                [len(self.recursive_positions(ref, k)) for k in range(nmin)],
-                               [len(br["ctx"]) for br in b["brs"]], nq)
+                               [len(br["ctx"]) for br in b["brs"]], ng + nq)
         for k, br in enumerate(b["brs"]):
             nf = len(br["ctx"])
             rpos = self.recursive_positions(ref, k)
             nih = len(rpos)
-            body = self.strip_lams(spine[npar + 1 + k], nf + nih + nq, path + [f"minor{k}"])
-            depth = nf + nih + nq
-            benv = [("bvar", q + nih + nq, "field", k, q) for q in range(nf)]   # q: innermost-first
+            body = self.strip_lams(spine[npar + 1 + k], nf + nih + ng + nq, path + [f"minor{k}"])
+            depth = nf + nih + ng + nq
+            benv = [("bvar", q + nih + ng + nq, "field", k, q) for q in range(nf)]   # q: innermost-first
             for t in range(nl):                                               # a_{nl-1} .. a_0
                 i = nl - 1 - t
                 if i > r:
                     benv.append(("bvar", nq - 1 - (i - r - 1)))
+                elif i in gpos:
+                    benv.append(("bvar", nq + ng - 1 - gpos.index(i), "gen", i))
                 else:
                     benv.append(("bvar", senv[t][1] + depth, "param", i))
-            info = {"minor": k, "r": r, "nf": nf, "nq": nq, "rec_q": [nf - 1 - p for p in rpos], "idx_pos": idx_pos}
+            info = {"minor": k, "r": r, "nf": nf, "nq": nq, "rec_q": [nf - 1 - p for p in rpos], "idx_pos": idx_pos,
+                    "gpos": gpos}
             benv.append(("rec", info))
             benv += self.shift(senv[nl + 1:], depth)
             self.check(br["body"], body, path + [f"minor{k}"], benv)
@@ -490,8 +561,8 @@ class Auditor:
         if len(args) < r + 1:
             raise Mismatch(f"{path}: recursive call without its decreasing argument")
         for i in range(r):
-            if i in info["idx_pos"]:
-                continue        # index arguments are fixed by the field's type
+            if i in info["idx_pos"] or i in info.get("gpos", []):
+                continue        # index arguments are fixed by the field's type; generalized ones are passed on
             a = args[i]
             ent = env[a["i"]] if a["k"] == "rel" and a["i"] < len(env) else None
             if not (ent and ent[0] == "bvar" and ent[2:4] == ("param", i)):
@@ -505,7 +576,7 @@ class Auditor:
             raise Mismatch(f"{path}: recursive call on a non-recursive field")
         m = info["rec_q"].index(q)
         ih = ent[1] - 1 - m - q
-        rest = args[r + 1:]
+        rest = [args[i] for i in info.get("gpos", [])] + args[r + 1:]
         cur = e
         for j in reversed(range(len(rest))):
             if cur["k"] != "app":
