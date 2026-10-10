@@ -17,7 +17,7 @@ Each invariant names the component that enforces it and the test that exercises 
 | Invariant | Enforced by | Tested by |
 |---|---|---|
 | Exactly one result row per exported declaration; no rows for unexported declarations | consumer `coverage`; audit `coverage` | test-root-contract |
-| Every requested root is `TRANSLATED_AND_CHECKED`; the report's status is `OK` and its root records (requested spelling, resolved declaration, status) equal the contract's roots in order and the result rows | consumer `coverage` + `roots`, audit, translate CLI | test-root-contract (review counterexamples; 13 cases through `verify` and `translate`) |
+| Every requested root is `TRANSLATED_AND_CHECKED`; the report's status is `OK` and its root records (requested spelling, resolved declaration, status) equal the contract's roots in order and the result rows | consumer `coverage` + `roots`, audit, translate CLI | test-root-contract (review counterexamples; 14 cases through `verify` and `translate`) |
 | Every declaration of the required closure (recomputed independently by the auditor from the source terms) is `TRANSLATED_AND_CHECKED` or a verified bootstrap rule | consumer, audit | test-root-contract |
 | Summary counts are recomputed; at least one declaration is accepted | audit | test-root-contract |
 | Extra exported declarations outside the closure are classified `extra_not_required` and never counted | audit | — (none in current fixtures) |
