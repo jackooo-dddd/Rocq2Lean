@@ -1,5 +1,27 @@
 # Status
 
+**Current milestone: M5 (MathComp / SSReflect foundation), starting.** M4 criteria met
+(`reports/m4/M4_REPORT.md`). M1–M3: `HARDENED_M1_M3_ACCEPTED` (historical gate, commit `6e85e3c`).
+
+## M4 — real Rocq standard-library declarations
+
+| Item | Status | Evidence |
+|---|---|---|
+| Inductive universe support (template R5, R2T, proof-local R2B) | PASS | Corelib `list`, `option`, `prod`, `sum`, `sigT`, `bool` as fresh Lean inductives (`test-m4`) |
+| Real theorems with original proofs | PASS | 16 Stdlib list theorems VERIFIED (closure 47); auditor: 721 typing-determined levels, 0 deferred |
+| Real functions | PASS | 29 Stdlib/Corelib functions VERIFIED (closure 35) |
+| Computation | PASS | 39/39 Rocq-vs-Lean cases agree, incl. `list/option/prod/bool_rect` |
+| Negative tests | PASS | Prop instances, template metadata, forged bindings and levels, type-correct fix mutations |
+| Fresh holdouts (after `m4-freeze-1` = `54c9e70`) | 14/16 (15/16 after the post-holdout fix) | `reports/m4/holdout_m4*.json` |
+| Regressions | PASS | `test-all` 16/16 (310 checks); no M1–M3 coverage lost (`reports/m4/regression_vs_m3.json`) |
+
+M4 blockers:
+* Corelib `nth`: decreasing match not outermost.
+* Setoid `Morphisms`: universe-polymorphic constants; `relation` relies on `Set < l`.
+
+Paths are in the M4 report.
+
+
 Updated only from test evidence (`scripts/test-*` on cityu-wsl). Statuses follow the prompt's vocabulary.
 
 **Current verdict: `HARDENED_M1_M3_ACCEPTED`.** `./scripts/acceptance` passes 6/6 gates
