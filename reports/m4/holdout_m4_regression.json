@@ -1,0 +1,248 @@
+{
+  "schema": "rocq2lean-holdout/2",
+  "tag": "m4-freeze-1",
+  "freeze": "54c9e70822cf50c0af1587607dd62380b261bc1e",
+  "role": "regression",
+  "roots": {
+    "Stdlib.Lists.List.app_comm_cons": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 4
+    },
+    "Stdlib.Lists.List.app_eq_nil": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 9
+    },
+    "Stdlib.Lists.List.in_or_app": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 10
+    },
+    "Stdlib.Lists.List.in_rev": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "BLOCKED_DEPENDENCY",
+      "message": "failed dependencies: #[Corelib.Classes.Morphisms.Reflexive_partial_app_morphism, Corelib.Classes.Morphisms.eq_proper_proxy, Corelib.Classes.Morphisms.reflexive_proper_proxy, Corelib.Classes.Morphisms.reflexive_reflexive_proxy, Corelib.Classes.Morphisms.respectful, Corelib.Classes.Morphisms.trans_co_",
+      "exit_codes": {
+        "export": 0,
+        "translate": 2,
+        "verify": null,
+        "status": null
+      },
+      "verified": false,
+      "closure": null
+    },
+    "Stdlib.Lists.List.map_rev": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 11
+    },
+    "Stdlib.Lists.List.concat_app": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 12
+    },
+    "Stdlib.Lists.List.flat_map_app": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 17
+    },
+    "Stdlib.Lists.List.existsb_app": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 8
+    },
+    "Stdlib.Lists.List.forallb_app": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 8
+    },
+    "Stdlib.Lists.List.fold_right_app": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 8
+    },
+    "Stdlib.Lists.List.firstn_skipn": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 10
+    },
+    "Stdlib.Lists.List.length_seq": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 9
+    },
+    "Stdlib.Lists.List.nth_error_In": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 14
+    },
+    "Stdlib.Lists.List.app_inv_tail": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 25
+    },
+    "Corelib.Init.Datatypes.sum": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 1
+    },
+    "Corelib.Init.Specif.sigT": {
+      "preflight": "CANDIDATE_SUPPORTED",
+      "preflight_reasons": null,
+      "preflight_path": null,
+      "translation": "TRANSLATED_AND_CHECKED",
+      "message": "",
+      "exit_codes": {
+        "export": 0,
+        "translate": 0,
+        "verify": 0,
+        "status": 0
+      },
+      "verified": true,
+      "closure": 1
+    }
+  }
+}
