@@ -311,21 +311,22 @@ def template_binding(d):
     return out
 
 
-def changed_params(t, nl, r, depth=0, acc=None):
+def changed_params(t, nl, r, depth=0, acc=None, nfun=1):
     """Independent copy of the rule deciding generalized fixpoint arguments: positions i < r of the
     leading arguments that some recursive call changes (`depth` binders below the fix binder: the
-    function is rel depth, leading lambda i is rel depth-1-i)."""
+    function is rel depth, leading lambda i is rel depth-1-i; in a mutual block of nfun functions,
+    calls to rel depth .. rel depth+nfun-1 count)."""
     acc = set() if acc is None else acc
     if isinstance(t, list):
         for v in t:
-            changed_params(v, nl, r, depth, acc)
+            changed_params(v, nl, r, depth, acc, nfun)
         return acc
     if not isinstance(t, dict):
         return acc
     k = t.get("k")
-    go = lambda u, d: changed_params(u, nl, r, depth + d, acc)
+    go = lambda u, d: changed_params(u, nl, r, depth + d, acc, nfun)
     if k == "app":
-        if t["f"] == {"k": "rel", "i": depth} and depth >= nl:
+        if t["f"].get("k") == "rel" and depth <= t["f"]["i"] < depth + nfun and depth >= nl:
             for i, a in enumerate(t["args"][:r]):
                 if a != {"k": "rel", "i": depth - 1 - i}:
                     acc.add(i)
@@ -357,8 +358,16 @@ class Auditor:
         self.body = None          # proof-local level solutions of the declaration being audited
         self.recursors = recursors
         self.decls = decls
+        # M6 δβ-inlining: source bodies of the transparent monomorphic constants
+        self.ir_bodies = {n: d["body"] for n, d in decls.items() if d.get("kind") == "constant"
+                          and d.get("body_state") == "transparent" and d.get("body")
+                          and (d.get("universes") or {}).get("k") == "monomorphic"}
         self.ok = {r["source"]: r for r in results
                    if r["status"] in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED")}
+        # accepted transparent definitions (target name -> level parameters, value), for comparing
+        # recursor binder types modulo delta (a source binder type may be a definition, PolC Z := Pol Z)
+        self.defs = {r["target"]: (r.get("level_params") or [], r["target_value"]) for r in self.ok.values()
+                     if r.get("target_kind") == "def" and r.get("target_value") is not None}
 
     def ind_target(self, ref):
         mind, idx = ref["mind"], ref["i"]
@@ -401,12 +410,14 @@ class Auditor:
         """The target has `n` extra binders that the source does not."""
         out = []
         for x in env:
-            if x[0] == "bvar":
+            if x[0] == "bvar" and len(x) > 5:      # a field with its course-of-values result term
+                out.append(("bvar", x[1] + n, *x[2:5], lift(x[5], n)))
+            elif x[0] == "bvar":
                 out.append(("bvar", x[1] + n, *x[2:]))
             elif x[0] == "tgt":
                 out.append(("tgt", lift(x[1], n)))
             elif x[0] == "expect":
-                out.append(("expect", x[1], Auditor.shift(x[2], n)))
+                out.append(("expect", x[1], Auditor.shift(x[2], n), *x[3:]))
             elif x[0] == "accrec":           # the induction hypothesis' position moves with the binders
                 out.append(("accrec", dict(x[1], ih=x[1]["ih"] + n)))
             else:
@@ -427,7 +438,15 @@ class Auditor:
         if e["k"] == "mdata":
             raise Mismatch(f"{path}: unexpected metadata node in target")
         if k == "cast":
-            return C(s["t"], e, "cast")
+            # the cast's term as is; otherwise a cast repair around it (a source convoy match has the
+            # same outer shape as a repair, so the direct comparison comes first)
+            try:
+                return C(s["t"], e, "cast")
+            except Mismatch:
+                inner = self.peel_cast_repair(e, path)
+                if inner is e:
+                    raise
+                return C(s["t"], inner, "cast")
         if k == "rel":
             if s["i"] >= len(env):
                 raise Mismatch(f"{path}: source rel {s['i']} out of scope")
@@ -494,6 +513,36 @@ class Auditor:
             return self.check_fix(s, e, path, env)
         raise Mismatch(f"{path}: UNAUDITABLE source node '{k}'")
 
+    def peel_cast_repair(self, e, path, depth=0):
+        """M6 cast repair: a source cast may be translated as I.rec (lam v. A v -> T v) minors v c, a
+        transport of the translated source term c along case analysis, into a proposition (the
+        recursor's motive level is 0: a proof, computationally irrelevant). Every minor must end in its
+        last binder h (the transported proof itself) or in a nested repair of h, so no other proof
+        can replace the source's. Returns c (audited by the caller against the source term)."""
+        if e.get("k") != "app" or depth > 8:
+            return e
+        head, spine = self.unspine(e["f"])
+        if head.get("k") != "const" or not head["n"].endswith(".rec") or not head["u"] or head["u"][0] != {"k": "zero"}:
+            return e
+        rec = (self.recursors or {}).get(head["n"])
+        if rec is None or rec["num_indices"] != 0 or rec["num_motives"] != 1:
+            return e
+        np, nm = rec["num_params"], rec["num_minors"]
+        if len(spine) != np + 1 + nm + 1 or spine[-1].get("k") != "bvar":
+            return e
+        mot = spine[np]
+        if mot.get("k") != "lam" or mot["b"].get("k") != "forall":
+            return e
+        for k in range(nm):
+            m = spine[np + 1 + k]
+            n = 0
+            while m.get("k") == "lam":
+                m, n = m["b"], n + 1
+            leaf = m if m == {"k": "bvar", "i": 0} else self.peel_cast_repair(m, path, depth + 1)
+            if n == 0 or leaf != {"k": "bvar", "i": 0}:
+                raise Mismatch(f"{path}: cast repair minor {k} does not end in the transported source proof")
+        return e["a"]
+
     def check_head(self, s, e, path, env=()):
         h = self.head(s) if s["k"] in ("const", "ind", "construct") else None
         if h is None:
@@ -516,28 +565,58 @@ class Auditor:
         elif isinstance(univ, tuple) and len(e["u"]) != univ[1]:
             raise Mismatch(f"{path}: generalized constant {name} must have {univ[1]} universe arguments")
 
-    def recursive_fields(self, ref, ctor):
-        """Number of recursive constructor arguments (Lean adds one recursive result for each)."""
-        return len(self.recursive_positions(ref, ctor))
+    def split_nested(self, head, spine, npar, nmain, path):
+        """M6 nested inductive (one type, trivial auxiliary eliminations): Lean's recursor takes one
+        motive per auxiliary type after the main motive and one minor per auxiliary constructor after
+        the main minors; they must be lam .. PUnit and lam .. PUnit.unit. Returns the spine without
+        them, the auxiliary motives (for the binder check), and whether the block is nested."""
+        rec = (self.recursors or {}).get(head.get("n"))
+        if rec is None or rec["num_motives"] == 1:
+            return spine, [], False
+        na, nn = rec["num_motives"] - 1, rec["num_minors"] - nmain
+        aux_m = spine[npar + 1:npar + 1 + na]
+        aux_n = spine[npar + 1 + na + nmain:npar + 1 + na + nmain + nn]
+        for x, want in [(m, "PUnit") for m in aux_m] + [(m, "PUnit.unit") for m in aux_n]:
+            while x.get("k") == "lam":
+                x = x["b"]
+            if x.get("k") != "const" or x.get("n") != want:
+                raise Mismatch(f"{path}: an auxiliary (nested) motive or minor is not the trivial {want}")
+        return spine[:npar + 1] + spine[npar + 1 + na:npar + 1 + na + nmain] + spine[npar + 1 + na + nmain + nn:], aux_m, True
 
-    def recursive_positions(self, ref, ctor):
-        """Outermost-first positions of the recursive constructor arguments."""
+    def recursive_fields(self, ref, ctor, nested=False):
+        """Number of recursive constructor arguments (Lean adds one recursive result for each)."""
+        return len(self.recursive_positions(ref, ctor, nested))
+
+    def recursive_positions(self, ref, ctor, nested=False):
+        """Outermost-first positions of the recursive constructor arguments (with nested, also the
+        fields of an auxiliary type, e.g. list I, which have a recursive result in Lean)."""
         mib = self.decls[ref["mind"]]
         if len(mib["bodies"]) != 1:
             raise Mismatch("UNAUDITABLE: case on a mutual block")
         args = list(reversed(mib["bodies"][ref["i"]]["ctors"][ctor]["args"]))  # outermost first
         pos = []
         for p, a in enumerate(args):
+            if nested and mentions_src_rel(a["ty"], p + mib["npars"]):
+                pos.append(p)
+                continue
             t, depth = a["ty"], 0
             while t["k"] == "prod":
                 t, depth = t["b"], depth + 1
             while t["k"] == "app":
                 t = t["f"]
             if t == {"k": "rel", "i": p + mib["npars"] + depth}:
-                if depth:
-                    raise Mismatch("UNAUDITABLE: functional recursive field")
-                pos.append(p)
+                pos.append(p)       # M6: a functional recursive field (depth > 0) has ih : forall zs, motive (y zs)
         return pos
+
+    def functional_positions(self, ref, ctor):
+        """Outermost-first positions of the functional recursive constructor arguments."""
+        mib = self.decls[ref["mind"]]
+        args = list(reversed(mib["bodies"][ref["i"]]["ctors"][ctor]["args"]))
+        out = []
+        for p in self.recursive_positions(ref, ctor):
+            if args[p]["ty"]["k"] == "prod":
+                out.append(p)
+        return out
 
     @staticmethod
     def strip_lams(e, n, path):
@@ -554,6 +633,20 @@ class Auditor:
 
     def check_case(self, s, e, path, env):
         ref = s["ci"]["ind"]
+        c = s["c"]
+        if c["k"] == "rel" and c["i"] < len(env) and env[c["i"]][0] == "bvar" and len(env[c["i"]]) > 5:
+            return self.check_case_cov(s, e, path, env, env[c["i"]][5])
+        if c["k"] == "rel" and c["i"] < len(env) and env[c["i"]][0] == "expect" and len(env[c["i"]]) > 3:
+            # M6 ι-generalized fix lowering: in minor k the decreasing argument is C_k params fields,
+            # so a match on it is its branch k, with the branch's fields := the minor's fields
+            _, _, cenv, (tag, k, nf, xref) = env[c["i"]]
+            if tag != "iota" or ref != xref:
+                raise Mismatch(f"{path}: ι-reduced match on a different inductive")
+            br = s["brs"][k]
+            if len(br["ctx"]) != nf:
+                raise Mismatch(f"{path}: ι-reduction: branch {k} binds {len(br['ctx'])} names for {nf} fields")
+            fenv = [("bvar", cenv[q][1], "field", k, q) + ((cenv[q][5],) if len(cenv[q]) > 5 else ()) for q in range(nf)]
+            return self.check(br["body"], e, path + [f"iota{k}"], fenv + list(env))
         if self.nonuniform(ref):
             return self.check_case_nu(s, e, path, env)
         tname, _, _ = self.ind_target(ref)
@@ -567,19 +660,62 @@ class Auditor:
             raise Mismatch(f"{path}: match must lower to {tname}.rec, found {cur.get('n', cur['k'])}")
         p, brs = s["p"], s["brs"]
         npar, nidx = len(p["params"]), len(p["ctx"]) - 1
+        spine, aux, nested = self.split_nested(cur, spine, npar, len(brs), path)
         if len(spine) != npar + 1 + len(brs) + nidx + 1:
             raise Mismatch(f"{path}: {tname}.rec applied to {len(spine)} arguments")
         for i, a in enumerate(p["params"]):
             self.check(a, spine[i], path + [f"param{i}"], env)
         motive = self.strip_lams(spine[npar], len(p["ctx"]), path + ["motive"])
         self.check(p["ret"], motive, path + ["motive"], self.push(env, len(p["ctx"])))
-        self.check_rec_binders(cur, spine, npar, len(brs), nidx, path, [self.recursive_fields(ref, k) for k in range(len(brs))],
-                               [len(br["ctx"]) for br in brs], 0)
+        self.check_rec_binders(cur, spine, npar, len(brs), nidx, path,
+                               [self.recursive_fields(ref, k, nested) for k in range(len(brs))],
+                               [len(br["ctx"]) for br in brs], 0, aux)
         for k, br in enumerate(brs):
-            nf, nih = len(br["ctx"]), self.recursive_fields(ref, k)
+            nf, nih = len(br["ctx"]), self.recursive_fields(ref, k, nested)
             body = self.strip_lams(spine[npar + 1 + k], nf + nih, path + [f"minor{k}"])
             self.check(br["body"], body, path + [f"minor{k}"], self.shift(self.push(env, nf), nih))
         # Indices of the major premise are forced by the recursor's (kernel-checked) type.
+        self.check(s["c"], spine[-1], path + ["major"], env)
+
+    def check_case_cov(self, s, e, path, env, res):
+        """M6 course-of-values: match z (z with a known result r_z) ->
+           I.rec params (lam z. forall h, RET) minors z r_z, minor_k = lam fields ihs h. B_k, the recursive
+           field m's result being proj0 (proj1^m (proj1 h)); h's type is forced by the application to r_z."""
+        ref = s["ci"]["ind"]
+        tname, _, _ = self.ind_target(ref)
+        if e["k"] != "app" or e["a"] != res:
+            raise Mismatch(f"{path}: course-of-values match must pass its scrutinee's result {res}")
+        head, spine = self.unspine(e["f"])
+        if head.get("k") != "const" or head.get("n") != tname + ".rec":
+            raise Mismatch(f"{path}: match must lower to {tname}.rec, found {head.get('n', head['k'])}")
+        p, brs = s["p"], s["brs"]
+        npar, nidx = len(p["params"]), len(p["ctx"]) - 1
+        if nidx or self.nonuniform(ref) or len(spine) != npar + 1 + len(brs) + 1:
+            raise Mismatch(f"{path}: UNAUDITABLE course-of-values match shape")
+        for i, a in enumerate(p["params"]):
+            self.check(a, spine[i], path + [f"param{i}"], env)
+        motive = self.strip_lams(spine[npar], 1, path + ["motive"])
+        if motive["k"] != "forall":
+            raise Mismatch(f"{path}: course-of-values motive is not a function of the scrutinee's result")
+        self.check(p["ret"], motive["b"], path + ["motive"], self.shift(self.push(env, 1), 1))
+        nihs = [self.recursive_fields(ref, k) for k in range(len(brs))]
+        self.check_rec_binders(head, spine, npar, len(brs), 0, path, nihs, [len(br["ctx"]) for br in brs], 1)
+        for k, br in enumerate(brs):
+            nf, nih = len(br["ctx"]), nihs[k]
+            if self.functional_positions(ref, k):
+                raise Mismatch(f"{path}: UNAUDITABLE course-of-values match with a functional field")
+            body = self.strip_lams(spine[npar + 1 + k], nf + nih + 1, path + [f"minor{k}"])
+            rq = [nf - 1 - pp for pp in self.recursive_positions(ref, k)]
+            benv = []
+            for q in range(nf):
+                ent = ("bvar", q + nih + 1, "field", "cov", q)
+                if q in rq:
+                    r_ = {"k": "proj", "s": "PProd", "i": 1, "e": {"k": "bvar", "i": 0}}
+                    for _ in range(rq.index(q)):
+                        r_ = {"k": "proj", "s": "PProd", "i": 1, "e": r_}
+                    ent = ent + ({"k": "proj", "s": "PProd", "i": 0, "e": r_},)
+                benv.append(ent)
+            self.check(br["body"], body, path + [f"minor{k}"], benv + self.shift(list(env), nf + nih + 1))
         self.check(s["c"], spine[-1], path + ["major"], env)
 
     def check_case_nu(self, s, e, path, env):
@@ -659,7 +795,7 @@ class Auditor:
             benv = [("bvar", 1 + q) for q in range(nf)] + self.shift(list(env), depth + nf + 1)
             self.check(br["body"], refl, path + [f"minor{kk}"], benv)
 
-    def check_rec_binders(self, head, spine, npar, nmin, nidx, path, nihs, nfs, nq):
+    def check_rec_binders(self, head, spine, npar, nmin, nidx, path, nihs, nfs, nq, aux=()):
         """Recursor identity/levels (kernel metadata) and the binder types of the motive and of
         every minor premise, reconstructed from the kernel-checked recursor type instantiated
         with the actual parameters and motive, compared modulo beta and binder names."""
@@ -668,7 +804,8 @@ class Auditor:
             raise Mismatch(f"{path}: no kernel metadata for recursor {head['n']} (fail closed)")
         if len(head["u"]) != len(rec["level_params"]):
             raise Mismatch(f"{path}: {head['n']} applied to {len(head['u'])} universe levels, kernel expects {len(rec['level_params'])}")
-        if (rec["num_params"], rec["num_indices"], rec["num_minors"], rec["num_motives"]) != (npar, nidx, nmin, 1):
+        naux_n = rec["num_minors"] - nmin if aux else 0
+        if (rec["num_params"], rec["num_indices"], rec["num_minors"], rec["num_motives"]) != (npar, nidx, nmin + naux_n, 1 + len(aux)):
             raise Mismatch(f"{path}: recursor shape differs from the source match")
         if [rec["rule_nfields"][k] for k in range(nmin)] != nfs:
             raise Mismatch(f"{path}: constructor field counts differ from the kernel recursor rules")
@@ -678,9 +815,9 @@ class Auditor:
         want, _ = foralls(mdoms[0], nidx + 1, path + ["motive type"])
         got, _ = lam_domains(spine[npar], nidx + 1, path + ["motive"])
         for i, (w, g) in enumerate(zip(want, got)):
-            if not same_mod_beta(w, g):
+            if not self.same_mod_beta_delta(w, g):
                 raise Mismatch(f"{path}: motive binder {i} type differs from the recursor's")
-        ty = inst_forall(ty, [spine[npar]], path)
+        ty = inst_forall(ty, [spine[npar]] + list(aux), path)
         for k in range(nmin):
             ty = beta(ty)
             if ty["k"] != "forall":
@@ -693,9 +830,46 @@ class Auditor:
                 want = want + qwant
             got, _ = lam_domains(spine[npar + 1 + k], nb + nq, path + [f"minor{k}"])
             for i, (w, g) in enumerate(zip(want, got)):
-                if not same_mod_beta(w, g):
+                if not self.same_mod_beta_delta(w, g):
                     raise Mismatch(f"{path}: minor {k} binder {i} type differs from the recursor's")
             ty = subst(ty["b"], spine[npar + 1 + k])
+
+    def unfold_src_alias(self, t, fuel=8):
+        """A source type whose head is a transparent constant (a definition alias such as Tauto's
+        clause or TFormula := GFormula …), delta-beta-unfolded until its head is not one: the
+        inductive the translator reaches by whnf."""
+        for _ in range(fuel):
+            h = t["f"] if t.get("k") == "app" else t
+            if h.get("k") != "const" or h["c"] not in self.ir_bodies:
+                return t
+            t = src_flatten_apps(beta_app(self.ir_bodies[h["c"]], t["args"] if t.get("k") == "app" else []))
+        return t
+
+    def same_mod_beta_delta(self, a, b, fuel=6):
+        """Equal modulo beta and binder names, unfolding a head that is an accepted transparent
+        definition (its audited target value, at the reference's universe arguments) when needed."""
+        if same_mod_beta(a, b):
+            return True
+        for _ in range(fuel):
+            a2, b2 = self.unfold_head(beta(a)), self.unfold_head(beta(b))
+            if a2 is None and b2 is None:
+                return False
+            a, b = a2 or a, b2 or b
+            if same_mod_beta(a, b):
+                return True
+        return False
+
+    def unfold_head(self, e):
+        h, sp = self.unspine(e)
+        if h.get("k") != "const" or h["n"] not in self.defs:
+            return None
+        lps, val = self.defs[h["n"]]
+        if len(lps) != len(h["u"]):
+            return None
+        v = inst_levels(val, dict(zip(lps, h["u"])))
+        for x in sp:
+            v = {"k": "app", "f": v, "a": x}
+        return beta(v)
 
     @staticmethod
     def unspine(e):
@@ -708,8 +882,15 @@ class Auditor:
     def check_fix(self, s, e, path, env):
         """fix f a0..a_{n-1} {struct a_r} := match a_r with ... end
            ->  lam a0..a_{n-1}. I.rec params motive minors idx a_r Q   (Q = a_{r+1}..)"""
-        if len(s["defs"]) != 1 or s["idx"] != 0:
-            raise Mismatch(f"{path}: UNAUDITABLE mutual fixpoint")
+        # M6 δβ: constants to which the block passes its own functions are inlined; ζ: let-bound
+        # partial applications of the block's functions are inlined (both definitional)
+        need = [d["rarg"] + 1 for d in reversed(s["defs"])]
+        s = dict(s, defs=[dict(d, body=zeta_fix_lets(inline_rec_args(d["body"], need, self.ir_bodies), len(s["defs"])))
+                          for d in s["defs"]])
+        if len(s["defs"]) != 1:
+            return self.check_fix_mutual(s, e, path, env)
+        if s["idx"] != 0:
+            raise Mismatch(f"{path}: UNAUDITABLE fixpoint index")
         d = s["defs"][0]
         r = d["rarg"]
         lams, b = [], d["body"]
@@ -726,8 +907,11 @@ class Auditor:
         th, _ = self.unspine(tgt_body)
         if th.get("k") == "const" and th.get("n") == "Acc.rec":
             return self.check_fix_acc(s, e, path, env)
-        if b["k"] != "case" or b["c"] != {"k": "rel", "i": nl - 1 - r}:
-            raise Mismatch(f"{path}: UNAUDITABLE fixpoint shape")
+        # M6 course-of-values: (I.rec params (λ x, PProd (M x) (Below x)) minors x).1 G Q
+        cov = th.get("k") == "proj" and th.get("s") == "PProd" and th.get("i") == 0
+        # The body is a match on the decreasing argument (M3c), or any term (M6 ι-generalized
+        # lowering: each minor is the whole body, matches on the decreasing argument ι-reduced).
+        iota = not (b["k"] == "case" and b["c"] == {"k": "rel", "i": nl - 1 - r})
         senv = [("forbid",)] + list(env)      # the source binds f; the target does not
         cur = e
         for i, lam in enumerate(lams):
@@ -737,22 +921,47 @@ class Auditor:
             senv = self.push(senv)
             cur = cur["b"]
         # Index positions: earlier parameters that are indices of the decreasing argument's type.
-        xty = lams[r]["ty"]
+        xty = self.unfold_src_alias(lams[r]["ty"])
         xargs = []
         while xty["k"] == "app":
             xargs = xty["args"] + xargs
             xty = xty["f"]
-        ref = b["ci"]["ind"]
-        npar = b["ci"]["npar"]
+        if iota:
+            if xty["k"] != "ind":
+                raise Mismatch(f"{path}: UNAUDITABLE fixpoint shape (decreasing argument not of an inductive type)")
+            ref = xty["ind"]
+            npar = self.decls[ref["mind"]]["npars"]
+            if self.nonuniform(ref):
+                raise Mismatch(f"{path}: UNAUDITABLE ι-generalized fixpoint on a non-uniform inductive")
+            if len(self.decls[ref["mind"]]["bodies"]) != 1:
+                raise Mismatch(f"{path}: UNAUDITABLE fixpoint on a mutual block")
+            branches = [(len(c["args"]), None) for c in self.decls[ref["mind"]]["bodies"][ref["i"]]["ctors"]]
+            nidx = len(xargs) - npar
+        else:
+            ref = b["ci"]["ind"]
+            npar = b["ci"]["npar"]
+            branches = [(len(br["ctx"]), br["body"]) for br in b["brs"]]
+            nidx = len(b["p"]["ctx"]) - 1
+        # M6: non-uniform parameters are Lean indices (the leading ones) and the leading fields of
+        # Lean's constructors; Rocq's match counts them as parameters, its branches bind the others
+        nu = 0 if iota else self.nonuniform(ref)
+        rnpar, npar, nidx = npar, npar - nu, nidx + nu
         idx_pos = {r - 1 - a["i"] for a in xargs[npar:] if a["k"] == "rel" and a["i"] < r}
         # Leading arguments changed by recursive calls (not indices) are generalized in the motive.
         gpos = sorted(changed_params(d["body"], nl, r) - idx_pos)
         ng = len(gpos)
         head, spine = self.unspine(cur)
+        if cov:
+            if nu or nidx:
+                raise Mismatch(f"{path}: UNAUDITABLE course-of-values recursion on an indexed or non-uniform inductive")
+            head, spine = self.unspine(head["e"])[0], self.unspine(head["e"])[1] + spine   # G Q after the major
         tname, _, _ = self.ind_target(ref)
         if head["k"] != "const" or head["n"] != tname + ".rec":
             raise Mismatch(f"{path}: fixpoint must lower to {tname}.rec")
-        nmin, nq, nidx = len(b["brs"]), nl - r - 1, len(b["p"]["ctx"]) - 1
+        nmin, nq = len(branches), nl - r - 1
+        spine, aux, nested = self.split_nested(head, spine, npar, nmin, path)
+        if nested and cov:
+            raise Mismatch(f"{path}: UNAUDITABLE course-of-values recursion on a nested inductive")
         if len(spine) != npar + 1 + nmin + nidx + 1 + ng + nq:
             raise Mismatch(f"{path}: {tname}.rec applied to {len(spine)} arguments")
         # Major premise, then the generalized arguments, then Q, in order.
@@ -769,6 +978,8 @@ class Auditor:
         env_r = self.shift(env_r, nl - r)
         if len(xargs) != npar + nidx:
             raise Mismatch(f"{path}: decreasing argument's type has {len(xargs)} arguments, expected {npar + nidx}")
+        if nu and any(not (a["k"] == "rel" and a["i"] < r) for a in xargs[npar:npar + nu]):
+            raise Mismatch(f"{path}: UNAUDITABLE non-uniform parameter of the decreasing argument that is not a leading argument")
         for i in range(npar):
             self.check(xargs[i], spine[i], path + [f"param{i}"], env_r)
         for j in range(nidx):
@@ -806,6 +1017,15 @@ class Auditor:
                 raise Mismatch(f"{path}: fixpoint type has fewer than {r + 1} binders")
             fty = fty["b"]
         mbody = self.strip_lams(spine[npar], nidx + 1, path + ["motive"])
+        if cov:
+            ph, pa = self.unspine(mbody)
+            if ph.get("k") != "const" or ph.get("n") != "PProd" or len(pa) != 2:
+                raise Mismatch(f"{path}: course-of-values motive is not PProd (M x) (Below x)")
+            bh, ba = self.unspine(pa[1])
+            if bh.get("k") != "const" or bh.get("n") != tname + ".rec" or len(ba) != npar + 2 + nmin \
+                    or ba[-1] != {"k": "bvar", "i": 0} or any(ba[i] != lift(spine[i], 1) for i in range(npar)):
+                raise Mismatch(f"{path}: course-of-values Below is not {tname}.rec over the motive's argument")
+            mbody = pa[0]                     # Below's minors are kernel-forced by the audited chains
         for j, i in enumerate(gpos):          # ∀ G: the generalized arguments' source types
             if mbody["k"] != "forall":
                 raise Mismatch(f"{path}: motive lacks the generalized argument {i}")
@@ -813,42 +1033,250 @@ class Auditor:
             mbody = mbody["b"]
         self.check(fty, mbody, path + ["motive body"], menv)
         self.check_rec_binders(head, spine, npar, nmin, nidx, path,
-                               [len(self.recursive_positions(ref, k)) for k in range(nmin)],
-                               [len(br["ctx"]) for br in b["brs"]], ng + nq)
-        for k, br in enumerate(b["brs"]):
-            nf = len(br["ctx"])
-            rpos = self.recursive_positions(ref, k)
+                               [len(self.recursive_positions(ref, k, nested)) for k in range(nmin)],
+                               [nf + nu for nf, _ in branches], 0 if cov else ng + nq, aux)
+        for k, (nf, bbody) in enumerate(branches):
+            rpos = self.recursive_positions(ref, k, nested)
             nih = len(rpos)
-            body = self.strip_lams(spine[npar + 1 + k], nf + nih + ng + nq, path + [f"minor{k}"])
-            depth = nf + nih + ng + nq
+            if cov:
+                if self.functional_positions(ref, k):
+                    raise Mismatch(f"{path}: UNAUDITABLE course-of-values recursion with a functional field")
+                vh, va = self.unspine(self.strip_lams(spine[npar + 1 + k], nf + nih, path + [f"minor{k}"]))
+                if vh.get("k") != "const" or vh.get("n") != "PProd.mk" or len(va) != 4:
+                    raise Mismatch(f"{path}: course-of-values minor {k} is not a pair")
+                chain = va[3]                  # ⟨ih_1, ⟨ih_2, … PUnit.unit⟩⟩ in field order
+                for m in range(nih):
+                    ch, ca = self.unspine(chain)
+                    if ch.get("k") != "const" or ch.get("n") != "PProd.mk" or len(ca) != 4 or ca[2] != {"k": "bvar", "i": nih - 1 - m}:
+                        raise Mismatch(f"{path}: course-of-values minor {k}: the below chain is not the recursive results in order")
+                    chain = ca[3]
+                if chain.get("k") != "const" or chain.get("n") != "PUnit.unit":
+                    raise Mismatch(f"{path}: course-of-values minor {k}: the below chain does not end in PUnit.unit")
+                body = self.strip_lams(va[2], ng + nq, path + [f"minor{k}"])
+            else:
+                body = self.strip_lams(spine[npar + 1 + k], nf + nu + nih + ng + nq, path + [f"minor{k}"])
+            depth = nf + nu + nih + ng + nq
+            nuvar = lambda t: ("bvar", nf + (nu - 1 - t) + nih + ng + nq)   # Lean field of non-uniform parameter t
             benv = [("bvar", q + nih + ng + nq, "field", k, q) for q in range(nf)]   # q: innermost-first
+            if cov:                                  # recursive field q: its result is its ih (a pair)
+                rq = [nf - 1 - p for p in rpos]
+                benv = [x + ({"k": "bvar", "i": nih - 1 - rq.index(x[4]) + ng + nq},) if x[4] in rq else x for x in benv]
             # In branch k (run at every recursion depth) the decreasing argument denotes the
             # constructor applied to the parameters and fields, and its index variables denote that
             # constructor's indices (source `ctor.indices`, in the context params + fields).
             ctor_env = [("bvar", q + nih + ng + nq) for q in range(nf)] + \
-                [("tgt", lift(spine[npar - 1 - qq], depth)) for qq in range(npar)] + [("forbid",)]
+                [("tgt", lift(spine[rnpar - 1 - qq], depth)) if rnpar - 1 - qq < npar else nuvar(rnpar - 1 - qq - npar)
+                 for qq in range(rnpar)] + [("forbid",)]
+            if cov:                                  # (fields of an ι-reduced match carry their results)
+                ctor_env = [("bvar", q + nih + ng + nq, "ctor", k, q, {"k": "bvar", "i": nih - 1 - rq.index(q) + ng + nq})
+                            if q in rq else ctor_env[q] for q in range(nf)] + ctor_env[nf:]
             xk = {"k": "construct", "ind": ref, "c": k, "u": []}
-            if npar + nf:
-                xk = {"k": "app", "f": xk, "args": [{"k": "rel", "i": nf + npar - 1 - pi} for pi in range(npar)]
+            if rnpar + nf:
+                xk = {"k": "app", "f": xk, "args": [{"k": "rel", "i": nf + rnpar - 1 - pi} for pi in range(rnpar)]
                       + [{"k": "rel", "i": nf - 1 - pp} for pp in range(nf)]}
-            cidx = self.decls[ref["mind"]]["bodies"][ref["i"]]["ctors"][k]["indices"]
+            cidx = [None] * nu + self.decls[ref["mind"]]["bodies"][ref["i"]]["ctors"][k]["indices"]
             for t in range(nl):                                               # a_{nl-1} .. a_0
                 i = nl - 1 - t
                 if i > r:
                     benv.append(("bvar", nq - 1 - (i - r - 1)))
                 elif i == r:
-                    benv.append(("expect", xk, ctor_env))
+                    benv.append(("expect", xk, ctor_env, ("iota", k, nf, ref)) if iota else ("expect", xk, ctor_env))
                 elif i in gpos:
                     benv.append(("bvar", nq + ng - 1 - gpos.index(i), "gen", i))
                 elif i in idx_of:
-                    benv.append(("expect", cidx[idx_of[i]], ctor_env))
+                    benv.append(nuvar(idx_of[i]) if idx_of[i] < nu else ("expect", cidx[idx_of[i]], ctor_env))
                 else:
                     benv.append(("bvar", senv[t][1] + depth, "param", i))
             info = {"minor": k, "r": r, "nf": nf, "nq": nq, "rec_q": [nf - 1 - p for p in rpos], "idx_pos": idx_pos,
-                    "gpos": gpos}
+                    "gpos": gpos, "fun_q": [nf - 1 - p for p in self.functional_positions(ref, k)], "cov": cov, "ref": ref}
             benv.append(("rec", info))
             benv += self.shift(senv[nl + 1:], depth)
-            self.check(br["body"], body, path + [f"minor{k}"], benv)
+            if iota:
+                self.check(b, body, path + [f"minor{k}"], benv[nf:])
+            else:
+                self.check(bbody, body, path + [f"minor{k}"], benv)
+
+    def check_fix_mutual(self, s, e, path, env):
+        """M6 mutual structural fixpoints over one inductive (all functions decrease on argument r,
+        with the same leading argument types):
+           fix f_0 .. f_{n-1} for f_j  ->  lam a_0..a_{r}  Q_j. (I.rec params motive minors idx a_r).j G Q_j
+           motive  = lam idx x. PProd (forall G Q_0. T_0) (PProd .. (forall G Q_{n-1}. T_{n-1}))
+           minor_k = lam fields ihs. PProd.mk _ _ (lam G Q_0. b_0k) (PProd.mk _ _ .. (lam G Q_{n-1}. b_{n-1,k}))
+        `.j` is the PProd projection chain; a call f_i P y rest on a recursive field y becomes
+        (ih_y).i G' rest; b_jk is branch k of b_j (a match on x) or b_j with matches on x ι-reduced."""
+        defs, fidx = s["defs"], s["idx"]
+        n = len(defs)
+        r = defs[0]["rarg"]
+        if any(d["rarg"] != r for d in defs):
+            raise Mismatch(f"{path}: UNAUDITABLE mutual fixpoint (decreasing arguments at different positions)")
+        peeled = []
+        for d in defs:
+            lams, b = [], d["body"]
+            while b["k"] == "lam":
+                lams.append(b)
+                b = b["b"]
+            if len(lams) <= r:
+                raise Mismatch(f"{path}: UNAUDITABLE mutual fixpoint (decreasing argument not a leading lambda)")
+            peeled.append((lams, b))
+        for j in range(1, n):
+            for i in range(r + 1):
+                if src_anon(peeled[j][0][i]["ty"]) != src_anon(peeled[0][0][i]["ty"]):
+                    raise Mismatch(f"{path}: UNAUDITABLE mutual fixpoint (argument {i} of function {j} has another type)")
+        lamsF = peeled[fidx][0]
+        nlF = len(lamsF)
+        senv = [("forbid",)] * n + list(env)          # the source binds f_0..f_{n-1}; the target does not
+        cur = e
+        for i, lam in enumerate(lamsF):
+            if cur["k"] != "lam":
+                raise Mismatch(f"{path}: expected {nlF} lambdas")
+            self.check(lam["ty"], cur["t"], path + [f"lam{i}"], senv)
+            senv = self.push(senv)
+            cur = cur["b"]
+        xty = self.unfold_src_alias(lamsF[r]["ty"])
+        xargs = []
+        while xty["k"] == "app":
+            xargs = xty["args"] + xargs
+            xty = xty["f"]
+        if xty["k"] != "ind":
+            raise Mismatch(f"{path}: UNAUDITABLE mutual fixpoint (decreasing argument not of an inductive type)")
+        ref = xty["ind"]
+        mib = self.decls[ref["mind"]]
+        if len(mib["bodies"]) != 1 or self.nonuniform(ref):
+            raise Mismatch(f"{path}: UNAUDITABLE mutual fixpoint over a mutual or non-uniform inductive")
+        npar = mib["npars"]
+        nidx = len(xargs) - npar
+        ctors = mib["bodies"][ref["i"]]["ctors"]
+        nmin = len(ctors)
+        idx_pos = {r - 1 - a["i"] for a in xargs[npar:] if a["k"] == "rel" and a["i"] < r}
+        gacc = set()
+        for j, d in enumerate(defs):
+            changed_params(d["body"], len(peeled[j][0]), r, 0, gacc, n)
+        gpos = sorted(gacc - idx_pos)
+        ng = len(gpos)
+        nqF = nlF - r - 1
+        head, outer_args = self.unspine(cur)
+        if len(outer_args) != ng + nqF:
+            raise Mismatch(f"{path}: projection applied to {len(outer_args)} arguments, expected {ng + nqF}")
+        for jj, i in enumerate(gpos):
+            self.check({"k": "rel", "i": nlF - 1 - i}, outer_args[jj], path + [f"g{jj}"], senv)
+        for jj in range(nqF):
+            self.check({"k": "rel", "i": nqF - 1 - jj}, outer_args[ng + jj], path + [f"q{jj}"], senv)
+        node = head
+        for want in pprod_path(fidx, n):
+            if node.get("k") != "proj" or node.get("s") != "PProd" or node.get("i") != want:
+                raise Mismatch(f"{path}: function {fidx} must be projection {pprod_path(fidx, n)} of the joint recursor")
+            node = node["e"]
+        rhead, spine = self.unspine(node)
+        tname, _, _ = self.ind_target(ref)
+        if rhead["k"] != "const" or rhead["n"] != tname + ".rec":
+            raise Mismatch(f"{path}: mutual fixpoint must lower to {tname}.rec")
+        if len(spine) != npar + 1 + nmin + nidx + 1:
+            raise Mismatch(f"{path}: {tname}.rec applied to {len(spine)} arguments")
+        self.check({"k": "rel", "i": nlF - 1 - r}, spine[-1], path + ["major"], senv)
+        env_r = [("forbid",)] * n + list(env)
+        for _ in range(r):
+            env_r = self.push(env_r)
+        env_r = self.shift(env_r, nlF - r)
+        for i in range(npar):
+            self.check(xargs[i], spine[i], path + [f"param{i}"], env_r)
+        for jj in range(nidx):
+            self.check(xargs[npar + jj], spine[npar + 1 + nmin + jj], path + [f"index{jj}"], env_r)
+        idx_of = {}
+        for jj, a in enumerate(xargs[npar:]):
+            if a["k"] == "rel" and a["i"] < r:
+                idx_of[r - 1 - a["i"]] = jj
+
+        def lead_env(i, extra):
+            out = []
+            for kk in reversed(range(i)):
+                if kk in gpos:
+                    out.append(("bvar", extra - 1 - gpos.index(kk)))
+                elif kk in idx_of:
+                    out.append(("bvar", extra + nidx - idx_of[kk]))
+                else:
+                    out.append(("bvar", (nlF - 1 - kk) + nidx + 1 + extra))
+            return out + [("forbid",)] * n + self.shift(list(env), nlF + nidx + 1 + extra)
+        menv = [("bvar", ng)]
+        for i in reversed(range(r)):
+            if i in gpos:
+                menv.append(("bvar", ng - 1 - gpos.index(i)))
+            else:
+                menv.append(("bvar", ng + nidx - idx_of[i]) if i in idx_of else ("bvar", (nlF - 1 - i) + nidx + 1 + ng))
+        menv += self.shift(list(env), nlF + nidx + 1 + ng)
+        # motive: PProd chain of the components forall G Q_j. T_j
+        mnode = self.strip_lams(spine[npar], nidx + 1, path + ["motive"])
+        for j in range(n):
+            if j + 1 < n:
+                mh, ma = self.unspine(mnode)
+                if mh.get("k") != "const" or mh.get("n") != "PProd" or len(ma) != 2:
+                    raise Mismatch(f"{path}: motive is not a PProd of the {n} function types")
+                comp, mnode = ma
+            else:
+                comp = mnode
+            fty = defs[j]["ty"]
+            for _ in range(r + 1):
+                if fty["k"] != "prod":
+                    raise Mismatch(f"{path}: type of function {j} has fewer than {r + 1} binders")
+                fty = fty["b"]
+            for jj, i in enumerate(gpos):
+                if comp["k"] != "forall":
+                    raise Mismatch(f"{path}: motive component {j} lacks the generalized argument {i}")
+                self.check(lamsF[i]["ty"], comp["t"], path + [f"motive{j} g{jj}"], lead_env(i, jj))
+                comp = comp["b"]
+            self.check(fty, comp, path + [f"motive{j} body"], menv)
+        nihs = [len(self.recursive_positions(ref, k)) for k in range(nmin)]
+        nfs = [len(c["args"]) for c in ctors]
+        self.check_rec_binders(rhead, spine, npar, nmin, nidx, path, nihs, nfs, 0)
+        cidx_all = [c["indices"] for c in ctors]
+        for k in range(nmin):
+            nf, nih = nfs[k], nihs[k]
+            rpos = self.recursive_positions(ref, k)
+            vnode = self.strip_lams(spine[npar + 1 + k], nf + nih, path + [f"minor{k}"])
+            for j in range(n):
+                if j + 1 < n:
+                    vh, va = self.unspine(vnode)
+                    if vh.get("k") != "const" or vh.get("n") != "PProd.mk" or len(va) != 4:
+                        raise Mismatch(f"{path}: minor {k} is not a PProd.mk tuple of the {n} branches")
+                    comp, vnode = va[2], va[3]       # the component types va[0], va[1] are kernel-forced
+                else:
+                    comp = vnode
+                lams_j, b_j = peeled[j]
+                nl_j = len(lams_j)
+                nq = nl_j - r - 1
+                body = self.strip_lams(comp, ng + nq, path + [f"minor{k}.{j}"])
+                depth = nf + nih + ng + nq
+                iota = not (b_j["k"] == "case" and b_j["c"] == {"k": "rel", "i": nl_j - 1 - r})
+                if not iota:
+                    if b_j["ci"]["ind"] != ref or len(b_j["brs"]) != nmin or len(b_j["brs"][k]["ctx"]) != nf:
+                        raise Mismatch(f"{path}: function {j}'s match disagrees with the recursor")
+                benv = [("bvar", q + nih + ng + nq, "field", k, q) for q in range(nf)]
+                ctor_env = [("bvar", q + nih + ng + nq) for q in range(nf)] + \
+                    [("tgt", lift(spine[npar - 1 - qq], depth)) for qq in range(npar)] + [("forbid",)]
+                xk = {"k": "construct", "ind": ref, "c": k, "u": []}
+                if npar + nf:
+                    xk = {"k": "app", "f": xk, "args": [{"k": "rel", "i": nf + npar - 1 - pi} for pi in range(npar)]
+                          + [{"k": "rel", "i": nf - 1 - pp} for pp in range(nf)]}
+                for t in range(nl_j):
+                    i = nl_j - 1 - t
+                    if i > r:
+                        benv.append(("bvar", nq - 1 - (i - r - 1)))
+                    elif i == r:
+                        benv.append(("expect", xk, ctor_env, ("iota", k, nf, ref)) if iota else ("expect", xk, ctor_env))
+                    elif i in gpos:
+                        benv.append(("bvar", nq + ng - 1 - gpos.index(i), "gen", i))
+                    elif i in idx_of:
+                        benv.append(("expect", cidx_all[k][idx_of[i]], ctor_env))
+                    else:
+                        benv.append(("bvar", (nlF - 1 - i) + depth, "param", i))
+                for fi in reversed(range(n)):                 # rel nl_j is f_{n-1}, the innermost
+                    benv.append(("rec", {"minor": k, "r": r, "nf": nf, "nq": nq, "rec_q": [nf - 1 - p for p in rpos],
+                                         "idx_pos": idx_pos, "gpos": gpos, "fn": fi, "nfn": n,
+                                         "fun_q": [nf - 1 - p for p in self.functional_positions(ref, k)]}))
+                benv += self.shift(list(env), nlF + depth)
+                if iota:
+                    self.check(b_j, body, path + [f"minor{k}.{j}"], benv[nf:])
+                else:
+                    self.check(b_j["brs"][k]["body"], body, path + [f"minor{k}.{j}"], benv)
 
     def check_fix_acc(self, s, e, path, env):
         """fix f a0..a_{n-1} {struct a_r} := body, a_r a proof of a Prop inductive I (one or no index),
@@ -873,7 +1301,7 @@ class Auditor:
             senv = self.push(senv)
             cur = cur["b"]
         head, spine = self.unspine(cur)
-        xty = lams[r]["ty"]
+        xty = self.unfold_src_alias(lams[r]["ty"])
         xargs = []
         while xty["k"] == "app":
             xargs = xty["args"] + xargs
@@ -891,6 +1319,68 @@ class Auditor:
         ng, nq = len(gpos), nl - r - 1
         if len(spine) != 6 + ng + nq:
             raise Mismatch(f"{path}: Acc.rec applied to {len(spine)} arguments")
+        # carrier C (spine[0]), reconstructed from the source: PSigma (lam i : U. I params i) with the
+        # second component a Prop family, or the decreasing argument's type itself
+        C = spine[0]
+        if has_idx:
+            ch, ca = self.unspine(C)
+            if ch.get("k") != "const" or ch.get("n") != "PSigma" or len(ca) != 2 or len(ch["u"]) != 2 \
+                    or level_nf(ch["u"][1]) != canon(0, {}) or ca[1]["k"] != "lam":
+                raise Mismatch(f"{path}: accessibility carrier is not PSigma of a Prop family")
+            ip = next(iter(idx_pos))
+            # U: the index lambda's type, in the context of the lambdas before it
+            uenv = [("bvar", nl - 1 - k) for k in reversed(range(ip))] + [("forbid",)] + self.shift(list(env), nl)
+            self.check(lams[ip]["ty"], ca[0], path + ["carrier index type"], uenv)
+            # the family body: the decreasing argument's type with the index replaced by the binder
+            fenv = [("bvar", 0) if k == ip else ("bvar", nl - 1 - k + 1) for k in reversed(range(r))] + [("forbid",)] \
+                + self.shift(list(env), nl + 1)
+            self.check(lams[r]["ty"], ca[1]["b"], path + ["carrier family"], fenv)
+        else:
+            cenv = [("bvar", nl - 1 - k) for k in reversed(range(r))] + [("forbid",)] + self.shift(list(env), nl)
+            self.check(lams[r]["ty"], C, path + ["carrier"], cenv)
+        # call-graph relation R (spine[1]): lam y s. D_1 \/ ... \/ D_n, one disjunct per recursive call of
+        # the source body, each EXISTS ctx.., Eq C' y PAIR. (Its disjuncts' contents and the
+        # well-foundedness proof and certificates are proofs/propositions checked by the kernel; R occurs
+        # only in binder types of Acc.rec's minor premise, so it cannot change the computed value; a
+        # relation not containing the call graph is kernel-rejected: test-m6 mutations.)
+        def n_calls(t, depth):
+            if isinstance(t, dict):
+                n = 1 if (t.get("k") == "app" and t["f"] == {"k": "rel", "i": nl + depth}) else 0
+                k = t.get("k")
+                if k in ("lam", "prod"):
+                    return n + n_calls(t["ty"], depth) + n_calls(t["b"], depth + 1)
+                if k == "let":
+                    return n + n_calls(t["v"], depth) + n_calls(t["ty"], depth) + n_calls(t["b"], depth + 1)
+                if k == "case":
+                    return n + n_calls(t["c"], depth) + sum(n_calls(x, depth) for x in t["p"]["params"]) \
+                        + n_calls(t["p"]["ret"], depth + len(t["p"]["ctx"])) \
+                        + sum(n_calls(br["body"], depth + len(br["ctx"])) for br in t["brs"])
+                if k == "fix":
+                    return n + sum(n_calls(dd["ty"], depth) + n_calls(dd["body"], depth + len(t["defs"])) for dd in t["defs"])
+                return n + sum(n_calls(v, depth) for kk, v in t.items() if kk not in ("k",) and isinstance(v, (dict, list)))
+            if isinstance(t, list):
+                return sum(n_calls(v, depth) for v in t)
+            return 0
+        ncall = n_calls(b, 0)
+        rb = self.strip_lams(spine[1], 2, path + ["relation"])
+        disj = []
+        while ncall - len(disj) > 1:
+            oh, oa = self.unspine(rb)
+            if oh.get("n") != "Or" or len(oa) != 2:
+                raise Mismatch(f"{path}: call relation has fewer disjuncts than the source's {ncall} recursive calls")
+            disj.append(oa[0])
+            rb = oa[1]
+        disj.append(rb)
+        for q, dsj in enumerate(disj):
+            dpt = 0
+            while True:
+                eh, ea = self.unspine(dsj)
+                if eh.get("n") == "Exists" and len(ea) == 2 and ea[1]["k"] == "lam":
+                    dsj, dpt = ea[1]["b"], dpt + 1
+                    continue
+                break
+            if eh.get("n") != "Eq" or len(ea) != 3 or ea[1] != {"k": "bvar", "i": dpt + 1}:
+                raise Mismatch(f"{path}: call relation disjunct {q} is not EXISTS ctx, y = <j, a>")
         # major
         xb = {"k": "bvar", "i": nl - 1 - r}
         maj = spine[4]
@@ -987,13 +1477,32 @@ class Auditor:
             ent = env[a["i"]] if a["k"] == "rel" and a["i"] < len(env) else None
             if not (ent and ent[0] == "bvar" and ent[2:4] == ("param", i)):
                 raise Mismatch(f"{path}: recursive call changes parameter {i}")
-        y = args[r]
+        y, zs = args[r], []
+        if y["k"] == "app" and y["f"]["k"] == "rel":      # a functional recursive field applied: g zs
+            y, zs = y["f"], y["args"]
         ent = env[y["i"]] if y["k"] == "rel" and y["i"] < len(env) else None
+        if info.get("cov"):
+            # course-of-values: any subterm with a known result r becomes (r).1 G' rest
+            if zs or not (ent and ent[0] == "bvar" and len(ent) > 5 and ent[2] == "field"):
+                raise Mismatch(f"{path}: recursive call on a subterm without a course-of-values result")
+            rest = [args[i] for i in info.get("gpos", [])] + args[r + 1:]
+            cur = e
+            for j in reversed(range(len(rest))):
+                if cur["k"] != "app":
+                    raise Mismatch(f"{path}: recursive result applied to too few arguments")
+                self.check(rest[j], cur["a"], path + [f"rec-arg{j}"], env)
+                cur = cur["f"]
+            want = {"k": "proj", "s": "PProd", "i": 0, "e": ent[5]}
+            if cur != want:
+                raise Mismatch(f"{path}: recursive call must become the first component of its subterm's result {want}, found {cur}")
+            return
         if not (ent and ent[0] == "bvar" and len(ent) == 5 and ent[2] == "field" and ent[3] == info["minor"]):
             raise Mismatch(f"{path}: recursive call not on a constructor field")
         q = ent[4]
         if q not in info["rec_q"]:
             raise Mismatch(f"{path}: recursive call on a non-recursive field")
+        if bool(zs) != (q in info.get("fun_q", [])):
+            raise Mismatch(f"{path}: recursive call on a functional field must apply it (and only then)")
         m = info["rec_q"].index(q)
         ih = ent[1] - 1 - m - q
         rest = [args[i] for i in info.get("gpos", [])] + args[r + 1:]
@@ -1002,6 +1511,16 @@ class Auditor:
             if cur["k"] != "app":
                 raise Mismatch(f"{path}: recursive result applied to too few arguments")
             self.check(rest[j], cur["a"], path + [f"rec-arg{j}"], env)
+            cur = cur["f"]
+        if info.get("nfn", 1) > 1:              # mutual block: the component of the called function
+            for i in pprod_path(info["fn"], info["nfn"]):
+                if cur.get("k") != "proj" or cur.get("s") != "PProd" or cur.get("i") != i:
+                    raise Mismatch(f"{path}: recursive call must select component {info['fn']} of the recursive result")
+                cur = cur["e"]
+        for j in reversed(range(len(zs))):          # a functional field's recursive result, applied: ih zs
+            if cur["k"] != "app":
+                raise Mismatch(f"{path}: recursive result of a functional field applied to too few arguments")
+            self.check(zs[j], cur["a"], path + [f"rec-z{j}"], env)
             cur = cur["f"]
         if cur != {"k": "bvar", "i": ih}:
             raise Mismatch(f"{path}: recursive call must become recursive result bvar {ih}, found {cur}")
@@ -1078,6 +1597,169 @@ def anon(e):
     return e
 
 
+def src_rewrite(t, pre, k=0, again=True):
+    """Rewrite a source IR term top-down: pre(node, k) returns a replacement or None; k counts the
+    binders above the node. With again, a replacement is itself rewritten (at the same k)."""
+    if isinstance(t, list):
+        return [src_rewrite(x, pre, k, again) for x in t]
+    if not isinstance(t, dict):
+        return t
+    r = pre(t, k)
+    if r is not None:
+        return src_rewrite(r, pre, k, again) if again else r
+    go = lambda u, d=0: src_rewrite(u, pre, k + d, again)
+    kk = t.get("k")
+    if kk in ("prod", "lam"):
+        return dict(t, ty=go(t["ty"]), b=go(t["b"], 1))
+    if kk == "let":
+        return dict(t, v=go(t["v"]), ty=go(t["ty"]), b=go(t["b"], 1))
+    if kk == "case":
+        p = t["p"]
+        return dict(t, p=dict(p, params=go(p["params"]), ret=go(p["ret"], len(p["ctx"]))), c=go(t["c"]),
+                    brs=[dict(br, body=go(br["body"], len(br["ctx"]))) for br in t["brs"]])
+    if kk in ("fix", "cofix"):
+        n = len(t["defs"])
+        return dict(t, defs=[dict(d, ty=go(d["ty"]), body=go(d["body"], n)) for d in t["defs"]])
+    return {key: (go(v) if isinstance(v, (dict, list)) else v) for key, v in t.items()}
+
+
+def src_lift(t, n):
+    """Add n to every free rel of a source term."""
+    if not n:
+        return t
+    return src_rewrite(t, lambda x, d: {"k": "rel", "i": x["i"] + n} if x.get("k") == "rel" and x["i"] >= d else None,
+                       again=False)
+
+
+def src_subst0(b, v):
+    """b[rel 0 := v] for a source term b under one binder (v in the context outside the binder)."""
+    def pre(x, d):
+        if x.get("k") != "rel" or x["i"] < d:
+            return None
+        return src_lift(v, d) if x["i"] == d else {"k": "rel", "i": x["i"] - 1}
+    return src_rewrite(b, pre, again=False)
+
+
+def src_flatten_apps(t):
+    """app (app f a) b -> app f (a ++ b)."""
+    def pre(x, d):
+        if x.get("k") == "app" and x["f"].get("k") == "app":
+            return {"k": "app", "f": x["f"]["f"], "args": x["f"]["args"] + x["args"]}
+        return None
+    return src_rewrite(t, pre)
+
+
+def mentions_rels(t, lo, n):
+    """Does the source term mention a free rel in [lo, lo+n) (counted at its top)?"""
+    hit = []
+    src_rewrite(t, lambda x, d: hit.append(1) if x.get("k") == "rel" and lo + d <= x["i"] < lo + d + n else None,
+                again=False)
+    return bool(hit)
+
+
+def zeta_fix_lets(body, nfun):
+    """M6 ζ-normalization of a fixpoint body (independent of the translator): a let whose value
+    mentions a function of the block (a partial application, e.g. Pos.peano_rect's f2) is inlined,
+    so its uses become recursive calls. The body is at depth 0 below the block's binders."""
+    def pre(x, d):
+        if x.get("k") == "let" and mentions_rels(x["v"], d, nfun):
+            return src_flatten_apps(src_subst0(x["b"], x["v"]))
+        return None
+    return src_rewrite(body, pre)
+
+
+def partial_rec_use(t, lo, need):
+    """Does the source term use a function of a fixpoint block (rel lo+o, o < len(need); offset 0 is
+    the block's last function) other than in a full call (fewer than need[o] arguments, or bare)?"""
+    found = []
+
+    def pre(x, d):
+        if x.get("k") == "app" and x["f"].get("k") == "rel":
+            i = x["f"]["i"] - lo - d
+            if 0 <= i < len(need) and len(x["args"]) < need[i]:
+                found.append(1)
+            for a in x["args"]:
+                src_rewrite(a, pre, d, again=False)
+            return x                                   # handled (the head is not visited bare)
+        if x.get("k") == "rel" and 0 <= x["i"] - lo - d < len(need):
+            found.append(1)
+        return None
+    src_rewrite(t, pre, again=False)
+    return bool(found)
+
+
+def beta_app(f, args):
+    """Source β-reduction of f args as far as f's leading lambdas go (rest stays applied, flattened)."""
+    while args and f.get("k") == "lam":
+        f, args = src_subst0(f["b"], args[0]), args[1:]
+    if not args:
+        return f
+    if f.get("k") == "app":
+        return {"k": "app", "f": f["f"], "args": f["args"] + args}
+    return {"k": "app", "f": f, "args": args}
+
+
+def inline_rec_args(body, need, bodies, fuel=16):
+    """M6 δβ-inlining (independent of the translator): in a fixpoint body, c args with c a transparent
+    monomorphic constant and some argument using a block function other than in a full call is
+    replaced by c's source body β-reduced with args (Ring_polynom Padd/PaddI, Tauto xcnf/mk_and)."""
+    def pre(x, d):
+        nonlocal fuel
+        if x.get("k") == "app" and x["f"].get("k") == "const" and x["f"]["c"] in bodies and fuel > 0 \
+                and any(partial_rec_use(a, d, need) for a in x["args"]):
+            fuel -= 1
+            return src_flatten_apps(beta_app(bodies[x["f"]["c"]], x["args"]))
+        return None
+    return src_rewrite(body, pre)
+
+
+def mentions_src_rel(t, i):
+    """Does the source term mention rel i (counting binders)?"""
+    found = []
+    src_rewrite(t, lambda x, d: found.append(1) if x.get("k") == "rel" and x["i"] == i + d else None, again=False)
+    return bool(found)
+
+
+def has_set_motive(ty):
+    """The source type has a binder of a Set-valued family (forall xs, Set with xs nonempty)."""
+    while ty.get("k") == "prod":
+        a, n = ty["ty"], 0
+        while a.get("k") == "prod":
+            a, n = a["b"], n + 1
+        if n and a.get("k") == "sort" and a["s"]["k"] == "type" and a["s"]["u"] == [{"l": {"k": "set"}, "n": 0}]:
+            return True
+        ty = ty["b"]
+    return False
+
+
+def inline_consts(body, names, bodies, fuel=8):
+    """M6 delta-inlining (independent): applications of the listed constants become their source
+    bodies beta-reduced with the arguments."""
+    left = [fuel]
+
+    def pre(x, d):
+        if x.get("k") == "app" and x["f"].get("k") == "const" and x["f"]["c"] in names and left[0] > 0:
+            left[0] -= 1
+            return src_flatten_apps(beta_app(bodies[x["f"]["c"]], x["args"]))
+        return None
+    return src_rewrite(body, pre)
+
+
+def src_anon(t):
+    """A source term without binder names (for comparing source types)."""
+    if isinstance(t, dict):
+        return {k: (len(v) if k == "ctx" else src_anon(v)) for k, v in t.items()
+                if not (k == "n" and t.get("k") in ("prod", "lam", "let"))}
+    if isinstance(t, list):
+        return [src_anon(v) for v in t]
+    return t
+
+
+def pprod_path(j, n):
+    """Projection indices, outermost first, of component j of a right-nested PProd of n types."""
+    return ([0] if j + 1 < n else []) + [1] * j
+
+
 def same_mod_beta(a, b):
     """Equal modulo beta, binder names and (documented) the semantic normal form of levels."""
     x, y = anon(beta(a)), anon(beta(b))
@@ -1150,7 +1832,8 @@ def const_occurrences(e, acc):
     return acc
 
 
-def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None, own_admit=frozenset(), lift=False):
+def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None, own_admit=frozenset(), lift=False,
+                        lower=False):
     """Rule R3 (docs/UNIVERSE_TRANSLATION.md) for every reference in `exprs`.
     own: source global levels of the referring declaration; gen: target name -> source levels;
     poly: target name -> number of leading R6 instance arguments (checked structurally, not by R3)."""
@@ -1173,13 +1856,15 @@ def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None
                 if da and not ca:
                     raise Mismatch(f"{name}: source level {l} is a motive level of the referring declaration only")
                 bump = (lambda x: {"k": "succ", "l": x}) if ca and not da else (lambda x: x)
-                if body and l in body:
+                if body and l in body and not (lower and (c, ps) != level_nf(bump(body[l]))):
                     if (c, ps) != level_nf(bump(body[l])):
                         raise Mismatch(f"{name}: source level {l} is proof-local, argument must be its solution {body[l]}")
-                elif l in own:
+                elif l in own and not (body and l in body) and not (lower and (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)}))):
                     if (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)})):
                         raise Mismatch(f"{name}: source level {l} is shared, argument must be {level_param(l)}")
                 else:
+                    # (R3-down, rows of the lowered tier only: an argument for a shared level that is not its
+                    # variable must not raise either, as for a level of another declaration)
                     if c is not None and not (ca and c == 0) and not facts.entails("Set", l, c - 1 if ca else c):
                         raise Mismatch(f"{name}: Set + {c} <= {l} not entailed by the source universe graph")
                     for p, k in ps:
@@ -1466,7 +2151,7 @@ def own_partition_full(d, r):
     return params, sol, interp
 
 
-def check_body_levels(facts, d, sol, params=None, admit=frozenset(), prop_offset=False):
+def check_body_levels(facts, d, sol, params=None, admit=frozenset(), prop_offset=False, relaxed=None):
     """Rules R2S/R2B, independently: each solution is a level over the declaration's parameters, and
     every native fact between a solved level and Set / a parameter / another solved level holds with
     solved levels read as their solutions (summand-wise entailment in the native graph)."""
@@ -1495,8 +2180,19 @@ def check_body_levels(facts, d, sol, params=None, admit=frozenset(), prop_offset
         if (a in sol or b in sol) and a in mine and b in mine:
             # R2B-P (cumulativity-tier rows only): a fact Set < m may stem from Prop's typing
             # (Type@{Set+1} in Rocq, Sort 1 in Lean)
-            if not leq(summ(a), summ(b), 1 if (r == "lt" and not (prop_offset and a == "Set")) else 0):
+            # (only for the reported levels: R2B-P proof-local ones, R2B-S result-sort ones)
+            off = prop_offset and a == "Set" and (relaxed is None or b in relaxed)
+            if not leq(summ(a), summ(b), 1 if (r == "lt" and not off) else 0):
                 raise Mismatch(f"proof-local level solution violates the native fact {a} {r} {b}")
+
+
+def only_in_result_sort(ty, l):
+    """R2B-S applicability (independent): l occurs in the source type forall xs, Sort s only in s."""
+    while ty["k"] == "prod":
+        if l in source_globals(ty["ty"], set()):
+            return False
+        ty = ty["b"]
+    return ty["k"] == "sort" or l not in source_globals(ty, set())
 
 
 def closure_refs(t, acc):
@@ -1669,7 +2365,22 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     # R8: reported motive levels must be motive levels of the source type, and type levels
                     if not own_admit <= motive_levels(d_["type"]) & set(source_globals(d_["type"], set())):
                         raise Mismatch(f"admitting levels {sorted(own_admit)} are not motive levels of the source type")
-                    check_body_levels(facts, d_, sol_only, params, own_admit, bool(r_.get("universe_cumulativity")))
+                    # R2B-P / R2B-S: the relaxed levels must be reported, R2B-P ones proof-local (not in the
+                    # source type; their source instance is checked at verify), R2B-S ones only in the
+                    # type's result sort (a type definition at its value's level)
+                    rp = {x["level"] for x in r_.get("r2bp_levels") or []}
+                    rs = {x["level"] for x in r_.get("sort_lowered_levels") or []}
+                    tyg = set(source_globals(d_["type"], set()))
+                    # R2B-P levels of the statement must be reported as such (a specialization of the
+                    # source statement; verify re-checks the instance and refuses it on requested roots)
+                    marked = {x["level"] for x in r_.get("r2bp_levels") or [] if x.get("in_type")}
+                    if (rp & tyg) != marked:
+                        raise Mismatch(f"R2B-P levels of the source type {sorted(rp & tyg)} reported as {sorted(marked)}")
+                    for l_ in rs:
+                        if not only_in_result_sort(d_["type"], l_):
+                            raise Mismatch(f"R2B-S level {l_} occurs in the source type outside its result sort")
+                    check_body_levels(facts, d_, sol_only, params, own_admit, bool(r_.get("universe_cumulativity")),
+                                      rp | rs)
                     bl = {**sol_only, **interp_}            # coherence: an own level's argument is its image
                     # R3G: an implicit level must be the source level of a parameter of a referenced
                     # declaration, and occur as that parameter's argument in the accepted terms
@@ -1685,7 +2396,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     # for a non-template block, an argument for an own level must be its R2F interpretation
                     params_i, bl, tb_i = ind_params(d_, r_)
                     own = set(params_i)
-                    if tb_i is None:
+                    if tb_i is None and not r_.get("plain_levels"):
                         bl = own_level_interp(facts, params_i)     # explicit and implicit levels (R2F)
                     self_n = {r_.get("target")} | {c["name"] for c in r_.get("target_ctors", [])}
                     for l in r_.get("implicit_levels") or []:
@@ -1699,7 +2410,8 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                 self_names = {r_.get("target")} | {c["name"] for c in r_.get("target_ctors", [])}
                 gen_ = {k: v for k, v in gen.items() if k not in self_names} if d_["kind"] == "inductive" else gen
                 univ_checked += check_universe_args(facts, own, gen_, [x for x in exprs if x is not None], bl, poly,
-                                                    gen_admit, own_admit, bool(r_.get("universe_cumulativity")))
+                                                    gen_admit, own_admit, bool(r_.get("universe_cumulativity")),
+                                                    bool(r_.get("universe_lowered")))
             except Mismatch as e:
                 problem("universe", f"{s_}: {e}")
     # Structural fidelity of every accepted translation.
@@ -1776,7 +2488,9 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                 # R2F: sorts of a non-template block are read through the fact-respecting interpretation
                 # R2F (non-template): sorts read through the fact-respecting interpretation;
                 # R5S (template): other levels read through their reported solutions (fact-checked)
-                if tb is None:
+                if tb is None and r.get("plain_levels"):
+                    aud.body = None               # M6: plain parameters (u_l itself for every level)
+                elif tb is None:
                     aud.body = own_level_interp(FACTS, params0) if FACTS is not None else None   # explicit and implicit levels
                 else:
                     if FACTS is not None:
@@ -1807,7 +2521,14 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                 ADMIT[0] = set(r.get("admitting_levels") or [])
                 try:
                     aud.check(d["type"], r["target_type"], ["type"])
-                    aud.check(d["body"], r["target_value"], ["body"])
+                    body_s = d["body"]
+                    if r.get("delta_inlined"):
+                        # M6: Set-motive constants used at a Prop family, inlined (definitional)
+                        for n_ in r["delta_inlined"]:
+                            if n_ not in aud.ir_bodies or not has_set_motive(decls[n_]["type"]):
+                                raise Mismatch(f"inlined {n_} is not a transparent constant with a Set-motive binder")
+                        body_s = inline_consts(body_s, set(r["delta_inlined"]), aud.ir_bodies)
+                    aud.check(body_s, r["target_value"], ["body"])
                 finally:
                     aud.body = None
                     REDUCE[0] = False

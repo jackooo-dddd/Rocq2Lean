@@ -1,0 +1,1 @@
+{"name": "iotafix", "load_paths": [["-Q", ".", "IF"]], "files": ["IotaFix.v"], "requires": ["IF.IotaFix"]}

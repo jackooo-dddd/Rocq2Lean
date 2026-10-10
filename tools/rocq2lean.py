@@ -537,6 +537,60 @@ def bound_hashes(run_dir, snap, tm):
     return h
 
 
+def check_source_instances(run_dir, snap, rep, log):
+    """R2B-P obligation (docs/UNIVERSE_TRANSLATION.md): for every row that relaxed a native `Set < m`
+    on a proof-local level m, the Lean solution must denote a Rocq level (0 -> Set, u_l -> l) and the
+    source declaration must be accepted by Rocq's kernel with m at that level, in a fresh Rocq
+    process. Returns the number of declarations checked; raises on any failure (fail closed)."""
+    rows = [r for r in rep["results"] if r.get("status") == "TRANSLATED_AND_CHECKED" and r.get("r2bp_levels")]
+    # a level of the statement (not proof-local) makes the row a specialization of the source
+    # statement at the checked instance: allowed for dependencies, never for a requested root
+    roots = {r.get("name") for r in rep.get("roots", [])}
+    spec = [r["source"] for r in rows if r["source"] in roots and any(x.get("in_type") for x in r["r2bp_levels"])]
+    if spec:
+        raise Rejected("AUDIT_REJECTED", f"requested roots whose statement would be specialized (R2B-P on a type level): {spec}")
+    if not rows:
+        return 0
+    levels = []
+    with open(snap["ir"]) as fh:
+        for line in fh:
+            d = json.loads(line)
+            if d.get("kind") == "universe_facts":
+                levels = d["levels"]
+                break
+    back = {"u_" + l.replace(".", "_"): l for l in levels}
+    problems, cmds = [], []
+    for r in rows:
+        subst = []
+        for x in r["r2bp_levels"]:
+            sg = x["sigma"]
+            if sg == {"k": "zero"}:
+                subst.append(f"{x['level']}=Set")
+            elif sg.get("k") == "param" and sg["n"] in back:
+                subst.append(f"{x['level']}={back[sg['n']]}")
+            else:
+                problems.append(f"{r['source']}: solution {sg} of {x['level']} denotes no Rocq level (R2B-P restricted)")
+        cmds.append(f'Rocq2Lean CheckInstance "{r["source"]}" "{";".join(subst)}".')
+    if problems:
+        raise Rejected("AUDIT_REJECTED", "; ".join(problems))
+    m, _, lp, _ = load_manifest(snap["manifest"])
+    v = run_dir / "SourceInstances.v"
+    v.write_text("\n".join(["From Rocq2LeanExport Require Import Loader."] + [f"Require {q}." for q in m.get("requires", [])]
+                           + cmds) + "\n")
+    p = run(["rocq", "compile", "-I", str(EXPORTER / "src"), "-Q", str(EXPORTER / "theories"), "Rocq2LeanExport",
+             *lp, str(v)], log, env=opam_env(), check=False)
+    got = {}
+    for line in (p.stdout + p.stderr).splitlines():
+        if line.startswith("INSTANCE "):
+            _, key, res = line.split(" ", 2)
+            got[key] = res
+    bad = [f"{r['source']}: {got.get(r['source'], 'not checked')}" for r in rows if got.get(r["source"]) != "INSTANCE_OK"]
+    atomic_write_json(run_dir / "source_instances.json", {"checked": {r["source"]: got.get(r["source"]) for r in rows}})
+    if p.returncode != 0 or bad:
+        raise Rejected("AUDIT_REJECTED", "R2B-P source instance rejected by Rocq's kernel: " + "; ".join(bad))
+    return len(rows)
+
+
 def _verify(run_dir):
     log = run_dir / "logs" / "verify.log"
     (run_dir / "logs").mkdir(exist_ok=True)
@@ -612,6 +666,9 @@ def _verify(run_dir):
     audit = json.loads((run_dir / "audit.json").read_text()) if (run_dir / "audit.json").exists() else {}
     if p.returncode != 0 or audit.get("status") != "OK":
         raise Rejected("AUDIT_REJECTED", f"structural audit failed (exit {p.returncode}); see {run_dir / 'audit.json'}")
+    # Source-side obligations of the cumulativity tier (R2B-P): each relaxed proof-local level's
+    # solution must denote a Rocq level at which Rocq's kernel accepts the source declaration.
+    n_inst = check_source_instances(run_dir, snap, rep, log)
     # Re-hash everything before publishing: nothing may have changed during verification.
     h1 = bound_hashes(run_dir, snap, tm)
     if h1 != h0:
@@ -628,6 +685,7 @@ def _verify(run_dir):
             "fresh_readback": "OK (separate Lean process imported the module and re-checked type/value/levels against the report)",
             "assumptions": "OK (collectAxioms empty for every accepted declaration)",
             "structural_audit": "OK",
+            "source_instances": f"OK ({n_inst} R2B-P declaration(s) re-checked by Rocq's kernel at their instances)",
             "artifact_freshness": "OK (all bound hashes equal before and after verification)",
         },
         "consumer_detectors": consumer.get("detectors"),

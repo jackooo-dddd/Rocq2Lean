@@ -181,24 +181,68 @@ references monomorphic declarations at their own levels).
   the translator checked their shared levels against `u_l` while referring through `ι l`, a
   latent inconsistency.
 
-**Cumulativity tier (R3↑, R2B-P).**
+**Cumulativity tier (R3↑, R2B-P, R2B-S, R3↓).** Lean has no cumulativity; Rocq's typing uses it in
+four recurring ways. Each is a separately scoped rule with its own obligation, applied only to a
+declaration that every strict tier rejected, and reported per row.
 - *When it applies.* Only to a declaration that every strict tier rejected (R2, R2⁺, R2F-c).
-  Such a row is reported as `universe_cumulativity: true`, and only for those rows do the
-  translator and the auditor accept the two justifications below. For every other declaration
-  R3 and R2B are unchanged: the unit checks in `tests/smoke/UniverseRules.lean` still reject
-  `u_b` for `a` when only `a ≤ b` holds.
-- *R3↑ (upward lifting).* In R3, a summand that is the referring declaration's own level `m`,
-  with effective offset 0, may stand for `l` when `l ≤ m` is entailed. Rocq then used `c`'s
-  level-`l` value at level `m` by upward cumulativity, and Lean expresses that by instantiating
-  `c` at `m`. Example: MathComp `Monoid.isLaw.phant_axioms : … → Type@{309}` returns
-  `isLaw.axioms_@{298,300} …` with `300 ≤ 309`.
-- *R2B-P (`Prop` typing).* A native fact `Set < m` on a proof-local level is checked as
-  `Set ≤ m`. Rocq types `Prop` at `Type@{Set+1}` and Lean at `Sort 1`, the image of `Set`, so the
-  fact may stem from `Prop` alone. Example: Corelib `Morphisms`, where `relation@{77} Prop` gives
-  `Set < 77` and Lean solves 77 as 0.
-- *What stays rejected.* A raised offset, unrelated levels, and facts between a proof-local level
-  and a type level (the M4 forged-solution test still fails on `l ≤ m`). The kernel checks every
-  declaration in full.
+  Such a row is reported as `universe_cumulativity: true`. For every other declaration R3 and R2B
+  are unchanged: the unit checks in `tests/smoke/UniverseRules.lean` still reject `u_b` for `a` when
+  only `a ≤ b` holds.
+- *R3↑ (upward lifting) — correspondence rule.* In R3, a summand that is the referring declaration's
+  own level `m`, with effective offset 0, may stand for the referenced level `l` when `l ≤ m` is
+  entailed by the native facts. Rocq typed the reference `c@{l}` and used its value at `m` by upward
+  cumulativity (subtyping, no term change); Lean instantiates the same definition at `m`. Obligations
+  (translator and auditor, independently): the summand is an own level with offset 0, `l ≤ m` is
+  entailed, nothing else in the argument raises; the kernel checks `c` for every value of its
+  parameters, and the referring declaration in full. Positive: MathComp
+  `Monoid.isLaw/isComLaw.phant_axioms` (no other relaxation); negative: a forged unrelated argument
+  is audit-rejected (`test-m6`).
+- *R2B-P (`Set < m` read as `Set ≤ m`) — source obligation.* Lean types `Prop` at `Sort 1`, the image
+  of `Set`, so a solved level `m` may need the native fact `Set < m` read as `Set ≤ m`. The rule is
+  restricted to what can be validated: for every such level (reported in `r2bp_levels`), `verify`
+  maps the solution back to a Rocq level (`0 ↦ Set`, `u_l ↦ l`) and has Rocq's kernel re-check the
+  source declaration at that instance (`Rocq2Lean CheckInstance`, a fresh `rocq compile`; type,
+  body, and body type ≤ declared type). Any failure rejects the run. Positive: `uses_n` (the fact is
+  imposed by another declaration). Negative: `prop_in_m` (its own typing needs `Set < m`).
+- *Statement specializations.* When such a level occurs in the declaration's *type* (`in_type`), the
+  Lean statement is the source statement at the checked instance — a specialization. Example: the
+  `Corelib.Classes.Morphisms` obligations `∀ A : Type@{77}, … respectful A Prop …`, where
+  `respectful`'s single level must hold both `A` and `Prop` (Rocq: `77 ≤ 21`, `Set < 21` by
+  cumulativity; Lean: one level, which `Prop` forces to 0). Allowed for dependencies only, each with
+  Rocq's INSTANCE_OK; `verify` refuses a requested root whose statement would be specialized, so
+  root statements are never weakened. The auditor requires every relaxed level of the type to be
+  reported as `in_type`.
+- *R2B-S (result-sort lowering).* A level that occurs in the source type only as the declaration's
+  own result sort (`c : ∀ xs, Type@{…l…}`, `l` in no binder type) — a type definition — is set to its
+  value's level, reading `Set < l` (from `l`'s global declaration) as `Set ≤ l`: the type it defines
+  does not depend on its sort level, and every use is kernel-checked at that level. No instance check
+  (the dependencies keep `l`): Stdlib `ZMicromega.ZWitness := Psatz Z`. Positive `up_nat`; negative
+  `up_binder` (the level also in a binder type: not R2B-S, and its instance fails). Applicability is
+  re-derived by the auditor from the source type (`only_in_result_sort`).
+- *R3↓ (downward instantiation).* A reference whose argument lives below a level shared with the
+  referring declaration (`PolC@{l} Z` with `Z : Set ≤ Type@{l}`; `Box@{l} nat` in a field of an
+  inductive at `l`) takes a fresh level, solved by Lean's unifier at the argument's level; the
+  argument must not raise (`Set + c ≤ l`, `m + k ≤ l` entailed), exactly as for a level of another
+  declaration. Last tiers for constants, a third attempt for inductives; reported
+  (`universe_lowered`). Positive: `proof` in `fixtures/cumul`, Stdlib `ZMicromega.ZArithProof`;
+  negative: a forged unrelated argument is audit-rejected.
+- *Bounded solver for postponed `max` constraints* (the R3↓ tiers only). Lean leaves
+  `max(As) = max(Bs)` with a free metavariable unsolved. After removing the common offset, a bare
+  metavariable `?v` of one side that does not occur on the other gets the candidates `max(Bs ∖ As)`,
+  `0`, then each summand of `Bs`; a candidate is kept only when Lean's level unification accepts the
+  constraint with nothing postponed. Assignments are recorded in `universe_diagnostics`
+  (`solver: ?v := …`); a constraint left is classified as *unsatisfiable* (a parameter summand of one
+  side is covered by no summand of the other) or *solver limitation*. Every solution is then subject
+  to the R3 obligations and the kernel. Positive: Stdlib `Ring_theory.IDmorph`.
+- *Plain levels of inductives.* A non-template inductive is first translated with independent
+  universe parameters (`plain_levels`), then, if the kernel rejects that, with the R2F fact
+  interpretation. The interpretation bakes in facts between the block's levels that only uses
+  elsewhere impose (Stdlib `Ring_theory.ring_morph`: `C ≥ R` from `IDmorph`'s `C := R`), which made
+  `RingMicromega.SORaddon` (independent `R`, `C`) unsatisfiable; the plain form is strictly more
+  general. The auditor reads a plain row's sorts and coherence without the interpretation.
+- *What stays rejected.* A raised offset, unrelated levels, a root whose statement would be
+  specialized, a relaxed level whose Rocq instance is rejected; the kernel checks every declaration in
+  full.
 
 **R8. Motive levels admit `Prop`.**
 - *Which levels.* A level that occurs in a constant's type only as the codomain sort `Type@{l}`

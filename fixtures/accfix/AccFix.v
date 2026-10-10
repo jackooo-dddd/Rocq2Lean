@@ -30,3 +30,8 @@ Proof. reflexivity. Qed.
 
 Lemma search_ex1 : search P2 1 (AccBS P2 1 (AccB0 P2 2 eq_refl)) = 2.
 Proof. reflexivity. Qed.
+
+(* Open-variable unfolding: the recursion step holds by conversion for an arbitrary proof a, so the
+   translation must unfold Acc.rec definitionally on an open argument. *)
+Lemma search_step0 (a : accb P2 1) : search P2 0 (AccBS P2 0 a) = search P2 1 a.
+Proof. reflexivity. Qed.

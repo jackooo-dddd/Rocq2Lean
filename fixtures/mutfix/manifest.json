@@ -1,0 +1,1 @@
+{"name": "mutfix", "load_paths": [["-Q", ".", "MF"]], "files": ["MutFix.v"], "requires": ["MF.MutFix"]}

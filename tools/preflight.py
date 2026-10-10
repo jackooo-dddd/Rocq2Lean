@@ -11,12 +11,14 @@ Statically detected blockers (the translator rejects the same shapes during tran
   irrelevant binders, universe-polymorphic levels and instances outside universe-polymorphic constants
   (R6 translates those), source assumptions and missing
   bodies; inductives that are polymorphic, coinductive, mutual, primitive records or mention
-  template inductives with unbound template levels; `match` on a mutual block, a nested inductive, an inductive with
-  functional recursive fields or let-bound constructor arguments; `fix` that is mutual, whose body
-  is not a match on its decreasing argument, or whose recursive calls change a parameter before the
-  decreasing argument while a type depends on that argument (otherwise the argument is generalized),
-  are not on a direct recursive constructor field, or use the function other
-  than in a call.
+  template inductives with unbound template levels; `match` on a mutual block or an inductive with
+  let-bound constructor arguments; mutual `fix` whose functions decrease at different
+  positions; a single `fix` whose body is a match on its decreasing argument and whose recursive
+  calls change a parameter before the decreasing argument while a type depends on that argument
+  (otherwise the argument is generalized). M6 completion: calls on non-direct subterms
+  (course-of-values), bodies that are not a match on the decreasing argument
+  (ι-generalized lowering), mutual blocks, let-bound and higher-order partial uses of the function
+  (ζ / δβ) and functional recursive fields are no longer static blockers; the translator decides.
 Shape conditions that need typing (e.g. large elimination of a Prop-only inductive) are only
 detected by the translator.
 """
@@ -100,8 +102,6 @@ class Inductives:
                 selfi = p + mib["npars"]
                 h, depth = head_rel_depth(a["ty"])
                 if h == {"k": "rel", "i": selfi + depth}:
-                    if depth:
-                        out.append("match on an inductive with functional recursive fields")
                     # the self reference may still occur nested inside the arguments
                     t = a["ty"]
                     for _ in range(depth):
@@ -109,8 +109,9 @@ class Inductives:
                     args = t["args"] if t["k"] == "app" else []
                     if any(mentions_rel(x, selfi + depth) for x in args):
                         out.append("match on a nested inductive")
-                elif mentions_rel(a["ty"], selfi):
-                    out.append("match on a nested inductive")
+                # (a field of another inductive applied to the type, e.g. list Rose: a nested inductive,
+                # whose plain matches and fixpoints are supported since M6 completion; recursion through
+                # the nesting is rejected by the translator)
         return sorted(set(out))
 
 
@@ -155,8 +156,9 @@ def walk(t, found, inds, path):
 def fix_blockers(t, found, inds, path):
     defs = t["defs"]
     if len(defs) != 1:
-        found.add("mutual fixpoint", path)
-        return
+        if len({d["rarg"] for d in defs}) != 1:
+            found.add("mutual fixpoint whose functions decrease at different positions", path)
+        return                               # otherwise decided by the translator (joint recursor)
     d = defs[0]
     r = d["rarg"]
     lams, b = [], d["body"]
@@ -168,8 +170,7 @@ def fix_blockers(t, found, inds, path):
         found.add("fixpoint decreasing argument not bound by its leading lambdas", path)
         return
     if b["k"] != "case" or b["c"] != {"k": "rel", "i": nl - 1 - r}:
-        found.add("fixpoint body is not a match on its decreasing argument", path)
-        return
+        return                               # ι-generalized lowering: decided by the translator
     ref = b["ci"]["ind"]
     if inds.case_blockers(ref):
         return                               # reported by the case itself
@@ -204,20 +205,15 @@ def calls(t, depth, nl, nf, r, idx_pos, rec_q, found, path, changed):
         return
     k = t.get("k")
     if k == "rel":
-        if t["i"] == fi:
-            found.add("recursive function used other than in a call", path)
-        return
+        return                               # a partial use: ζ / δβ, decided by the translator
     if k == "app" and t["f"] == {"k": "rel", "i": fi}:
         args = t["args"]
-        if len(args) < r + 1:
-            found.add("recursive call without its decreasing argument", path)
-        else:
+        if len(args) >= r + 1:
             for i in range(r):
                 if i not in idx_pos and args[i] != {"k": "rel", "i": nl - 1 - i + nf + depth}:
                     changed.add(i)
-            y = args[r]
-            if not (y["k"] == "rel" and y["i"] - depth in rec_q):
-                found.add("recursive call on a term that is not a direct recursive constructor field", path)
+            # (a call on a subterm that is not a direct field — a field of a matched field — is
+            # course-of-values recursion since M6 completion: decided by the translator)
         for i, a in enumerate(args):
             go(a, 0, f"arg{i}")
         return

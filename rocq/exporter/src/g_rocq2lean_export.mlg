@@ -32,3 +32,10 @@ VERNAC COMMAND EXTEND Rocq2LeanNativeMeta CLASSIFIED AS QUERY STATE opaque_acces
     fun ~opaque_access -> R2l_export.native_meta ~opaque_access key kind
   }
 END
+
+(* Rocq2Lean CheckInstance "key" "l=r;...": Rocq kernel re-check of a constant at substituted levels. *)
+VERNAC COMMAND EXTEND Rocq2LeanCheckInstance CLASSIFIED AS QUERY STATE opaque_access
+| [ "Rocq2Lean" "CheckInstance" string(key) string(subst) ] -> {
+    fun ~opaque_access -> R2l_export.check_instance ~opaque_access key subst
+  }
+END

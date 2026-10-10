@@ -53,10 +53,7 @@ rc, out = run(PF + ["/nonexistent.ndjson"])
 check(rc == 3 and "TOOL_FAILURE" in out, "preflight: invalid input exits 3")
 # Every known blocker of the M3 negative fixtures is reported by inspect (one export, all roots),
 # with structured diagnostics: status, blocked declaration, dependency path, reasons and node paths.
-NEG = {"M3.M3Neg.evenR": "mutual fixpoint",
-       "M3.M3Neg.half": "recursive call on a term that is not a direct recursive constructor field",
-       "M3.M3Neg.Stream": "coinductive type", "M3.M3Neg.sprop_id": "SProp",
-       "M3.M3Neg.rose_size": "match on a nested inductive"}
+NEG = {"M3.M3Neg.Stream": "coinductive type", "M3.M3Neg.sprop_id": "SProp"}
 rc, out = run(PY + ["inspect", "--manifest", M3, "--roots", ",".join(NEG)])
 rep = json.loads(out[:out.rindex("}") + 1])
 check(rc == 2 and "UNSUPPORTED_FEATURE" in out, "inspect of the M3 negative roots exits 2")
@@ -65,6 +62,14 @@ for r, reason in NEG.items():
     check(v["status"] == "UNSUPPORTED_FEATURE" and reason in v["reasons"] and v["blocked_declaration"] == r
           and reason in v["locations"] and v["dependency_path"] == [r],
           f"inspect: {r} blocked by '{reason}' at {v.get('locations', {}).get(reason)}")
+# Mutual fixpoints (joint recursor) and calls on non-direct subterms (course-of-values) are translated
+# since M6 completion: evenR and half are no longer blockers.
+for r_, what in (("M3.M3Neg.evenR", "mutual fixpoint"), ("M3.M3Neg.half", "call on a field of a field"),
+                 ("M3.M3Neg.rose_size", "match on a nested inductive")):
+    rc, out = run(PY + ["inspect", "--manifest", M3, "--roots", r_])
+    rep = json.loads(out[:out.rindex("}") + 1])
+    check(rc == 0 and rep["roots"][r_]["status"] == "CANDIDATE_SUPPORTED",
+          f"inspect: {r_.split('.')[-1]} ({what}) is a candidate since M6 completion, not a blocker")
 # Universe-polymorphic constants are translated since M6 (rule R6): pid is no longer a blocker.
 rc, out = run(PY + ["inspect", "--manifest", M3, "--roots", "M3.M3Neg.pid"])
 rep = json.loads(out[:out.rindex("}") + 1])

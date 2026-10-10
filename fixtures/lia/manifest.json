@@ -1,0 +1,1 @@
+{"name": "lia", "load_paths": [["-Q", ".", "LIA"]], "files": ["Lia.v"], "requires": ["LIA.Lia"]}

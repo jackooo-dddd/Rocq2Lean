@@ -228,15 +228,15 @@ for name, mut in (("seq-generalized-argument", mut_top_g), ("seq-recursive-call-
     RESULTS.setdefault("mutations", []).append({"mutation": name, "declaration": f"{C}.seq",
                                                 "kernel": "ACCEPTED" if kernel_ok else "REJECTED", "detector": "structure"})
 
-# 9. Known blockers, reported by inspect with dependency paths.
-for root, needles in ((f"{C}.nth", ("fixpoint body is not a match on its decreasing argument",)),):
+# 9. Former blocker: Corelib nth (its decreasing match on l is not outermost) is supported since M6
+# completion (ι-generalized lowering); inspect no longer reports a blocker (it is VERIFIED in test-m6).
+for root in (f"{C}.nth",):
     rc, out = cli("inspect", "--manifest", MAN, "--roots", root)
     rep = json.loads(out[:out.rindex("}") + 1]) if "}" in out else {"roots": {}}
     v = rep["roots"].get(root, {})
-    needle = next((n for n in needles if n in v.get("reasons", [])), needles[0])
-    check(rc == 2 and needle in v.get("reasons", []),
-          f"inspect {root}: blocked by '{needle}' via {' -> '.join(x.split('.')[-1] for x in v.get('dependency_path', []))}")
-    RESULTS.setdefault("blockers", []).append({"root": root, "reasons": v.get("reasons"), "dependency_path": v.get("dependency_path")})
+    check(rc == 0 and v.get("status") == "CANDIDATE_SUPPORTED",
+          f"inspect {root}: a candidate since M6 completion (non-outermost decreasing match), not a blocker")
+    RESULTS.setdefault("former_blockers", []).append({"root": root, "status": v.get("status")})
 
 # 10. Former M4 blockers (setoid Morphisms: universe-polymorphic constants, relation's sort floor,
 # Prop-typing facts of proof-local levels), translated since M6 (rules R6, R2⁺, R2B-P): VERIFIED.

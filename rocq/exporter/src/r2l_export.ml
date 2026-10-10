@@ -827,3 +827,43 @@ let check_prepared ~opaque_access key =
   let body = match cb.Declarations.const_body with Declarations.Def b -> term_json (q b) | _ -> J.Null in
   Feedback.msg_info
     Pp.(str ("PREPARED " ^ key ^ " " ^ J.to_string (J.Obj [ ("type", term_json (q cb.Declarations.const_type)); ("body", body) ])))
+
+(* Rocq2Lean CheckInstance "key" "l1=r1;l2=r2": re-check a constant with Rocq's own kernel after
+   substituting the given global levels (by Set or by other global levels) in its type and in its
+   (prepared) body: the source-side obligation of the cumulativity tier's R2B-P (a proof-local level
+   solved below a native fact must still be a valid Rocq instance of the declaration). *)
+let check_instance ~opaque_access key subst_s =
+  let env = Global.env () in
+  let g = Environ.universes env in
+  let by_name = Hashtbl.create 97 in
+  Univ.Level.Set.iter (fun l -> Hashtbl.replace by_name (level_name l) l) (UGraph.domain g);
+  Hashtbl.replace by_name "Set" Univ.Level.set;
+  let res =
+    try
+      let pairs = List.filter (fun s -> s <> "") (String.split_on_char ';' subst_s) in
+      let m =
+        List.fold_left
+          (fun m p ->
+            match String.split_on_char '=' p with
+            | [ a; b ] -> (
+              match (Hashtbl.find_opt by_name a, Hashtbl.find_opt by_name b) with
+              | Some la, Some lb -> Univ.Level.Map.add la lb m
+              | _ -> failwith ("unknown level in " ^ p))
+            | _ -> failwith ("malformed substitution " ^ p))
+          Univ.Level.Map.empty pairs
+      in
+      let sub = (Sorts.QVar.Map.empty, m) in
+      let c = Names.Constant.make1 (kername_of_key key) in
+      let ty = Vars.subst_univs_level_constr sub (Environ.lookup_constant c env).Declarations.const_type in
+      let _ = Typeops.infer_type env ty in
+      match prepared_body ~opaque_access env c with
+      | None -> "INSTANCE_OK"
+      | Some (b, _, _) -> (
+        let b = Vars.subst_univs_level_constr sub b in
+        let j = Typeops.infer env b in
+        match Conversion.default_conv_leq env j.Environ.uj_type ty with
+        | Ok () -> "INSTANCE_OK"
+        | Error () -> "INSTANCE_TYPE_MISMATCH")
+    with e -> "INSTANCE_REJECTED " ^ String.map (fun ch -> if ch = '\n' then ' ' else ch) (Printexc.to_string e)
+  in
+  Feedback.msg_info Pp.(str ("INSTANCE " ^ key ^ " " ^ res))

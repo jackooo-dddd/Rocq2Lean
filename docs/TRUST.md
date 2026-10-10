@@ -68,23 +68,94 @@ also recomputed by the auditor and checked by the consumer, R4), and erased cast
 ## M6 constructions
 
 * **Construction primitives.** The accessibility lowering uses Lean prelude inductives `Acc`,
-  `PSigma`, `Exists`, `Or` and `False`, and the convoy lowering uses `Eq` (with their constructors
-  and recursors). The consumer's dependency check admits exactly this fixed list in addition to the
-  run's accepted closure and the bootstrap targets. They are kernel-defined inductive types; the
-  axiom detector still runs on every target, and none is involved in any axiom.
-* **What the auditor does not compare** in an accessibility-lowered fixpoint: the carrier `C`, the
-  call-graph relation `R`, the well-foundedness proof and the call certificates. `C` is forced by
-  the major premise's type; `R` is a proposition and the others are proofs, so none can change
-  what is computed. The auditor compares the major premise, the passed-on arguments, the motive
-  (the source fixpoint type) and the minor premise's body (the source body, recursive calls as
-  `ih ⟨j, a⟩ _ G Q`). A type-correct mutation of the computed result is kernel-accepted and
-  audit-rejected (`test-m6`).
+  `PSigma`, `Exists`, `Or` and `False`, the convoy lowering uses `Eq`, and the mutual fixpoint
+  and course-of-values lowerings use `PProd` and `PUnit` (with their constructors and recursors). The consumer's dependency check
+  admits exactly this fixed list in addition to the run's accepted closure and the bootstrap
+  targets. They are kernel-defined inductive types; the axiom detector still runs on every target,
+  and none is involved in any axiom.
+* **Accessibility lowering: what is reconstructed and what is argued.** For
+  `Acc.rec C R motive intro major wf G Q` the auditor (`check_fix_acc`) checks:
+  - *carrier* `C`: rebuilt from the source — `PSigma (λ i : U, I params i)` with level arguments
+    `[_, 0]` (a `Prop` family), the index type checked against the decreasing argument's index
+    binder and the family body against the decreasing argument's type; or that type itself when it
+    has no index;
+  - *major premise*: `⟨index, x⟩` (or `x`), the generalized and passed-on arguments, the motive
+    (the source fixpoint type), and the minor premise's body (the source body, each recursive call
+    as `ih ⟨j, a⟩ cert G' Q'` with `a` compared to the source call's decreasing argument);
+  - *call relation* `R`: its shape is one disjunct per source recursive call site (counted on the
+    source), each `∃ ctx, y = ⟨j_c, a_c⟩` with `y` the relation's first binder.
+  What is *argued*, not reconstructed: the bodies `a_c` inside `R`, the well-foundedness proof `wf`
+  and the certificates. Argument (scoped to this lowering): `R` occurs only in the binder types of
+  `Acc.rec`'s minor premise and in proofs; the value computed by `Acc.rec` on `intro` is `intro x h
+  (λ y r, rec y (h y r))`, and the minor's body (audited against the source) uses the recursive
+  result only at the audited call arguments. A different `R` can therefore only make the target
+  ill-typed (the certificates must prove `R ⟨j_c, a_c⟩ s` for the audited `a_c`), never change a
+  computed value. Executable checks (`test-m6`): replacing `R` by the empty relation is rejected by
+  the kernel; a type-correct mutation of the computed result is kernel-accepted and audit-rejected;
+  Rocq and Lean compute the same values on 4 inputs (`compute_m6`); the lowering unfolds on an
+  open accessibility proof by reflexivity (`search_step0`).
+* **ι-generalized fixpoints.** The auditor compares each minor premise with the *whole* source body,
+  the decreasing argument denoting `C_k params fields` (an environment entry carrying an ι marker);
+  a source `match` on it is compared through branch `k` only, with that branch's binders mapped to
+  the minor's fields. ι-reduction is definitional in both systems; the dropped return clause only
+  types the match. Mutation: minors of two constructors swapped (type-correct, kernel-accepted,
+  audit-rejected).
+* **Mutual fixpoints.** The auditor reconstructs the `PProd` motive component by component from the
+  functions' source types, the projection chain selecting the defined function, each `PProd.mk`
+  component against the corresponding function's branch, and each cross-function call's
+  projection. The `PProd.mk` type arguments are forced by kernel typing. Mutations: the wrong
+  component as the definition, and a call redirected to the other function (both type-correct,
+  kernel-accepted, audit-rejected).
+* **ζ of recursive lets; functional recursive fields.** The auditor re-derives the ζ-step on the
+  source IR with its own substitution (`zeta_fix_lets`) and compares the inlined calls; a call on an
+  applied functional field `g zs` must become `ih zs` with `zs` compared. Mutations: a changed
+  generalized argument of an inlined call, and a changed argument of a functional field (both
+  type-correct, kernel-accepted, audit-rejected).
+* **Course-of-values recursion.** The auditor checks the motive `PProd (M x) (Below x)` (`M` against
+  the source fixpoint type; `Below` is the recursor over the motive's argument with the same
+  parameters), each minor's first component against the source branch, its second component as the
+  chain of the minor's recursive results in field order ending in `PUnit.unit`, each convoyed match
+  (`… z r_z`, the passed result being the scrutinee's known result), and each recursive call as the
+  first component of the result of the subterm it is on (the canonical projection path for a field
+  of a convoyed match). `Below`'s minors and the convoy's domain are forced by kernel typing given
+  these audited values. Mutation: a call reading another field's result (type-correct,
+  kernel-accepted, audit-rejected).
+* **Cast repair (proofs only).** A Rocq cast whose conversion needs a fixpoint to unfold at open
+  arguments (Ring_polynom `norm_aux_PEadd`: `norm_aux (PEadd pe1 pe2)` against its unfolded body) is
+  not definitional for the recursor-based lowerings (Lean has no primitive fixpoint). When the cast's
+  type is a proposition, the translated source proof `c` is transported along case analysis on free
+  variables of that type until both sides are definitionally equal:
+  `I.rec (λ v, A v → T v) (λ fs ihs h, h | nested) v c`. This is a generated proof implementing the
+  lowering's unfolding equation (as Lean's own equation lemmas do), not a replacement proof: the
+  auditor requires the recursor's motive level 0 (a proposition), every minor to end in the
+  transported proof `h` or a nested repair of it, and audits `c` against the source. A cast on data
+  is never repaired.
+* **Nested inductives (trivial auxiliary eliminations).** For a single-type nested inductive (Stdlib
+  `ZMicromega.ZArithProof`, nesting `list ZArithProof`), Lean's recursor takes one more motive per
+  auxiliary type and minors for the auxiliary constructors. A plain match or a structural fixpoint
+  that does not recurse through the nesting supplies `λ …, PUnit` and `λ …, PUnit.unit`; the auditor
+  checks exactly these shapes, removes them, and audits the rest as for an ordinary inductive (nested
+  fields have a recursive result in Lean, and are counted as such).
+* **Recursor binder types modulo δ.** The auditor compares the motive's and minors' binder types with
+  the kernel recursor's modulo β, binder names and the unfolding of accepted transparent definitions
+  (their audited target values; `PolC Z` against `Pol Z`). These types are forced by kernel typing in
+  any case.
+* **δ-inlining of `Set`-motive constants (a last tier).** Rocq's `Prop ≤ Set` lets
+  `well_founded_induction (P : A → Set)` take a `Prop`-valued family; Lean's `Type` does not contain
+  `Prop`. A declaration that every other tier rejects is retried with the applications of transparent
+  monomorphic constants that have a `Set`-family binder replaced by their source bodies (δβ,
+  definitional): the body of `well_founded_induction` is the R8-generic `well_founded_induction_type`.
+  The inlined constants are reported (`delta_inlined`); the auditor checks each is such a constant and
+  re-derives the inlining on the source before comparing.
 * **Convoy lowering.** The auditor checks the shape (parameters, the non-uniform argument, the
   `Eq.refl` convoy, the cast pattern of the return clause, each branch body under its `refl`
   λ, the fields passed on). The inner `Eq.rec` motives only affect typing.
 * **Universe rules R6, R2⁺, R3G, R2F-c, R8 and the cumulativity tier**: each has an independent
   copy in the auditor (`docs/UNIVERSE_TRANSLATION.md`). The cumulativity tier is applied only to
-  rows the strict rules reject, and is reported per row.
+  rows the strict rules reject, and is reported per row. **R2B-P has a source obligation** checked
+  at verify: for every reported level `m := σ`, Rocq's kernel re-checks the source declaration at
+  the instance `m := σ` (`Rocq2Lean CheckInstance`, a fresh `rocq compile`); a failure rejects the
+  run. R3↑'s correspondence rule is documented in `docs/UNIVERSE_TRANSLATION.md`.
 * **Binder names.** Macro scopes are erased from binder names in every translated term (hygienic
   names inherited from Lean's own declarations do not survive the report's string round trip).
   Binder names carry no meaning, and the auditor does not compare them.

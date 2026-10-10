@@ -111,12 +111,31 @@ rc, _ = cli("export", "--manifest", MAN, "--roots", ",".join(roots), "--out", ne
 check(rc == 0, "negative M3 inputs export and round-trip faithfully")
 rc, _ = cli("translate", "--input", neg / "source.ndjson", "--out", neg)
 R, _ = results(neg)
-want = {"evenR": "mutual fixpoint", "half": "not a direct recursive constructor field",
-        "Stream": "coinductive", "sprop_id": "SProp",
-        "rose_size": "mutual or nested"}
+want = {"Stream": "coinductive", "sprop_id": "SProp"}
 for n, msg in want.items():
     r = R["M3.M3Neg." + n]
     check(rc != 0 and r["status"] == "UNSUPPORTED_FEATURE" and msg in r["message"], f"rejected explicitly: {n} ({msg})")
+# rose_size (a match on a nested inductive, no recursion through the nesting) was rejected until M6
+# completion; trivial auxiliary motives translate it. It must now translate, verify and pass the audit.
+rv = ROOT / "runs" / "m3-rose"
+shutil.rmtree(rv, ignore_errors=True)
+rcs = [cli("export", "--manifest", MAN, "--roots", "M3.M3Neg.rose_size", "--out", rv)[0],
+       cli("translate", "--input", rv / "source.ndjson", "--out", rv)[0], cli("verify", "--run", rv)[0]]
+check(rcs == [0, 0, 0], f"rose_size (match on a nested inductive, trivial auxiliary motives since M6 completion) VERIFIED {rcs}")
+# half (recursion on a field of a field) was rejected until M6 completion; course-of-values recursion
+# (docs/SUPPORT_PROFILE.md) translates it. It must now translate, verify and pass the audit on its own.
+hv = ROOT / "runs" / "m3-half"
+shutil.rmtree(hv, ignore_errors=True)
+rcs = [cli("export", "--manifest", MAN, "--roots", "M3.M3Neg.half", "--out", hv)[0],
+       cli("translate", "--input", hv / "source.ndjson", "--out", hv)[0], cli("verify", "--run", hv)[0]]
+check(rcs == [0, 0, 0], f"half (recursion on a non-direct subterm, course-of-values since M6 completion) VERIFIED {rcs}")
+# evenR/oddR (a mutual fixpoint) was rejected until M6 completion; the joint recursor into PProd
+# (docs/SUPPORT_PROFILE.md) translates it. It must now translate, verify and pass the audit on its own.
+ev = ROOT / "runs" / "m3-evenr"
+shutil.rmtree(ev, ignore_errors=True)
+rcs = [cli("export", "--manifest", MAN, "--roots", "M3.M3Neg.evenR", "--out", ev)[0],
+       cli("translate", "--input", ev / "source.ndjson", "--out", ev)[0], cli("verify", "--run", ev)[0]]
+check(rcs == [0, 0, 0], f"evenR (mutual fixpoint, joint recursor since M6 completion) VERIFIED {rcs}")
 # addPre (recursion changes the argument k before the decreasing n) was a blocker of the pilot; since M4
 # the changed argument is generalized in the motive (docs/SUPPORT_PROFILE.md). It must now translate,
 # verify and pass the audit on its own.

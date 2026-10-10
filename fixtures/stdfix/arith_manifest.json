@@ -1,0 +1,1 @@
+{"name": "pnat", "load_paths": [], "files": [], "requires": ["Stdlib.Arith.PeanoNat", "Stdlib.ZArith.BinInt", "Stdlib.NArith.BinNat"]}
