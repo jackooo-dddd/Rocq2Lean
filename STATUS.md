@@ -1,7 +1,44 @@
 # Status
 
-**Current milestone: M5 (MathComp / SSReflect foundation), starting.** M4 criteria met
-(`reports/m4/M4_REPORT.md`). M1–M3: `HARDENED_M1_M3_ACCEPTED` (historical gate, commit `6e85e3c`).
+**Current milestone: M6 (Prosa v0.6).**
+- M6.1 / M6.2: criteria met.
+- M6.3: met for `finish_time`, `finished_at_finish_time`, `earliest_finish_time` and
+  `response_time`. `completes_at_finish_time` is blocked by its `lia` certificate.
+- M5 and M4: criteria met (`reports/m5/M5_REPORT.md`, `reports/m4/M4_REPORT.md`).
+- M1–M3: `HARDENED_M1_M3_ACCEPTED` (historical gate, commit `6e85e3c`).
+
+Toolchains are unchanged (Lean 4.33.1, Rocq 9.3.0, MetaRocq `c18395ad`). MathComp 2.6.0 is in the
+dedicated switch `rocq930-mc` (`docs/ENVIRONMENT_M5.md`). Regression: `test-all` **18/18**.
+
+## M6 — Prosa v0.6 (`reports/m6/M6_REPORT.md`)
+
+| Item | Status | Evidence |
+|---|---|---|
+| Source compatibility under Rocq 9.3 / MathComp 2.6 | PASS | 5 isolated patches, 10/357 files, all of Prosa builds (`compat/prosa-0.6`, `scripts/setup-prosa`) |
+| Elaborated declarations vs the original environment (Rocq 9.0.1, MathComp 2.4) | PASS | `reports/m6/compat_comparison_finish_time.json`: behavior definitions identical; 1 statement differs because of MathComp's `eqfun` (documented) |
+| M6.1/M6.2 behavior theorems (arrivals, service, completion) | PASS | 61 VERIFIED, closure 426 (`reports/m6/behavior61.json`) |
+| M6.3 FinishTime | PASS (4/5) | `finish_time`, `finished_at_finish_time`, `earliest_finish_time`, `response_time` VERIFIED, closure 123; `completes_at_finish_time` blocked (`lia`: `reports/m6/completes_at_finish_time_blockers.json`) |
+| New rules | PASS | R6 polymorphic constants; universe rules R2⁺/R3G/R2F-c/R8 and the cumulativity tier; non-uniform parameters (convoy); accessibility lowering (MathComp `find_ex_minn`); all with independent audit rules (`test-m6`, 8 checks incl. 3 type-correct mutations that the kernel accepts and the audit rejects) |
+| Fresh holdouts (after `m6-freeze-1`) | 13/20 Prosa, 14/14 MathComp | `reports/m6/holdout_results.json`; the 7 blocked Prosa roots fall in documented classes |
+| No axioms, no reused proofs | PASS | consumer `collectAxioms` empty; only Prosa's own proof terms |
+
+M6 blockers (paths in the report):
+- the `lia`/micromega closure: mutual `Pos` fixpoints, non-outermost decreasing matches,
+  `Ring_theory` universes;
+- `max` universe constraints Lean's unifier cannot invert (`simpl_pred`, Prosa `JobReady`);
+- `prod` at `Prop` (`leqif`).
+
+## M5 — MathComp 2.6.0 / SSReflect (`reports/m5/M5_REPORT.md`)
+
+| Item | Status | Evidence |
+|---|---|---|
+| eqType + reflection | PASS | 13 roots VERIFIED (closure 57); packed `Equality.type` preserved |
+| Sequences | PASS | 15 roots VERIFIED (closure 93) |
+| Finite sums | PASS | `big_nil`, `big_cons`, `mem_iota`, `mem_cat`, `big_cat`, `big_nat_recr`, `big_geq`, `big_ltn` VERIFIED |
+| Supported declarations | listed | `reports/m5/supported_declarations.json` (167; 98 MathComp) |
+| Fix-lowering soundness fix | PASS | `fixtures/fixref`; no earlier declaration changed |
+| Fresh holdouts | 14/14 | `reports/m6/holdout_results.json` |
+| Blockers | reported | `card_bool`/`card_ord`/`big_ord_recr` (fintype class universes); `big_const_seq` (proof-local fact); `seq.nth` (non-outermost match) |
 
 ## M4 — real Rocq standard-library declarations
 
@@ -24,7 +61,7 @@ Paths are in the M4 report.
 
 Updated only from test evidence (`scripts/test-*` on cityu-wsl). Statuses follow the prompt's vocabulary.
 
-**Current verdict: `HARDENED_M1_M3_ACCEPTED`.** `./scripts/acceptance` passes 6/6 gates
+**Historical verdict (M1–M3): `HARDENED_M1_M3_ACCEPTED`.** `./scripts/acceptance` passes 6/6 gates
 (`reports/acceptance.json`). Full account: `reports/HARDENING_REPORT.md`.
 
 ## Acceptance hardening (second pass, after reviewed commit `7adb40b`)

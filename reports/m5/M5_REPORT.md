@@ -55,9 +55,12 @@ matches.
 ## Fresh holdouts
 
 15 standard MathComp lemmas were chosen after the freeze tag `m6-freeze-1` and committed before
-running (`reports/m6/holdout_selection.json`; `eqtype.eqxx` was excluded because it is a notation).
-Their run on the frozen implementation is in progress; the results will be added here and in
-`reports/m6/`.
+running (`reports/m6/holdout_selection.json`). `eqtype.eqxx` was excluded because in MathComp 2.6
+it is a notation, not a declaration. The other 14 ran once on the frozen implementation, and
+**14/14 are VERIFIED** (`reports/m6/holdout_results.json`):
+- `ssrnat`: `addnC`, `addnA`, `addn0`, `add0n`, `leqnn`, `leq_addr`, `subnn`;
+- `seq`: `size_rev`, `rev_cat`, `count_rev`, `take_drop`, `cat_take_drop`;
+- `bigop`: `big_seq1`, `big_nat1`.
 
 ## Reproduce
 

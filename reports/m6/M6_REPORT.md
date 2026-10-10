@@ -19,7 +19,7 @@ algebra and finite-group, mathcomp-zify, the micromega plugin) are install-only 
 | A genuine Prosa theorem with its full closure, original proof kernel-checked | `finished_at_finish_time`, `earliest_finish_time` (FinishTime, closure 123); 61 behavior theorems (closure 426) |
 | No axiom / sorry / invented proof | consumer: `collectAxioms` empty for every target; every proof is the Rocq proof term of Prosa's own script, translated. No proof from the earlier correspondence project was used |
 | Audits | independent structural, universe, dependency and axiom audits: OK on every reported run |
-| 50–100 declarations and 10–20 theorems | 65 Prosa theorems VERIFIED as roots; closures of 426 and 123 declarations (MathComp, Corelib, Stdlib and Prosa) |
+| 50–100 declarations and 10–20 theorems | 65 Prosa theorems VERIFIED as roots, plus 13 fresh holdouts; closures of 426, 411 and 123 declarations (MathComp, Corelib, Stdlib and Prosa) |
 | M1–M5 regressions | `test-all` 18/18 (`test-m6` added) |
 
 ## Compatibility
@@ -40,7 +40,27 @@ No legacy-Rocq exporter was needed.
 |---|---|---|---|
 | `runs/m6-behavior61` (`reports/m6/behavior61.json`) | 61 lemmas of `analysis.facts.behavior.{arrivals,service,completion}` | 426 | VERIFIED |
 | `runs/m6-finishtime4` (`reports/m6/finishtime.json`) | `finish_time`, `finished_at_finish_time`, `earliest_finish_time`, `response_time` | 123 | VERIFIED |
-| fresh holdouts after `m6-freeze-1` | see below | | |
+| fresh holdouts after `m6-freeze-1` (`reports/m6/holdout_results.json`) | 20 lemmas of `analysis.facts.behavior.{deadlines,supply}` | 411 (the 13 translated) | 13/20 translated and kernel-checked on the frozen implementation, VERIFIED as their own run; 7 blocked by known classes |
+
+## Fresh holdouts
+
+Roots were chosen after the freeze tag `m6-freeze-1` and committed before running
+(`reports/m6/holdout_selection.json`); the implementation was unchanged since the tag.
+
+**Prosa: 13/20 translated and kernel-checked.** The 13 are VERIFIED as their own run (closure
+411): `incomplete_implies_later_deadline`, `scheduled_at_implies_later_deadline`,
+`service_invariant_implies_deadline_met`, `service_at_le_supply_at`,
+`pos_service_impl_pos_supply`, `blackout_or_supply`, `supply_at_complement`,
+`is_blackout_complement`, `supply_at_le_1`, `supply_during_last_plus_before`,
+`blackout_during_last_plus_before`, `blackout_during_unit_growth`, `progress_inside_supplies`.
+
+The 7 blocked roots (`incomplete_implies_scheduled_later`, `unit_supply_proc_service_case`,
+`supply_during_bound`, `blackout_during_bound`, `supply_during_complement`,
+`blackout_during_complement`, `blackout_during_cat`) fall only into classes already listed below:
+`lia`'s arithmetic closure, `leqif`, `simpl_pred`, `nary_congruence`, `big_const_seq`. No new
+failure kind appeared.
+
+**MathComp: 14/14 VERIFIED** (one selected root, `eqtype.eqxx`, is a notation and was excluded).
 
 ## What was implemented (translator, auditor, consumer)
 
