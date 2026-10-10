@@ -94,5 +94,105 @@
     "declaration": "M2.M2A.vm_proof",
     "translator": "TRANSLATED_AND_CHECKED",
     "classification": "intentionally equivalent"
+  },
+  {
+    "mutation": "case-minor-swap",
+    "declaration": "L.Lower.neg2",
+    "kernel": "ACCEPTED",
+    "audit_exit": 1,
+    "detectors": [
+      "structure"
+    ],
+    "classification": "audit rejection (type-correct mutation)"
+  },
+  {
+    "mutation": "case-uses-recursive-result",
+    "declaration": "M3.M3Case.pred_r",
+    "kernel": "ACCEPTED",
+    "audit_exit": 1,
+    "detectors": [
+      "structure"
+    ],
+    "classification": "audit rejection (type-correct mutation)"
+  },
+  {
+    "mutation": "fix-major-premise-swap",
+    "declaration": "M3.M3Fix.addR",
+    "kernel": "ACCEPTED",
+    "audit_exit": 1,
+    "detectors": [
+      "structure"
+    ],
+    "classification": "audit rejection (type-correct mutation)"
+  },
+  {
+    "mutation": "fix-recursive-call-argument",
+    "declaration": "M3.M3Fix.addAcc",
+    "kernel": "ACCEPTED",
+    "audit_exit": 1,
+    "detectors": [
+      "structure"
+    ],
+    "classification": "audit rejection (type-correct mutation)"
+  },
+  {
+    "mutation": "case-minor-swap (e2e, definition root)",
+    "declaration": "L.Lower.neg2",
+    "kernel": "ACCEPTED",
+    "consumer": "OK",
+    "verify_exit": 2,
+    "classification": "audit rejection through verify"
+  },
+  {
+    "mutation": "case-uses-recursive-result (e2e, definition root)",
+    "declaration": "M3.M3Case.pred_r",
+    "kernel": "ACCEPTED",
+    "consumer": "OK",
+    "verify_exit": 2,
+    "classification": "audit rejection through verify"
+  },
+  {
+    "mutation": "fix-major-premise-swap (e2e, definition root)",
+    "declaration": "M3.M3Fix.addR",
+    "kernel": "ACCEPTED",
+    "consumer": "OK",
+    "verify_exit": 2,
+    "classification": "audit rejection through verify"
+  },
+  {
+    "mutation": "fix-recursive-call-argument (e2e, definition root)",
+    "declaration": "M3.M3Fix.addAcc",
+    "kernel": "ACCEPTED",
+    "consumer": "OK",
+    "verify_exit": 2,
+    "classification": "audit rejection through verify"
+  },
+  {
+    "mutation": "case-minor-swap (e2e, lemma root)",
+    "declaration": "L.Lower.neg2",
+    "kernel": "dependent proof REJECTED",
+    "verify_exit": 2,
+    "classification": "kernel rejection (through a dependent proof)"
+  },
+  {
+    "mutation": "case-uses-recursive-result (e2e, lemma root)",
+    "declaration": "M3.M3Case.pred_r",
+    "kernel": "dependent proof REJECTED",
+    "verify_exit": 2,
+    "classification": "kernel rejection (through a dependent proof)"
+  },
+  {
+    "mutation": "fix-major-premise-swap (e2e, lemma root)",
+    "declaration": "M3.M3Fix.addR",
+    "kernel": "dependent proof REJECTED",
+    "verify_exit": 2,
+    "classification": "kernel rejection (through a dependent proof)"
+  },
+  {
+    "mutation": "fix-recursive-call-argument (e2e, lemma root)",
+    "declaration": "M3.M3Fix.addAcc",
+    "kernel": "dependent proof REJECTED",
+    "verify_exit": 2,
+    "classification": "kernel rejection (through a dependent proof)"
   }
 ]

@@ -53,3 +53,36 @@ def structurally_rejected(run, rep, name, decl):
     """True iff the auditor rejects the report through its structural detector on `decl`."""
     rc, probs = audit_report(run, rep, name)
     return rc == 1 and any(x["detector"] == "structure" and x["message"].startswith(decl + ":") for x in probs)
+
+
+def forge_run(base, name, rep, prelude=""):
+    """A copy of run `base` whose report is `rep` and whose generated module is rebuilt from that
+    report by kernel replay (`#rocq2lean_replay`, every declaration through addChecked), with the
+    translation manifest re-synchronized: it simulates a translator that produced exactly `rep`.
+    Returns (run dir, all replayed declarations kernel-accepted, verify exit, consumer result, audit)."""
+    import hashlib
+    import os
+    import shutil
+    base = Path(base)
+    d = base.parent / f"{base.name}-forged-{name}"
+    shutil.rmtree(d, ignore_errors=True)
+    shutil.copytree(base, d, ignore=shutil.ignore_patterns(".rocq2lean.lock", "verify.json", "audit.json",
+                                                           "consumer_result.json", "*-forged-*", "mut-*"))
+    (d / "translation_report.json").write_text(json.dumps(rep))
+    lean = d / "lean"
+    for f in lean.glob("Rocq2LeanOut.*"):
+        f.unlink()
+    (lean / "Rocq2LeanOut.lean").write_text(
+        f'import Rocq2Lean\n{prelude}\n#rocq2lean_replay "{d / "translation_report.json"}" "{lean / "replay.json"}"\n')
+    env = dict(os.environ, PATH=f"{Path.home()}/.elan/bin:" + os.environ["PATH"])
+    subprocess.run(["lake", "-d", str(ROOT), "env", "lean", "Rocq2LeanOut.lean", "-o", "Rocq2LeanOut.olean",
+                    "-i", "Rocq2LeanOut.ilean"], cwd=lean, capture_output=True, text=True, env=env)
+    replayed = json.loads((lean / "replay.json").read_text())["results"] if (lean / "replay.json").exists() else []
+    sha = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()
+    tm = json.loads((d / "translation_manifest.json").read_text())
+    tm.update(report_sha256=sha(d / "translation_report.json"), module_lean_sha256=sha(lean / "Rocq2LeanOut.lean"),
+              module_olean_sha256=sha(lean / "Rocq2LeanOut.olean"), module_ilean_sha256=sha(lean / "Rocq2LeanOut.ilean"))
+    (d / "translation_manifest.json").write_text(json.dumps(tm))
+    rc, _ = cli("verify", "--run", d)
+    load = lambda f: json.loads((d / f).read_text()) if (d / f).exists() else {}
+    return d, bool(replayed) and all(x["kernel"] == "ACCEPTED" for x in replayed), rc, load("consumer_result.json"), load("audit.json")

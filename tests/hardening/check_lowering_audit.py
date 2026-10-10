@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
-from lib import ROOT, audit_report, check, cli, finish  # noqa: E402
+from lib import ROOT, audit_report, check, cli, finish, forge_run  # noqa: E402
 import replay  # noqa: E402
 
 M3 = ROOT / "fixtures" / "m3" / "manifest.json"
@@ -198,6 +198,81 @@ for name, ann, expect in (("cast-annotation-wrong", lambda ty: {"k": "ind", "ind
     CLASS.append({"mutation": name, "declaration": "M2.M2A.vm_proof", "translator": st,
                   "classification": "translator rejection" if st != "TRANSLATED_AND_CHECKED" else "intentionally equivalent"})
     check(st == expect, f"{name}: translator status {st} (expected {expect})")
+
+# 9. Further type-correct mutations (kernel-accepted, so only the audit can reject them).
+m3x = pipeline("hl-m3x", M3, ["M3.M3Case.pred_r_RS", "M3.M3Fix.addR_RS", "M3.M3Fix.addAcc_RS"])
+low2 = pipeline("hl-low2", LOW, ["L.Lower.neg2_T2", "L.Lower.swapacc_RS"])
+
+
+def under_lams(e, n):
+    for _ in range(n):
+        e = e["b"]
+    return e
+
+
+def swap_minors(v):                      # neg2: B2.rec motive F2 T2 b  ->  B2.rec motive T2 F2 b
+    h, args, nodes = first_rec(v)
+    nodes[1]["a"], nodes[2]["a"] = nodes[2]["a"], nodes[1]["a"]
+
+
+def case_uses_ih(v):                     # pred_r: RS minor  λ m ih. m  ->  λ m ih. ih  (a match must ignore ih)
+    h, args, nodes = first_rec(v)
+    body = under_lams(nodes[2]["a"], 1)
+    body["b"] = {"k": "bvar", "i": 0}
+
+
+def swap_major_trailing(v):              # addR: RNat.rec motive mz ms n m  ->  ... m n  (recursion on m)
+    h, args, nodes = first_rec(v)
+    nodes[-2]["a"], nodes[-1]["a"] = nodes[-1]["a"], nodes[-2]["a"]
+
+
+def rec_call_argument(v):                # addAcc: ih (RS m)  ->  ih m  in the RS minor
+    h, args, nodes = first_rec(v)
+    body = under_lams(nodes[2]["a"], 3)  # λ p ih m. ih (RS m)
+    assert body["k"] == "app" and body["f"] == {"k": "bvar", "i": 1}, body
+    body["a"] = {"k": "bvar", "i": 0}
+
+
+NEW = [(low2, "case-minor-swap", "L.Lower.neg2", swap_minors),
+       (m3x, "case-uses-recursive-result", "M3.M3Case.pred_r", case_uses_ih),
+       (m3x, "fix-major-premise-swap", "M3.M3Fix.addR", swap_major_trailing),
+       (m3x, "fix-recursive-call-argument", "M3.M3Fix.addAcc", rec_call_argument)]
+for run, name, decl, mut in NEW:
+    classify(run, name, decl, mut, "audit rejection")
+
+# The same type-correct mutations through the full public pipeline: a synchronized forged run (the
+# generated module is rebuilt from the mutated report through the kernel) must not verify.
+# (a) Roots are the mutated definitions themselves: every forged declaration is kernel-accepted and
+#     the consumer's readback agrees with the report, so the rejection must come from the audit.
+defs_m3 = pipeline("hl-defs", M3, ["M3.M3Case.pred_r", "M3.M3Fix.addR", "M3.M3Fix.addAcc"])
+defs_low = pipeline("hl-defs-low", LOW, ["L.Lower.neg2"])
+E2E = {"case-minor-swap": defs_low, "case-uses-recursive-result": defs_m3, "fix-major-premise-swap": defs_m3,
+       "fix-recursive-call-argument": defs_m3}
+for run0, name, decl, mut in NEW:
+    run = E2E[name]
+    rep = json.loads((run / "translation_report.json").read_text())
+    mut(next(x for x in rep["results"] if x["source"] == decl)["target_value"])
+    d, kernel_ok, rc, cons, aud = forge_run(run, name, rep)
+    v = json.loads((d / "verify.json").read_text())
+    struct = [p["message"] for p in aud.get("problems", []) if p["detector"] == "structure" and p["message"].startswith(decl + ":")]
+    check(kernel_ok and cons.get("status") == "OK" and rc == 2 and v["status"] == "AUDIT_REJECTED" and struct,
+          f"e2e {name}: forged module kernel-accepted, consumer OK, verify rejects via the structural audit of {decl}"
+          + ("" if struct else f" — kernel_ok={kernel_ok} consumer={cons.get('status')} rc={rc} {aud.get('problems', [])[:2]}"))
+    CLASS.append({"mutation": name + " (e2e, definition root)", "declaration": decl, "kernel": "ACCEPTED" if kernel_ok else "REJECTED",
+                  "consumer": cons.get("status"), "verify_exit": rc, "classification": "audit rejection through verify" if struct else "?"})
+# (b) Roots are the original computation lemmas (proved by reflexivity): the changed computation
+#     makes a dependent proof ill typed, so the kernel itself rejects the forged module.
+for run, name, decl, mut in NEW:
+    rep = json.loads((run / "translation_report.json").read_text())
+    mut(next(x for x in rep["results"] if x["source"] == decl)["target_value"])
+    d, kernel_ok, rc, cons, aud = forge_run(run, name + "-lemma", rep)
+    check(not kernel_ok and rc == 2, f"e2e {name} under its computation lemma: a dependent reflexivity proof is kernel-rejected; verify exit {rc}")
+    CLASS.append({"mutation": name + " (e2e, lemma root)", "declaration": decl, "kernel": "dependent proof REJECTED",
+                  "verify_exit": rc, "classification": "kernel rejection (through a dependent proof)"})
+# Positive control for the e2e path: an unmutated synchronized forged run verifies.
+d, kernel_ok, rc, cons, aud = forge_run(defs_m3, "unmutated", json.loads((defs_m3 / "translation_report.json").read_text()))
+check(kernel_ok and rc == 0, "e2e positive control: unmutated synchronized forged run VERIFIED")
+
 (ROOT / "reports" / "hardening").mkdir(parents=True, exist_ok=True)
 (ROOT / "reports" / "hardening" / "lowering_mutations.json").write_text(json.dumps(CLASS, indent=2) + "\n")
 finish("test-lowering-audit")
