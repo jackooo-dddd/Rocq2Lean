@@ -75,6 +75,59 @@ vb = victim.read_bytes()
 tamper_case("implementation-changed", lambda: append(victim, b"# temporary edit\n"), "impl_tree changed",
             lambda: victim.write_bytes(vb))
 
+
+
+# Toolchain binding: the snapshot / translation manifest record content digests of the Lean, Rocq and
+# MetaRocq binaries; a run exported or translated under different binaries does not verify.
+def forge_toolchain(fname, key):
+    def f():
+        d = json.loads((BASE / fname).read_text())
+        if key == "toolchain_fingerprint":
+            d[key]["digest"] = "0" * 64
+        else:
+            d[key] = "0" * 64
+        (BASE / fname).write_text(json.dumps(d))
+    return f
+tamper_case("toolchain-at-export", forge_toolchain("source_snapshot.json", "toolchain_fingerprint"),
+            "toolchain binaries (Lean, Rocq, MetaRocq) changed since export")
+tamper_case("toolchain-at-translation", forge_toolchain("translation_manifest.json", "toolchain_sha256"),
+            "toolchain changed since translation")
+v = fresh()
+fp = v.get("toolchain_fingerprint", {})
+check(fp.get("files", 0) > 4 and {"lean:bin/lean", "lean:lib/lean/libleanshared.so", "rocq:bin/rocq"} <= set(fp.get("components", {}))
+      and v["bound_sha256"].get("toolchain") == fp.get("digest"),
+      f"verify.json binds the toolchain fingerprint ({fp.get('files')} files incl. lean, libleanshared, rocq, MetaRocq)")
+
+
+# `status`: a VERIFIED result is reported current only while every bound digest is unchanged.
+def st_cli():
+    rc, out = cli("status", "--run", BASE)
+    return rc, out
+rc, out = st_cli()
+check(rc == 0 and "VERIFIED_CURRENT" in out, "status: fresh VERIFIED run is VERIFIED_CURRENT (exit 0)")
+src = ROOT / "fixtures" / "m3" / "M3Fix.v"
+sb = src.read_bytes()
+try:
+    append(src, b"(* edited after verification *)\n")
+    rc, out = st_cli()
+    check(rc == 2 and "STALE" in out and "src:" in out, "status: source edited after verification -> STALE (exit 2), names the file")
+    check(status() == "VERIFIED", "status is read-only (verify.json untouched)")
+finally:
+    src.write_bytes(sb)
+rc, out = st_cli()
+check(rc == 0 and "VERIFIED_CURRENT" in out, "status: restoring the exact source makes the result current again")
+ob = (BASE / "lean" / "Rocq2LeanOut.olean").read_bytes()
+append(BASE / "lean" / "Rocq2LeanOut.olean")
+rc, out = st_cli()
+check(rc == 2 and "module_olean" in out, "status: generated module changed -> STALE")
+(BASE / "lean" / "Rocq2LeanOut.olean").write_bytes(ob)
+(BASE / "translation_report.json").unlink()
+rc, out = st_cli()
+check(rc == 2 and "STALE" in out, "status: a bound artifact deleted -> STALE")
+rc, out = cli("verify", "--run", BASE)
+rc, out = st_cli()
+check(rc == 2 and "NOT_VERIFIED" in out, "status after a failed re-verification: NOT_VERIFIED (exit 2)")
+
 # Re-translation invalidates a previous success before it starts.
 fresh()
 p = subprocess.Popen(CLI + ["translate", "--input", str(BASE / "source.ndjson"), "--out", str(BASE)],

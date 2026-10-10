@@ -37,7 +37,11 @@ for entry, base in (("python", PY), ("wrapper", [W])):
     check(rc != 0, f"[{entry}] unknown subcommand fails")
 
 # Standalone preflight on IR files.
-good = ROOT / "runs" / "h-m3d" / "source.ndjson"
+# The suite builds its own inputs (no dependence on runs left by other suites or earlier sessions).
+gooddir = ROOT / "runs" / "cli-good"
+shutil.rmtree(gooddir, ignore_errors=True)
+assert run(PY + ["export", "--manifest", M3, "--roots", "M3.M3Proofs.mirror_mirror,M3.M3Proofs.vmap_id", "--out", str(gooddir)])[0] == 0
+good = gooddir / "source.ndjson"
 rc, out = run(PF + [str(good)])
 check(rc == 0 and "CANDIDATE_SUPPORTED" in out, "preflight: all-candidate IR exits 0")
 neg = ROOT / "runs" / "cli-neg"
@@ -47,6 +51,34 @@ rc, out = run(PF + [str(neg / "source.ndjson")])
 check(rc == 2 and "UNSUPPORTED_FEATURE" in out and "SProp" in out, "preflight: known blocker exits 2 and names the reason")
 rc, out = run(PF + ["/nonexistent.ndjson"])
 check(rc == 3 and "TOOL_FAILURE" in out, "preflight: invalid input exits 3")
+# Every known blocker of the M3 negative fixtures is reported by inspect (one export, all roots),
+# with structured diagnostics: status, blocked declaration, dependency path, reasons and node paths.
+NEG = {"M3.M3Neg.evenR": "mutual fixpoint",
+       "M3.M3Neg.half": "recursive call on a term that is not a direct recursive constructor field",
+       "M3.M3Neg.addPre": "recursive call changes a parameter before the decreasing argument",
+       "M3.M3Neg.Stream": "coinductive type", "M3.M3Neg.sprop_id": "SProp",
+       "M3.M3Neg.pid": "universe-polymorphic constant", "M3.M3Neg.rose_size": "match on a nested inductive"}
+rc, out = run(PY + ["inspect", "--manifest", M3, "--roots", ",".join(NEG)])
+rep = json.loads(out[:out.rindex("}") + 1])
+check(rc == 2 and "UNSUPPORTED_FEATURE" in out, "inspect of the M3 negative roots exits 2")
+for r, reason in NEG.items():
+    v = rep["roots"][r]
+    check(v["status"] == "UNSUPPORTED_FEATURE" and reason in v["reasons"] and v["blocked_declaration"] == r
+          and reason in v["locations"] and v["dependency_path"] == [r],
+          f"inspect: {r} blocked by '{reason}' at {v.get('locations', {}).get(reason)}")
+# A blocker reached through a dependency names the dependency path; relaxed checking is a blocker.
+M1 = str(ROOT / "fixtures" / "m1" / "manifest.json")
+rc, out = run(PY + ["inspect", "--manifest", M1, "--roots", "M1.M1Neg.uses_ax,M1.M1Neg.uses_relaxed,M1.M1Chain.uses_color"])
+rep = json.loads(out[:out.rindex("}") + 1])
+check(rc == 2 and rep["roots"]["M1.M1Neg.uses_ax"]["dependency_path"] == ["M1.M1Neg.uses_ax", "M1.M1Neg.ax"]
+      and "genuine source assumption" in rep["roots"]["M1.M1Neg.uses_ax"]["reasons"],
+      "inspect: a blocker in a dependency is reported with its dependency path (uses_ax -> ax)")
+check(any(x.startswith("relaxed source checking") for x in rep["roots"]["M1.M1Neg.uses_relaxed"]["reasons"]),
+      "inspect: relaxed source checking is a known blocker")
+check(rep["roots"]["M1.M1Chain.uses_color"]["status"] == "CANDIDATE_SUPPORTED", "inspect: supported root in the same request stays a candidate")
+# Agreement with the translator: every positive M3 root is a candidate.
+rc, out = run(PF + [str(ROOT / "runs" / "cli-good" / "source.ndjson")])
+check(rc == 0, "preflight agrees with the translator on supported roots (exit 0)")
 # A shell pipeline must not hide the failure.
 p = subprocess.run(["bash", "-c", f"set -o pipefail; {W} inspect --manifest {M3} --roots M3.M3Neg.sprop_id | cat"],
                    capture_output=True, text=True)

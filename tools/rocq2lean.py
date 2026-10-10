@@ -6,6 +6,7 @@
     rocq2lean export    --manifest SOURCE_MANIFEST --roots ROOTS --out RUN_DIR
     rocq2lean translate --input SOURCE_IR --out RUN_DIR
     rocq2lean verify    --run RUN_DIR
+    rocq2lean status    --run RUN_DIR      (is the VERIFIED result still current? read-only)
 
 ROOTS is a comma-separated list of fully qualified Rocq names. A SOURCE_MANIFEST is JSON:
 
@@ -188,6 +189,39 @@ def impl_tree_sha256():
     return h.hexdigest()
 
 
+_TOOLCHAIN_FP = None
+
+
+def toolchain_fingerprint():
+    """Content digests of the toolchain components that produce or check the artifacts, beyond the
+    version strings `doctor` compares: the Lean executable, `lake` and the shared library that
+    contains the kernel; the `rocq` executable; the MetaRocq Template plugins and theories. (The
+    Rocq libraries the exported declarations come from are hashed per library in the snapshot.)"""
+    global _TOOLCHAIN_FP
+    if _TOOLCHAIN_FP is None:
+        sysroot = subprocess.run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_SYSROOT"], capture_output=True,
+                                 text=True, env=lean_env(), check=True).stdout.strip()
+        oenv = opam_env()
+        sw = load_lock()["rocq"]["opam_switch"]
+        lib = Path(subprocess.run(["opam", "var", f"--switch={sw}", "lib"], capture_output=True, text=True, env=oenv,
+                                  check=True).stdout.strip())
+        rocq = subprocess.run(["which", "rocq"], capture_output=True, text=True, env=oenv, check=True).stdout.strip()
+        files = {"lean:bin/lean": Path(sysroot) / "bin" / "lean", "lean:bin/lake": Path(sysroot) / "bin" / "lake",
+                 "lean:lib/lean/libleanshared.so": Path(sysroot) / "lib" / "lean" / "libleanshared.so",
+                 "rocq:bin/rocq": Path(rocq)}
+        for p in sorted(lib.glob("rocq-metarocq-template-*/*.cmxs")):
+            files[f"metarocq:{p.relative_to(lib)}"] = p
+        for p in sorted((lib / "coq" / "user-contrib" / "MetaRocq").rglob("*.vo")):
+            files[f"metarocq:{p.relative_to(lib)}"] = p
+        digests = {k: sha256_file(p) for k, p in sorted(files.items())}
+        h = hashlib.sha256()
+        for k, d in digests.items():
+            h.update(k.encode() + b"\0" + d.encode() + b"\n")
+        _TOOLCHAIN_FP = {"digest": h.hexdigest(), "files": len(digests),
+                         "components": {k: v for k, v in digests.items() if not k.endswith(".vo")}}
+    return _TOOLCHAIN_FP
+
+
 def git_identity():
     def g(*a):
         return subprocess.run(["git", "-C", str(ROOT), *a], capture_output=True, text=True).stdout.strip()
@@ -331,7 +365,7 @@ def _export(manifest, roots, raw_roots, out, log_name):
         raise Rejected("ROOT_CONTRACT_REJECTED", str(e))
     atomic_write_json(out / "contract.json", con)
     snapshot = {
-        "schema": "rocq2lean-source-snapshot/2",
+        "schema": "rocq2lean-source-snapshot/3",
         "run_id": con["run_id"],
         "manifest": str(mpath), "manifest_sha256": sha256_file(mpath),
         "request": roots,
@@ -345,6 +379,7 @@ def _export(manifest, roots, raw_roots, out, log_name):
         "sources": [{"file": str(f), "sha256": sha256_file(f)} for f in files],
         "libraries": libs,
         "toolchains_lock_sha256": lock_sha(),
+        "toolchain_fingerprint": toolchain_fingerprint(),
         "impl_tree_sha256": impl_tree_sha256(),
     }
     atomic_write_json(out / "source_snapshot.json", snapshot)
@@ -361,7 +396,8 @@ def inspect(manifest, roots):
     print(json.dumps(report, indent=2))
     blocked = [r for r, v in report["roots"].items() if v["status"] != "CANDIDATE_SUPPORTED"]
     if blocked:
-        raise Rejected("UNSUPPORTED_FEATURE", f"preflight blockers for roots: {blocked}")
+        raise Rejected("UNSUPPORTED_FEATURE", "preflight blockers for roots: " + "; ".join(
+            f"{r} ({', '.join(report['roots'][r]['reasons'])} in {report['roots'][r]['blocked_declaration']})" for r in blocked))
     return report
 
 
@@ -432,6 +468,7 @@ def _translate(inp, out):
         "module_ilean_sha256": sha256_file(lean_dir / "Rocq2LeanOut.ilean"),
         "translator_build_sha256": lean_build_sha256(),
         "impl_tree_sha256": impl_tree_sha256(),
+        "toolchain_sha256": toolchain_fingerprint()["digest"],
         "lean_exit": p.returncode,
     })
     return rep
@@ -472,7 +509,8 @@ def bound_hashes(run_dir, snap, tm):
          "toolchains_lock": lock_sha(),
          "impl_tree": impl_tree_sha256(),
          "translator_build": lean_build_sha256(),
-         "exporter_plugin": sha256_file(EXPORTER / "src" / "rocq2lean_export_plugin.cmxs")}
+         "exporter_plugin": sha256_file(EXPORTER / "src" / "rocq2lean_export_plugin.cmxs"),
+         "toolchain": toolchain_fingerprint()["digest"]}
     for lib in snap["libraries"]:
         if lib["vo"]:
             h["vo:" + lib["dirpath"]] = sha256_file(lib["vo"])
@@ -487,7 +525,7 @@ def _verify(run_dir):
     if log.exists():
         log.unlink()
     snap = json.loads(_need(run_dir / "source_snapshot.json", "source snapshot").read_text())
-    if snap.get("schema") != "rocq2lean-source-snapshot/2":
+    if snap.get("schema") != "rocq2lean-source-snapshot/3":
         raise Rejected("AUDIT_REJECTED", f"unknown snapshot schema {snap.get('schema')}")
     con_p = _need(run_dir / "contract.json", "coverage contract")
     tm = json.loads(_need(run_dir / "translation_manifest.json", "translation manifest").read_text())
@@ -508,6 +546,8 @@ def _verify(run_dir):
         problems.append("source manifest changed since export")
     if h0["toolchains_lock"] != snap["toolchains_lock_sha256"]:
         problems.append("toolchain lock changed since export")
+    if h0["toolchain"] != snap["toolchain_fingerprint"]["digest"]:
+        problems.append("toolchain binaries (Lean, Rocq, MetaRocq) changed since export")
     for lib in snap["libraries"]:
         if lib["vo"] and h0["vo:" + lib["dirpath"]] != lib["sha256"]:
             problems.append(f"library {lib['dirpath']} changed since export")
@@ -527,7 +567,8 @@ def _verify(run_dir):
         problems.append("translation input digest differs from the contract")
     for k, hk in (("report_sha256", "translation_report"), ("module_lean_sha256", "module_lean"),
                   ("module_olean_sha256", "module_olean"), ("module_ilean_sha256", "module_ilean"),
-                  ("impl_tree_sha256", "impl_tree"), ("translator_build_sha256", "translator_build")):
+                  ("impl_tree_sha256", "impl_tree"), ("translator_build_sha256", "translator_build"),
+                  ("toolchain_sha256", "toolchain")):
         if tm[k] != h0[hk]:
             problems.append(f"{hk} changed since translation (stale artifact or implementation)")
     if snap["impl_tree_sha256"] != h0["impl_tree"]:
@@ -574,6 +615,7 @@ def _verify(run_dir):
         "consumer_detectors": consumer.get("detectors"),
         "audit_summary": audit.get("coverage"),
         "bound_sha256": h1,
+        "toolchain_fingerprint": snap["toolchain_fingerprint"],
         "git": git_identity(),
         "note": "fresh_readback imports the .olean; it does not re-typecheck declarations from scratch "
                 "(kernel checking happened at insertion; a clean rebuild is separate evidence)",
@@ -581,6 +623,35 @@ def _verify(run_dir):
     atomic_write_json(run_dir / "verify.json", result)
     print("VERIFIED", run_dir)
     return result
+
+
+# ---------------------------------------------------------------- status
+
+def status(run_dir):
+    """Is the run's VERIFIED result still current? Read-only: recomputes every digest the verdict
+    is bound to (sources, libraries, IR, contract, round trip, report, generated module,
+    implementation, translator build, exporter plugin, toolchain) and compares them with
+    verify.json. Exit 0 only for VERIFIED_CURRENT."""
+    run_dir = Path(run_dir).resolve()
+    with RunLock(run_dir):
+        vp = run_dir / "verify.json"
+        if not vp.exists():
+            raise Rejected("NOT_VERIFIED", f"no verification result in {run_dir}")
+        v = json.loads(vp.read_text())
+        if v.get("status") != "VERIFIED":
+            raise Rejected("NOT_VERIFIED", f"last verification ended with {v.get('status')}: {v.get('reason', '')}")
+        try:
+            snap = json.loads((run_dir / "source_snapshot.json").read_text())
+            tm = json.loads((run_dir / "translation_manifest.json").read_text())
+            h = bound_hashes(run_dir, snap, tm)
+        except (OSError, KeyError, ValueError) as e:
+            raise Rejected("STALE", f"an artifact the verdict is bound to is missing or unreadable: {e}")
+        old = v.get("bound_sha256", {})
+        changed = sorted(k for k in set(h) | set(old) if h.get(k) != old.get(k))
+        if changed:
+            raise Rejected("STALE", f"artifacts changed since verification: {changed}")
+        print(json.dumps({"status": "VERIFIED_CURRENT", "run_id": v["run_id"], "request": v["request"],
+                          "bound_artifacts": len(h)}, indent=2))
 
 
 # ---------------------------------------------------------------- main
@@ -600,6 +671,8 @@ def main(argv=None):
     s.add_argument("--out", required=True)
     s = sub.add_parser("verify")
     s.add_argument("--run", required=True)
+    s = sub.add_parser("status")
+    s.add_argument("--run", required=True)
     a = ap.parse_args(argv)
     try:
         if a.cmd == "doctor":
@@ -612,6 +685,8 @@ def main(argv=None):
             translate(a.input, a.out)
         elif a.cmd == "verify":
             verify(a.run)
+        elif a.cmd == "status":
+            status(a.run)
     except Rejected as e:
         print(f"{e.status}: {e.msg}", file=sys.stderr)
         return 2

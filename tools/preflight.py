@@ -3,81 +3,296 @@
 
 Classifies each declaration from its actual elaborated terms, never from surface keywords.
 CANDIDATE_SUPPORTED means "no known blocker", not a guarantee of success. Kept in sync with
-docs/SUPPORT_PROFILE.md.
+docs/SUPPORT_PROFILE.md. Every reason carries the node path of its first occurrence, and a root's
+verdict names the dependency path to the first blocked declaration.
+
+Statically detected blockers (the translator rejects the same shapes during translation):
+  relaxed source checking flags; node kinds outside the fragment (cofix, proj, primitives, evars, section variables), SProp and
+  irrelevant binders, universe-polymorphic levels and instances, source assumptions and missing
+  bodies; inductives that are polymorphic, coinductive, mutual, primitive records or mention
+  global universe levels; `match` on a mutual block, a nested inductive, an inductive with
+  functional recursive fields or let-bound constructor arguments; `fix` that is mutual, whose body
+  is not a match on its decreasing argument, or whose recursive calls change a parameter before the
+  decreasing argument, are not on a direct recursive constructor field, or use the function other
+  than in a call.
+Shape conditions that need typing (e.g. large elimination of a Prop-only inductive) are only
+detected by the translator.
 """
 
 import json
 import sys
 
-# Node kinds the current build translates (case/fix only in the shapes of docs/SUPPORT_PROFILE.md;
-# preflight cannot see shape restrictions, so "candidate" stays a weaker claim than "supported").
+# Node kinds the current build translates (case/fix only in the shapes checked below).
 SUPPORTED_NODES = {"rel", "sort", "cast", "prod", "lam", "let", "app", "const", "ind", "construct", "case", "fix"}
 BOOTSTRAP = {"Corelib.Init.Datatypes.nat", "Corelib.Init.Logic.eq"}
 
 
-def walk(t, found):
+class Found:
+    """Reasons with the path of their first occurrence."""
+
+    def __init__(self):
+        self.where = {}
+
+    def add(self, reason, path):
+        self.where.setdefault(reason, "/".join(map(str, path)) or "<top>")
+
+
+def head_rel_depth(ty):
+    """For a constructor argument type `∀ zs, H args`: (H, number of leading products)."""
+    depth = 0
+    while ty["k"] == "prod":
+        ty, depth = ty["b"], depth + 1
+    while ty["k"] == "app":
+        ty = ty["f"]
+    return ty, depth
+
+
+def mentions_rel(t, i):
+    """Does `t` mention `rel i` (counting binders)?"""
     if isinstance(t, dict):
         k = t.get("k")
-        if k == "sort":
-            s = t["s"]
-            if s["k"] == "sprop":
-                found.add("SProp")
-            elif s["k"] == "type":
-                for e in s["u"]:
-                    if e["l"]["k"] == "var":
-                        found.add("polymorphic universe level")
-            return
-        if k is not None and k not in SUPPORTED_NODES:
-            found.add(f"node:{k}")
-        if k in ("const", "ind", "construct") and t.get("u"):
-            found.add("universe instance")
-        if isinstance(t, dict) and t.get("r") == "I":
-            found.add("SProp-irrelevant binder")
-        for v in t.values():
-            walk(v, found)
-    elif isinstance(t, list):
-        for v in t:
-            walk(v, found)
+        if k == "rel":
+            return t["i"] == i
+        if k in ("prod", "lam"):
+            return mentions_rel(t["ty"], i) or mentions_rel(t["b"], i + 1)
+        if k == "let":
+            return mentions_rel(t["v"], i) or mentions_rel(t["ty"], i) or mentions_rel(t["b"], i + 1)
+        return any(mentions_rel(v, i) for v in t.values() if isinstance(v, (dict, list)))
+    if isinstance(t, list):
+        return any(mentions_rel(v, i) for v in t)
+    return False
 
 
-def classify(d):
-    found = set()
+class Inductives:
+    def __init__(self, decls):
+        self.decls = decls
+
+    def ctor_args(self, ref, k):
+        """Outermost-first constructor arguments of constructor k."""
+        mib = self.decls[ref["mind"]]
+        return list(reversed(mib["bodies"][ref["i"]]["ctors"][k]["args"]))
+
+    def recursive_positions(self, ref, k):
+        mib = self.decls[ref["mind"]]
+        pos = []
+        for p, a in enumerate(self.ctor_args(ref, k)):
+            h, depth = head_rel_depth(a["ty"])
+            if h == {"k": "rel", "i": p + mib["npars"] + depth}:
+                pos.append(p)
+        return pos
+
+    def case_blockers(self, ref):
+        """Reasons why `match` on this inductive cannot be lowered to a single-motive recursor."""
+        mib = self.decls.get(ref["mind"])
+        if mib is None:
+            return ["match on an inductive absent from the export"]
+        out = []
+        if len(mib["bodies"]) != 1:
+            out.append("match on a mutual inductive block")
+            return out
+        for k in range(len(mib["bodies"][0]["ctors"])):
+            for p, a in enumerate(self.ctor_args(ref, k)):
+                if a.get("body") is not None:
+                    out.append("match on an inductive with let-bound constructor arguments")
+                selfi = p + mib["npars"]
+                h, depth = head_rel_depth(a["ty"])
+                if h == {"k": "rel", "i": selfi + depth}:
+                    if depth:
+                        out.append("match on an inductive with functional recursive fields")
+                    # the self reference may still occur nested inside the arguments
+                    t = a["ty"]
+                    for _ in range(depth):
+                        t = t["b"]
+                    args = t["args"] if t["k"] == "app" else []
+                    if any(mentions_rel(x, selfi + depth) for x in args):
+                        out.append("match on a nested inductive")
+                elif mentions_rel(a["ty"], selfi):
+                    out.append("match on a nested inductive")
+        return sorted(set(out))
+
+
+def walk(t, found, inds, path):
+    if isinstance(t, list):
+        for i, v in enumerate(t):
+            walk(v, found, inds, path + [i])
+        return
+    if not isinstance(t, dict):
+        return
+    k = t.get("k")
+    if k == "sort":
+        s = t["s"]
+        if s["k"] == "sprop":
+            found.add("SProp", path)
+        elif s["k"] == "type":
+            for e in s["u"]:
+                if e["l"]["k"] == "var":
+                    found.add("polymorphic universe level", path)
+        return
+    if k is not None and k not in SUPPORTED_NODES:
+        found.add(f"node:{k}", path)
+    if k in ("const", "ind", "construct") and t.get("u"):
+        found.add("universe instance", path)
+    if t.get("r") == "I":
+        found.add("SProp-irrelevant binder", path)
+    if k == "case":
+        for reason in inds.case_blockers(t["ci"]["ind"]):
+            found.add(reason, path)
+    if k == "fix":
+        fix_blockers(t, found, inds, path)
+    for key, v in t.items():
+        if isinstance(v, (dict, list)):
+            walk(v, found, inds, path + [key])
+
+
+def fix_blockers(t, found, inds, path):
+    defs = t["defs"]
+    if len(defs) != 1:
+        found.add("mutual fixpoint", path)
+        return
+    d = defs[0]
+    r = d["rarg"]
+    lams, b = [], d["body"]
+    while b["k"] == "lam":
+        lams.append(b)
+        b = b["b"]
+    nl = len(lams)
+    if r >= nl:
+        found.add("fixpoint decreasing argument not bound by its leading lambdas", path)
+        return
+    if b["k"] != "case" or b["c"] != {"k": "rel", "i": nl - 1 - r}:
+        found.add("fixpoint body is not a match on its decreasing argument", path)
+        return
+    ref = b["ci"]["ind"]
+    if inds.case_blockers(ref):
+        return                               # reported by the case itself
+    npar = b["ci"]["npar"]
+    xty = lams[r]["ty"]
+    xargs = xty["args"] if xty["k"] == "app" else []
+    idx_pos = {r - 1 - a["i"] for a in xargs[npar:] if a["k"] == "rel" and a["i"] < r}
+    for k, br in enumerate(b["brs"]):
+        nf = len(br["ctx"])
+        rec_q = {nf - 1 - p for p in inds.recursive_positions(ref, k)}
+        calls(br["body"], 0, nl, nf, r, idx_pos, rec_q, found, path + ["defs", 0, "body", f"branch{k}"])
+
+
+def calls(t, depth, nl, nf, r, idx_pos, rec_q, found, path):
+    """Check every occurrence of the fixpoint variable inside a branch body (binder `depth` below the
+    branch's fields): f = rel(nl + nf + depth), parameter i = rel(nl - 1 - i + nf + depth),
+    field q = rel(q + depth)."""
+    fi = nl + nf + depth
+    go = lambda x, dd, seg: calls(x, depth + dd, nl, nf, r, idx_pos, rec_q, found, path + [seg])
+    if isinstance(t, list):
+        for i, v in enumerate(t):
+            calls(v, depth, nl, nf, r, idx_pos, rec_q, found, path + [i])
+        return
+    if not isinstance(t, dict):
+        return
+    k = t.get("k")
+    if k == "rel":
+        if t["i"] == fi:
+            found.add("recursive function used other than in a call", path)
+        return
+    if k == "app" and t["f"] == {"k": "rel", "i": fi}:
+        args = t["args"]
+        if len(args) < r + 1:
+            found.add("recursive call without its decreasing argument", path)
+        else:
+            for i in range(r):
+                if i not in idx_pos and args[i] != {"k": "rel", "i": nl - 1 - i + nf + depth}:
+                    found.add("recursive call changes a parameter before the decreasing argument", path)
+            y = args[r]
+            if not (y["k"] == "rel" and y["i"] - depth in rec_q):
+                found.add("recursive call on a term that is not a direct recursive constructor field", path)
+        for i, a in enumerate(args):
+            go(a, 0, f"arg{i}")
+        return
+    if k in ("prod", "lam"):
+        go(t["ty"], 0, "ty")
+        go(t["b"], 1, "b")
+        return
+    if k == "let":
+        go(t["v"], 0, "v")
+        go(t["ty"], 0, "ty")
+        go(t["b"], 1, "b")
+        return
+    if k == "case":
+        go(t["p"]["params"], 0, "params")
+        go(t["p"]["ret"], len(t["p"]["ctx"]), "ret")
+        go(t["c"], 0, "c")
+        for j, br in enumerate(t["brs"]):
+            go(br["body"], len(br["ctx"]), f"branch{j}")
+        return
+    if k in ("fix", "cofix"):
+        n = len(t["defs"])
+        for j, dd in enumerate(t["defs"]):
+            go(dd["ty"], 0, f"def{j}.ty")
+            go(dd["body"], n, f"def{j}.body")
+        return
+    for key, v in t.items():
+        if isinstance(v, (dict, list)):
+            go(v, 0, key)
+
+
+def global_levels(t, found, path):
+    if isinstance(t, list):
+        for i, v in enumerate(t):
+            global_levels(v, found, path + [i])
+    elif isinstance(t, dict):
+        if t.get("k") == "sort" and t["s"]["k"] == "type" and any(e["l"]["k"] == "global" for e in t["s"]["u"]):
+            found.add("global universe level in an inductive declaration", path)
+        for key, v in t.items():
+            if isinstance(v, (dict, list)):
+                global_levels(v, found, path + [key])
+
+
+def relaxed_flags(d):
+    """Source checking that the pilot does not accept (same rule as Emit.relaxedFlags)."""
+    f = (d.get("native") or {}).get("typing_flags") or {}
+    bad = [k for k in ("check_guarded", "check_positive", "check_universes", "check_eliminations") if f.get(k) is not True]
+    bad += [k for k in ("impredicative_set", "allow_uip") if f.get(k) is not False]
+    return bad
+
+
+def classify(d, inds):
+    found = Found()
+    bad = relaxed_flags(d)
+    if bad:
+        found.add(f"relaxed source checking ({', '.join(bad)})", [])
     if d["kind"] == "constant":
         if d["universes"]["k"] != "monomorphic":
-            found.add("universe-polymorphic constant")
+            found.add("universe-polymorphic constant", [])
         if d["body_state"] == "assumption":
-            found.add("genuine source assumption")
+            found.add("genuine source assumption", [])
         if d["body_state"] in ("unavailable", "unsupported_primitive"):
-            found.add(f"body state {d['body_state']}")
-        walk(d["type"], found)
-        walk(d["body"], found)
+            found.add(f"body state {d['body_state']}", [])
+        walk(d["type"], found, inds, ["type"])
+        walk(d["body"], found, inds, ["body"])
     else:
-        if d["name"] in BOOTSTRAP:
-            return "CANDIDATE_SUPPORTED", ["bootstrap registry"]
+        if d["name"] in BOOTSTRAP and not found.where:
+            return "CANDIDATE_SUPPORTED", {}
         if d["universes"]["k"] != "monomorphic":
-            found.add("universe-polymorphic inductive")
+            found.add("universe-polymorphic inductive", [])
         if d["finite"] == "CoFinite":
-            found.add("coinductive type")
+            found.add("coinductive type", [])
         if len(d["bodies"]) != 1:
-            found.add("mutual inductive block")
+            found.add("mutual inductive block", [])
         if any(b["projs"] for b in d["bodies"]):
-            found.add("primitive record")
-        for b in d["bodies"]:
-            walk(b["type"], found)
-            for c in b["ctors"]:
-                walk(c["type"], found)
-                for a in c["args"]:
-                    if a["ty"]["k"] == "sort" and False:
-                        pass
-        found = {f for f in found if f != "global universe level"}
-    return ("UNSUPPORTED_FEATURE" if found else "CANDIDATE_SUPPORTED"), sorted(found)
+            found.add("primitive record", [])
+        for i, b in enumerate(d["bodies"]):
+            walk(b["type"], found, inds, ["bodies", i, "type"])
+            global_levels(b["type"], found, ["bodies", i, "type"])
+            for j, c in enumerate(b["ctors"]):
+                walk(c["type"], found, inds, ["bodies", i, "ctors", j, "type"])
+                global_levels(c["type"], found, ["bodies", i, "ctors", j, "type"])
+    return ("UNSUPPORTED_FEATURE" if found.where else "CANDIDATE_SUPPORTED"), dict(sorted(found.where.items()))
 
 
 def preflight(ir_path):
     lines = [json.loads(l) for l in open(ir_path)]
     decls = {d["name"]: d for d in lines if d["kind"] in ("constant", "inductive")}
+    inds = Inductives(decls)
     roots = [r["name"] for r in lines[1]["roots"]]
-    status = {n: classify(d) for n, d in decls.items()}
+    status = {n: classify(d, inds) for n, d in decls.items()}
 
     def deps(n):
         dd = decls[n]["deps"]
@@ -93,11 +308,18 @@ def preflight(ir_path):
                     return [n] + p
         return None
 
+    def root_entry(r):
+        p = blocker_path(r)
+        if not p:
+            return {"status": "CANDIDATE_SUPPORTED"}
+        where = status[p[-1]][1]
+        return {"status": "UNSUPPORTED_FEATURE", "dependency_path": p, "blocked_declaration": p[-1],
+                "reasons": sorted(where), "locations": where}
+
     return {
-        "roots": {r: ({"status": "CANDIDATE_SUPPORTED"} if not blocker_path(r)
-                      else {"status": "UNSUPPORTED_FEATURE", "dependency_path": blocker_path(r),
-                            "reasons": status[blocker_path(r)[-1]][1]}) for r in roots},
-        "declarations": {n: {"status": s, "reasons": r} for n, (s, r) in status.items()},
+        "schema": "rocq2lean-preflight/2",
+        "roots": {r: root_entry(r) for r in roots},
+        "declarations": {n: {"status": s, "reasons": sorted(w), "locations": w} for n, (s, w) in status.items()},
     }
 
 
@@ -109,11 +331,11 @@ if __name__ == "__main__":
         sys.exit(3)
     try:
         rep = preflight(sys.argv[1])
-    except (OSError, ValueError, KeyError, IndexError) as e:
+    except (OSError, ValueError, KeyError, IndexError, TypeError) as e:
         print(f"TOOL_FAILURE: invalid input: {type(e).__name__}: {e}", file=sys.stderr)
         sys.exit(3)
     print(json.dumps(rep, indent=2))
-    blocked = [r for r, v in rep["roots"].items() if v["status"] != "CANDIDATE_SUPPORTED"]
+    blocked = {r: v["reasons"] for r, v in rep["roots"].items() if v["status"] != "CANDIDATE_SUPPORTED"}
     if blocked:
         print(f"UNSUPPORTED_FEATURE: blockers for roots {blocked}", file=sys.stderr)
         sys.exit(2)
