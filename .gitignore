@@ -12,3 +12,4 @@ runs/
 .work/
 reports/logs/
 reports/evidence/
+__pycache__/
