@@ -1,0 +1,27 @@
+PASS positive: related levels, shared level, repeated refs, Set, composition — VERIFIED
+PASS translator and independent auditor checked the same 8 universe arguments
+PASS no defaulted universe levels
+PASS no solver diagnostics
+PASS raised target level rejected by the universe detector (kernel: REJECTED; classification: kernel+audit)
+PASS foreign/incoherent level argument rejected by the universe detector (kernel: REJECTED)
+PASS equivalent level spelling 'max-self' accepted by kernel and audit (intentionally equivalent)
+PASS equivalent level spelling 'max-zero' accepted by kernel and audit (intentionally equivalent)
+PASS level_nf: max(1, u+1) == u+1
+PASS level_nf: (max u v)+1 == max(u+1, v+1)
+PASS level_nf: u+1 != u
+PASS [drop-ua<=ub] native re-check rejects the mutated universe fact
+PASS [drop-ua<=ub] auditor's universe detector rejects usea once ua <= ub is not entailed
+PASS [add-ub<=ua] native re-check rejects the mutated universe fact
+PASS [add-ub<=ua] auditor rejects the mutated IR (binding to the contract digest)
+PASS Type@{ub} : Type@{uc} (strict inclusion) rejected honestly (KERNEL_REJECTED) — documented limitation
+PASS residual level: use_cst defaults one unconstrained level, justified (kernel, every value) and re-checked by the consumer — VERIFIED
+PASS forged residual whose generic declaration is not valid for every level: consumer kernel re-check rejects (verify exit 2)
+PASS   (the auditor's syntactic residual check alone accepts it: the kernel re-check is the necessary gate)
+PASS defaulted level with its justification record removed: rejected by consumer and auditor
+PASS justification record that does not instantiate to the accepted declaration: rejected by consumer and auditor
+PASS instance levels: auditor determined {'checked': 2, 'deferred_to_consumer': 0}, consumer checked 2
+PASS Eq template level raised: auditor's instance_levels detector rejects (kernel: REJECTED)
+PASS M3 (mirror_mirror, addR_RS): auditor determined {'checked': 28, 'deferred_to_consumer': 0} recursor/Eq levels; consumer checked 28
+PASS recursor motive level raised (RNat.rec in addR): kernel REJECTED, auditor instance_levels rejects
+PASS invented MetaRocq constraint (ub < ua) rejected by the native round trip (not entailed)
+test-universe-audit: OK

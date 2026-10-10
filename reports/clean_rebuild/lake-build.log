@@ -1,0 +1,20 @@
+✔ [2/18] Built Rocq2Lean.Signature (151ms)
+✔ [3/18] Built Rocq2Lean.Sha256 (250ms)
+✔ [4/18] Built Sha256Vectors (129ms)
+✔ [5/18] Built Rocq2Lean.IR (997ms)
+✔ [6/18] Built Rocq2Lean.Kernel (2.4s)
+✔ [7/18] Built Rocq2Lean.Eval (2.4s)
+ℹ [8/18] Built KernelPath (476ms)
+info: tests/smoke/KernelPath.lean:19:0: SMOKE_KERNEL_PATH_OK: valid accepted; invalid rejected with: (kernel) declaration type mismatch, 'Smoke.zeroIsFalse' has type
+  Nat
+but it is expected to have type
+  False
+✔ [9/18] Built Rocq2Lean.Translate (2.2s)
+✔ [10/18] Built Rocq2Lean.Bootstrap (609ms)
+✔ [11/18] Built Rocq2Lean.Emit (821ms)
+✔ [12/18] Built UniverseRules (513ms)
+✔ [14/18] Built Rocq2Lean.Command (646ms)
+✔ [15/18] Built Rocq2Lean.Replay (618ms)
+✔ [16/18] Built Rocq2Lean.Verify (1.1s)
+✔ [17/18] Built Rocq2Lean (408ms)
+Build completed successfully (18 jobs).

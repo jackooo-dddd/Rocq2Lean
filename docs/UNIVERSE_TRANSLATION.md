@@ -64,13 +64,38 @@ which reimplements the rule (`tools/audit.py: Facts, check_universe_args`). Leve
 through the normal form `max(c, uᵢ + kᵢ)` with dominated constants dropped (`max u u ≡ u`,
 `max 0 u ≡ u`, `(max u v)+1 ≡ max (u+1) (v+1)`); this is symbolic, not sampled.
 
+## R3′ — Defaulted (residual) levels
+
+A level metavariable that Lean's unifier leaves unassigned is not determined by typing. It is set
+to `0` only with a **justification**: the translator re-submits the declaration with every such
+level as a fresh universe parameter `u_residual_i` to the kernel (`justifyResiduals`, without
+installing it); acceptance means the declaration is well typed for *every* value of those levels,
+so the default chooses nothing. Otherwise the declaration is `UNIVERSE_REJECTED`. The report
+records the generic declaration (`universe_residuals`); the auditor checks that it instantiates at
+`0` to exactly the reported declaration, and the consumer re-checks it in the kernel in a fresh
+process (`residual_levels`). The defaulted arguments must in addition satisfy R3 like any other.
+Fixture: `fixtures/universes/UnivResidual.v`.
+
 ## R4 — Template inductive `eq ↦ Eq.{u}`
 
 The argument is the sort level of the first argument's type. In Lean `@Eq.{u} A` is well typed
 only when `A : Sort u` exactly (no cumulativity), so `u` is uniquely determined by the kernel-
-checked term; the auditor checks there is exactly one universe argument. Recursors of
-inductives that eliminate into any sort take the motive's level first; it is likewise
-determined by the motive's type.
+checked term. Recursors of inductives that eliminate into any sort take the motive's level
+first; it is likewise determined by the motive's type. These levels are **checked, not only
+counted**: the auditor recomputes them from the audited target terms (`InstanceLevels`: the sort
+of `A`'s type for `Eq`/`Eq.refl`/`Eq.rec`, the sort of the motive's codomain for large
+recursors), using the report's audited types and an independent copy of the bootstrap types;
+occurrences its small inference cannot determine are counted as deferred. The consumer checks
+every occurrence with Lean's inference in a fresh process (`instance_levels`).
+
+## Coverage (tests, additions of the second hardening pass)
+
+`scripts/test-universe-audit` also covers: a justified residual level (positive control); a forged
+justification that is not valid for every level (consumer kernel re-check rejects; the auditor's
+syntactic check alone would accept it), a removed justification record and one that does not
+instantiate to the accepted declaration (consumer and auditor); a raised `Eq` level and a raised
+recursor motive level (kernel and auditor `instance_levels`); an invented MetaRocq constraint (native
+round trip: not entailed). `tests/smoke/UniverseRules.lean` adds unit checks of `justifyResiduals`.
 
 ## Coverage (tests)
 

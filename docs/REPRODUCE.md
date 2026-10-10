@@ -2,9 +2,11 @@
 
 Two kinds of reproduction are distinguished; reports state which one was executed.
 
-1. **Fresh clone, preinstalled toolchains** (executed for the hardening report): clone the repo,
-   `lake build Rocq2Lean Smoke`, `./scripts/test-all`. Requires the toolchains below to already be
-   installed.
+1. **Fresh clone, preinstalled toolchains** (executed for the hardening report):
+   `./scripts/clean-rebuild [COMMIT]` clones the repository into `~/research/r2l-clean-<commit>`,
+   builds `Rocq2Lean` and `Smoke` from scratch and runs `./scripts/test-all` (every suite in a fresh
+   process); results go to `reports/clean_rebuild/`. Then `./scripts/package-evidence` and
+   `./scripts/acceptance`. Requires the toolchains below to already be installed.
 2. **Toolchain reconstruction** (documented, not executed in this report): install elan and
    `leanprover/lean4:v4.33.1`; create the opam switch and pins below; then (1).
 

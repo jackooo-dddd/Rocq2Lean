@@ -1,8 +1,15 @@
 # Support profile (hardened pilot)
 
-"Candidate supported" (`tools/preflight.py`) means *no known blocker*, decided from the
-elaborated terms — not a guarantee of success. Shape restrictions on `match`/`fix` are only
-checked during translation.
+"Candidate supported" (`tools/preflight.py`, `rocq2lean inspect`) means *no known blocker*,
+decided from the elaborated terms — not a guarantee of success. Preflight detects statically every
+blocker listed under "Rejected explicitly" that is visible in the syntax (including the `match`/
+`fix` shape conditions: mutual or non-structural recursion, a changed parameter before the
+decreasing argument, a recursive call not on a direct recursive field, `match` on a mutual/nested
+inductive or one with functional fields or let-bound constructor arguments, global levels in
+inductives, relaxed source checking) and reports, per root, the blocked declaration, the
+dependency path to it, the reasons and the node path of each reason; `inspect` exits 2 when any
+requested root is blocked. Only conditions that need typing (large elimination of a Prop-only
+inductive, kernel universe failures) are detected by the translator alone.
 
 ## Supported
 
@@ -12,7 +19,7 @@ checked during translation.
 | `rel`, `prod`, `lam`, `let`, `app`, `const` | structural; every `let` kept (`usedLetOnly := false`) — `Translate.trans` |
 | `cast` | annotation translated and checked convertible (`isDefEq`), then erased |
 | Sorts | `Prop ↦ Sort 0`; `Type@{Set+n} ↦ Sort (n+1)`; `max` componentwise |
-| Global monomorphic levels in constants | rules R0–R4 of `docs/UNIVERSE_TRANSLATION.md`: per-declaration parameters `u_<name>`; reference arguments solved by Lean's unifier and checked against the native universe graph (coherence, no raising); defaults recorded. A declaration relying on a strict inclusion between its own levels (`Type@{ub} : Type@{uc}`) is rejected by the kernel (documented). |
+| Global monomorphic levels in constants | rules R0–R4 of `docs/UNIVERSE_TRANSLATION.md`: per-declaration parameters `u_<name>`; reference arguments solved by Lean's unifier and checked against the native universe graph (coherence, no raising); a level left unconstrained is defaulted to 0 only with a kernel-checked justification (R3′); typing-determined levels (`Eq`, recursor motives) recomputed independently (R4). A declaration relying on a strict inclusion between its own levels (`Type@{ub} : Type@{uc}`) is rejected by the kernel (documented). |
 | Bootstrap inductives | `nat ↦ Nat`, `eq ↦ Eq` (exact source signature, target shape and constructor adapter checks, every run); `eq`'s template universe from its first argument |
 | New inductives (M3a) | single-body, monomorphic, non-coinductive, no primitive projections; parameters/indices/constructor order preserved; `Declaration.inductDecl` through `addChecked`; kernel generates constructors and `I.rec`. Nested inductives are accepted by the Lean kernel (but see `match`/`fix`). |
 | `match` (M3b) | lowered to the kernel recursor `I.rec`: dependent motive built in the recursor's motive telescope from the source return clause; minors bind exactly the constructor fields (kernel rule `nfields`) and the recursive results (ignored); indices taken from the scrutinee's inferred type |

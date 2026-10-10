@@ -1,0 +1,38 @@
+PASS [same-dir-failure] positive control VERIFIED
+PASS [same-dir-failure] rejected, verify.json now AUDIT_REJECTED, reason contains 'module_olean changed'
+PASS [ir-changed-same-path] positive control VERIFIED
+PASS [ir-changed-same-path] rejected, verify.json now AUDIT_REJECTED, reason contains 'source IR changed since export'
+PASS [report-changed] positive control VERIFIED
+PASS [report-changed] rejected, verify.json now AUDIT_REJECTED, reason contains 'translation_report changed'
+PASS [module-source-changed] positive control VERIFIED
+PASS [module-source-changed] rejected, verify.json now AUDIT_REJECTED, reason contains 'module_lean changed'
+PASS [manifest-changed] positive control VERIFIED
+PASS [manifest-changed] rejected, verify.json now AUDIT_REJECTED, reason contains 'source manifest changed'
+PASS [request-changed] positive control VERIFIED
+PASS [request-changed] rejected, verify.json now AUDIT_REJECTED, reason contains 'coverage contract changed since export'
+PASS [roundtrip-missing] positive control VERIFIED
+PASS [roundtrip-missing] rejected, verify.json now AUDIT_REJECTED, reason contains 'missing round-trip result'
+PASS [roundtrip-altered] positive control VERIFIED
+PASS [roundtrip-altered] rejected, verify.json now AUDIT_REJECTED, reason contains 'source round trip not verified or changed'
+PASS [implementation-changed] positive control VERIFIED
+PASS [implementation-changed] rejected, verify.json now AUDIT_REJECTED, reason contains 'impl_tree changed'
+PASS [toolchain-at-export] positive control VERIFIED
+PASS [toolchain-at-export] rejected, verify.json now AUDIT_REJECTED, reason contains 'toolchain binaries (Lean, Rocq, MetaRocq) changed since export'
+PASS [toolchain-at-translation] positive control VERIFIED
+PASS [toolchain-at-translation] rejected, verify.json now AUDIT_REJECTED, reason contains 'toolchain changed since translation'
+PASS verify.json binds the toolchain fingerprint (93 files incl. lean, libleanshared, rocq, MetaRocq)
+PASS status: fresh VERIFIED run is VERIFIED_CURRENT (exit 0)
+PASS status: source edited after verification -> STALE (exit 2), names the file
+PASS status is read-only (verify.json untouched)
+PASS status: restoring the exact source makes the result current again
+PASS status: generated module changed -> STALE
+PASS status: a bound artifact deleted -> STALE
+PASS status after a failed re-verification: NOT_VERIFIED (exit 2)
+PASS translate removes the previous verify.json when it starts (saw ABSENT)
+PASS after re-translation no verify.json exists until a new verification
+PASS verification killed mid-run (during the consumer) leaves no success (verify.json ABSENT)
+PASS verification killed at its start leaves no success (verify.json ABSENT)
+PASS no partial publication counted as success
+PASS a second writer on the same run is rejected (RUN_BUSY)
+PASS positive control: verification succeeds once the run is free
+test-artifact-integrity: OK

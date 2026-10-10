@@ -1,0 +1,24 @@
+PASS m3a: export + translate + VERIFIED (4 roots)
+PASS m3b: export + translate + VERIFIED (7 roots)
+PASS m3c: export + translate + VERIFIED (11 roots)
+PASS m3d: export + translate + VERIFIED (5 roots)
+PASS M3a: fresh Lean inductives generated (not aliases)
+PASS M3a: constructor order preserved
+PASS M3c: mirrorR lowered to the kernel-generated Tree.rec (no self reference)
+PASS M3c: recursion through bootstrap Nat.rec
+PASS M3c mutation constructed (swap mirrorR recursive results)
+PASS audit positive control: unmutated M3c report accepted
+PASS audit rejects mirrorR with its two recursive results swapped (structure detector on mirrorR)
+PASS open-variable equations addR RZ m, addR (RS n) m, lengthR nil, lengthR (cons a xs) are definitional in Lean
+PASS addR n RZ = n recorded as propositional (proved by induction)
+computation: 78/78 cases agree
+PASS source and target computations agree on generated inputs (constructor encodings)
+PASS negative M3 inputs export and round-trip faithfully
+PASS rejected explicitly: evenR (mutual fixpoint)
+PASS rejected explicitly: half (not a direct recursive constructor field)
+PASS rejected explicitly: addPre (changes parameter)
+PASS rejected explicitly: Stream (coinductive)
+PASS rejected explicitly: sprop_id (SProp)
+PASS rejected explicitly: pid (universe-polymorphic)
+PASS rejected explicitly: rose_size (mutual or nested)
+test-m3: OK

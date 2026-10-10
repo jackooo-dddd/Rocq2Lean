@@ -1,0 +1,22 @@
+PASS freeze tag hardening-freeze-1 names the recorded commit 742b3a9cbaab (found 742b3a9cbaab)
+PASS hardening-freeze-1 is an annotated tag
+PASS historical freeze pilot-freeze-1 still present
+PASS implementation identical to the freeze (committed and working tree)
+PASS no untracked implementation files ([])
+PASS holdout fixtures were first committed after the freeze commit
+PASS holdout root H2.Holdout2.add_comm': preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.points_flip: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.fin_val_lift: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.tmax_comm: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.tmax_idem: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.tri_neq: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.S_inj': preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.ev_dbl: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.ev_plus4: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.ev_sum: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.len_revA: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.len_mapL: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.three_eq: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout root H2.Holdout2.use_three: preflight CANDIDATE_SUPPORTED, translation TRANSLATED_AND_CHECKED 
+PASS holdout run: export/translate/verify/status exit codes {'export': 0, 'translate': 0, 'verify': 0, 'status': 0}; VERIFIED_CURRENT
+test-holdout2: OK

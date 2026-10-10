@@ -1,0 +1,12 @@
+PASS missing body in a required dependency blocks the root (no axiom)
+PASS dependency absent from the export is reported, not skipped
+PASS malformed (out-of-scope) index rejected with node path
+PASS reordered constructors detected by the round trip
+PASS reordered constructors also break the dependent translation
+PASS ill-typed universe change rejected (KERNEL_REJECTED)
+PASS wrong proof term rejected by the Lean kernel
+PASS forged report with an injected custom axiom is rejected by verify
+PASS stale .olean removed; failing input stays failed
+PASS verify refuses a run whose IR no longer matches its anchored snapshot
+PASS a requested root that does not exist fails the export (never silently skipped)
+test-negative: OK

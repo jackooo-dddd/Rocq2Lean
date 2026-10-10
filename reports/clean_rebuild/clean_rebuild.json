@@ -1,0 +1,6 @@
+{"schema": "rocq2lean-clean-rebuild/1", "commit": "dbf7c2be21cb5151433e2533a088a1ac6b994be5", "fresh_clone": true, "clone_path": "/home/shunqwang4/research/r2l-clean-dbf7c2be21cb",
+ "started": "2026-10-10T11:50:36+08:00", "finished": "2026-10-10T11:59:26+08:00", "seconds": 530,
+ "lake_build_exit": 0, "test_all_exit": 0,
+ "lake_build_from_scratch": true,
+ "toolchain_rebuilt": false,
+ "toolchain_note": "Lean v4.33.1 (elan) and opam switch rocq930 (Rocq 9.3.0, MetaRocq c18395ad) were used as installed; not rebuilt. scripts/doctor checked them against toolchains.lock.json and their binaries' content digests are bound in every snapshot."}

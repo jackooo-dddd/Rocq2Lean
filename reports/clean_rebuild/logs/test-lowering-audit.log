@@ -1,0 +1,33 @@
+PASS hl-m3b: positive control VERIFIED
+PASS hl-m3c: positive control VERIFIED
+PASS hl-low: positive control VERIFIED
+PASS recursive-result-order: audit rejection (type-correct mutation) (kernel ACCEPTED, audit detectors ['structure']); expected audit rejection
+PASS trailing-argument-order: audit rejection (type-correct mutation) (kernel ACCEPTED, audit detectors ['structure']); expected audit rejection
+PASS case-motive-content: kernel rejection + audit (kernel REJECTED, audit detectors ['structure']); expected kernel rejection
+PASS case-index-beta-equivalent: intentionally equivalent (kernel ACCEPTED, audit detectors []); expected intentionally equivalent
+PASS case-index-different: kernel rejection (kernel REJECTED, audit detectors []); expected kernel rejection
+PASS minor-binder-beta-equivalent: intentionally equivalent (kernel ACCEPTED, audit detectors []); expected intentionally equivalent
+PASS minor-binder-different-type: kernel rejection + audit (kernel REJECTED, audit detectors ['structure']); expected kernel rejection
+PASS recursor-selection: kernel rejection + audit (kernel REJECTED, audit detectors ['structure']); expected kernel rejection
+PASS fix-index-different: kernel rejection + audit (kernel REJECTED, audit detectors ['structure']); expected kernel rejection
+PASS hl-m2: positive control VERIFIED
+PASS cast-annotation-wrong: translator status TRANSLATION_FAILED (expected TRANSLATION_FAILED)
+PASS cast-annotation-convertible: translator status TRANSLATED_AND_CHECKED (expected TRANSLATED_AND_CHECKED)
+PASS hl-m3x: positive control VERIFIED
+PASS hl-low2: positive control VERIFIED
+PASS case-minor-swap: audit rejection (type-correct mutation) (kernel ACCEPTED, audit detectors ['structure']); expected audit rejection
+PASS case-uses-recursive-result: audit rejection (type-correct mutation) (kernel ACCEPTED, audit detectors ['structure']); expected audit rejection
+PASS fix-major-premise-swap: audit rejection (type-correct mutation) (kernel ACCEPTED, audit detectors ['structure']); expected audit rejection
+PASS fix-recursive-call-argument: audit rejection (type-correct mutation) (kernel ACCEPTED, audit detectors ['structure']); expected audit rejection
+PASS hl-defs: positive control VERIFIED
+PASS hl-defs-low: positive control VERIFIED
+PASS e2e case-minor-swap: forged module kernel-accepted, consumer OK, verify rejects via the structural audit of L.Lower.neg2
+PASS e2e case-uses-recursive-result: forged module kernel-accepted, consumer OK, verify rejects via the structural audit of M3.M3Case.pred_r
+PASS e2e fix-major-premise-swap: forged module kernel-accepted, consumer OK, verify rejects via the structural audit of M3.M3Fix.addR
+PASS e2e fix-recursive-call-argument: forged module kernel-accepted, consumer OK, verify rejects via the structural audit of M3.M3Fix.addAcc
+PASS e2e case-minor-swap under its computation lemma: a dependent reflexivity proof is kernel-rejected; verify exit 2
+PASS e2e case-uses-recursive-result under its computation lemma: a dependent reflexivity proof is kernel-rejected; verify exit 2
+PASS e2e fix-major-premise-swap under its computation lemma: a dependent reflexivity proof is kernel-rejected; verify exit 2
+PASS e2e fix-recursive-call-argument under its computation lemma: a dependent reflexivity proof is kernel-rejected; verify exit 2
+PASS e2e positive control: unmutated synchronized forged run VERIFIED
+test-lowering-audit: OK

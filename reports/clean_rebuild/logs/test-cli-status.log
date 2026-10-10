@@ -1,0 +1,31 @@
+PASS [python] doctor exits 0 on the fixed toolchains
+PASS [python] inspect of a supported root exits 0
+PASS [python] inspect of a known blocker exits 2 with its reason
+PASS [python] missing manifest is a tool failure (exit 3), not a rejection
+PASS [python] empty request is a rejection (exit 2)
+PASS [python] verify of an empty run directory is rejected (exit 2)
+PASS [python] unknown subcommand fails
+PASS [wrapper] doctor exits 0 on the fixed toolchains
+PASS [wrapper] inspect of a supported root exits 0
+PASS [wrapper] inspect of a known blocker exits 2 with its reason
+PASS [wrapper] missing manifest is a tool failure (exit 3), not a rejection
+PASS [wrapper] empty request is a rejection (exit 2)
+PASS [wrapper] verify of an empty run directory is rejected (exit 2)
+PASS [wrapper] unknown subcommand fails
+PASS preflight: all-candidate IR exits 0
+PASS preflight: known blocker exits 2 and names the reason
+PASS preflight: invalid input exits 3
+PASS inspect of the M3 negative roots exits 2
+PASS inspect: M3.M3Neg.evenR blocked by 'mutual fixpoint' at body
+PASS inspect: M3.M3Neg.half blocked by 'recursive call on a term that is not a direct recursive constructor field' at body/defs/0/body/branch1/branch1/args/0
+PASS inspect: M3.M3Neg.addPre blocked by 'recursive call changes a parameter before the decreasing argument' at body/defs/0/body/branch1
+PASS inspect: M3.M3Neg.Stream blocked by 'coinductive type' at <top>
+PASS inspect: M3.M3Neg.sprop_id blocked by 'SProp' at type/ty
+PASS inspect: M3.M3Neg.pid blocked by 'universe-polymorphic constant' at <top>
+PASS inspect: M3.M3Neg.rose_size blocked by 'match on a nested inductive' at body/defs/0/body/b
+PASS inspect: a blocker in a dependency is reported with its dependency path (uses_ax -> ax)
+PASS inspect: relaxed source checking is a known blocker
+PASS inspect: supported root in the same request stays a candidate
+PASS preflight agrees with the translator on supported roots (exit 0)
+PASS pipefail: a failing inspect through a pipeline still reports exit 2
+test-cli-status: OK

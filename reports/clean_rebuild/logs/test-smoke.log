@@ -1,0 +1,8 @@
+PASS doctor: Lean v4.33.1 and Rocq 9.3.0 match toolchains.lock.json
+PASS checked insertion path accepts True.intro and rejects Nat.zero : False
+PASS id_nat export (MetaRocq frontend, round trip)
+PASS id_nat_correct: original Qed proof translated and kernel-checked
+PASS id_nat run VERIFIED
+PASS deleted body rejected as BLOCKED_SOURCE_BODY (non-zero exit)
+PASS no module produced for the rejected input
+test-smoke: OK

@@ -1,0 +1,8 @@
+PASS positive control VERIFIED; consumer axioms detector OK on the genuine module
+PASS [custom-axiom] forged module builds; every declaration kernel-accepted (synchronized forgery)
+PASS [custom-axiom] report and module agree (value/type/coverage/presence detectors OK)
+PASS [custom-axiom] the axioms detector rejects it: ['Rocq.M3.M3Fix.addR_RS: depends on axioms #[r2l_injected]']
+PASS [sorryAx] forged module builds; every declaration kernel-accepted (synchronized forgery)
+PASS [sorryAx] report and module agree (value/type/coverage/presence detectors OK)
+PASS [sorryAx] the axioms detector rejects it: ['Rocq.M3.M3Fix.addR_RS: depends on axioms #[sorryAx]']
+test-assumptions: OK

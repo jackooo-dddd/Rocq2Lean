@@ -1,0 +1,7 @@
+PASS historical freeze tag pilot-freeze-1 still present (not moved)
+NOTE implementation changed since pilot-freeze-1 ( 18 files changed, 2285 insertions(+), 236 deletions(-)): historical holdouts now run as regression tests
+PASS holdout export + round trip
+PASS all 9 holdout roots TRANSLATED_AND_CHECKED
+PASS holdout run VERIFIED
+PASS holdout pulled new Corelib content (False/True/not/Nat.add) through the generic rules
+test-holdout: OK

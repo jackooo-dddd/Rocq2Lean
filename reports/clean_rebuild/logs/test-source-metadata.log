@@ -1,0 +1,11 @@
+PASS positive control: M1 export with full round trip (bodies, metadata, universes) OK
+PASS unmutated copy passes the round trip (positive control)
+PASS metadata mutation 'typing-flag' caught (M1.M1Base.two: native metadata differs in ['typing_flags'])
+PASS metadata mutation 'template-flag' caught (Corelib.Init.Logic.eq: native metadata differs in ['template'])
+PASS metadata mutation 'private-universes' caught (native metadata differs in ['private_universes'])
+PASS metadata mutation 'body-kind' caught (native metadata differs in ['body_kind'])
+PASS metadata mutation 'body-state' caught (RT_OPACITY_MISMATCH)
+PASS metadata mutation 'dependency-edges' caught (exported dependency edges differ)
+PASS metadata mutation 'universe-record' caught (is not entailed by the native facts)
+PASS metadata mutation 'polymorphic-flag' caught (native metadata differs in ['polymorphic'])
+test-source-metadata: OK

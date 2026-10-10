@@ -32,9 +32,12 @@ implementation code, not translated mathematics.
 ## Universe solving
 
 References to generalized constants get fresh level metavariables, assigned by Lean's checker
-and unifier (levels only). Solver failures are recorded (`universe_diagnostics`), residual
-levels are defaulted to 0 and counted, and **every** resulting argument must satisfy rule R3
+and unifier (levels only). Solver failures are recorded (`universe_diagnostics`); a residual
+level is defaulted to 0 only when the kernel accepts the declaration with that level as a fresh
+parameter (R3′, re-checked by the consumer); and **every** resulting argument must satisfy rule R3
 (`docs/UNIVERSE_TRANSLATION.md`), checked by the translator and independently by the auditor.
+Typing-determined levels (`Eq` template level, large-recursor motive level) are recomputed by the
+auditor and checked at every occurrence by the consumer (R4).
 
 ## Lowering of `match` and `fix`
 
@@ -42,8 +45,8 @@ The auditor reconstructs everything it can (G5 of the invariants). Remaining det
 fields: the indices of a `match`'s major premise (Rocq does not store them; the consumer checks
 at every recursor application that they equal the indices of the major's type, which is the
 kernel typing obligation made explicit; indices do not occur in the recursor's ι-reduct), the
-motive's universe level and `Eq`'s template level (unique solutions without cumulativity), and
-erased cast annotations (validated by `isDefEq` before erasure; a cast carries no term content).
+motive's universe level and `Eq`'s template level (unique solutions without cumulativity; now
+also recomputed by the auditor and checked by the consumer, R4), and erased cast annotations (validated by `isDefEq` before erasure; a cast carries no term content).
 
 ## Assumptions
 
@@ -64,3 +67,5 @@ rule `source_theorem_dependency = false` does not apply.
 
 Digests detect change relative to an anchored request within one workspace; they do not
 authenticate a workspace where an adversary can replace sources, tools and all recorded digests.
+The toolchain fingerprint binds the binaries that were *used*; it does not show that those
+binaries were built from the locked sources (the toolchains were installed, not rebuilt).

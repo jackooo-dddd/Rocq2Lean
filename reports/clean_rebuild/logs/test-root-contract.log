@@ -1,0 +1,41 @@
+PASS positive control: genuine run VERIFIED
+PASS audit positive control: correct pair accepted
+PASS audit rejects roots_empty via 'report root records disagree'
+PASS audit rejects no_roots_only_unsupported via 'requested root M3.M3Proofs.mirror_mirror has status UNSUPPORTED_FEATURE'
+PASS audit rejects root_success_result_unsupported via 'requested root M3.M3Proofs.mirror_mirror has status UNSUPPORTED_FEATURE'
+PASS audit rejects root_and_result_fail via 'has status UNSUPPORTED_FEATURE'
+PASS audit rejects omitted_root via 'report root records disagree'
+PASS audit rejects duplicate_result via '2 result rows'
+PASS audit rejects extra_root via 'report root records disagree'
+PASS audit rejects root_result_conflict via 'report root records disagree'
+PASS audit rejects omitted_failed_dependency via 'required declaration M3.M3Fix.mirrorR has status NOT_ACCEPTED'
+PASS audit rejects dependency_row_missing via 'M3.M3Fix.mirrorR: exported declaration has no result'
+PASS audit rejects forged_success_count via 'differs from recomputed'
+PASS audit rejects zero_accepted via 'no accepted declaration'
+PASS audit rejects empty_contract_request via 'empty request'
+PASS audit rejects contract_closure_shrunk via 'contract closure differs'
+PASS audit rejects wrong_run_id via 'report run id differs'
+PASS audit rejects success_without_body via 'success claimed without target type/value'
+PASS export rejects empty_request ('empty root request')
+PASS export rejects duplicate_request ('duplicate requested roots')
+PASS export rejects whitespace_duplicate ('duplicate requested roots')
+PASS export rejects constructor_root ('unsupported root form')
+PASS export rejects two spellings of one root
+PASS e2e: roots_empty rejected by verify (exit 2, AUDIT_REJECTED) via consumer detector 'roots' ('0 root record(s)')
+PASS e2e: omitted_root rejected by verify (exit 2, AUDIT_REJECTED) via consumer detector 'roots' ('1 root record(s)')
+PASS e2e: root_success_result_unsupported rejected by verify (exit 2, AUDIT_REJECTED) via consumer detector 'coverage' ('(M3.M3Proofs.mirror_mirror) has status UNSUPPORTED_FEATURE')
+PASS e2e: root_record_respelled rejected by verify (exit 2, AUDIT_REJECTED) via consumer detector 'roots' ('differs from contract root')
+PASS e2e: root_record_retargeted rejected by verify (exit 2, AUDIT_REJECTED) via consumer detector 'roots' ('differs from contract root')
+PASS e2e: root_record_status_forged rejected by verify (exit 2, AUDIT_REJECTED) via consumer detector 'roots' ('its result row says')
+PASS e2e: report_status_forged rejected by verify (exit 2, AUDIT_REJECTED) via consumer detector 'roots' ('report status')
+PASS e2e: duplicate_root_row rejected by verify (exit 2, AUDIT_REJECTED) via consumer detector 'coverage' ('M3.M3Proofs.mirror_mirror: 2 result rows')
+PASS e2e: zero_accepted rejected by verify (exit 2, AUDIT_REJECTED) via consumer detector 'coverage' ('no accepted declaration')
+PASS e2e: emptied contract + snapshot request rejected ('no accepted declaration'; verify AUDIT_REJECTED)
+PASS translate refuses an IR whose root record is empty ('no requested root'; exit 2; no manifest)
+PASS translate refuses an IR whose root record is duplicate ('duplicate requested root'; exit 2; no manifest)
+PASS translate refuses an IR whose root record is same_resolution ('resolve to the same declaration'; exit 2; no manifest)
+PASS translate refuses an IR whose root record is unknown ('is not an exported declaration'; exit 2; no manifest)
+PASS e2e: review exploit (roots emptied, root relabelled) now rejected by the coverage detector (AUDIT_REJECTED, FAIL)
+PASS e2e: failed dependency in the closure rejected (coverage)
+PASS e2e: duplicate result row rejected (coverage)
+test-root-contract: OK
