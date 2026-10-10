@@ -126,4 +126,131 @@ rc, _ = cli("translate", "--input", big / "source.ndjson", "--out", big)
 R, _ = results(big)
 check(rc != 0 and R["U.Univ.big"]["status"] in ("KERNEL_REJECTED", "UNIVERSE_REJECTED"),
       f"Type@{{ub}} : Type@{{uc}} (strict inclusion) rejected honestly ({R['U.Univ.big']['status']}) — documented limitation")
+
+# (7) Defaulted (residual) levels: justified by a kernel check of the generic declaration, re-checked
+#     by the consumer; forged or missing justifications are rejected through the full pipeline.
+import hashlib  # noqa: E402
+RES = ROOT / "runs" / "hu-resid"
+shutil.rmtree(RES, ignore_errors=True)
+rcs = [cli("export", "--manifest", MAN, "--roots", "U.UnivResidual.use_cst_eq", "--out", RES)[0],
+       cli("translate", "--input", RES / "source.ndjson", "--out", RES)[0], cli("verify", "--run", RES)[0]]
+RR, _ = results(RES)
+uc = RR["U.UnivResidual.use_cst"]
+cons = json.loads((RES / "consumer_result.json").read_text())
+check(rcs == [0, 0, 0] and uc["universe_level_defaults"] == 1 and uc["universe_residuals"]["params"] == ["u_residual_0"]
+      and cons["residual_levels_checked"] == 1,
+      "residual level: use_cst defaults one unconstrained level, justified (kernel, every value) and re-checked by the consumer — VERIFIED")
+
+
+def e2e(run, name, mutate):
+    d = run.parent / f"{run.name}-e2e-{name}"
+    shutil.rmtree(d, ignore_errors=True)
+    shutil.copytree(run, d, ignore=shutil.ignore_patterns(".rocq2lean.lock"))
+    rep = json.loads((d / "translation_report.json").read_text())
+    mutate({r["source"]: r for r in rep["results"]})
+    (d / "translation_report.json").write_text(json.dumps(rep))
+    tm = json.loads((d / "translation_manifest.json").read_text())
+    tm["report_sha256"] = hashlib.sha256((d / "translation_report.json").read_bytes()).hexdigest()
+    (d / "translation_manifest.json").write_text(json.dumps(tm))
+    rc, _ = cli("verify", "--run", d)
+    c = json.loads((d / "consumer_result.json").read_text()) if (d / "consumer_result.json").exists() else {"problems": []}
+    rcA, probsA = audit_report(d, rep, "forged")
+    return rc, c["problems"], probsA
+
+
+def forge_unjustified(rows):
+    r = rows["U.UnivResidual.use_cst_eq"]
+    gty = json.loads(json.dumps(r["target_type"]))
+    def raise_eq(e):                         # Eq.{1} -> Eq.{u_residual_0 + 1}: equal at 0, ill typed otherwise
+        if isinstance(e, dict):
+            if e.get("k") == "const" and e["n"] == "Eq":
+                e["u"] = [{"k": "succ", "l": {"k": "param", "n": "u_residual_0"}}]
+            for v in e.values():
+                raise_eq(v)
+    raise_eq(gty)
+    r["universe_level_defaults"] = 1
+    r["universe_residuals"] = {"params": ["u_residual_0"], "default": "zero", "justification": "forged",
+                               "generic_type": gty, "generic_value": r["target_value"]}
+rc, cp, ap = e2e(RES, "unjustified", forge_unjustified)
+check(rc == 2 and any(x["detector"] == "residual_levels" and "rejected by the kernel" in x["message"] for x in cp),
+      "forged residual whose generic declaration is not valid for every level: consumer kernel re-check rejects (verify exit 2)")
+check(not any(x["detector"] == "universe" for x in ap),
+      "  (the auditor's syntactic residual check alone accepts it: the kernel re-check is the necessary gate)")
+rc, cp, ap = e2e(RES, "unrecorded", lambda rows: rows["U.UnivResidual.use_cst"].update(universe_residuals=None))
+check(rc == 2 and any(x["detector"] == "residual_levels" and "without a justification" in x["message"] for x in cp)
+      and any(x["detector"] == "universe" and "without a justification record" in x["message"] for x in ap),
+      "defaulted level with its justification record removed: rejected by consumer and auditor")
+
+
+def forge_generic(rows):
+    g = rows["U.UnivResidual.use_cst"]["universe_residuals"]["generic_value"]
+    g["u"] = [{"k": "succ", "l": u} for u in g["u"]]
+rc, cp, ap = e2e(RES, "generic-mismatch", forge_generic)
+check(rc == 2 and any(x["detector"] == "residual_levels" and "not the imported one" in x["message"] for x in cp)
+      and any("differs from the reported declaration" in x["message"] for x in ap),
+      "justification record that does not instantiate to the accepted declaration: rejected by consumer and auditor")
+
+# (8) Typing-determined instance levels (Eq template level, recursor motive level): recomputed by the
+#     auditor from the audited terms and checked at every occurrence by the consumer.
+aud = json.loads((RES / "audit.json").read_text())
+check(aud["instance_levels"]["checked"] >= 2 and cons["instance_levels_checked"] >= 2,
+      f"instance levels: auditor determined {aud['instance_levels']}, consumer checked {cons['instance_levels_checked']}")
+REPR = json.loads((RES / "translation_report.json").read_text())
+
+
+def bump_const(rep, decl, cname, part="target_type"):
+    rep = copy.deepcopy(rep)
+    r = next(x for x in rep["results"] if x["source"] == decl)
+
+    def go(e):
+        if isinstance(e, dict):
+            if e.get("k") == "const" and e["n"] == cname and e["u"]:
+                e["u"][0] = {"k": "succ", "l": e["u"][0]}
+            for v in e.values():
+                go(v)
+    go(r[part])
+    return rep
+
+
+d = RES / "mut-eq-level"
+shutil.rmtree(d, ignore_errors=True)
+d.mkdir()
+rep = bump_const(REPR, "U.UnivResidual.use_cst_eq", "Eq")
+(d / "report.json").write_text(json.dumps(rep))
+k = next(x for x in replay.replay(d / "report.json", d) if x["source"] == "U.UnivResidual.use_cst_eq")["kernel"]
+rc, probs = audit_report(RES, rep, "mut-eq-level")
+check(rc != 0 and any(x["detector"] == "instance_levels" for x in probs),
+      f"Eq template level raised: auditor's instance_levels detector rejects (kernel: {k})")
+M3RUN = ROOT / "runs" / "hu-m3rec"
+shutil.rmtree(M3RUN, ignore_errors=True)
+rcs = [cli("export", "--manifest", ROOT / "fixtures" / "m3" / "manifest.json", "--roots", "M3.M3Proofs.mirror_mirror,M3.M3Fix.addR_RS",
+           "--out", M3RUN)[0], cli("translate", "--input", M3RUN / "source.ndjson", "--out", M3RUN)[0], cli("verify", "--run", M3RUN)[0]]
+am = json.loads((M3RUN / "audit.json").read_text())
+cm = json.loads((M3RUN / "consumer_result.json").read_text())
+check(rcs == [0, 0, 0] and am["instance_levels"]["checked"] > 0 and cm["instance_levels_checked"] >= am["instance_levels"]["checked"],
+      f"M3 (mirror_mirror, addR_RS): auditor determined {am['instance_levels']} recursor/Eq levels; consumer checked {cm['instance_levels_checked']}")
+M3REP = json.loads((M3RUN / "translation_report.json").read_text())
+d = M3RUN / "mut-rec-level"
+shutil.rmtree(d, ignore_errors=True)
+d.mkdir()
+rep = bump_const(M3REP, "M3.M3Fix.addR", "Rocq.M3.M3Types.RNat.rec", "target_value")
+(d / "report.json").write_text(json.dumps(rep))
+k = next(x for x in replay.replay(d / "report.json", d) if x["source"] == "M3.M3Fix.addR")["kernel"]
+rc, probs = audit_report(M3RUN, rep, "mut-rec-level")
+check(k == "REJECTED" and rc != 0 and any(x["detector"] == "instance_levels" for x in probs),
+      f"recursor motive level raised (RNat.rec in addR): kernel {k}, auditor instance_levels rejects")
+
+# (9) MetaRocq's own constraint record must be entailed by the native graph.
+lines = [json.loads(l) for l in open(RUN / "source.ndjson")]
+lines[3]["constraints"].append({"l": {"k": "global", "n": ub}, "rel": {"k": "le", "offset": 1}, "r": {"k": "global", "n": ua}})
+d = RUN / "facts-metarocq-constraint"
+shutil.rmtree(d, ignore_errors=True)
+d.mkdir()
+(d / "source.ndjson").write_text("".join(json.dumps(x) + "\n" for x in lines))
+env = dict(os.environ, PATH=f"{Path.home()}/.local/bin:" + os.environ["PATH"])
+p = subprocess.run(["opam", "exec", "--switch=rocq930", "--", sys.executable, "-I", str(ROOT / "tools" / "roundtrip.py"),
+                    str(d / "source.ndjson"), str(d), "-Q", str(MAN.parent), "U", "--", "U.Univ"],
+                   capture_output=True, text=True, env=env)
+check(p.returncode != 0 and "is not entailed by the native facts" in p.stdout,
+      "invented MetaRocq constraint (ub < ua) rejected by the native round trip (not entailed)")
 finish("test-universe-audit")

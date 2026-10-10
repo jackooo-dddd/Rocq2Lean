@@ -556,7 +556,7 @@ def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr) : Exc
 type-check with Lean's checker (which unifies universe levels; terms are not changed) and
 unify the value's type with the declared type; any level left unconstrained is set to `0`.
 The kernel re-checks the result. -/
-def solveLevels (ty val : Expr) : MetaM (Expr × Expr × Array String × Nat) := do
+def solveLevels (ty val : Expr) : MetaM (Expr × Expr × Array String × List Name × Expr × Expr) := do
   let mut diags : Array String := #[]
   try Meta.check ty catch e => diags := diags.push s!"Meta.check type: {← e.toMessageData.toString}"
   try Meta.check val catch e => diags := diags.push s!"Meta.check value: {← e.toMessageData.toString}"
@@ -568,8 +568,16 @@ def solveLevels (ty val : Expr) : MetaM (Expr × Expr × Array String × Nat) :=
   let val ← instantiateMVars val
   let ((), ms) := ((levelMVarsOf ty *> levelMVarsOf val).run #[])
   -- Residual levels are unconstrained by unification; they are defaulted to 0 and *recorded*,
-  -- and must still pass the universe obligations (rule R3) like every other argument.
+  -- must still pass the universe obligations (rule R3) like every other argument, and are only
+  -- accepted with a justification: the caller kernel-checks the generic variant returned here,
+  -- in which each residual is a fresh universe parameter (`u_residual_i`).
+  let ps := (List.range ms.size).map fun i => Name.mkSimple s!"u_residual_{i}"
+  let sub (l : Level) : Option Level := match l with
+    | .mvar id => (ms.findIdx? (· == id)).map fun i => .param ps[i]!
+    | _ => none
+  let gty := ty.replaceLevel sub
+  let gval := val.replaceLevel sub
   for m in ms do assignLevelMVar m Level.zero
-  return (← instantiateMVars ty, ← instantiateMVars val, diags, ms.size)
+  return (← instantiateMVars ty, ← instantiateMVars val, diags, ps, gty, gval)
 
 end Rocq2Lean

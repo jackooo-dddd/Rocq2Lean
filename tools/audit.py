@@ -644,6 +644,167 @@ def check_universe_args(facts, own, gen, exprs):
     return n
 
 
+# ---------- instance levels of template constants and recursors (independent recomputation) ----------
+
+_ZERO = {"k": "zero"}
+_ONE = {"k": "succ", "l": _ZERO}
+# Types of the bootstrap targets (independent copy): Nat : Type, Eq.{u} : {α : Sort u} → α → α → Prop.
+BOOT_TYPES = {
+    "Nat": ({"k": "sort", "l": _ONE}, []),
+    "Eq": ({"k": "forall", "n": "α", "t": {"k": "sort", "l": {"k": "param", "n": "u"}},
+            "b": {"k": "forall", "n": "a", "t": {"k": "bvar", "i": 0},
+                  "b": {"k": "forall", "n": "b", "t": {"k": "bvar", "i": 1}, "b": {"k": "sort", "l": _ZERO}}}}, ["u"]),
+}
+
+
+class InstanceLevels:
+    """Recomputes, from the audited target terms alone, the universe arguments that kernel typing
+    determines and that no source instance records (docs/UNIVERSE_TRANSLATION.md, R4):
+
+      Eq.{u} A …, Eq.refl.{u} A …   u = the sort level of A's type
+      Eq.rec.{v, u} A …             u as above
+      I.rec.{v, …} params motive …  v = the sort level of the motive's codomain (large eliminators)
+
+    Types of heads come from the report rows (already structurally audited against the source)
+    and from an independent copy of the bootstrap types; recursor shapes from the kernel metadata.
+    Occurrences whose level this small inference cannot determine are counted as deferred; the
+    consumer checks every occurrence (`instance_levels` obligation) in a fresh Lean process."""
+
+    def __init__(self, rows, recursors):
+        self.types = dict(BOOT_TYPES)
+        for r in rows:
+            if r.get("status") != "TRANSLATED_AND_CHECKED" or r.get("target_type") is None:
+                continue
+            self.types[r["target"]] = (r["target_type"], r.get("level_params", []))
+            for c in r.get("target_ctors", []):
+                self.types[c["name"]] = (c["type"], [])
+        self.recursors = recursors or {}
+        self.checked = self.deferred = 0
+
+    def head_type(self, h):
+        t = self.types.get(h["n"])
+        if t is None or len(t[1]) != len(h["u"]):
+            return None
+        return inst_levels(t[0], dict(zip(t[1], h["u"])))
+
+    @staticmethod
+    def result_sort(ty, nargs):
+        if ty is None:
+            return None
+        for _ in range(nargs):
+            ty = beta(ty)
+            if ty["k"] != "forall":
+                return None
+            ty = ty["b"]
+        ty = beta(ty)
+        return ty["l"] if ty["k"] == "sort" else None
+
+    def sort_of_type(self, t, ctx):
+        """Level l with t : Sort l, or None."""
+        k = t["k"]
+        if k == "sort":
+            return {"k": "succ", "l": t["l"]}
+        if k == "forall":
+            sb = self.sort_of_type(t["b"], [t["t"]] + ctx)
+            if sb is None:
+                return None
+            if level_nf(sb) == canon(0, {}):
+                return _ZERO                       # imax(_, 0) = 0
+            sa = self.sort_of_type(t["t"], ctx)
+            c, ps = level_nf(sb)
+            if sa is None or not ((c or 0) >= 1 or any(o >= 1 for _, o in ps)):
+                return None                       # imax with a possibly-zero codomain level
+            return {"k": "max", "a": sa, "b": sb}
+        if k == "let":
+            return self.sort_of_type(t["b"], [t["t"]] + ctx)
+        if k == "mdata":
+            return self.sort_of_type(t["e"], ctx)
+        head, args = Auditor.unspine(t)
+        if head["k"] == "const":
+            return self.result_sort(self.head_type(head), len(args))
+        if head["k"] == "bvar" and head["i"] < len(ctx):
+            return self.result_sort(ctx[head["i"]], len(args))
+        return None
+
+    def expect(self, got, want, what, problems):
+        if want is None:
+            self.deferred += 1
+            return
+        self.checked += 1
+        if level_nf(got) != level_nf(want):
+            problems.append(f"{what}: universe argument {got} differs from the level determined by typing {want}")
+
+    def visit(self, e, ctx, problems, where):
+        k = e["k"]
+        if k in ("lam", "forall"):
+            self.visit(e["t"], ctx, problems, where)
+            self.visit(e["b"], [e["t"]] + ctx, problems, where)
+            return
+        if k == "let":
+            self.visit(e["t"], ctx, problems, where)
+            self.visit(e["v"], ctx, problems, where)
+            self.visit(e["b"], [e["t"]] + ctx, problems, where)
+            return
+        if k in ("mdata", "proj"):
+            self.visit(e["e"], ctx, problems, where)
+            return
+        head, args = Auditor.unspine(e) if k == "app" else (e, [])
+        if head["k"] == "const":
+            n, us = head["n"], head["u"]
+            if n in ("Eq", "Eq.refl") and args and len(us) == 1:
+                self.expect(us[0], self.sort_of_type(args[0], ctx), f"{where}: {n}", problems)
+            rec = self.recursors.get(n)
+            if rec is not None and rec["num_motives"] == 1 and us:
+                if n == "Eq.rec" and args and len(us) == 2:
+                    self.expect(us[1], self.sort_of_type(args[0], ctx), f"{where}: {n} (type level)", problems)
+                if self.large(rec) and len(args) > rec["num_params"]:
+                    m, mctx = args[rec["num_params"]], list(ctx)
+                    for _ in range(rec["num_indices"] + 1):
+                        if m["k"] != "lam":
+                            m = None
+                            break
+                        mctx = [m["t"]] + mctx
+                        m = m["b"]
+                    self.expect(us[0], None if m is None else self.sort_of_type(m, mctx), f"{where}: {n} (motive level)", problems)
+        if k == "app":
+            if head["k"] != "const":
+                self.visit(head, ctx, problems, where)
+            for a in args:
+                self.visit(a, ctx, problems, where)
+
+    @staticmethod
+    def large(rec):
+        """The recursor eliminates into any sort: its motive's codomain is its first level parameter."""
+        ty = rec["type"]
+        for _ in range(rec["num_params"]):
+            ty = ty["b"] if ty["k"] == "forall" else ty
+        if ty["k"] != "forall":
+            return False
+        mt = ty["t"]
+        for _ in range(rec["num_indices"] + 1):
+            mt = mt["b"] if mt["k"] == "forall" else mt
+        return mt["k"] == "sort" and bool(rec["level_params"]) and mt["l"] == {"k": "param", "n": rec["level_params"][0]}
+
+
+def check_residuals(r):
+    """Defaulted universe levels carry a justification record whose generic declaration, with its
+    residual parameters set to zero, is exactly the reported one (the kernel acceptance of the
+    generic declaration is re-checked by the consumer)."""
+    n = r.get("universe_level_defaults", 0)
+    res = r.get("universe_residuals")
+    if not n and res is None:
+        return
+    if res is None:
+        raise Mismatch(f"{n} defaulted universe level(s) without a justification record")
+    ps = res.get("params", [])
+    if len(ps) != n or len(set(ps)) != n or set(ps) & set(r.get("level_params", [])):
+        raise Mismatch(f"residual parameters {ps} do not match {n} defaulted level(s)")
+    zero = {p: _ZERO for p in ps}
+    if inst_levels(res.get("generic_type"), zero) != r.get("target_type") or \
+            inst_levels(res.get("generic_value"), zero) != r.get("target_value"):
+        raise Mismatch("generic declaration with residual levels at 0 differs from the reported declaration")
+
+
 def closure_refs(t, acc):
     """Independent reimplementation of dependency extraction (not shared with tools/contract.py)."""
     stack = [t]
@@ -792,6 +953,23 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
     recursors = None
     if metadata_path and Path(metadata_path).exists():
         recursors = {r["name"]: r for r in json.load(open(metadata_path)).get("recursors", [])}
+    # Defaulted universe levels (justification records) and typing-determined instance levels.
+    inst = InstanceLevels(list(rows.values()), recursors)
+    for s_, r_ in rows.items():
+        if r_.get("status") != "TRANSLATED_AND_CHECKED":
+            continue
+        try:
+            check_residuals(r_)
+        except Mismatch as e:
+            problem("universe", f"{s_}: {e}")
+        ips = []
+        for part in ("target_type", "target_value"):
+            if r_.get(part) is not None:
+                inst.visit(r_[part], [], ips, part)
+        for c in r_.get("target_ctors", []):
+            inst.visit(c["type"], [], ips, "ctor " + c["name"])
+        for m in ips:
+            problem("instance_levels", f"{s_}: {m}")
     aud = Auditor(decls, list(rows.values()), recursors)
     for s in sorted(decls):
         r, d = rows.get(s), decls[s]
@@ -843,6 +1021,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
         verdicts.append(v)
     out = {"schema": "rocq2lean-audit/2", "status": "OK" if not problems else "AUDIT_REJECTED",
            "universe_arguments_checked": univ_checked,
+           "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
            "coverage": {"requested_roots": len(canon), "required_closure": len(closure), "accepted": len(accepted),
                         "extra_exported": sorted(set(decls) - closure)},
            "problems": problems, "verdicts": verdicts}

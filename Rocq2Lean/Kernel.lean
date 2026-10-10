@@ -33,4 +33,15 @@ def addChecked (decl : Declaration) : CoreM KernelResult := do
   | .error ex =>
     return .rejected (← (ex.toMessageData opts).toString)
 
+/-- Submit `decl` to the Lean kernel *without* installing it: used to validate a side condition
+(e.g. that a declaration is well typed for every value of a defaulted universe level). -/
+def checkOnly (decl : Declaration) : CoreM KernelResult := do
+  let opts ← getOptions
+  if debug.skipKernelTC.get opts then
+    throwError "rocq2lean: refusing to check declarations while debug.skipKernelTC is enabled"
+  match (← getEnv).addDeclCore (Core.getMaxHeartbeats opts).toUSize (maxRecDepth.get opts).toUSize decl
+      none (doCheck := true) with
+  | .ok _ => return .accepted
+  | .error ex => return .rejected (← (ex.toMessageData opts).toString)
+
 end Rocq2Lean

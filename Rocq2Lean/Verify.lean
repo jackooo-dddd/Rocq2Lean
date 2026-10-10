@@ -1,6 +1,7 @@
 import Lean
 import Rocq2Lean.Emit
 import Rocq2Lean.Bootstrap
+import Rocq2Lean.Replay
 
 /-!
 # `#rocq2lean_verify "contract.json" "report.json" "result.json"`
@@ -21,6 +22,11 @@ Detectors (each recorded separately in `result.json`):
   reported one;
 * `safety` — not `unsafe`/`partial`;
 * `axioms` — empty transitive axiom set (`collectAxioms`), standard Lean axioms included;
+* `instance_levels` — at every `Eq`/`Eq.refl`/`Eq.rec` occurrence and every large recursor
+  application, the typing-determined universe argument equals the level Lean infers here;
+* `residual_levels` — every defaulted universe level is justified: the reported generic
+  declaration (residuals as fresh universe parameters) is accepted by the kernel here, and
+  instantiating its residual parameters with `0` gives exactly the imported declaration;
 * `target_deps` — every constant referenced by an accepted target is an accepted target of
   this run, a bootstrap target, or a kernel-generated constructor/recursor of one.
 
@@ -54,6 +60,40 @@ def checkRecIndices (v : Expr) : MetaM (Nat × Array String) := do
           unless want.size == idx.size && (want.zip idx).all (fun (a, b) => a == b) do
             unless want.size == idx.size && (← (want.zip idx).allM fun (a, b) => isDefEq a b) do
               bad.modify (·.push s!"{r}: indices differ from the major premise's type")
+    return .continue)
+  return (← checked.get, ← bad.get)
+
+/-- Obligation for the universe arguments that typing determines and no source instance records
+(docs/UNIVERSE_TRANSLATION.md, R4): at every occurrence of `Eq.{u} A`, `Eq.refl.{u} A` and
+`Eq.rec.{_, u} A`, `u` is the sort level of `A`'s type; at every application of a large recursor
+`I.rec.{v, …} params motive …`, `v` is the level of the motive's codomain. Returns the number of
+checked arguments and any violations. -/
+def checkInstanceLevels (v : Expr) : MetaM (Nat × Array String) := do
+  let checked ← IO.mkRef 0
+  let bad ← IO.mkRef (#[] : Array String)
+  let same (what : String) (got want : Level) : MetaM Unit := do
+    checked.modify (· + 1)
+    unless ← isLevelDefEq got want do bad.modify (·.push s!"{what}: argument {got}, typing determines {want}")
+  discard <| Meta.transform v (post := fun e => do
+    if let .const c us := e.getAppFn then
+      let args := e.getAppArgs
+      if (c == ``Eq || c == ``Eq.refl) && args.size ≥ 1 && us.length == 1 then
+        same s!"{c}" us[0]! (← getLevel args[0]!)
+      if c == ``Eq.rec && args.size ≥ 1 && us.length == 2 then
+        same s!"{c} (type level)" us[1]! (← getLevel args[0]!)
+      if let some (.recInfo rv) := (← getEnv).find? c then
+        if rv.numMotives == 1 && args.size > rv.numParams && !us.isEmpty then
+          -- large eliminator: the motive's codomain is the recursor's first universe parameter
+          let large ← forallBoundedTelescope rv.type (some (rv.numParams + 1)) fun xs _ => do
+            if xs.size != rv.numParams + 1 then return false
+            forallTelescopeReducing (← inferType xs.back!) fun _ b => do
+              return b.isSort && b.sortLevel! == .param rv.levelParams.head!
+          if large then
+            let mty ← inferType args[rv.numParams]!
+            forallTelescopeReducing mty fun _ b => do
+              match (← whnf b) with
+              | .sort l => same s!"{c} (motive level)" us[0]! l
+              | _ => bad.modify (·.push s!"{c}: motive codomain is not a sort")
     return .continue)
   return (← checked.get, ← bad.get)
 
@@ -156,6 +196,8 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
   let env ← getEnv
   let mut recs : Std.HashMap Name RecursorVal := {}
   let mut recApps : Nat := 0
+  let mut residualsChecked : Nat := 0
+  let mut instChecked : Nat := 0
   for (s, r) in accepted do
     let tgt := getStr r "target"
     let some ci := env.find? tgt.toName
@@ -194,15 +236,46 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
       let (n, bad) ← liftTermElabM (checkRecIndices v)
       recApps := recApps + n
       for b in bad do problems := note "rec_indices" s!"{tgt}: {b}" problems
+    for e in ci.type :: (ci.value? (allowOpaque := true)).toList do
+      let (n, bad) ← liftTermElabM (checkInstanceLevels e)
+      instChecked := instChecked + n
+      for b in bad do problems := note "instance_levels" s!"{tgt}: {b}" problems
+    -- residual_levels
+    let nDefaults := (r.getObjValAs? Nat "universe_level_defaults").toOption.getD 0
+    match r.getObjValD "universe_residuals" with
+    | .null =>
+      if nDefaults != 0 then
+        problems := note "residual_levels" s!"{tgt}: {nDefaults} defaulted universe level(s) without a justification" problems
+    | res =>
+      let parsed : Except String (List Name × Expr × Expr) := do
+        let ps := (← res.getObjValAs? (Array String) "params").toList.map String.toName
+        return (ps, ← exprOfJson (← res.getObjVal? "generic_type"), ← exprOfJson (← res.getObjVal? "generic_value"))
+      match parsed, ci.value? (allowOpaque := true) with
+      | .ok (ps, gty, gval), some v =>
+        if ps.length != nDefaults || ps.any ci.levelParams.contains then
+          problems := note "residual_levels" s!"{tgt}: residual parameters {ps} do not match {nDefaults} defaulted level(s)" problems
+        let z := ps.map fun _ => Level.zero
+        unless exprJson (gty.instantiateLevelParams ps z) == exprJson ci.type &&
+            exprJson (gval.instantiateLevelParams ps z) == exprJson v do
+          problems := note "residual_levels" s!"{tgt}: the generic declaration with its residual levels at 0 is not the imported one" problems
+        let d ← liftTermElabM (mkConstDecl (tgt.toName ++ `_rocq2lean_residual_check) kind (ci.levelParams ++ ps) gty gval)
+        match ← liftCoreM (checkOnly d) with
+        | .accepted => residualsChecked := residualsChecked + 1
+        | .rejected m =>
+          problems := note "residual_levels" s!"{tgt}: generic declaration rejected by the kernel, defaults unjustified ({m})" problems
+      | .error e, _ => problems := note "residual_levels" s!"{tgt}: unreadable residual record ({e})" problems
+      | _, none => problems := note "residual_levels" s!"{tgt}: residual record on a declaration without value" problems
     let axs ← liftCoreM (collectAxioms tgt.toName)
     unless axs.isEmpty do problems := note "axioms" s!"{tgt}: depends on axioms {axs}" problems
   for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)
   let dets := ["binding", "coverage", "roots", "presence", "kind", "safety", "levels", "type", "value", "ctors",
-               "target_deps", "axioms", "rec_indices"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
+               "target_deps", "axioms", "rec_indices", "residual_levels", "instance_levels"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
   let res := Json.mkObj [
     ("schema", "rocq2lean-consumer/1"), ("status", if problems.isEmpty then "OK" else "AUDIT_REJECTED"),
     ("run_id", getStr contract "run_id"), ("accepted_checked", accepted.size),
     ("recursor_applications_checked", recApps),
+    ("residual_levels_checked", residualsChecked),
+    ("instance_levels_checked", instChecked),
     ("recursors", Json.arr (recs.toArray.map (recursorJson ·.2))),
     ("detectors", Json.mkObj dets),
     ("problems", Json.arr (problems.map fun (d, m) => Json.mkObj [("detector", d), ("message", m)]))]

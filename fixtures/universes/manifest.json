@@ -1,1 +1,1 @@
-{"name": "universes", "load_paths": [["-Q", ".", "U"]], "files": ["Univ.v"], "requires": ["U.Univ"]}
+{"name": "universes", "load_paths": [["-Q", ".", "U"]], "files": ["Univ.v", "UnivResidual.v"], "requires": ["U.Univ", "U.UnivResidual"]}

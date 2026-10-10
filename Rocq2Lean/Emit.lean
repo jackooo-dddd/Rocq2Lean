@@ -46,6 +46,11 @@ structure DeclResult where
   levelDiagnostics : Array String := #[]
   levelDefaults : Nat := 0
   universeChecks : Nat := 0
+  /-- Defaulted (residual) universe levels: the fresh parameters standing for them and the
+  declaration's type/value with those parameters, which the kernel accepted (justification). -/
+  residualParams : List Name := []
+  residualType : Option Expr := none
+  residualValue : Option Expr := none
   deriving Inhabited
 
 def DeclResult.ok (r : DeclResult) : Bool :=
@@ -78,6 +83,25 @@ def globalsOf' (c : IR.ConstantDecl) : Array String :=
   match c.body with
   | some b => (globalsOf b (globalsOf c.type)).toArray
   | none => (globalsOf c.type).toArray
+
+/-- The target declaration of a constant, by target kind. -/
+def mkConstDecl (name : Name) (kind : String) (lps : List Name) (ty val : Expr) : MetaM Declaration := do
+  match kind with
+  | "def" =>
+    let h := ReducibilityHints.regular (getMaxHeight (← getEnv) val + 1)
+    return .defnDecl { name, levelParams := lps, type := ty, value := val, hints := h, safety := .safe, all := [name] }
+  | "theorem" => return .thmDecl { name, levelParams := lps, type := ty, value := val, all := [name] }
+  | _ => return .opaqueDecl { name, levelParams := lps, type := ty, value := val, isUnsafe := false, all := [name] }
+
+/-- Justification of defaulted universe levels (docs/UNIVERSE_TRANSLATION.md, R3'): the declaration
+with each residual level as a fresh universe parameter must be accepted by the kernel, i.e. it is
+well typed for *every* value of those levels, so the default `0` chooses nothing. -/
+def justifyResiduals (name : Name) (kind : String) (lps resid : List Name) (gty gval : Expr) :
+    MetaM (Option String) := do
+  if resid.isEmpty then return none
+  match ← checkOnly (← mkConstDecl name kind (lps ++ resid) gty gval) with
+  | .accepted => return none
+  | .rejected msg => return some s!"defaulted universe level(s) {resid} not justified: the declaration is not valid for every value ({msg})"
 
 def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl) :
     MetaM DeclResult := do
@@ -119,8 +143,8 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let (ty, val, diags, defaults) ← solveLevels ty val
-    let base := { base with levelDiagnostics := diags, levelDefaults := defaults }
+    let (ty, val, diags, resid, gty, gval) ← solveLevels ty val
+    let base := { base with levelDiagnostics := diags, levelDefaults := resid.length }
     let nchecks ← match checkUniverseObligations genv globals ty, checkUniverseObligations genv globals val with
       | .ok a, .ok b => pure (a + b)
       | .error msg, _ | _, .error msg =>
@@ -128,18 +152,13 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let base := { base with universeChecks := nchecks }
     unless (← whnf (← inferType ty)).isSort do
       return { base with status := "TRANSLATION_FAILED", message := "translated type is not a type" }
-    let (decl, kind) ←
-      if c.bodyState == "transparent" then
-        let h := ReducibilityHints.regular (getMaxHeight (← getEnv) val + 1)
-        pure (Declaration.defnDecl { name, levelParams := lparams, type := ty, value := val, hints := h,
-                                     safety := .safe, all := [name] }, "def")
-      else if ← isProp ty then
-        pure (Declaration.thmDecl { name, levelParams := lparams, type := ty, value := val, all := [name] }, "theorem")
-      else
-        pure (Declaration.opaqueDecl { name, levelParams := lparams, type := ty, value := val, isUnsafe := false,
-                                       all := [name] }, "opaque")
+    let kind ← if c.bodyState == "transparent" then pure "def" else if ← isProp ty then pure "theorem" else pure "opaque"
     let base := { base with target := some name, targetKind := kind, rule := s!"constant/{c.bodyState}" }
-    match ← addChecked decl with
+    if let some msg ← justifyResiduals name kind lparams resid gty gval then
+      return { base with status := "UNIVERSE_REJECTED", message := msg }
+    let base := if resid.isEmpty then base
+      else { base with residualParams := resid, residualType := gty, residualValue := gval }
+    match ← addChecked (← mkConstDecl name kind lparams ty val) with
     | .accepted => return { base with status := "TRANSLATED_AND_CHECKED", targetType := ty, targetValue := val,
                                       levelParams := lparams }
     | .rejected msg => return { base with status := "KERNEL_REJECTED", message := msg }
@@ -262,6 +281,12 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("universe_level_defaults", r.levelDefaults),
     ("universe_checks", r.universeChecks),
     ("universe_diagnostics", Json.arr (r.levelDiagnostics.map Json.str)),
+    ("universe_residuals", if r.residualParams.isEmpty then .null else Json.mkObj [
+      ("params", Json.arr (r.residualParams.map (Json.str ·.toString)).toArray),
+      ("default", "zero"),
+      ("justification", "kernel accepted the declaration with these levels as fresh universe parameters"),
+      ("generic_type", match r.residualType with | some e => exprJson e | none => .null),
+      ("generic_value", match r.residualValue with | some e => exprJson e | none => .null)]),
     ("target_ctors", Json.arr (r.targetCtors.map fun (n, e) =>
       Json.mkObj [("name", n.toString), ("type", exprJson e)]))]
 
