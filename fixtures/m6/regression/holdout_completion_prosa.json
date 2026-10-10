@@ -1,0 +1,24 @@
+{
+ "name": "holdout_completion_prosa",
+ "manifest": "fixtures/m6/holdout_util_manifest.json",
+ "roots": [
+  "prosa.util.sum.sum_unit1",
+  "prosa.util.sum.sum_nat_eq0_nat",
+  "prosa.util.sum.big_sum_eq_in_eq_sized_intervals",
+  "prosa.util.sum.sum_split_exhaustive_mutually_exclusive_preds",
+  "prosa.util.sum.ltn_sum_leq_seq",
+  "prosa.util.sum.sum_majorant_constant",
+  "prosa.util.div_mod.div_ceil0",
+  "prosa.util.div_mod.div_ceil_subadditive",
+  "prosa.util.div_mod.divn_leq",
+  "prosa.util.div_mod.eqdivn_leqmodn",
+  "prosa.util.div_mod.addmod_le_mod",
+  "prosa.util.div_mod.div_ceil_gt0",
+  "prosa.util.list.iotaD_impl",
+  "prosa.util.list.exists_two",
+  "prosa.util.list.has_all_nilp",
+  "prosa.util.list.nin_rem_all",
+  "prosa.util.list.max0_cons",
+  "prosa.util.list.index_iota_filter_eqx"
+ ]
+}

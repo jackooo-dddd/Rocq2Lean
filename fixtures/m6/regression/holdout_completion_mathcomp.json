@@ -1,0 +1,14 @@
+{
+ "name": "holdout_completion_mathcomp",
+ "manifest": "fixtures/m6/mathcomp_div_manifest.json",
+ "roots": [
+  "mathcomp.boot.div.dvdn_odd",
+  "mathcomp.boot.div.dvdnn",
+  "mathcomp.boot.div.lcmn1",
+  "mathcomp.boot.div.modnDl",
+  "mathcomp.boot.div.muln_lcmr",
+  "mathcomp.boot.div.dvdn_lcml",
+  "mathcomp.boot.div.coprime_pexpl",
+  "mathcomp.boot.div.gcdn_idPl"
+ ]
+}

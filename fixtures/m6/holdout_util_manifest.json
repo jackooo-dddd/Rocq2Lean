@@ -1,0 +1,1 @@
+{"name": "m6-holdout-util", "load_paths": [["-R", "../../.work/prosa-0.6-rocq93", "prosa"]], "files": [], "requires": ["prosa.util.sum", "prosa.util.div_mod", "prosa.util.list"]}
