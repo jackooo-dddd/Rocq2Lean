@@ -1,42 +1,82 @@
 #!/usr/bin/env bash
-# Package hardening evidence: reports/evidence/rocq2lean-evidence-<commit>.tar.gz (+ .sha256),
-# with SHA256SUMS inside and REPLAY.md. No credentials, no opam switch, no .lake.
+# Package one complete, nontrivial M3 evidence chain with hashes and logs:
+#   reports/evidence/rocq2lean-evidence-<commit>.tar.gz (+ .sha256) and reports/evidence/package.json.
+# The chain is produced here, through the public CLI, in a fresh run directory: the five M3d
+# induction proofs (original Rocq proofs) and their whole required closure (fresh inductives, match
+# and fix lowered to recursors, Corelib eq lemmas). No credentials, no opam switch, no .lake.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-C=$(git rev-parse --short HEAD)
-OUT=reports/evidence; STAGE=$(mktemp -d); E=$STAGE/rocq2lean-evidence-$C
-mkdir -p "$E"/{source,run-m3d,reports,logs,hardening,clean_rebuild} "$OUT"
+C=$(git rev-parse HEAD); CS=$(git rev-parse --short HEAD)
+ROOTS=M3.M3Proofs.addR_n_RZ,M3.M3Proofs.length_map,M3.M3Proofs.mirror_mirror,M3.M3Proofs.vmap_id,M3.M3Proofs.vid_id
+R=runs/evidence-m3d; rm -rf "$R"; mkdir -p "$R/logs"
+CLI=./scripts/rocq2lean
+{ echo "\$ rocq2lean export --manifest fixtures/m3/manifest.json --roots $ROOTS --out $R"; $CLI export --manifest fixtures/m3/manifest.json --roots "$ROOTS" --out "$R"; echo "[exit $?]"
+  echo "\$ rocq2lean translate --input $R/source.ndjson --out $R"; $CLI translate --input "$R/source.ndjson" --out "$R"; echo "[exit $?]"
+  echo "\$ rocq2lean verify --run $R"; $CLI verify --run "$R"; echo "[exit $?]"
+  echo "\$ rocq2lean status --run $R"; $CLI status --run "$R"; echo "[exit $?]"
+  echo "\$ tools/replay.py $R/translation_report.json $R/replay"; python3 -I tools/replay.py "$R/translation_report.json" "$R/replay"; echo "[exit $?]"
+} > "$R/logs/cli.log" 2>&1 || true
+VS=$(python3 -c "import json;print(json.load(open('$R/verify.json'))['status'])" 2>/dev/null || echo MISSING)
+
+OUT=reports/evidence; STAGE=$(mktemp -d); E=$STAGE/rocq2lean-evidence-$CS
+rm -f "$OUT"/rocq2lean-evidence-*; mkdir -p "$E"/{source,run-m3d/lean,reports,logs,hardening,clean_rebuild} "$OUT"
 git archive --format=tar HEAD | tar -x -C "$E/source"
 cp toolchains.lock.json "$E/"
 cp reports/environment.json reports/test_all.json "$E/reports/" 2>/dev/null || true
-cp reports/HARDENING_REPORT.md reports/hardening-results.json "$E/reports/" 2>/dev/null || true
+cp reports/HARDENING_REPORT.md "$E/reports/" 2>/dev/null || true
 cp -r reports/hardening/* "$E/hardening/" 2>/dev/null || true
 cp reports/logs/*.log "$E/logs/" 2>/dev/null || true
-R=runs/h-m3d
-for f in source.ndjson contract.json source_snapshot.json roundtrip.json translation_report.json translation_manifest.json \
-         consumer_result.json audit.json verify.json Export.v RoundTrip.v RoundTripNative.v RoundTripUniverses.v; do
-  [ -e "$R/$f" ] && cp "$R/$f" "$E/run-m3d/"; done
-cp -r $R/logs "$E/run-m3d/logs"; mkdir -p "$E/run-m3d/lean"; cp $R/lean/*.lean "$E/run-m3d/lean/"
-[ -d $R/replay ] && cp $R/replay/replay.json "$E/run-m3d/replay.json" || true
-cp runs/m3-compute/computation.json "$E/run-m3d/computation.json" 2>/dev/null || true
 cp -r reports/clean_rebuild/* "$E/clean_rebuild/" 2>/dev/null || true
+for f in source.ndjson contract.json source_snapshot.json roundtrip.json translation_report.json translation_manifest.json \
+         consumer_result.json audit.json verify.json Export.v; do
+  [ -e "$R/$f" ] && cp "$R/$f" "$E/run-m3d/"; done
+cp -r "$R/logs" "$E/run-m3d/logs"
+cp "$R"/lean/Rocq2LeanOut.{lean,olean,ilean} "$R"/lean/Rocq2LeanConsumer.lean "$E/run-m3d/lean/"
+[ -e "$R/replay/replay.json" ] && cp "$R/replay/replay.json" "$E/run-m3d/replay.json"
+cp fixtures/m3/manifest.json fixtures/m3/*.v "$E/run-m3d/" 2>/dev/null || true
+[ -e runs/m3-compute/computation.json ] && cp runs/m3-compute/computation.json "$E/run-m3d/computation.json"
+[ -e reports/m3_laws.json ] && cp reports/m3_laws.json "$E/run-m3d/m3_laws.json"
 cat > "$E/REPLAY.md" <<MD
-# Replaying this evidence
+# Evidence package $CS
 
-Source revision: $(git rev-parse HEAD) (\`source/\`, from \`git archive\`).
-Toolchains: see \`toolchains.lock.json\` (Lean v4.33.1; Rocq 9.3.0 in opam switch \`rocq930\` with
-MetaRocq c18395ad, Equations d56dfc2c, ext-lib 0.13.2). Setup: \`source/docs/REPRODUCE.md\`.
+Source revision \`$C\` (\`source/\`, from \`git archive\`). Toolchains: \`toolchains.lock.json\`
+(Lean v4.33.1; Rocq 9.3.0, opam switch \`rocq930\`, MetaRocq Template c18395ad unpatched).
+Toolchain setup: \`source/docs/REPRODUCE.md\`. The toolchain binaries' content digests used by this
+run are in \`run-m3d/verify.json\` (\`toolchain_fingerprint\`).
+
+## The packaged chain (\`run-m3d/\`)
+
+Roots (original Rocq induction proofs, \`fixtures/m3/M3Proofs.v\`): \`${ROOTS//,/, }\`.
+Commands and outputs: \`run-m3d/logs/cli.log\` (export with independent round trip, translate,
+verify, status, kernel replay of the report). Verdict: \`run-m3d/verify.json\` (status $VS), with
+every bound digest (\`bound_sha256\`); consumer detectors \`run-m3d/consumer_result.json\`; independent
+audit \`run-m3d/audit.json\`; kernel replay from the report alone \`run-m3d/replay.json\`; Rocq/Lean
+computation agreement \`run-m3d/computation.json\` and law table \`run-m3d/m3_laws.json\`.
+
+## Replaying
 
 1. \`cd source && lake build Rocq2Lean Smoke && ./scripts/doctor\`
-2. Full suite: \`./scripts/test-all\` (writes \`reports/test_all.json\` with per-suite exit codes).
-3. The packaged M3 run (\`run-m3d/\`) can be re-verified by re-running:
-   \`./scripts/rocq2lean export --manifest fixtures/m3/manifest.json --roots $(python3 -c "import json;print(','.join(json.load(open('runs/h-m3d/contract.json'))['request']))") --out RUN\`,
-   then \`translate\` and \`verify\`; compare \`RUN/verify.json\` bound digests with \`run-m3d/verify.json\`
-   (IR and contract digests differ only in the fresh run id).
+2. Full suite: \`./scripts/test-all\`; acceptance: \`./scripts/acceptance\`.
+3. Re-run the chain: \`./scripts/rocq2lean export --manifest fixtures/m3/manifest.json --roots $ROOTS --out RUN\`,
+   then \`translate --input RUN/source.ndjson --out RUN\`, \`verify --run RUN\`, \`status --run RUN\`.
+   Bound digests equal \`run-m3d/verify.json\` except those of the IR-derived contract/snapshot
+   (fresh run id) and absolute paths.
 4. Check this archive: \`sha256sum -c SHA256SUMS\`.
 MD
 (cd "$E" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
-tar -C "$STAGE" -czf "$OUT/rocq2lean-evidence-$C.tar.gz" "rocq2lean-evidence-$C"
-(cd "$OUT" && sha256sum "rocq2lean-evidence-$C.tar.gz" > "rocq2lean-evidence-$C.tar.gz.sha256")
+NF=$(wc -l < "$E/SHA256SUMS")
+tar -C "$STAGE" -czf "$OUT/rocq2lean-evidence-$CS.tar.gz" "rocq2lean-evidence-$CS"
+(cd "$OUT" && sha256sum "rocq2lean-evidence-$CS.tar.gz" > "rocq2lean-evidence-$CS.tar.gz.sha256")
+SHA=$(cut -d' ' -f1 "$OUT/rocq2lean-evidence-$CS.tar.gz.sha256")
+python3 - "$OUT/package.json" <<PY
+import json, sys
+v = json.load(open("$R/verify.json")) if "$VS" != "MISSING" else {}
+json.dump({"schema": "rocq2lean-evidence/2", "commit": "$C", "run": "$R", "roots": "$ROOTS".split(","),
+           "verify_status": "$VS", "required_closure_size": v.get("required_closure_size"),
+           "toolchain_fingerprint": (v.get("toolchain_fingerprint") or {}).get("digest"),
+           "archive": "rocq2lean-evidence-$CS.tar.gz", "archive_sha256": "$SHA", "files": $NF},
+          open(sys.argv[1], "w"), indent=2)
+PY
 rm -rf "$STAGE"
-echo "$OUT/rocq2lean-evidence-$C.tar.gz"; cat "$OUT/rocq2lean-evidence-$C.tar.gz.sha256"
+echo "$OUT/rocq2lean-evidence-$CS.tar.gz ($NF files, verify $VS)"; cat "$OUT/rocq2lean-evidence-$CS.tar.gz.sha256"
+[ "$VS" = VERIFIED ]

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Reproduce the full suite from a clean checkout: fresh `git clone` of COMMIT (default HEAD) into
+# ~/research/r2l-clean-<commit>, `lake build Rocq2Lean Smoke` from scratch (no .lake, no runs/, no
+# compiled fixtures or exporter plugin), then scripts/test-all (every suite in a fresh process).
+# Results are copied to reports/clean_rebuild/. The toolchains themselves (elan's Lean v4.33.1,
+# opam switch rocq930 with MetaRocq) are *not* rebuilt here; doctor checks them against the lock
+# and their content digests are recorded in every run's snapshot.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+REPO=$(pwd); C=$(git rev-parse "${1:-HEAD}"); D=$HOME/research/r2l-clean-${C:0:12}
+OUT=$REPO/reports/clean_rebuild
+rm -rf "$D" "$OUT"; mkdir -p "$OUT"
+T0=$(date -Is); S0=$(date +%s)
+git clone -q --no-local "$REPO" "$D" && git -C "$D" checkout -q "$C"
+cd "$D" || exit 2
+export PATH=$HOME/.elan/bin:$PATH
+lake build Rocq2Lean Smoke > "$OUT/lake-build.log" 2>&1; RB=$?
+mkdir -p reports/logs
+./scripts/test-all > "$OUT/test-all.stdout" 2>&1; RT=$?
+cp reports/test_all.json "$OUT/test_all.json" 2>/dev/null
+mkdir -p "$OUT/logs"; cp reports/logs/*.log "$OUT/logs/" 2>/dev/null
+cat > "$OUT/clean_rebuild.json" <<JSON
+{"schema": "rocq2lean-clean-rebuild/1", "commit": "$C", "fresh_clone": true, "clone_path": "$D",
+ "started": "$T0", "finished": "$(date -Is)", "seconds": $(( $(date +%s) - S0 )),
+ "lake_build_exit": $RB, "test_all_exit": $RT,
+ "lake_build_from_scratch": $( [ -d "$D/.lake" ] && echo true || echo false ),
+ "toolchain_rebuilt": false,
+ "toolchain_note": "Lean v4.33.1 (elan) and opam switch rocq930 (Rocq 9.3.0, MetaRocq c18395ad) were used as installed; not rebuilt. scripts/doctor checked them against toolchains.lock.json and their binaries' content digests are bound in every snapshot."}
+JSON
+cat "$OUT/test-all.stdout"; echo "lake build exit $RB, test-all exit $RT ($D)"
+[ $RB -eq 0 ] && [ $RT -eq 0 ]
