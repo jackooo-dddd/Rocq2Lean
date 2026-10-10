@@ -1,0 +1,145 @@
+make Makefile.coq
+make[1]: Entering directory '/home/shunqwang4/research/prosa-0.6-rocq93'
+Warning: Omitting --rocq-package is deprecated.
+Warning: Use --rocq-package <package> to enable the Findlib-backed Rocq package installation scheme.
+Warning: Pass --no-rocq-package-warning to silence this warning.
+
+make[1]: Leaving directory '/home/shunqwang4/research/prosa-0.6-rocq93'
+make -f Makefile.coq
+make[1]: Entering directory '/home/shunqwang4/research/prosa-0.6-rocq93'
+ROCQ DEP VFILES
+ROCQ compile ./behavior/time.v
+ROCQ compile ./util/supremum.v
+ROCQ compile ./util/tactics.v
+ROCQ compile ./util/notation.v
+ROCQ compile ./util/bigop.v
+ROCQ compile ./util/subadditivity.v
+ROCQ compile ./util/setoid.v
+ROCQ compile ./util/epsilon.v
+ROCQ compile ./util/rel.v
+File "./util/epsilon.v", line 2, characters 0-8:
+Warning: Use of "Notation" keyword for abbreviations is deprecated, use
+"Abbreviation" instead.
+[notation-for-abbreviation,deprecated-since-9.2,deprecated,default]
+ROCQ compile ./util/seqset.v
+File "./util/supremum.v", line 40, characters 7-14:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 50, characters 4-11:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 51, characters 35-42:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 61, characters 4-11:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 74, characters 4-11:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 75, characters 14-21:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 76, characters 35-42:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 107, characters 18-25:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 110, characters 6-13:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 112, characters 6-13:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 118, characters 22-29:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/supremum.v", line 121, characters 24-31:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/tactics.v", line 72, characters 31-38:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/tactics.v", line 72, characters 63-70:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/tactics.v", line 125, characters 21-35:
+Error: The reference ssreflect.done was not found in the current environment.
+Did you mean ssreflect.hide, ssreflect.phant, ssreflect.hideT or
+ssreflect.Phant?
+
+ROCQ compile ./util/int.v
+make[2]: *** [Makefile.coq:869: util/tactics.vo] Error 1
+make[2]: *** [util/tactics.vo] Deleting file 'util/tactics.glob'
+File "./util/subadditivity.v", line 46, characters 4-11:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/subadditivity.v", line 70, characters 38-45:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/subadditivity.v", line 71, characters 6-13:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/subadditivity.v", line 72, characters 17-24:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/bigop.v", line 17, characters 37-44:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/bigop.v", line 21, characters 15-22:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/bigop.v", line 24, characters 18-25:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/bigop.v", line 25, characters 7-14:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/bigop.v", line 26, characters 2-9:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/bigop.v", line 27, characters 2-9:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/bigop.v", line 28, characters 15-22:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+File "./util/seqset.v", line 24, characters 20-22:
+Error: Syntax error: [def_body] expected after [ident_decl] (in [gallina]).
+
+make[2]: *** [Makefile.coq:869: util/seqset.vo] Error 1
+make[2]: *** [util/seqset.vo] Deleting file 'util/seqset.glob'
+File "./util/setoid.v", line 50, characters 41-48:
+Warning:
+The ssreflect 'rewrite' tactic has been renamed 'rw' (available from Rocq 9.3).
+[rewrite-rw,deprecated-since-9.3,deprecated,default]
+make[2]: Target 'real-all' not remade because of errors.
+make[1]: *** [Makefile.coq:423: all] Error 2
+make[1]: Leaving directory '/home/shunqwang4/research/prosa-0.6-rocq93'
+make: *** [Makefile:15: prosa] Error 2

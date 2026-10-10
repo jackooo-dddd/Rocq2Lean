@@ -1,0 +1,2779 @@
+{
+  "original_env": {
+    "switch": "prosa-0.6",
+    "rocq": "9.0.1",
+    "mathcomp": "2.4.0",
+    "prosa": "rocq-prosa 0.6 (opam, released)"
+  },
+  "patched_env": {
+    "switch": "rocq930-mc",
+    "rocq": "9.3.0",
+    "mathcomp": "2.6.0",
+    "prosa": "rt-proofs v0.6 + compat/prosa-0.6/patches"
+  },
+  "normalizations": {
+    "match_return_printing": "Rocq 9.3 prints `return T with` without parentheses",
+    "scope_delimiter_printing": "Rocq 9.3 prints Arguments scopes as %_scope",
+    "ssreflect_rw_relocation": "Rocq 9.3 moved ssreflect's core (phant, Phant, ...) to Corelib.ssr.ssreflect_rw; Corelib.ssr.ssreflect re-exports them",
+    "hb_unnamed_renumbering": "HB unnamed instances renumbered (patch 0002): {\"HB_unnamed_factory_1\": \"HB_unnamed_factory_2\", \"HB_unnamed_factory_3\": \"HB_unnamed_factory_4\", \"HB_unnamed_mixin_5\": \"HB_unnamed_mixin_6\"}",
+    "mathcomp_path": "mathcomp.ssreflect.* (2.4) and mathcomp.boot.* (2.6) identified"
+  },
+  "modules": [
+    "prosa.util.tactics",
+    "prosa.util.notation",
+    "prosa.util.bigop",
+    "prosa.util.bigcat",
+    "prosa.util.div_mod",
+    "prosa.util.epsilon",
+    "prosa.util.list",
+    "prosa.util.minmax",
+    "prosa.util.nat",
+    "prosa.util.nondecreasing",
+    "prosa.util.poet",
+    "prosa.util.rel",
+    "prosa.util.search_arg",
+    "prosa.util.seqset",
+    "prosa.util.setoid",
+    "prosa.util.subadditivity",
+    "prosa.util.sum",
+    "prosa.util.supremum",
+    "prosa.util.unit_growth",
+    "prosa.util.all",
+    "prosa.behavior.time",
+    "prosa.behavior.job",
+    "prosa.behavior.arrival_sequence",
+    "prosa.behavior.schedule",
+    "prosa.behavior.service",
+    "prosa.analysis.definitions.finish_time"
+  ],
+  "summary": {
+    "SAME_STATEMENT": 177,
+    "IDENTICAL_MODULO_PRESENTATION": 50,
+    "IDENTICAL": 48,
+    "INDUCTIVE_SAME_CONSTRUCTORS": 2,
+    "STATEMENT_DIFFERS": 1
+  },
+  "declarations": {
+    "prosa.analysis.definitions.finish_time.completes_at_finish_time": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "Job) (R : nat) (H_response_time_bounded : is_true (@service.job_response_time_bound Job PState sched H0 H j R)) => (fun _evar_0_ : match true return Prop with\n                                                                                 ",
+        "patched": "Job) (R : nat) (H_response_time_bounded : is_true (@service.job_response_time_bound Job PState sched H0 H j R)) => (fun \u2017evar_0\u2017 : match true return Prop with\n                                                                                 "
+      }
+    },
+    "prosa.analysis.definitions.finish_time.earliest_finish_time": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "Job PState sched H0 H j R)) (t : time.instant) (COMP : is_true (@service.completed_by Job PState sched H0 j t)) => (fun _evar_0_ : forall (x : nat) (p : (fun m : nat => is_true (@service.completed_by Job PState sched H0 j m)) x) (q : (fun m",
+        "patched": "Job PState sched H0 H j R)) (t : time.instant) (COMP : is_true (@service.completed_by Job PState sched H0 j t)) => (fun \u2017evar_0\u2017 : forall (x : nat) (p : (fun m : nat => is_true (@service.completed_by Job PState sched H0 j m)) x) (q : (fun m"
+      }
+    },
+    "prosa.analysis.definitions.finish_time.finish_time": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.analysis.definitions.finish_time.finished_at_finish_time": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "Job) (R : nat) (H_response_time_bounded : is_true (@service.job_response_time_bound Job PState sched H0 H j R)) => (fun _evar_0_ : forall (x : nat) (p : (fun m : nat => is_true (@service.completed_by Job PState sched H0 j m)) x) (q : (fun m",
+        "patched": "Job) (R : nat) (H_response_time_bounded : is_true (@service.job_response_time_bound Job PState sched H0 H j R)) => (fun \u2017evar_0\u2017 : forall (x : nat) (p : (fun m : nat => is_true (@service.completed_by Job PState sched H0 j m)) x) (q : (fun m"
+      }
+    },
+    "prosa.analysis.definitions.finish_time.job_finishes": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.analysis.definitions.finish_time.response_time": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.behavior.arrival_sequence.arrival_sequence": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.arrival_sequence_uniq": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.arrivals_at": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.arrivals_before": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.arrivals_between": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.arrivals_between_P": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.behavior.arrival_sequence.arrivals_up_to": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.arrived_before": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.arrived_between": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.arrives_at": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.arrives_in": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.consistent_arrival_times": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.has_arrived": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.arrival_sequence.valid_arrival_sequence": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.job.JobArrival": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.job.JobCost": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.job.JobDeadline": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.job.JobType": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.job.job_arrival": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.job.job_cost": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.job.job_deadline": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.job.work": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.Core": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.ProcessorState": {
+      "status": "INDUCTIVE_SAME_CONSTRUCTORS",
+      "kind": "Variant",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "constructors": [
+        "prosa.behavior.schedule.Build_ProcessorState"
+      ]
+    },
+    "prosa.behavior.schedule.State": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.schedule": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.scheduled_in": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.scheduled_on": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.service_in": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.service_on": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.service_on_implies_scheduled_on": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.service_on_le_supply_on": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.supply_in": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.schedule.supply_on": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.completed_by": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.completes_at": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.job_meets_deadline": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.job_response_time_bound": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.pending": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.pending_earlier_and_at": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.receives_service_at": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.remaining_cost": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.scheduled_at": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.service": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.service_at": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.service.service_during": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.time.duration": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.behavior.time.instant": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.util.bigcat.bigcat_filter_eq_filter_bigcat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": " (eqtype.Equality.sort Y)) (xss : list (eqtype.Equality.sort X)) (P : forall _ : eqtype.Equality.sort Y, bool) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => @eq (list (eqtype.Equality.sort Y)) (@seq.filter (eqtype.Equality.s",
+        "patched": " (eqtype.Equality.sort Y)) (xss : list (eqtype.Equality.sort X)) (P : forall _ : eqtype.Equality.sort Y, bool) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => @eq (list (eqtype.Equality.sort Y)) (@seq.filter (eqtype.Equality.s"
+      }
+    },
+    "prosa.util.bigcat.bigcat_nat_filter_eq_filter_bigcat_nat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "X, bool) (t1 t2 : nat) => let H : is_true (orb (ssrnat.leq t1 t2) (ssrnat.leq t2 t1)) := ssrnat.leq_total t1 t2 in (fun _view_subject_ : is_true (orb (ssrnat.leq t1 t2) (ssrnat.leq t2 t1)) => (fun __top_assumption_ : or (is_true (ssrnat.leq",
+        "patched": "X, bool) (t1 t2 : nat) => let H : is_true (orb (ssrnat.leq t1 t2) (ssrnat.leq t2 t1)) := ssrnat.leq_total t1 t2 in (fun \u2017view_subject\u2017 : is_true (orb (ssrnat.leq t1 t2) (ssrnat.leq t2 t1)) => (fun \u2017\u2017top_assumption\u2017 : or (is_true (ssrnat.leq"
+      }
+    },
+    "prosa.util.bigcat.bigcat_nat_uniq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "mem (eqtype.Equality.sort T) (seq.seq_predType T) (f i2)))), @eq nat i1 i2) (n1 n2 : nat) => match ssrnat.leqP n1 n2 in (ssrnat.leq_xor_gtn _ _ n n0 n3 n4 b b0) return is_true (@seq.uniq T (@bigop.bigop.body (list (eqtype.Equality.sort T)) ",
+        "patched": "mem (eqtype.Equality.sort T) (seq.seq_predType T) (f i2)))), @eq nat i1 i2) (n1 n2 : nat) => match ssrnat.leqP n1 n2 in ssrnat.leq_xor_gtn _ _ n n0 n3 n4 b b0 return is_true (@seq.uniq T (@bigop.bigop.body (list (eqtype.Equality.sort T)) na"
+      }
+    },
+    "prosa.util.bigcat.bigcat_partitions": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "n x : eqtype.Equality.sort X => andb (P x) (@eqtype.eq_op Y (x_to_y x) y)) xs in fun j : eqtype.Equality.sort X => (fun _evar_0_ : match @ssrbool.in_mem (eqtype.Equality.sort X) j (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) ",
+        "patched": "n x : eqtype.Equality.sort X => andb (P x) (@eqtype.eq_op Y (x_to_y x) y)) xs in fun j : eqtype.Equality.sort X => (fun \u2017evar_0\u2017 : match @ssrbool.in_mem (eqtype.Equality.sort X) j (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) "
+      }
+    },
+    "prosa.util.bigcat.bigcat_seq_uniqK": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "y.sort X) y (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) xs))) (UNI : is_true (@seq.uniq X xs)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall (_ : is_true (@ssrbool.in_mem (eqtype.Equality.sort X) y (@s",
+        "patched": "y.sort X) y (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) xs))) (UNI : is_true (@seq.uniq X xs)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall (_ : is_true (@ssrbool.in_mem (eqtype.Equality.sort X) y (@s"
+      }
+    },
+    "prosa.util.bigcat.bigcat_uniq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "rt Y) x (@ssrbool.mem (eqtype.Equality.sort Y) (seq.seq_predType Y) (f z)))), @eq (eqtype.Equality.sort X) y z) => (fun _top_assumption_ : list (eqtype.Equality.sort X) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall _ ",
+        "patched": "rt Y) x (@ssrbool.mem (eqtype.Equality.sort Y) (seq.seq_predType Y) (f z)))), @eq (eqtype.Equality.sort X) y z) => (fun \u2017top_assumption\u2017 : list (eqtype.Equality.sort X) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall _ "
+      }
+    },
+    "prosa.util.bigcat.mem_bigcat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "ssrbool.in_mem (eqtype.Equality.sort Y) y (@ssrbool.mem (eqtype.Equality.sort Y) (seq.seq_predType Y) (f x)))) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall _ : is_true (@ssrbool.in_mem (eqtype.Equality.sort X) x (@ss",
+        "patched": "ssrbool.in_mem (eqtype.Equality.sort Y) y (@ssrbool.mem (eqtype.Equality.sort Y) (seq.seq_predType Y) (f x)))) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall _ : is_true (@ssrbool.in_mem (eqtype.Equality.sort X) x (@ss"
+      }
+    },
+    "prosa.util.bigcat.mem_bigcat_exists": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": ") (f : forall _ : eqtype.Equality.sort X, list (eqtype.Equality.sort Y)) (P : forall _ : eqtype.Equality.sort X, bool) (_top_assumption_ : list (eqtype.Equality.sort X)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall (",
+        "patched": ") (f : forall _ : eqtype.Equality.sort X, list (eqtype.Equality.sort Y)) (P : forall _ : eqtype.Equality.sort X, bool) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort X)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall ("
+      }
+    },
+    "prosa.util.bigcat.mem_bigcat_nat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "@ssrbool.in_mem (eqtype.Equality.sort T) x (@ssrbool.mem (eqtype.Equality.sort T) (seq.seq_predType T) (f j)))) => (fun _view_subject_ : is_true (andb (ssrnat.leq m j) (ssrnat.leq (S j) n)) => (fun __top_assumption_ : and (is_true (ssrnat.l",
+        "patched": "@ssrbool.in_mem (eqtype.Equality.sort T) x (@ssrbool.mem (eqtype.Equality.sort T) (seq.seq_predType T) (f j)))) => (fun \u2017view_subject\u2017 : is_true (andb (ssrnat.leq m j) (ssrnat.leq (S j) n)) => (fun \u2017\u2017top_assumption\u2017 : and (is_true (ssrnat.l"
+      }
+    },
+    "prosa.util.bigcat.mem_bigcat_nat_exists": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "at => @bigop.BigBody (list (eqtype.Equality.sort T)) nat i (@seq.cat (eqtype.Equality.sort T)) true (f i)))))) => (fun (_evar_0_ : (fun n0 : nat => forall _ : is_true (@ssrbool.in_mem (eqtype.Equality.sort T) x (@ssrbool.mem (eqtype.Equalit",
+        "patched": "at => @bigop.BigBody (list (eqtype.Equality.sort T)) nat i (@seq.cat (eqtype.Equality.sort T)) true (f i)))))) => (fun (\u2017evar_0\u2017 : (fun n0 : nat => forall _ : is_true (@ssrbool.in_mem (eqtype.Equality.sort T) x (@ssrbool.mem (eqtype.Equalit"
+      }
+    },
+    "prosa.util.bigcat.mem_bigcat_ord": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "bigcat.mem_bigcat_ord = fun (T : eqtype.Equality.type) (x : eqtype.Equality.sort T) (_top_assumption_ : nat) => (fun (_evar_0_ : (fun n : nat => forall (j : fintype.ordinal n) (f : forall _ : fintype.ordin",
+        "patched": "bigcat.mem_bigcat_ord = fun (T : eqtype.Equality.type) (x : eqtype.Equality.sort T) (\u2017top_assumption\u2017 : nat) => (fun (\u2017evar_0\u2017 : (fun n : nat => forall (j : fintype.ordinal n) (f : forall _ : fintype.ordin"
+      }
+    },
+    "prosa.util.bigcat.seq_different_elements_nil": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "Equality.sort Y) (seq.seq_predType Y) (f x)))), @eq (eqtype.Equality.sort X) (g y) x) (x1 x2 : eqtype.Equality.sort X) (_view_subject_ : is_true (negb (@eqtype.eq_op X x1 x2))) => (fun NEQ : not (is_true (@eqtype.eq_op X x1 x2)) => @list.fi",
+        "patched": "Equality.sort Y) (seq.seq_predType Y) (f x)))), @eq (eqtype.Equality.sort X) (g y) x) (x1 x2 : eqtype.Equality.sort X) (\u2017view_subject\u2017 : is_true (negb (@eqtype.eq_op X x1 x2))) => (fun NEQ : not (is_true (@eqtype.eq_op X x1 x2)) => @list.fi"
+      }
+    },
+    "prosa.util.bigcat.size_big_nat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": " list X) (t1 t2 : nat) => let H : is_true (orb (ssrnat.leq t1 t2) (ssrnat.leq t2 t1)) := ssrnat.leq_total t1 t2 in (fun _view_subject_ : is_true (orb (ssrnat.leq t1 t2) (ssrnat.leq t2 t1)) => (fun __top_assumption_ : or (is_true (ssrnat.leq",
+        "patched": " list X) (t1 t2 : nat) => let H : is_true (orb (ssrnat.leq t1 t2) (ssrnat.leq t2 t1)) := ssrnat.leq_total t1 t2 in (fun \u2017view_subject\u2017 : is_true (orb (ssrnat.leq t1 t2) (ssrnat.leq t2 t1)) => (fun \u2017\u2017top_assumption\u2017 : or (is_true (ssrnat.leq"
+      }
+    },
+    "prosa.util.bigop.big_pred1_seq": {
+      "status": "STATEMENT_DIFFERS",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "original": "forall [R : Type] [idx : R] [op : @bigop.Monoid.Law.type R idx] [X : eqtype.Equality.type] [P : ssrbool.pred (eqtype.Equality.sort X)] [F : forall _ : eqtype.Equality.sort X, R] (xs : list (eqtype.Equality.sort X)) (i : eqtype.Equality.sort X) (_ : is_true (@ssrbool.in_mem (eqtype.Equality.sort X) i (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) xs))) (_ : is_true (@seq.uniq X xs)) (_ : @ssrfun.eqfun (eqtype.Equality.sort X) (fun _ : eqtype.Equality.sort X => bool) P (@ssrbool.PredOfSimpl.coerce (eqtype.Equality.sort X) (@eqtype.pred1 X i))), @eq R (@bigop.bigop.body R (eqtype.Equality.sort X) idx xs (fun j : eqtype.Equality.sort X => @bigop.BigBody R (eqtype.Equality.sort X) j (@bigop.Monoid.Law.sort R idx op) (P j) (F j))) (F i)",
+      "patched": "forall [R : Type] [idx : R] [op : @bigop.Monoid.Law.type R idx] [X : eqtype.Equality.type] [P : ssrbool.pred (eqtype.Equality.sort X)] [F : forall _ : eqtype.Equality.sort X, R] (xs : list (eqtype.Equality.sort X)) (i : eqtype.Equality.sort X) (_ : is_true (@ssrbool.in_mem (eqtype.Equality.sort X) i (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) xs))) (_ : is_true (@seq.uniq X xs)) (_ : @ssrfun.eqfun bool (eqtype.Equality.sort X) P (@ssrbool.PredOfSimpl.coerce (eqtype.Equality.sort X) (@eqtype.pred1 X i))), @eq R (@bigop.bigop.body R (eqtype.Equality.sort X) idx xs (fun j : eqtype.Equality.sort X => @bigop.BigBody R (eqtype.Equality.sort X) j (@bigop.Monoid.Law.sort R idx op) (P j) (F j))) (F i)"
+    },
+    "prosa.util.div_mod.addmod_le_mod": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "(x y h : nat) (POS : is_true (ssrnat.leq (S O) h)) (EQ : @eq nat (div.divn x h) (div.divn (ssrnat.addn x y) h)) => (fun _view_subject_ : @eq nat (div.divn x h) (div.divn (ssrnat.addn x y) h) => (fun (_evar_0_ : forall _ : is_true (@eqtype.e",
+        "patched": "(x y h : nat) (POS : is_true (ssrnat.leq (S O) h)) (EQ : @eq nat (div.divn x h) (div.divn (ssrnat.addn x y) h)) => (fun \u2017view_subject\u2017 : @eq nat (div.divn x h) (div.divn (ssrnat.addn x y) h) => (fun (\u2017evar_0\u2017 : forall _ : is_true (@eqtype.e"
+      }
+    },
+    "prosa.util.div_mod.addn1_modn_commute": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": " h : nat) (POS : is_true (ssrnat.leq (S O) h)) (EQ : @eq nat (div.divn x h) (div.divn (ssrnat.addn x (S O)) h)) => (fun _evar_0_ : @eq nat (div.modn (S (ssrnat.addn x O)) h) (ssrnat.addn (div.modn x h) (S O)) => @eq_ind_r nat (S (ssrnat.add",
+        "patched": " h : nat) (POS : is_true (ssrnat.leq (S O) h)) (EQ : @eq nat (div.divn x h) (div.divn (ssrnat.addn x (S O)) h)) => (fun \u2017evar_0\u2017 : @eq nat (div.modn (S (ssrnat.addn x O)) h) (ssrnat.addn (div.modn x h) (S O)) => @eq_ind_r nat (S (ssrnat.add"
+      }
+    },
+    "prosa.util.div_mod.div_ceil": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.div_mod.div_ceil0": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "div_mod.div_ceil0 = fun b : nat => (fun _evar_0_ : @eq nat match true return nat with\n                                                           | @true => div.",
+        "patched": "div_mod.div_ceil0 = fun b : nat => (fun \u2017evar_0\u2017 : @eq nat match true return nat with\n                                                           | @true => div."
+      }
+    },
+    "prosa.util.div_mod.div_ceil_gt0": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "                                                             | @true => fun EQ0 : @eq bool (div.dvdn b a) true => (fun (_evar_0_ : is_true (ssrnat.leq b a)) (_evar_0_0 : is_true (ssrnat.leq (S O) b)) => @eq_ind_r bool (ssrnat.leq b a) (fun ",
+        "patched": "                                                             | @true => fun EQ0 : @eq bool (div.dvdn b a) true => (fun (\u2017evar_0\u2017 : is_true (ssrnat.leq b a)) (\u2017evar_0\u20170 : is_true (ssrnat.leq (S O) b)) => @eq_ind_r bool (ssrnat.leq b a) (fun "
+      }
+    },
+    "prosa.util.div_mod.div_ceil_monotone1": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @true => div.divn m d\n                                                                                                ",
+        "patched": "                                                                                                                           | @true => div.divn m d\n                                                                                             "
+      }
+    },
+    "prosa.util.div_mod.div_ceil_multiple": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "(delta T n : nat) (GT0 : is_true (ssrnat.leq (S O) T)) (LT : is_true (ssrnat.leq (S (ssrnat.muln T n)) delta)) => (fun (_evar_0_ : (fun b : bool => forall _ : @ssreflect.protect_term Prop (@eq bool (div.dvdn T delta) b), is_true (ssrnat.leq",
+        "patched": "(delta T n : nat) (GT0 : is_true (ssrnat.leq (S O) T)) (LT : is_true (ssrnat.leq (S (ssrnat.muln T n)) delta)) => (fun (\u2017evar_0\u2017 : (fun b : bool => forall _ : @ssreflect.protect_term Prop (@eq bool (div.dvdn T delta) b), is_true (ssrnat.leq"
+      }
+    },
+    "prosa.util.div_mod.div_ceil_subadditive": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "div_mod.div_ceil_subadditive = fun (T ab a b : nat) (SUM : @eq nat (ssrnat.addn a b) ab) => (fun _evar_0_ : is_true (ssrnat.leq (div_mod.div_ceil (ssrnat.addn a b) T) (ssrnat.addn (div_mod.div_ceil a T) (div_mod.div_c",
+        "patched": "div_mod.div_ceil_subadditive = fun (T ab a b : nat) (SUM : @eq nat (ssrnat.addn a b) ab) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (div_mod.div_ceil (ssrnat.addn a b) T) (ssrnat.addn (div_mod.div_ceil a T) (div_mod.div_c"
+      }
+    },
+    "prosa.util.div_mod.div_floor": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.div_mod.div_floor_add_g": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "dn a b)) := div.divn_eq a b in (fun DIV : @eq nat a (ssrnat.addn (ssrnat.muln (div.divn a b) b) (div.modn a b)) => (fun _evar_0_ : is_true (ssrnat.leq (S (ssrnat.addn (ssrnat.muln (div.divn a b) b) (div.modn a b))) (ssrnat.addn (ssrnat.muln",
+        "patched": "dn a b)) := div.divn_eq a b in (fun DIV : @eq nat a (ssrnat.addn (ssrnat.muln (div.divn a b) b) (div.modn a b)) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (S (ssrnat.addn (ssrnat.muln (div.divn a b) b) (div.modn a b))) (ssrnat.addn (ssrnat.muln"
+      }
+    },
+    "prosa.util.div_mod.divn_leq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": ": ssrnat.eqn0_xor_gt0 T (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality T O) (ssrnat.leq (S O) T)) (fun __top_assumption_ : ssrnat.eqn0_xor_gt0 T (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality T O) (ssrnat.l",
+        "patched": ": ssrnat.eqn0_xor_gt0 T (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality T O) (ssrnat.leq (S O) T)) (fun \u2017\u2017top_assumption\u2017 : ssrnat.eqn0_xor_gt0 T (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality T O) (ssrnat.l"
+      }
+    },
+    "prosa.util.div_mod.eqdivn_leqmodn": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "ssrnat.leq (S O) h in let b0 : bool := @eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality h O in match e in (ssrnat.eqn0_xor_gt0 _ b1 b2) return is_true (ssrnat.leq (div.modn t1 h) (div.modn t2 h)) with\n                         ",
+        "patched": "ssrnat.leq (S O) h in let b0 : bool := @eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality h O in match e in ssrnat.eqn0_xor_gt0 _ b1 b2 return is_true (ssrnat.leq (div.modn t1 h) (div.modn t2 h)) with\n                           "
+      }
+    },
+    "prosa.util.div_mod.leq_div_ceil_add1": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @true => div.divn (ssrnat.subn \u0394 T) T\n                                                                                ",
+        "patched": "                                                                                                                           | @true => div.divn (ssrnat.subn \u0394 T) T\n                                                                             "
+      }
+    },
+    "prosa.util.div_mod.ltdivn_dvdn": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "ssrnat.leq (S O) y in let b0 : bool := @eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality y O in match e in (ssrnat.eqn0_xor_gt0 _ b1 b2) return is_true (div.dvdn y (ssrnat.addn x (S O))) with\n                                   ",
+        "patched": "ssrnat.leq (S O) y in let b0 : bool := @eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality y O in match e in ssrnat.eqn0_xor_gt0 _ b1 b2 return is_true (div.dvdn y (ssrnat.addn x (S O))) with\n                                     "
+      }
+    },
+    "prosa.util.div_mod.mod_elim": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @true => ssrnat.subn (div.modn a c) b\n                                                                                ",
+        "patched": "                                                                                                                           | @true => ssrnat.subn (div.modn a c) b\n                                                                             "
+      }
+    },
+    "prosa.util.list.count_predUI'": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.count_predUI' = fun (P1 P2 : ssrbool.pred nat) (xs : list nat) => (fun _evar_0_ : @eq nat (@seq.count nat (@ssrbool.PredOfSimpl.coerce nat (@ssrbool.predU nat P1 P2)) xs) (ssrnat.subn (ssrnat",
+        "patched": "list.count_predUI' = fun (P1 P2 : ssrbool.pred nat) (xs : list nat) => (fun \u2017evar_0\u2017 : @eq nat (@seq.count nat (@ssrbool.PredOfSimpl.coerce nat (@ssrbool.predU nat P1 P2)) xs) (ssrnat.subn (ssrnat"
+      }
+    },
+    "prosa.util.list.default_or_in": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "e (eqtype.Equality.sort x) xs) n in let n3 : nat := ssrnat.minn n (@seq.size (eqtype.Equality.sort x) xs) in match l in (ssrnat.leq_xor_gtn _ _ n4 n5 n6 n7 b1 b2) return or (@eq (eqtype.Equality.sort x) (@seq.nth (eqtype.Equality.sort x) d ",
+        "patched": "e (eqtype.Equality.sort x) xs) n in let n3 : nat := ssrnat.minn n (@seq.size (eqtype.Equality.sort x) xs) in match l in ssrnat.leq_xor_gtn _ _ n4 n5 n6 n7 b1 b2 return or (@eq (eqtype.Equality.sort x) (@seq.nth (eqtype.Equality.sort x) d xs"
+      }
+    },
+    "prosa.util.list.eq_ind_in_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": ")) a => (fun EQ_b : @eq (eqtype.Equality.sort X) (@seq.nth (eqtype.Equality.sort X) a xs (@seq.index X b xs)) b => (fun _evar_0_ : @eq (eqtype.Equality.sort X) (@seq.nth (eqtype.Equality.sort X) a xs (@seq.index X a xs)) b => @eq_ind (eqtyp",
+        "patched": ")) a => (fun EQ_b : @eq (eqtype.Equality.sort X) (@seq.nth (eqtype.Equality.sort X) a xs (@seq.index X b xs)) b => (fun \u2017evar_0\u2017 : @eq (eqtype.Equality.sort X) (@seq.nth (eqtype.Equality.sort X) a xs (@seq.index X a xs)) b => @eq_ind (eqtyp"
+      }
+    },
+    "prosa.util.list.exists_two": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "@ssrbool.in_mem (eqtype.Equality.sort T) b (@ssrbool.mem (eqtype.Equality.sort T) (seq.seq_predType T) xs))))))) ((fun (_evar_0_ : (fun l : list (eqtype.Equality.sort T) => forall (_ : is_true (ssrnat.leq (S (S O)) (@seq.size (eqtype.Equali",
+        "patched": "@ssrbool.in_mem (eqtype.Equality.sort T) b (@ssrbool.mem (eqtype.Equality.sort T) (seq.seq_predType T) xs))))))) ((fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort T) => forall (_ : is_true (ssrnat.leq (S (S O)) (@seq.size (eqtype.Equali"
+      }
+    },
+    "prosa.util.list.filter_in_pred0": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "un (X : eqtype.Equality.type) (xs : list (eqtype.Equality.sort X)) (P : ssrbool.pred (eqtype.Equality.sort X)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall _ : forall (x : eqtype.Equality.sort X) (_ : is_true (@ssrbo",
+        "patched": "un (X : eqtype.Equality.type) (xs : list (eqtype.Equality.sort X)) (P : ssrbool.pred (eqtype.Equality.sort X)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall _ : forall (x : eqtype.Equality.sort X) (_ : is_true (@ssrbo"
+      }
+    },
+    "prosa.util.list.filter_last_mem": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.filter_last_mem = fun (X : eqtype.Equality.type) (_top_assumption_ : list (eqtype.Equality.sort X)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall (",
+        "patched": "list.filter_last_mem = fun (X : eqtype.Equality.type) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort X)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall ("
+      }
+    },
+    "prosa.util.list.filter_size_rem": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "list.filter_size_rem = fun (X : eqtype.Equality.type) (x : eqtype.Equality.sort X) (_xs_ : list (eqtype.Equality.sort X)) (P : ssrbool.pred (eqtype.Equality.sort X)) (_Hyp_ : is_true (@ssrbool.in_mem (eqt",
+        "patched": "list.filter_size_rem = fun (X : eqtype.Equality.type) (x : eqtype.Equality.sort X) (\u2017xs\u2017 : list (eqtype.Equality.sort X)) (P : ssrbool.pred (eqtype.Equality.sort X)) (\u2017Hyp\u2017 : is_true (@ssrbool.in_mem (eqt"
+      }
+    },
+    "prosa.util.list.first0": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.list.has_all_nilp": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.has_all_nilp = fun (T : eqtype.Equality.type) (_top_assumption_ : list (eqtype.Equality.sort T)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort T) => forall (",
+        "patched": "list.has_all_nilp = fun (T : eqtype.Equality.type) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort T)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort T) => forall ("
+      }
+    },
+    "prosa.util.list.in_cat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.in_cat = fun (X : eqtype.Equality.type) (x : eqtype.Equality.sort X) (_top_assumption_ : list (eqtype.Equality.sort X)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall _",
+        "patched": "list.in_cat = fun (X : eqtype.Equality.type) (x : eqtype.Equality.sort X) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort X)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall _"
+      }
+    },
+    "prosa.util.list.in_max0_le": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.in_max0_le = fun _top_assumption_ : @ssrbool.pred_sort nat (seq.seq_predType ssrnat.Datatypes_nat__canonical__eqtype_Equality) => (fun (_",
+        "patched": "list.in_max0_le = fun \u2017top_assumption\u2017 : @ssrbool.pred_sort nat (seq.seq_predType ssrnat.Datatypes_nat__canonical__eqtype_Equality) => (fun (\u2017"
+      }
+    },
+    "prosa.util.list.in_neq_impl_rem_in": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.in_neq_impl_rem_in = fun (X : eqtype.Equality.type) (x y : eqtype.Equality.sort X) (_top_assumption_ : list (eqtype.Equality.sort X)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall (",
+        "patched": "list.in_neq_impl_rem_in = fun (X : eqtype.Equality.type) (x y : eqtype.Equality.sort X) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort X)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall ("
+      }
+    },
+    "prosa.util.list.in_rem_all": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.in_rem_all = fun (X : eqtype.Equality.type) (a x : eqtype.Equality.sort X) (_top_assumption_ : list (eqtype.Equality.sort X)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall _",
+        "patched": "list.in_rem_all = fun (X : eqtype.Equality.type) (a x : eqtype.Equality.sort X) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort X)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall _"
+      }
+    },
+    "prosa.util.list.in_seq_equiv_undup": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "ality.sort X) x (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) xs0))) (x : eqtype.Equality.sort X) => (fun _evar_0_ : @eq bool (@ssrbool.in_mem (eqtype.Equality.sort X) x (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType",
+        "patched": "ality.sort X) x (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) xs0))) (x : eqtype.Equality.sort X) => (fun \u2017evar_0\u2017 : @eq bool (@ssrbool.in_mem (eqtype.Equality.sort X) x (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType"
+      }
+    },
+    "prosa.util.list.in_zip": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "t X)) (ys : list (eqtype.Equality.sort Y)) (x x__d : eqtype.Equality.sort X) (y y__d : eqtype.Equality.sort Y) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall (ys0 : list (eqtype.Equality.sort Y)) (_ : @eq nat (@seq.siz",
+        "patched": "t X)) (ys : list (eqtype.Equality.sort Y)) (x x__d : eqtype.Equality.sort X) (y y__d : eqtype.Equality.sort Y) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall (ys0 : list (eqtype.Equality.sort Y)) (_ : @eq nat (@seq.siz"
+      }
+    },
+    "prosa.util.list.index_iota_cat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.index_iota_cat = fun (t t1 t2 : nat) (NEQ : is_true (andb (ssrnat.leq t1 t) (ssrnat.leq t t2))) => (fun (_evar_0_ : @eq (list nat) (@seq.cat nat (seq.iota t1 (ssrnat.subn t t1)) (seq.iota (ssrnat.addn t1 (ssrnat.subn t t1)) (",
+        "patched": "list.index_iota_cat = fun (t t1 t2 : nat) (NEQ : is_true (andb (ssrnat.leq t1 t) (ssrnat.leq t t2))) => (fun (\u2017evar_0\u2017 : @eq (list nat) (@seq.cat nat (seq.iota t1 (ssrnat.subn t t1)) (seq.iota (ssrnat.addn t1 (ssrnat.subn t t1)) ("
+      }
+    },
+    "prosa.util.list.index_iota_filter_eqx": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @ex_intro _ _ x0 x1 => (fun (k : nat) (BO : is_true (ssrnat.leq (ssrnat.subn b a) k)) => (fun (_evar_0_ : (fun n : nat",
+        "patched": "                                                                                                                           | @ex_intro _ _ x0 x1 => (fun (k : nat) (BO : is_true (ssrnat.leq (ssrnat.subn b a) k)) => (fun (\u2017evar_0\u2017 : (fun n : "
+      }
+    },
+    "prosa.util.list.index_iota_filter_inxs": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": " x xs))) (bigop.index_iota a b) ((fun y : eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality => (fun _evar_0_ : forall _ : is_true (andb (ssrnat.leq a y) (ssrnat.leq (S y) b)), @eq bool (@ssrbool.in_mem nat y (@ssrbool.me",
+        "patched": " x xs))) (bigop.index_iota a b) ((fun y : eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality => (fun \u2017evar_0\u2017 : forall _ : is_true (andb (ssrnat.leq a y) (ssrnat.leq (S y) b)), @eq bool (@ssrbool.in_mem nat y (@ssrbool.me"
+      }
+    },
+    "prosa.util.list.index_iota_filter_singl": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.index_iota_filter_singl = fun (x a b : nat) (NEQ : is_true (andb (ssrnat.leq a x) (ssrnat.leq (S x) b))) => (fun (_evar_0_ : @eq (list (eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality)) (@seq.filter (eqtype.Equal",
+        "patched": "list.index_iota_filter_singl = fun (x a b : nat) (NEQ : is_true (andb (ssrnat.leq a x) (ssrnat.leq (S x) b))) => (fun (\u2017evar_0\u2017 : @eq (list (eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality)) (@seq.filter (eqtype.Equal"
+      }
+    },
+    "prosa.util.list.index_iota_filter_step": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @ex_intro _ _ x0 x1 => (fun (k : nat) (BO : is_true (ssrnat.leq (ssrnat.subn b a) k)) => (fun (_evar_0_ : (fun n : nat",
+        "patched": "                                                                                                                           | @ex_intro _ _ x0 x1 => (fun (k : nat) (BO : is_true (ssrnat.leq (ssrnat.subn b a) k)) => (fun (\u2017evar_0\u2017 : (fun n : "
+      }
+    },
+    "prosa.util.list.index_iota_lt_step": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "                                             | @S n => (fun (b0 : nat) (LT0 : is_true (ssrnat.leq (S a) (S b0))) => let _the_hidden_goal_ : Prop := @eq (list nat) (seq.iota a (ssrnat.subn (S b0) a)) (@cons nat a (seq.iota (S a) (ssrnat.subn",
+        "patched": "                                             | @S n => (fun (b0 : nat) (LT0 : is_true (ssrnat.leq (S a) (S b0))) => let \u2017the_hidden_goal\u2017 : Prop := @eq (list nat) (seq.iota a (ssrnat.subn (S b0) a)) (@cons nat a (seq.iota (S a) (ssrnat.subn"
+      }
+    },
+    "prosa.util.list.iotaD_impl": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "at n (ssrnat.addn n_le k)) := @ex_intro nat (fun k : nat => @eq nat n (ssrnat.addn n_le k)) (ssrnat.subn n n_le) ((fun (_evar_0_ : @eq nat n n) (_evar_0_0 : is_true (ssrnat.leq n_le n)) => @eq_ind_r nat n (fun _pattern_value_ : nat => @eq n",
+        "patched": "at n (ssrnat.addn n_le k)) := @ex_intro nat (fun k : nat => @eq nat n (ssrnat.addn n_le k)) (ssrnat.subn n n_le) ((fun (\u2017evar_0\u2017 : @eq nat n n) (\u2017evar_0\u20170 : is_true (ssrnat.leq n_le n)) => @eq_ind_r nat n (fun \u2017pattern_value\u2017 : nat => @eq n"
+      }
+    },
+    "prosa.util.list.iota_filter_gt": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @ex_intro _ _ x0 x1 => (fun (k : nat) (BO : is_true (ssrnat.leq (ssrnat.subn b a) k)) => (fun (_evar_0_ : (fun n : nat",
+        "patched": "                                                                                                                           | @ex_intro _ _ x0 x1 => (fun (k : nat) (BO : is_true (ssrnat.leq (ssrnat.subn b a) k)) => (fun (\u2017evar_0\u2017 : (fun n : "
+      }
+    },
+    "prosa.util.list.last0": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.list.last0_cat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.last0_cat = fun _top_assumption_ : list nat => (fun (_evar_0_ : (fun l : list nat => forall (xs_r : list nat) (_ : not (@eq (list nat) x",
+        "patched": "list.last0_cat = fun \u2017top_assumption\u2017 : list nat => (fun (\u2017evar_0\u2017 : (fun l : list nat => forall (xs_r : list nat) (_ : not (@eq (list nat) x"
+      }
+    },
+    "prosa.util.list.last0_cons": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.last0_cons = fun (x : nat) (__top_assumption_ : list nat) => (fun (_evar_0_ : (fun l : list nat => forall _ : not (@eq (list nat) l (@nil nat)), @eq",
+        "patched": "list.last0_cons = fun (x : nat) (\u2017\u2017top_assumption\u2017 : list nat) => (fun (\u2017evar_0\u2017 : (fun l : list nat => forall _ : not (@eq (list nat) l (@nil nat)), @eq"
+      }
+    },
+    "prosa.util.list.last0_ex_cat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.last0_ex_cat = fun (x : nat) (_top_assumption_ : list nat) => (fun (_evar_0_ : (fun l : list nat => forall (_ : not (@eq (list nat) l (@nil nat))) (_ ",
+        "patched": "list.last0_ex_cat = fun (x : nat) (\u2017top_assumption\u2017 : list nat) => (fun (\u2017evar_0\u2017 : (fun l : list nat => forall (_ : not (@eq (list nat) l (@nil nat))) (_ "
+      }
+    },
+    "prosa.util.list.last0_filter": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "(@cons nat x (@nil nat))) (@nil nat))) (_ : @eq nat (list.last0 (@seq.cat nat xsh (@cons nat x (@nil nat)))) x) => (fun _evar_0_ : @eq nat (list.last0 (@seq.cat nat (@seq.filter nat (fun x2 : nat => P x2) xsh) (@seq.filter nat (fun x2 : nat",
+        "patched": "(@cons nat x (@nil nat))) (@nil nat))) (_ : @eq nat (list.last0 (@seq.cat nat xsh (@cons nat x (@nil nat)))) x) => (fun \u2017evar_0\u2017 : @eq nat (list.last0 (@seq.cat nat (@seq.filter nat (fun x2 : nat => P x2) xsh) (@seq.filter nat (fun x2 : nat"
+      }
+    },
+    "prosa.util.list.last0_nth": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.last0_nth = fun xs : list nat => (fun _evar_0_ : @eq nat (list.last0 xs) (@seq.last nat O xs) => @eq_ind_r nat (@seq.last nat O xs) (fun _pattern_value_ : nat",
+        "patched": "list.last0_nth = fun xs : list nat => (fun \u2017evar_0\u2017 : @eq nat (list.last0 xs) (@seq.last nat O xs) => @eq_ind_r nat (@seq.last nat O xs) (fun \u2017pattern_value\u2017 : nat"
+      }
+    },
+    "prosa.util.list.last_of_seq_le_max_of_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "nat.leqnn (@seq.size nat xs))) (fun EX : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun __top_assumption_ : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun _evar_0_ : forall (x ",
+        "patched": "nat.leqnn (@seq.size nat xs))) (fun EX : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun \u2017\u2017top_assumption\u2017 : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun \u2017evar_0\u2017 : forall (x "
+      }
+    },
+    "prosa.util.list.max0": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.list.max0_2cons_eq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.max0_2cons_eq = fun (x : nat) (xs : list nat) => (fun _evar_0_ : @eq nat (ssrnat.maxn x (list.max0 (@cons nat x xs))) (list.max0 (@cons nat x xs)) => @eq_ind_r nat (ssrnat.ma",
+        "patched": "list.max0_2cons_eq = fun (x : nat) (xs : list nat) => (fun \u2017evar_0\u2017 : @eq nat (ssrnat.maxn x (list.max0 (@cons nat x xs))) (list.max0 (@cons nat x xs)) => @eq_ind_r nat (ssrnat.ma"
+      }
+    },
+    "prosa.util.list.max0_2cons_le": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.max0_2cons_le = fun (x1 x2 : nat) (_xs_ : list nat) (_Hyp_ : is_true (ssrnat.leq x1 x2)) => (fun _evar_0_ : @eq nat (ssrnat.maxn x1 (list.max0 (@cons nat x",
+        "patched": "list.max0_2cons_le = fun (x1 x2 : nat) (\u2017xs\u2017 : list nat) (\u2017Hyp\u2017 : is_true (ssrnat.leq x1 x2)) => (fun \u2017evar_0\u2017 : @eq nat (ssrnat.maxn x1 (list.max0 (@cons nat x"
+      }
+    },
+    "prosa.util.list.max0_cons": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.max0_cons = fun (x : nat) (xs : list nat) => (fun _evar_0_ : @eq nat (@bigop.bigop.body nat nat O (@cons nat O (@cons nat x xs)) (fun y : nat => @bigop.BigBody nat nat y ",
+        "patched": "list.max0_cons = fun (x : nat) (xs : list nat) => (fun \u2017evar_0\u2017 : @eq nat (@bigop.bigop.body nat nat O (@cons nat O (@cons nat x xs)) (fun y : nat => @bigop.BigBody nat nat y "
+      }
+    },
+    "prosa.util.list.max0_in_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.max0_in_seq = fun _top_assumption_ : list nat => (fun (_evar_0_ : (fun l : list nat => forall _ : not (@eq (list nat) l (@nil nat)), is_tr",
+        "patched": "list.max0_in_seq = fun \u2017top_assumption\u2017 : list nat => (fun (\u2017evar_0\u2017 : (fun l : list nat => forall _ : not (@eq (list nat) l (@nil nat)), is_tr"
+      }
+    },
+    "prosa.util.list.max0_of_uniform_set": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.max0_of_uniform_set = fun (k : eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality) (_top_assumption_ : list (eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality)) => (fun (_evar_0_ : (fu",
+        "patched": "list.max0_of_uniform_set = fun (k : eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality)) => (fun (\u2017evar_0\u2017 : (fu"
+      }
+    },
+    "prosa.util.list.max0_rem0": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.max0_rem0 = fun _top_assumption_ : list nat => (fun (_evar_0_ : (fun l : list nat => @eq nat (list.max0 (@seq.filter nat (fun x : nat =>",
+        "patched": "list.max0_rem0 = fun \u2017top_assumption\u2017 : list nat => (fun (\u2017evar_0\u2017 : (fun l : list nat => @eq nat (list.max0 (@seq.filter nat (fun x : nat =>"
+      }
+    },
+    "prosa.util.list.max_of_dominating_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "seq.size nat ys)))) (is_true (ssrnat.leq (@seq.size nat ys) (ssrnat.maxn (@seq.size nat xs) (@seq.size nat ys)))) ((fun _evar_0_ : is_true (orb (ssrnat.leq (@seq.size nat xs) (@seq.size nat xs)) (ssrnat.leq (@seq.size nat xs) (@seq.size nat",
+        "patched": "seq.size nat ys)))) (is_true (ssrnat.leq (@seq.size nat ys) (ssrnat.maxn (@seq.size nat xs) (@seq.size nat ys)))) ((fun \u2017evar_0\u2017 : is_true (orb (ssrnat.leq (@seq.size nat xs) (@seq.size nat xs)) (ssrnat.leq (@seq.size nat xs) (@seq.size nat"
+      }
+    },
+    "prosa.util.list.nin_rem_all": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.nin_rem_all = fun (X : eqtype.Equality.type) (x : eqtype.Equality.sort X) (_top_assumption_ : list (eqtype.Equality.sort X)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => not (is_",
+        "patched": "list.nin_rem_all = fun (X : eqtype.Equality.type) (x : eqtype.Equality.sort X) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort X)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => not (is_"
+      }
+    },
+    "prosa.util.list.nonnil_last": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "il_last = fun (X : eqtype.Equality.type) (xs : list (eqtype.Equality.sort X)) (d1 d2 : eqtype.Equality.sort X) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall _ : is_true (negb (@eqtype.eq_op (seq.Datatypes_list__canoni",
+        "patched": "il_last = fun (X : eqtype.Equality.type) (xs : list (eqtype.Equality.sort X)) (d1 d2 : eqtype.Equality.sort X) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall _ : is_true (negb (@eqtype.eq_op (seq.Datatypes_list__canoni"
+      }
+    },
+    "prosa.util.list.nth0_cons": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.nth0_cons = fun (_x_ : nat) (_xs_ : list nat) (__top_assumption_ : nat) => (fun (_evar_0_ : (fun n : nat => forall _ : is_true (ssrnat.le",
+        "patched": "list.nth0_cons = fun (\u2017x\u2017 : nat) (\u2017xs\u2017 : list nat) (\u2017\u2017top_assumption\u2017 : nat) => (fun (\u2017evar_0\u2017 : (fun n : nat => forall _ : is_true (ssrnat.le"
+      }
+    },
+    "prosa.util.list.prefix_of": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.list.range": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.list.range_filter_2cons": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "nical__eqtype_Equality) x xs))) (fun x0 : eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality => (fun _evar_0_ : @eq bool (orb (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality x0 x) (@ssrbool.in_mem (eqtype.",
+        "patched": "nical__eqtype_Equality) x xs))) (fun x0 : eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality => (fun \u2017evar_0\u2017 : @eq bool (orb (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality x0 x) (@ssrbool.in_mem (eqtype."
+      }
+    },
+    "prosa.util.list.range_iota_filter_step": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.list.rem_all": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.list.rem_in": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.rem_in = fun (X : eqtype.Equality.type) (x y : eqtype.Equality.sort X) (_top_assumption_ : list (eqtype.Equality.sort X)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall _",
+        "patched": "list.rem_in = fun (X : eqtype.Equality.type) (x y : eqtype.Equality.sort X) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort X)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall _"
+      }
+    },
+    "prosa.util.list.rem_lt_id": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "list.rem_lt_id = fun (x : nat) (_top_assumption_ : @ssrbool.pred_sort nat (seq.seq_predType ssrnat.Datatypes_nat__canonical__eqtype_Equality)) => (fun (",
+        "patched": "list.rem_lt_id = fun (x : nat) (\u2017top_assumption\u2017 : @ssrbool.pred_sort nat (seq.seq_predType ssrnat.Datatypes_nat__canonical__eqtype_Equality)) => (fun ("
+      }
+    },
+    "prosa.util.list.seq1_some": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing"
+      ],
+      "body_difference": {
+        "original": "list.seq1_some = fun (T : eqtype.Equality.type) (x y : eqtype.Equality.sort T) => (fun (_evar_0_ : forall e : @eq (eqtype.Equality.sort T) x y, (fun (b b0 : bool) (_ : @eqtype.eq_xor_neq T x y b b0) => @eq bo",
+        "patched": "list.seq1_some = fun (T : eqtype.Equality.type) (x y : eqtype.Equality.sort T) => (fun (\u2017evar_0\u2017 : forall e : @eq (eqtype.Equality.sort T) x y, (fun (b b0 : bool) (_ : @eqtype.eq_xor_neq T x y b b0) => @eq bo"
+      }
+    },
+    "prosa.util.list.seq_elim_last": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.seq_elim_last = fun (X : Type) (n : nat) (xs : list X) (SIZE : @eq nat (@seq.size X xs) (S n)) => (fun (_evar_0_ : (fun n0 : nat => forall (xs0 : list X) (_ : @eq nat (@seq.size X xs0) (S n0)), @ex X (fun x : X => @ex (list ",
+        "patched": "list.seq_elim_last = fun (X : Type) (n : nat) (xs : list X) (SIZE : @eq nat (@seq.size X xs) (S n)) => (fun (\u2017evar_0\u2017 : (fun n0 : nat => forall (xs0 : list X) (_ : @eq nat (@seq.size X xs0) (S n0)), @ex X (fun x : X => @ex (list "
+      }
+    },
+    "prosa.util.list.shift_points_neg": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.list.shift_points_pos": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.list.sorted_cat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "list.sorted_cat = fun (X : eqtype.Equality.type) (R : ssrbool.rel (eqtype.Equality.sort X)) (_top_assumption_ : list (eqtype.Equality.sort X)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall (",
+        "patched": "list.sorted_cat = fun (X : eqtype.Equality.type) (R : ssrbool.rel (eqtype.Equality.sort X)) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort X)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall ("
+      }
+    },
+    "prosa.util.list.sorted_split": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": ".sort X)) (P : forall _ : eqtype.Equality.sort X, bool) (f : forall _ : eqtype.Equality.sort X, nat) (t : nat) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort X) => forall _ : is_true (@path.sorted (eqtype.Equality.sort X) (fun x y ",
+        "patched": ".sort X)) (P : forall _ : eqtype.Equality.sort X, bool) (f : forall _ : eqtype.Equality.sort X, nat) (t : nat) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort X) => forall _ : is_true (@path.sorted (eqtype.Equality.sort X) (fun x y "
+      }
+    },
+    "prosa.util.list.strict_prefix_of": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.list.sub_count_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "), is_true (g x)) (ssrbool.inPhantom (forall (x : eqtype.Equality.sort X) (_ : is_true (f x)), is_true (g x)))) => (fun _evar_0_ : is_true (ssrnat.leq (@seq.size (eqtype.Equality.sort X) (@seq.filter (eqtype.Equality.sort X) f xs)) (@seq.co",
+        "patched": "), is_true (g x)) (ssrbool.inPhantom (forall (x : eqtype.Equality.sort X) (_ : is_true (f x)), is_true (g x)))) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (@seq.size (eqtype.Equality.sort X) (@seq.filter (eqtype.Equality.sort X) f xs)) (@seq.co"
+      }
+    },
+    "prosa.util.list.subseq_leq_size": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "ort X) ys))) (fun EXm : @ex nat (fun m : nat => is_true (ssrnat.leq (@seq.size (eqtype.Equality.sort X) ys) m)) => (fun __top_assumption_ : @ex nat (fun m : nat => is_true (ssrnat.leq (@seq.size (eqtype.Equality.sort X) ys) m)) => (fun _eva",
+        "patched": "ort X) ys))) (fun EXm : @ex nat (fun m : nat => is_true (ssrnat.leq (@seq.size (eqtype.Equality.sort X) ys) m)) => (fun \u2017\u2017top_assumption\u2017 : @ex nat (fun m : nat => is_true (ssrnat.leq (@seq.size (eqtype.Equality.sort X) ys) m)) => (fun \u2017eva"
+      }
+    },
+    "prosa.util.minmax.bigmax_leq_seqP": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "rbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) xs))) (_ : is_true (P x)), is_true (ssrnat.leq (F x) m) => (fun _evar_0_ : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort X) O xs (fun i : eqtype.Equality.sort X => @",
+        "patched": "rbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) xs))) (_ : is_true (P x)), is_true (ssrnat.leq (F x) m) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort X) O xs (fun i : eqtype.Equality.sort X => @"
+      }
+    },
+    "prosa.util.minmax.bigmax_ltn_ord": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "(_ : is_true (P (@fintype.nat_of_ord O (@fintype.Ordinal O i2 P0)))) => (fun P0' : is_true (ssrnat.leq (S i2) O) => let _the_hidden_goal_ : Prop := is_true (ssrnat.leq (S (@bigop.bigop.body nat (fintype.Finite.sort (fintype.fintype_ordinal_",
+        "patched": "(_ : is_true (P (@fintype.nat_of_ord O (@fintype.Ordinal O i2 P0)))) => (fun P0' : is_true (ssrnat.leq (S i2) O) => let \u2017the_hidden_goal\u2017 : Prop := is_true (ssrnat.leq (S (@bigop.bigop.body nat (fintype.Finite.sort (fintype.fintype_ordinal_"
+      }
+    },
+    "prosa.util.minmax.bigmax_ord_ltn_identity": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": " n i)))) n) with\n                                                 | @O => fun POS : is_true (ssrnat.leq (S O) O) => let _the_hidden_goal_ : Prop := is_true (ssrnat.leq (S (@bigop.bigop.body nat (fintype.Finite.sort (fintype.fintype_ordinal_",
+        "patched": " n i)))) n) with\n                                                 | @O => fun POS : is_true (ssrnat.leq (S O) O) => let \u2017the_hidden_goal\u2017 : Prop := is_true (ssrnat.leq (S (@bigop.bigop.body nat (fintype.Finite.sort (fintype.fintype_ordinal_"
+      }
+    },
+    "prosa.util.minmax.bigmax_pred": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "= fun (n : nat) (P : ssrbool.pred nat) (i0 : fintype.ordinal n) (Pi0 : is_true (P (@fintype.nat_of_ord n i0))) => (fun (_evar_0_ : (fun n0 : nat => forall (i1 : fintype.ordinal n0) (_ : is_true (P (@fintype.nat_of_ord n0 i1))), is_true (P (",
+        "patched": "= fun (n : nat) (P : ssrbool.pred nat) (i0 : fintype.ordinal n) (Pi0 : is_true (P (@fintype.nat_of_ord n i0))) => (fun (\u2017evar_0\u2017 : (fun n0 : nat => forall (i1 : fintype.ordinal n0) (_ : is_true (P (@fintype.nat_of_ord n0 i1))), is_true (P ("
+      }
+    },
+    "prosa.util.minmax.bigmax_subset": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "O xs (fun x : eqtype.Equality.sort T => @bigop.BigBody nat (eqtype.Equality.sort T) x ssrnat.maxn (P2 x) (F x)))) ((fun _evar_0_ : forall _ : is_true (ssrnat.leq (S (@bigop.bigop.body nat (eqtype.Equality.sort T) O xs (fun x : eqtype.Equali",
+        "patched": "O xs (fun x : eqtype.Equality.sort T => @bigop.BigBody nat (eqtype.Equality.sort T) x ssrnat.maxn (P2 x) (F x)))) ((fun \u2017evar_0\u2017 : forall _ : is_true (ssrnat.leq (S (@bigop.bigop.body nat (eqtype.Equality.sort T) O xs (fun x : eqtype.Equali"
+      }
+    },
+    "prosa.util.minmax.bigmax_witness": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "ype.Equality.sort T)) (P : ssrbool.pred (eqtype.Equality.sort T)) (F : forall _ : eqtype.Equality.sort T, nat) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort T) => forall _ : is_true (@seq.has (eqtype.Equality.sort T) P l), @ex (eq",
+        "patched": "ype.Equality.sort T)) (P : ssrbool.pred (eqtype.Equality.sort T)) (F : forall _ : eqtype.Equality.sort T, nat) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort T) => forall _ : is_true (@seq.has (eqtype.Equality.sort T) P l), @ex (eq"
+      }
+    },
+    "prosa.util.minmax.bigmax_witness_diff": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": " (fun x : eqtype.Equality.sort T => @bigop.BigBody nat (eqtype.Equality.sort T) x ssrnat.maxn (P2 x) (F x))))) => (fun (_evar_0_ : forall p : is_true (@seq.has (eqtype.Equality.sort T) P1 xs), (fun (b : bool) (_ : ssrbool.alt_spec (is_true ",
+        "patched": " (fun x : eqtype.Equality.sort T => @bigop.BigBody nat (eqtype.Equality.sort T) x ssrnat.maxn (P2 x) (F x))))) => (fun (\u2017evar_0\u2017 : forall p : is_true (@seq.has (eqtype.Equality.sort T) P1 xs), (fun (b0 : bool) (_ : ssrbool.alt_spec (is_true"
+      }
+    },
+    "prosa.util.minmax.leq_big_max": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "em (eqtype.Equality.sort X) (seq.seq_predType X) xs))) (_ : is_true (P x)), is_true (ssrnat.leq (F1 x) (F2 x))) => (fun _evar_0_ : match true return Prop with\n                                                                                 ",
+        "patched": "em (eqtype.Equality.sort X) (seq.seq_predType X) xs))) (_ : is_true (P x)), is_true (ssrnat.leq (F1 x) (F2 x))) => (fun \u2017evar_0\u2017 : match true return Prop with\n                                                                                 "
+      }
+    },
+    "prosa.util.minmax.leq_bigmax_cond_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "type.Equality.sort X) x (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) xs))) (Px : is_true (P x)) => (fun (_evar_0_ : is_true (ssrnat.leq (F x) (@bigop.Monoid.ComLaw.sort nat O bigop.ssrnat_maxn__canonical__Monoid_ComLaw match ",
+        "patched": "type.Equality.sort X) x (@ssrbool.mem (eqtype.Equality.sort X) (seq.seq_predType X) xs))) (Px : is_true (P x)) => (fun (\u2017evar_0\u2017 : is_true (ssrnat.leq (F x) (@bigop.Monoid.ComLaw.sort nat O bigop.ssrnat_maxn__canonical__Monoid_ComLaw match "
+      }
+    },
+    "prosa.util.minmax.leq_bigmax_sup": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": " (eqtype.Equality.sort X)) (F : forall _ : eqtype.Equality.sort X, nat) (xs : list (eqtype.Equality.sort X)) (n : nat) (__top_assumption_ : @ex (eqtype.Equality.sort X) (fun x : eqtype.Equality.sort X => and (is_true (@ssrbool.in_mem (eqtyp",
+        "patched": " (eqtype.Equality.sort X)) (F : forall _ : eqtype.Equality.sort X, nat) (xs : list (eqtype.Equality.sort X)) (n : nat) (\u2017\u2017top_assumption\u2017 : @ex (eqtype.Equality.sort X) (fun x : eqtype.Equality.sort X => and (is_true (@ssrbool.in_mem (eqtyp"
+      }
+    },
+    "prosa.util.nat.leq_subRL_impl": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.nat.subnACA": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.nondecreasing.antidensity_of_nondecreasing_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": " xs) (H : is_true (andb (ssrnat.leq (S (@seq.nth nat O xs n)) x) (ssrnat.leq (S x) (@seq.nth nat O xs (S n))))) => (fun _evar_0_ : match true return Prop with\n                                                                                 ",
+        "patched": " xs) (H : is_true (andb (ssrnat.leq (S (@seq.nth nat O xs n)) x) (ssrnat.leq (S x) (@seq.nth nat O xs (S n))))) => (fun \u2017evar_0\u2017 : match true return Prop with\n                                                                                 "
+      }
+    },
+    "prosa.util.nondecreasing.belonging_to_segment_of_seq_is_total": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "(ssrnat.leqnn (@seq.size nat xs))) (fun EX : @ex nat (fun n : nat => is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun __top_assumption_ : @ex nat (fun n : nat => is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun _evar_0_ : forall (x0 : n",
+        "patched": "(ssrnat.leqnn (@seq.size nat xs))) (fun EX : @ex nat (fun n : nat => is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun \u2017\u2017top_assumption\u2017 : @ex nat (fun n : nat => is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun \u2017evar_0\u2017 : forall (x0 : n"
+      }
+    },
+    "prosa.util.nondecreasing.distance_between_neighboring_elements_le_max_distance_in_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": " xs) id) (ssrnat.subn (@seq.nth nat O xs (S id)) (@seq.nth nat O xs id)) (list.max0 (nondecreasing.distances xs)) ((fun _evar_0_ : is_true (orb (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality (ssrnat.subn (@seq.nth nat O xs ",
+        "patched": " xs) id) (ssrnat.subn (@seq.nth nat O xs (S id)) (@seq.nth nat O xs id)) (list.max0 (nondecreasing.distances xs)) ((fun \u2017evar_0\u2017 : is_true (orb (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality (ssrnat.subn (@seq.nth nat O xs "
+      }
+    },
+    "prosa.util.nondecreasing.distances": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.nondecreasing.distances_iota_filtered": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @ex_intro _ _ x x0 => (fun (n : nat) (BO : is_true (ssrnat.leq (@seq.size (eqtype.Equality.sort ssrnat.Datatypes_nat__",
+        "patched": "                                                                                                                           | @ex_intro _ _ x x0 => (fun (n : nat) (BO : is_true (ssrnat.leq (@seq.size (eqtype.Equality.sort ssrnat.Datatypes_na"
+      }
+    },
+    "prosa.util.nondecreasing.distances_of_iota_\u03b5": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "istances_of_iota_\u03b5 = fun (n : nat) (x : eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality) => (fun (_evar_0_ : (fun n0 : nat => forall _ : is_true (@ssrbool.in_mem (eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__e",
+        "patched": "istances_of_iota_\u03b5 = fun (n : nat) (x : eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality) => (fun (\u2017evar_0\u2017 : (fun n0 : nat => forall _ : is_true (@ssrbool.in_mem (eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__e"
+      }
+    },
+    "prosa.util.nondecreasing.distances_positive_undup": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "ondecreasing.distances_positive_undup = fun (xs : list nat) (NonDec : nondecreasing.nondecreasing_sequence xs) => (fun (_evar_0_ : @eq (list nat) (nondecreasing.distances (@seq.filter nat (fun \u03c1 : nat => @ssrbool.in_mem nat \u03c1 (@ssrbool.mem ",
+        "patched": "ondecreasing.distances_positive_undup = fun (xs : list nat) (NonDec : nondecreasing.nondecreasing_sequence xs) => (fun (\u2017evar_0\u2017 : @eq (list nat) (nondecreasing.distances (@seq.filter nat (fun \u03c1 : nat => @ssrbool.in_mem nat \u03c1 (@ssrbool.mem "
+      }
+    },
+    "prosa.util.nondecreasing.distances_unfold_1app_last": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @ex_intro _ _ x0 x1 => (fun (n : nat) (LE : is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun (_evar_0_ : (fun n0 : n",
+        "patched": "                                                                                                                           | @ex_intro _ _ x0 x1 => (fun (n : nat) (LE : is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun (\u2017evar_0\u2017 : (fun n0 "
+      }
+    },
+    "prosa.util.nondecreasing.distances_unfold_2app_last": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @ex_intro _ _ x x0 => (fun (n : nat) (LE : is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun (_evar_0_ : (fun n0 : na",
+        "patched": "                                                                                                                           | @ex_intro _ _ x x0 => (fun (n : nat) (LE : is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun (\u2017evar_0\u2017 : (fun n0 :"
+      }
+    },
+    "prosa.util.nondecreasing.distances_unfold_2cons": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "nondecreasing.distances_unfold_2cons = fun (x0 x1 : nat) (xs : list nat) => (fun _evar_0_ : @eq (list nat) (@cons nat (ssrnat.subn x1 x0) (@seq.map (prod nat nat) nat (fun pat : prod nat nat => match p",
+        "patched": "nondecreasing.distances_unfold_2cons = fun (x0 x1 : nat) (xs : list nat) => (fun \u2017evar_0\u2017 : @eq (list nat) (@cons nat (ssrnat.subn x1 x0) (@seq.map (prod nat nat) nat (fun pat : prod nat nat => match p"
+      }
+    },
+    "prosa.util.nondecreasing.domination_of_distances_implies_domination_of_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "seq.size nat ys)))) (is_true (ssrnat.leq (@seq.size nat ys) (ssrnat.maxn (@seq.size nat xs) (@seq.size nat ys)))) ((fun _evar_0_ : is_true (orb (ssrnat.leq (@seq.size nat xs) (@seq.size nat xs)) (ssrnat.leq (@seq.size nat xs) (@seq.size nat",
+        "patched": "seq.size nat ys)))) (is_true (ssrnat.leq (@seq.size nat ys) (ssrnat.maxn (@seq.size nat xs) (@seq.size nat ys)))) ((fun \u2017evar_0\u2017 : is_true (orb (ssrnat.leq (@seq.size nat xs) (@seq.size nat xs)) (ssrnat.leq (@seq.size nat xs) (@seq.size nat"
+      }
+    },
+    "prosa.util.nondecreasing.function_of_distances_is_correct": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "nat.leqnn (@seq.size nat xs))) (fun EX : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun __top_assumption_ : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun _evar_0_ : forall (x ",
+        "patched": "nat.leqnn (@seq.size nat xs))) (fun EX : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun \u2017\u2017top_assumption\u2017 : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun \u2017evar_0\u2017 : forall (x "
+      }
+    },
+    "prosa.util.nondecreasing.increasing_implies_nondecreasing": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "reasing_implies_nondecreasing = fun (xs : list nat) (INC : nondecreasing.increasing_sequence xs) => (fun (n1 n2 : nat) (_view_subject_ : is_true (andb (ssrnat.leq n1 n2) (ssrnat.leq (S n2) (@seq.size nat xs)))) => (fun __top_assumption_ : a",
+        "patched": "reasing_implies_nondecreasing = fun (xs : list nat) (INC : nondecreasing.increasing_sequence xs) => (fun (n1 n2 : nat) (\u2017view_subject\u2017 : is_true (andb (ssrnat.leq n1 n2) (ssrnat.leq (S n2) (@seq.size nat xs)))) => (fun \u2017\u2017top_assumption\u2017 : a"
+      }
+    },
+    "prosa.util.nondecreasing.increasing_sequence": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.nondecreasing.iota_is_increasing_sequence": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @ex_intro _ _ x x0 => (fun (k : nat) (BO : is_true (ssrnat.leq (ssrnat.subn b a) k)) => (fun (_evar_0_ : (fun n : nat ",
+        "patched": "                                                                                                                           | @ex_intro _ _ x x0 => (fun (k : nat) (BO : is_true (ssrnat.leq (ssrnat.subn b a) k)) => (fun (\u2017evar_0\u2017 : (fun n : n"
+      }
+    },
+    "prosa.util.nondecreasing.last0_undup": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "nondecreasing.last0_undup = fun _top_assumption_ : list nat => (fun (_evar_0_ : (fun l : list nat => forall _ : nondecreasing.nondecreasing_sequence l, ",
+        "patched": "nondecreasing.last0_undup = fun \u2017top_assumption\u2017 : list nat => (fun (\u2017evar_0\u2017 : (fun l : list nat => forall _ : nondecreasing.nondecreasing_sequence l, "
+      }
+    },
+    "prosa.util.nondecreasing.last_is_max_in_nondecreasing_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @true => fun EQ0 : @eq bool (@eqtype.eq_op t x0 y) true => @or_introl (@eq (eqtype.Equality.sort t) x0 y) (is_true (ne",
+        "patched": "                                                                                                                           | @true => fun EQ0 : @eq bool (@eqtype.eq_op t x0 y) true => @or_introl (@eq (eqtype.Equality.sort t) x0 y) (is_true "
+      }
+    },
+    "prosa.util.nondecreasing.last_seq_minus_last_distance_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "s_true (ssrnat.leq (@seq.nth nat O (@cons nat x1 (@nil nat)) n1) (@seq.nth nat O (@cons nat x1 (@nil nat)) n2)) => (fun _evar_0_ : @eq nat (list.last0 (@cons nat x1 (@nil nat))) (@seq.nth nat O (@cons nat x1 (@nil nat)) (Nat.pred (Nat.pred ",
+        "patched": "s_true (ssrnat.leq (@seq.nth nat O (@cons nat x1 (@nil nat)) n1) (@seq.nth nat O (@cons nat x1 (@nil nat)) n2)) => (fun \u2017evar_0\u2017 : @eq nat (list.last0 (@cons nat x1 (@nil nat))) (@seq.nth nat O (@cons nat x1 (@nil nat)) (Nat.pred (Nat.pred "
+      }
+    },
+    "prosa.util.nondecreasing.max_distance_in_nontrivial_seq_is_positive": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "sing.max_distance_in_nontrivial_seq_is_positive = fun (xs : list nat) (SIZE : nondecreasing.nondecreasing_sequence xs) (__top_assumption_ : @ex (eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality) (fun x : eqtype.Equality",
+        "patched": "sing.max_distance_in_nontrivial_seq_is_positive = fun (xs : list nat) (SIZE : nondecreasing.nondecreasing_sequence xs) (\u2017\u2017top_assumption\u2017 : @ex (eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality) (fun x : eqtype.Equality"
+      }
+    },
+    "prosa.util.nondecreasing.max_distance_in_seq_le_last_element_of_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @O => @or_introl (is_true (ssrnat.leq (S O) (S (S O)))) (is_true (ssrnat.leq (S (S O)) O)) (ssrnat.leqnSn (S O))\n     ",
+        "patched": "                                                                                                                           | @O => @or_introl (is_true (ssrnat.leq (S O) (S (S O)))) (is_true (ssrnat.leq (S (S O)) O)) (ssrnat.leqnSn (S O))\n  "
+      }
+    },
+    "prosa.util.nondecreasing.nodup_sort_2cons_eq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "ort_2cons_eq = fun (X : eqtype.Equality.type) (x : eqtype.Equality.sort X) (xs : list (eqtype.Equality.sort X)) => (fun _evar_0_ : @eq (list (eqtype.Equality.sort X)) (@seq.undup X (@cons (eqtype.Equality.sort X) x (@ssreflect.locked (foral",
+        "patched": "ort_2cons_eq = fun (X : eqtype.Equality.type) (x : eqtype.Equality.sort X) (xs : list (eqtype.Equality.sort X)) => (fun \u2017evar_0\u2017 : @eq (list (eqtype.Equality.sort X)) (@seq.undup X (@cons (eqtype.Equality.sort X) x (@ssreflect.locked (foral"
+      }
+    },
+    "prosa.util.nondecreasing.nodup_sort_2cons_lt": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": " : is_true (ssrnat.leq (S x1) x2)) (H0 : nondecreasing.nondecreasing_sequence (@cons nat x1 (@cons nat x2 xs))) => (fun _evar_0_ : @eq (list (eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality)) (@seq.undup ssrnat.Datatyp",
+        "patched": " : is_true (ssrnat.leq (S x1) x2)) (H0 : nondecreasing.nondecreasing_sequence (@cons nat x1 (@cons nat x2 xs))) => (fun \u2017evar_0\u2017 : @eq (list (eqtype.Equality.sort ssrnat.Datatypes_nat__canonical__eqtype_Equality)) (@seq.undup ssrnat.Datatyp"
+      }
+    },
+    "prosa.util.nondecreasing.nondec_seq_zero_first": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                        | @S n => (fun x0 : nat => (fun _evar_0_ : forall (_ : is_true (orb (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality O (S x0)) (@ssrbool.",
+        "patched": "                                                                                        | @S n => (fun x0 : nat => (fun \u2017evar_0\u2017 : forall (_ : is_true (orb (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality O (S x0)) (@ssrbool."
+      }
+    },
+    "prosa.util.nondecreasing.nondecreasing_sequence": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.nondecreasing.nondecreasing_sequence_2cons_leVeq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "t n0 : nat := ssrnat.maxn x2 x1 in let n1 : nat := ssrnat.minn x1 x2 in let n2 : nat := ssrnat.minn x2 x1 in match c in (ssrnat.compare_nat _ _ n3 n4 n5 n6 b5 b6 b7 b8 b9 b10) return or (@eq nat x1 x2) (is_true b10) with\n                   ",
+        "patched": "t n0 : nat := ssrnat.maxn x2 x1 in let n1 : nat := ssrnat.minn x1 x2 in let n2 : nat := ssrnat.minn x2 x1 in match c in ssrnat.compare_nat _ _ n3 n4 n5 n6 b5 b6 b7 b8 b9 b10 return or (@eq nat x1 x2) (is_true b10) with\n                     "
+      }
+    },
+    "prosa.util.nondecreasing.nondecreasing_sequence_add_min": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "types_nat__canonical__eqtype_Equality) xs))), is_true (ssrnat.leq x y)) (ND : nondecreasing.nondecreasing_sequence xs) (__top_assumption_ : nat) => (fun (_evar_0_ : (fun n : nat => forall (n2 : nat) (_ : is_true (andb (ssrnat.leq n n2) (ssr",
+        "patched": "types_nat__canonical__eqtype_Equality) xs))), is_true (ssrnat.leq x y)) (ND : nondecreasing.nondecreasing_sequence xs) (\u2017\u2017top_assumption\u2017 : nat) => (fun (\u2017evar_0\u2017 : (fun n : nat => forall (n2 : nat) (_ : is_true (andb (ssrnat.leq n n2) (ssr"
+      }
+    },
+    "prosa.util.nondecreasing.nondecreasing_sequence_cons": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "ons = fun (x : nat) (xs : list nat) (ND : nondecreasing.nondecreasing_sequence (@cons nat x xs)) => (fun (n1 n2 : nat) (_view_subject_ : is_true (andb (ssrnat.leq n1 n2) (ssrnat.leq (S n2) (@seq.size nat xs)))) => (fun __top_assumption_ : a",
+        "patched": "ons = fun (x : nat) (xs : list nat) (ND : nondecreasing.nondecreasing_sequence (@cons nat x xs)) => (fun (n1 n2 : nat) (\u2017view_subject\u2017 : is_true (andb (ssrnat.leq n1 n2) (ssrnat.leq (S n2) (@seq.size nat xs)))) => (fun \u2017\u2017top_assumption\u2017 : a"
+      }
+    },
+    "prosa.util.nondecreasing.nondecreasing_sequence_cons_double": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "quence_cons_double = fun (x : nat) (xs : list nat) (ND : nondecreasing.nondecreasing_sequence (@cons nat x xs)) => (fun __top_assumption_ : nat => (fun (_evar_0_ : (fun n : nat => forall (n2 : nat) (_ : is_true (andb (ssrnat.leq n n2) (ssrn",
+        "patched": "quence_cons_double = fun (x : nat) (xs : list nat) (ND : nondecreasing.nondecreasing_sequence (@cons nat x xs)) => (fun \u2017\u2017top_assumption\u2017 : nat => (fun (\u2017evar_0\u2017 : (fun n : nat => forall (n2 : nat) (_ : is_true (andb (ssrnat.leq n n2) (ssrn"
+      }
+    },
+    "prosa.util.nondecreasing.nondecreasing_sequence_cons_min": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "atypes_nat__canonical__eqtype_Equality) (seq.seq_predType ssrnat.Datatypes_nat__canonical__eqtype_Equality) xs)) => let _the_hidden_goal_ : Prop := is_true (ssrnat.leq x y) in (fun _evar_0_ : forall _ : is_true (ssrnat.leq (S (@seq.index ss",
+        "patched": "atypes_nat__canonical__eqtype_Equality) (seq.seq_predType ssrnat.Datatypes_nat__canonical__eqtype_Equality) xs)) => let \u2017the_hidden_goal\u2017 : Prop := is_true (ssrnat.leq x y) in (fun \u2017evar_0\u2017 : forall _ : is_true (ssrnat.leq (S (@seq.index ss"
+      }
+    },
+    "prosa.util.nondecreasing.nondecreasing_sequence_cons_smin": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.nondecreasing.nondecreasing_sequence_undup": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @ex_intro _ _ x x0 => (fun (n : nat) (BO : is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun (_evar_0_ : (fun n0 : na",
+        "patched": "                                                                                                                           | @ex_intro _ _ x x0 => (fun (n : nat) (BO : is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun (\u2017evar_0\u2017 : (fun n0 :"
+      }
+    },
+    "prosa.util.nondecreasing.size_of_seq_of_distances": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "nat.leqnn (@seq.size nat xs))) (fun EX : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun __top_assumption_ : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun _evar_0_ : forall (x ",
+        "patched": "nat.leqnn (@seq.size nat xs))) (fun EX : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun \u2017\u2017top_assumption\u2017 : @ex nat (fun len : nat => is_true (ssrnat.leq (@seq.size nat xs) len)) => (fun \u2017evar_0\u2017 : forall (x "
+      }
+    },
+    "prosa.util.nondecreasing.undup_nth_le": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @ex_intro _ _ x x0 => (fun (n : nat) (BO : is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun (_evar_0_ : (fun n0 : na",
+        "patched": "                                                                                                                           | @ex_intro _ _ x x0 => (fun (n : nat) (BO : is_true (ssrnat.leq (@seq.size nat xs) n)) => (fun (\u2017evar_0\u2017 : (fun n0 :"
+      }
+    },
+    "prosa.util.notation.constant": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.poet.forall_exists_implied_by_forall_in_zip": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @nil _ => fun (SIZE0 : @eq nat (@seq.size (eqtype.Equality.sort X) (@nil (eqtype.Equality.sort X))) (@seq.size (eqtype",
+        "patched": "                                                                                                                           | @nil _ => fun (SIZE0 : @eq nat (@seq.size (eqtype.Equality.sort X) (@nil (eqtype.Equality.sort X))) (@seq.size (eqt"
+      }
+    },
+    "prosa.util.rel.antisymmetric_over_list": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.rel.monotone": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.rel.total_over_list": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.search_arg.earliest_pred_element_exists_case": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": " nat => negb (P x)) (bigop.index_iota t1 t2)) (@seq.all nat (fun x : nat => negb (P x)) (bigop.index_iota t1 t2))) (fun __top_assumption_ : ssrbool.alt_spec (is_true (@seq.all nat (fun x : nat => negb (P x)) (bigop.index_iota t1 t2))) (@seq",
+        "patched": " nat => negb (P x)) (bigop.index_iota t1 t2)) (@seq.all nat (fun x : nat => negb (P x)) (bigop.index_iota t1 t2))) (fun \u2017\u2017top_assumption\u2017 : ssrbool.alt_spec (is_true (@seq.all nat (fun x : nat => negb (P x)) (bigop.index_iota t1 t2))) (@seq"
+      }
+    },
+    "prosa.util.search_arg.prop_on_ex_minn": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "rnat.ex_minn_spec pred (@ssrnat.ex_minn pred ex)) (fun MIN : ssrnat.ex_minn_spec pred (@ssrnat.ex_minn pred ex) => (fun __top_assumption_ : ssrnat.ex_minn_spec pred (@ssrnat.ex_minn pred ex) => (fun _evar_0_ : forall (m : nat) (i : is_true ",
+        "patched": "rnat.ex_minn_spec pred (@ssrnat.ex_minn pred ex)) (fun MIN : ssrnat.ex_minn_spec pred (@ssrnat.ex_minn pred ex) => (fun \u2017\u2017top_assumption\u2017 : ssrnat.ex_minn_spec pred (@ssrnat.ex_minn pred ex) => (fun \u2017evar_0\u2017 : forall (m : nat) (i : is_true "
+      }
+    },
+    "prosa.util.search_arg.search_arg": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.search_arg.search_arg_extremum": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "srbool.total T R) (a b x : nat) (SEARCH : @eq (option nat) (@search_arg.search_arg T f P R a b) (@Some nat x)) => (fun (_evar_0_ : (fun n : nat => forall (x0 : nat) (_ : @eq (option nat) (@search_arg.search_arg T f P R a n) (@Some nat x0)) ",
+        "patched": "srbool.total T R) (a b x : nat) (SEARCH : @eq (option nat) (@search_arg.search_arg T f P R a b) (@Some nat x)) => (fun (\u2017evar_0\u2017 : (fun n : nat => forall (x0 : nat) (_ : @eq (option nat) (@search_arg.search_arg T f P R a n) (@Some nat x0)) "
+      }
+    },
+    "prosa.util.search_arg.search_arg_in_range": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "h_arg_in_range = fun (T : Type) (f : forall _ : nat, T) (P : ssrbool.pred T) (R : ssrbool.rel T) (a b x : nat) => (fun (_evar_0_ : (fun n : nat => forall _ : @eq (option nat) (@search_arg.search_arg T f P R a n) (@Some nat x), is_true (andb",
+        "patched": "h_arg_in_range = fun (T : Type) (f : forall _ : nat, T) (P : ssrbool.pred T) (R : ssrbool.rel T) (a b x : nat) => (fun (\u2017evar_0\u2017 : (fun n : nat => forall _ : @eq (option nat) (@search_arg.search_arg T f P R a n) (@Some nat x), is_true (andb"
+      }
+    },
+    "prosa.util.search_arg.search_arg_none": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "nat.leq (S x) b))), is_true (negb (P (f x))), @eq (option nat) (@search_arg.search_arg T f P R a b) (@None nat)) ((fun (_evar_0_ : (fun n : nat => forall (_ : @eq (option nat) (@search_arg.search_arg T f P R a n) (@None nat)) (x : nat) (_ :",
+        "patched": "nat.leq (S x) b))), is_true (negb (P (f x))), @eq (option nat) (@search_arg.search_arg T f P R a b) (@None nat)) ((fun (\u2017evar_0\u2017 : (fun n : nat => forall (_ : @eq (option nat) (@search_arg.search_arg T f P R a n) (@None nat)) (x : nat) (_ :"
+      }
+    },
+    "prosa.util.search_arg.search_arg_not_none": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "                  | @None _ => fun SEARCH0 : @eq (option nat) (@search_arg.search_arg T f P R a b) (@None nat) => (fun (_pattern_value_ : Prop) (_rewrite_rule_ : iff _pattern_value_ (forall (x : nat) (_ : is_true (andb (ssrnat.leq a x) (ssr",
+        "patched": "                  | @None _ => fun SEARCH0 : @eq (option nat) (@search_arg.search_arg T f P R a b) (@None nat) => (fun (\u2017pattern_value\u2017 : Prop) (\u2017rewrite_rule\u2017 : iff \u2017pattern_value\u2017 (forall (x : nat) (_ : is_true (andb (ssrnat.leq a x) (ssr"
+      }
+    },
+    "prosa.util.search_arg.search_arg_pred": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "earch_arg_pred = fun (T : Type) (f : forall _ : nat, T) (P : ssrbool.pred T) (R : ssrbool.rel T) (a b x : nat) => (fun (_evar_0_ : (fun n : nat => forall _ : @eq (option nat) (@search_arg.search_arg T f P R a n) (@Some nat x), is_true (P (f",
+        "patched": "earch_arg_pred = fun (T : Type) (f : forall _ : nat, T) (P : ssrbool.pred T) (R : ssrbool.rel T) (a b x : nat) => (fun (\u2017evar_0\u2017 : (fun n : nat => forall _ : @eq (option nat) (@search_arg.search_arg T f P R a n) (@Some nat x), is_true (P (f"
+      }
+    },
+    "prosa.util.seqset.HB_unnamed_factory_2": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "hb_unnamed_renumbering",
+        "match_return_printing"
+      ]
+    },
+    "prosa.util.seqset.HB_unnamed_factory_4": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "hb_unnamed_renumbering"
+      ]
+    },
+    "prosa.util.seqset.HB_unnamed_mixin_6": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "hb_unnamed_renumbering"
+      ]
+    },
+    "prosa.util.seqset._set_seq": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "match_return_printing"
+      ]
+    },
+    "prosa.util.seqset.eqtype_Equality__to__eqtype_hasDecEq": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "hb_unnamed_renumbering"
+      ]
+    },
+    "prosa.util.seqset.mem_set_predType": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.util.seqset.seqset_set__canonical__eqtype_Equality": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "hb_unnamed_renumbering"
+      ]
+    },
+    "prosa.util.seqset.seqset_set__canonical__eqtype_SubEquality": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "hb_unnamed_renumbering"
+      ]
+    },
+    "prosa.util.seqset.seqset_set__canonical__eqtype_SubType": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "hb_unnamed_renumbering"
+      ]
+    },
+    "prosa.util.seqset.set": {
+      "status": "INDUCTIVE_SAME_CONSTRUCTORS",
+      "kind": "Variant",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "constructors": [
+        "prosa.util.seqset.Build_set"
+      ]
+    },
+    "prosa.util.seqset.set_of": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "ssreflect_rw_relocation"
+      ]
+    },
+    "prosa.util.seqset.set_uniq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "                                                                                                                        | @seqset.Build_set _ _set_seq i => (fun (_set_seq0 : list (eqtype.Equality.sort T)) (i0 : is_true (@seq.uniq T _set_seq",
+        "patched": "                                                                                                                              | @seqset.Build_set _ _set_seq i => (fun (_set_seq0 : list (eqtype.Equality.sort T)) (i0 : is_true (@seq.uniq T _s"
+      }
+    },
+    "prosa.util.setoid.PreOrder_instance_0": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing"
+      ],
+      "body_difference": {
+        "original": "setoid.PreOrder_instance_0 = @RelationClasses.Build_PreOrder bool setoid.leb (fun __top_assumption_ : bool => (fun (_evar_0_ : (fun b : bool => setoid.leb b b) true) (_evar_0_0 : (fun b : bool => setoid",
+        "patched": "setoid.PreOrder_instance_0 = @RelationClasses.Build_PreOrder bool setoid.leb (fun \u2017\u2017top_assumption\u2017 : bool => (fun (\u2017evar_0\u2017 : (fun b : bool => setoid.leb b b) true) (\u2017evar_0\u20170 : (fun b : bool => setoid"
+      }
+    },
+    "prosa.util.setoid.Proper_instance_0": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing"
+      ],
+      "body_difference": {
+        "original": "setoid.Proper_instance_0 = (fun __top_assumption_ : bool => (fun (_evar_0_ : (fun b : bool => forall (y : bool) (_ : setoid.leb b y), @Morphisms.respect",
+        "patched": "setoid.Proper_instance_0 = (fun \u2017\u2017top_assumption\u2017 : bool => (fun (\u2017evar_0\u2017 : (fun b : bool => forall (y : bool) (_ : setoid.leb b y), @Morphisms.respect"
+      }
+    },
+    "prosa.util.setoid.Proper_instance_1": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing"
+      ],
+      "body_difference": {
+        "original": "setoid.Proper_instance_1 = (fun __top_assumption_ : bool => (fun (_evar_0_ : (fun b : bool => forall (y : bool) (_ : setoid.leb b y), @Morphisms.respect",
+        "patched": "setoid.Proper_instance_1 = (fun \u2017\u2017top_assumption\u2017 : bool => (fun (\u2017evar_0\u2017 : (fun b : bool => forall (y : bool) (_ : setoid.leb b y), @Morphisms.respect"
+      }
+    },
+    "prosa.util.setoid.Proper_instance_2": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing"
+      ],
+      "body_difference": {
+        "original": "setoid.Proper_instance_2 = (fun (a b : bool) (__top_assumption_ : setoid.leb a b) => (fun _evar_0_ : forall i : is_true (implb a b), (fun _ : setoid.leb a b => Basics",
+        "patched": "setoid.Proper_instance_2 = (fun (a b : bool) (\u2017\u2017top_assumption\u2017 : setoid.leb a b) => (fun \u2017evar_0\u2017 : forall i : is_true (implb a b), (fun _ : setoid.leb a b => Basics"
+      }
+    },
+    "prosa.util.setoid.Proper_instance_3": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "setoid.Proper_instance_3 = (fun (n m : nat) (_view_subject_ : @Basics.flip nat nat Prop le n m) => (fun (__view_subject_1_ : is_true (ssrnat.leq m n)) (n' m' : nat) ",
+        "patched": "setoid.Proper_instance_3 = (fun (n m : nat) (\u2017view_subject\u2017 : @Basics.flip nat nat Prop le n m) => (fun (\u2017\u2017view_subject\u20171\u2017 : is_true (ssrnat.leq m n)) (n' m' : nat) "
+      }
+    },
+    "prosa.util.setoid.Proper_instance_4": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "body_difference": {
+        "original": "setoid.Proper_instance_4 = (fun (n m : nat) (_view_subject_ : le n m) => (fun (__view_subject_1_ : is_true (ssrnat.leq n m)) (n' m' : nat) (_view_subject_0 : le n' m",
+        "patched": "setoid.Proper_instance_4 = (fun (n m : nat) (\u2017view_subject\u2017 : le n m) => (fun (\u2017\u2017view_subject\u20171\u2017 : is_true (ssrnat.leq n m)) (n' m' : nat) (\u2017view_subject\u20170 : le n' m"
+      }
+    },
+    "prosa.util.setoid.Proper_instance_5": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "body_difference": {
+        "original": "setoid.Proper_instance_5 = (fun (n m : nat) (_view_subject_ : le n m) => (fun (__view_subject_1_ : is_true (ssrnat.leq n m)) (n' m' : nat) (_view_subject_0 : @Basics",
+        "patched": "setoid.Proper_instance_5 = (fun (n m : nat) (\u2017view_subject\u2017 : le n m) => (fun (\u2017\u2017view_subject\u20171\u2017 : is_true (ssrnat.leq n m)) (n' m' : nat) (\u2017view_subject\u20170 : @Basics"
+      }
+    },
+    "prosa.util.setoid.Proper_instance_6": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "body_difference": {
+        "original": "setoid.Proper_instance_6 = (fun (n m : nat) (_view_subject_ : le n m) => (fun __view_subject_1_ : is_true (ssrnat.leq n m) => (fun _evar_0_ : is_true (ssrnat.leq (S ",
+        "patched": "setoid.Proper_instance_6 = (fun (n m : nat) (\u2017view_subject\u2017 : le n m) => (fun \u2017\u2017view_subject\u20171\u2017 : is_true (ssrnat.leq n m) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (S "
+      }
+    },
+    "prosa.util.setoid.RewriteRelation_instance_0": {
+      "status": "IDENTICAL",
+      "kind": "Definition"
+    },
+    "prosa.util.setoid.leb": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Inductive",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.setoid.leb_eq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "setoid.leb_eq = fun a b : bool => (fun __top_assumption_ : bool => (fun (_evar_0_ : (fun b0 : bool => forall b1 : bool, iff (setoid.leb b0 b1) (forall _ : is_t",
+        "patched": "setoid.leb_eq = fun a b : bool => (fun \u2017\u2017top_assumption\u2017 : bool => (fun (\u2017evar_0\u2017 : (fun b0 : bool => forall b1 : bool, iff (setoid.leb b0 b1) (forall _ : is_t"
+      }
+    },
+    "prosa.util.setoid.leb_ind": {
+      "status": "SAME_STATEMENT",
+      "kind": "Definition",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "setoid.leb_ind = fun (a b : bool) (P : forall _ : setoid.leb a b, Prop) (f : forall i : is_true (implb a b), P (setoid.Leb a b i)) (l : setoid.leb a b) => match l as l0 return P l0 with\n       ",
+        "patched": "setoid.leb_ind = fun (a b : bool) (P : forall _ : setoid.leb a b, Prop) (Leb : forall i : is_true (implb a b), P (setoid.Leb a b i)) (l : setoid.leb a b) => match l as l0 return P l0 with\n     "
+      }
+    },
+    "prosa.util.setoid.leb_rec": {
+      "status": "SAME_STATEMENT",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "setoid.leb_rec = fun (a b : bool) (P : forall _ : setoid.leb a b, Set) => setoid.leb_rect a b P",
+        "patched": "setoid.leb_rec = fun (a b : bool) (P : forall _ : setoid.leb a b, Set) (Leb : forall i : is_true (implb a b), P (setoid.Leb a b i)) (l : setoid.leb a b) => match l as l0 return P l0 with\n    "
+      }
+    },
+    "prosa.util.setoid.leb_rect": {
+      "status": "SAME_STATEMENT",
+      "kind": "Definition",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "setoid.leb_rect = fun (a b : bool) (P : forall _ : setoid.leb a b, Type) (f : forall i : is_true (implb a b), P (setoid.Leb a b i)) (l : setoid.leb a b) => match l as l0 return P l0 with\n       ",
+        "patched": "setoid.leb_rect = fun (a b : bool) (P : forall _ : setoid.leb a b, Type) (Leb : forall i : is_true (implb a b), P (setoid.Leb a b i)) (l : setoid.leb a b) => match l as l0 return P l0 with\n     "
+      }
+    },
+    "prosa.util.setoid.leb_sind": {
+      "status": "SAME_STATEMENT",
+      "kind": "Definition",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "setoid.leb_sind = fun (a b : bool) (P : forall _ : setoid.leb a b, SProp) (f : forall i : is_true (implb a b), P (setoid.Leb a b i)) (l : setoid.leb a b) => match l as l0 return P l0 with\n       ",
+        "patched": "setoid.leb_sind = fun (a b : bool) (P : forall _ : setoid.leb a b, SProp) (Leb : forall i : is_true (implb a b), P (setoid.Leb a b i)) (l : setoid.leb a b) => match l as l0 return P l0 with\n     "
+      }
+    },
+    "prosa.util.setoid.leqRW": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.subadditivity.subadditive": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.subadditivity.subadditive_at": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.subadditivity.subadditive_leq_mul": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "subadditivity.subadditive_leq_mul = fun (f : forall _ : nat, nat) (h_subadditive : subadditivity.subadditive f) (n __top_assumption_ : nat) => (fun (_evar_0_ : (fun n0 : nat => forall _ : is_true (ssrnat.leq (S O) n0), is_true (ssrnat.",
+        "patched": "subadditivity.subadditive_leq_mul = fun (f : forall _ : nat, nat) (h_subadditive : subadditivity.subadditive f) (n \u2017\u2017top_assumption\u2017 : nat) => (fun (\u2017evar_0\u2017 : (fun n0 : nat => forall _ : is_true (ssrnat.leq (S O) n0), is_true (ssrnat."
+      }
+    },
+    "prosa.util.subadditivity.subadditive_standard": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.subadditivity.subadditive_standard_equivalence": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": ".addn a b))) (fun (SUB : subadditivity.subadditive_standard f) (h a b : nat) (AB : @eq nat (ssrnat.addn a b) h) => (fun _evar_0_ : is_true (ssrnat.leq (f (ssrnat.addn a b)) (ssrnat.addn (f a) (f b))) => @eq_ind nat (ssrnat.addn a b) (fun _p",
+        "patched": ".addn a b))) (fun (SUB : subadditivity.subadditive_standard f) (h a b : nat) (AB : @eq nat (ssrnat.addn a b) h) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (f (ssrnat.addn a b)) (ssrnat.addn (f a) (f b))) => @eq_ind nat (ssrnat.addn a b) (fun \u2017p"
+      }
+    },
+    "prosa.util.subadditivity.subadditive_until": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.sum.big_nat_eq0": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "p.bigop.body nat nat O (bigop.index_iota m n) (fun i : nat => @bigop.BigBody nat nat i ssrnat.addn true (F i))) O) (fun _view_subject_ : @eq nat (@bigop.bigop.body nat nat O (seq.iota m (ssrnat.subn n m)) (fun i : nat => @bigop.BigBody nat ",
+        "patched": "p.bigop.body nat nat O (bigop.index_iota m n) (fun i : nat => @bigop.BigBody nat nat i ssrnat.addn true (F i))) O) (fun \u2017view_subject\u2017 : @eq nat (@bigop.bigop.body nat nat O (seq.iota m (ssrnat.subn n m)) (fun i : nat => @bigop.BigBody nat "
+      }
+    },
+    "prosa.util.sum.big_sum_eq_in_eq_sized_intervals": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": " forall (g : nat) (_ : is_true (ssrnat.leq (S g) d)), @eq nat (F1 (ssrnat.addn t1 g)) (F2 (ssrnat.addn t2 g))) => (fun (_evar_0_ : (fun n : nat => forall _ : forall (g : nat) (_ : is_true (ssrnat.leq (S g) n)), @eq nat (F1 (ssrnat.addn t1 g",
+        "patched": " forall (g : nat) (_ : is_true (ssrnat.leq (S g) d)), @eq nat (F1 (ssrnat.addn t1 g)) (F2 (ssrnat.addn t2 g))) => (fun (\u2017evar_0\u2017 : (fun n : nat => forall _ : forall (g : nat) (_ : is_true (ssrnat.leq (S g) n)), @eq nat (F1 (ssrnat.addn t1 g"
+      }
+    },
+    "prosa.util.sum.bigmax_leq_sum": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "s.Z ssrnat.maxn BinInt.Z.of_nat BinInt.Z.of_nat BinInt.Z.of_nat BinInt.Z.max (fun n m : nat => match ssrnat.leqP n m in (ssrnat.leq_xor_gtn _ _ n0 n3 n4 n5 b b0) return @eq BinNums.Z (@ZifyClasses.inj nat BinNums.Z ZifyInst.Inj_nat_Z n5) (B",
+        "patched": "s.Z ssrnat.maxn BinInt.Z.of_nat BinInt.Z.of_nat BinInt.Z.of_nat BinInt.Z.max (fun n m : nat => match ssrnat.leqP n m in ssrnat.leq_xor_gtn _ _ n4 n5 n6 n7 b1 b2 return @eq BinNums.Z (@ZifyClasses.inj nat BinNums.Z ZifyInst.Inj_nat_Z n7) (Bi"
+      }
+    },
+    "prosa.util.sum.eq_sum_leq_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "mem (eqtype.Equality.sort I) (seq.seq_predType I) r))) (_ : is_true (P i)), is_true (ssrnat.leq (E1 i) (E2 i))) => (fun _evar_0_ : @eq bool (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality (@bigop.bigop.body nat (eqtype.Equal",
+        "patched": "mem (eqtype.Equality.sort I) (seq.seq_predType I) r))) (_ : is_true (P i)), is_true (ssrnat.leq (E1 i) (E2 i))) => (fun \u2017evar_0\u2017 : @eq bool (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality (@bigop.bigop.body nat (eqtype.Equal"
+      }
+    },
+    "prosa.util.sum.eq_sum_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": ")) (_ : is_true (P i)), is_true (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality (E1 i) (E2 i))) => (fun _evar_0_ : @eq nat (@bigop.bigop.body nat (eqtype.Equality.sort I) O (@seq.filter (eqtype.Equality.sort I) P r) (fun i :",
+        "patched": ")) (_ : is_true (P i)), is_true (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equality (E1 i) (E2 i))) => (fun \u2017evar_0\u2017 : @eq nat (@bigop.bigop.body nat (eqtype.Equality.sort I) O (@seq.filter (eqtype.Equality.sort I) P r) (fun i :"
+      }
+    },
+    "prosa.util.sum.leq_sum_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "mem (eqtype.Equality.sort I) (seq.seq_predType I) r))) (_ : is_true (P i)), is_true (ssrnat.leq (E1 i) (E2 i))) => (fun _evar_0_ : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun i : eqtype.Equality.sort I => @b",
+        "patched": "mem (eqtype.Equality.sort I) (seq.seq_predType I) r))) (_ : is_true (P i)), is_true (ssrnat.leq (E1 i) (E2 i))) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun i : eqtype.Equality.sort I => @b"
+      }
+    },
+    "prosa.util.sum.leq_sum_seq_pred": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "ort I) i (@ssrbool.mem (eqtype.Equality.sort I) (seq.seq_predType I) r))) (_ : is_true (P1 i)), is_true (P2 i)) => (fun _evar_0_ : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun i : eqtype.Equality.sort I => @b",
+        "patched": "ort I) i (@ssrbool.mem (eqtype.Equality.sort I) (seq.seq_predType I) r))) (_ : is_true (P1 i)), is_true (P2 i)) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun i : eqtype.Equality.sort I => @b"
+      }
+    },
+    "prosa.util.sum.leq_sum_sub_uniq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "qtype.Equality.sort I) (seq.seq_predType I) r) (@ssrbool.mem (eqtype.Equality.sort I) (seq.seq_predType I) rs)) => (fun _evar_0_ : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun i : eqtype.Equality.sort I => @b",
+        "patched": "qtype.Equality.sort I) (seq.seq_predType I) r) (@ssrbool.mem (eqtype.Equality.sort I) (seq.seq_predType I) rs)) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun i : eqtype.Equality.sort I => @b"
+      }
+    },
+    "prosa.util.sum.leq_sum_subseq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": ".Equality.sort I0)) (P : ssrbool.pred (eqtype.Equality.sort I0)) (F : forall _ : eqtype.Equality.sort I0, nat) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort I0) => forall (r'0 : list (eqtype.Equality.sort I0)) (_ : is_true (@seq.s",
+        "patched": ".Equality.sort I0)) (P : ssrbool.pred (eqtype.Equality.sort I0)) (F : forall _ : eqtype.Equality.sort I0, nat) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort I0) => forall (r'0 : list (eqtype.Equality.sort I0)) (_ : is_true (@seq.s"
+      }
+    },
+    "prosa.util.sum.ltn_sum_leq_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "em (eqtype.Equality.sort I) (seq.seq_predType I) r))) (_ : is_true (P i)), is_true (ssrnat.leq (E1 i) (E2 i))) => (fun (_evar_0_ : is_true (ssrnat.leq (S (@bigop.Monoid.ComLaw.sort nat O bigop.ssrnat_addn__canonical__Monoid_ComLaw match P j",
+        "patched": "em (eqtype.Equality.sort I) (seq.seq_predType I) r))) (_ : is_true (P i)), is_true (ssrnat.leq (E1 i) (E2 i))) => (fun (\u2017evar_0\u2017 : is_true (ssrnat.leq (S (@bigop.Monoid.ComLaw.sort nat O bigop.ssrnat_addn__canonical__Monoid_ComLaw match P j"
+      }
+    },
+    "prosa.util.sum.pigeonhole_on_interval": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "minn t2 t1) (ssrnat.minn t1 t2) (ssrnat.maxn t2 t1) (ssrnat.maxn t1 t2) (ssrnat.leq t1 t2) (ssrnat.leq (S t2) t1)) (fun __top_assumption_ : ssrnat.leq_xor_gtn t1 t2 (ssrnat.minn t2 t1) (ssrnat.minn t1 t2) (ssrnat.maxn t2 t1) (ssrnat.maxn t1",
+        "patched": "minn t2 t1) (ssrnat.minn t1 t2) (ssrnat.maxn t2 t1) (ssrnat.maxn t1 t2) (ssrnat.leq t1 t2) (ssrnat.leq (S t2) t1)) (fun \u2017\u2017top_assumption\u2017 : ssrnat.leq_xor_gtn t1 t2 (ssrnat.minn t2 t1) (ssrnat.minn t1 t2) (ssrnat.maxn t2 t1) (ssrnat.maxn t1"
+      }
+    },
+    "prosa.util.sum.reorder_summation": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "ty.sort X) x ssrnat.addn (andb (P x) (@eqtype.eq_op Y (x_to_y x) y)) (f x)) in fun y' : eqtype.Equality.sort Y => (fun (_evar_0_ : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort X) O xs (fun x : eqtype.Equality.sort X => @",
+        "patched": "ty.sort X) x ssrnat.addn (andb (P x) (@eqtype.eq_op Y (x_to_y x) y)) (f x)) in fun y' : eqtype.Equality.sort Y => (fun (\u2017evar_0\u2017 : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort X) O xs (fun x : eqtype.Equality.sort X => @"
+      }
+    },
+    "prosa.util.sum.sum_ge_2_nat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "return @ex nat (fun to1 : nat => @ex nat (fun to2 : nat => and (is_true (ssrnat.leq t1 to1)) (and (is_true (ssrnat.leq (...) to2)) (and (is_true (...)) (and (...) (...)))))) with\n                                                             ",
+        "patched": "return @ex nat (fun to1 : nat => @ex nat (fun to2 : nat => and (is_true (ssrnat.leq t1 to1)) (and (is_true (ssrnat.leq (S to1) to2)) (and (is_true (ssrnat.leq ... t2)) (and (is_true ...) (is_true ...)))))) with\n                             "
+      }
+    },
+    "prosa.util.sum.sum_ge_2_seq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "ty.sort X) xs) B)) (@seq.size (eqtype.Equality.sort X) xs) (ssrnat.leqnn (@seq.size (eqtype.Equality.sort X) xs))) (fun __top_assumption_ : @ex nat (fun B : nat => is_true (ssrnat.leq (@seq.size (eqtype.Equality.sort X) xs) B)) => (fun _eva",
+        "patched": "ty.sort X) xs) B)) (@seq.size (eqtype.Equality.sort X) xs) (ssrnat.leqnn (@seq.size (eqtype.Equality.sort X) xs))) (fun \u2017\u2017top_assumption\u2017 : @ex nat (fun B : nat => is_true (ssrnat.leq (@seq.size (eqtype.Equality.sort X) xs) B)) => (fun \u2017eva"
+      }
+    },
+    "prosa.util.sum.sum_le_subseq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "nat => ssrnat.leqnn x) : @ssrbool.reflexive nat ssrnat.leq) (fun x y : nat => ssrnat.leq_addr y x) O I r1 r2 P F ((fun (_pattern_value_ : Prop) (_rewrite_rule_ : iff _pattern_value_ (@ex2 (list (eqtype.Equality.sort I)) (fun s : list (eqtyp",
+        "patched": "nat => ssrnat.leqnn x) : @ssrbool.reflexive nat ssrnat.leq) (fun x y : nat => ssrnat.leq_addr y x) O I r1 r2 P F ((fun (\u2017pattern_value\u2017 : Prop) (\u2017rewrite_rule\u2017 : iff \u2017pattern_value\u2017 (@ex2 (list (eqtype.Equality.sort I)) (fun s : list (eqtyp"
+      }
+    },
+    "prosa.util.sum.sum_le_summation_range": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "sum.sum_le_summation_range = fun (f : forall _ : nat, nat) (t _top_assumption_ : nat) => (fun (_evar_0_ : (fun n : nat => forall _ : is_true (ssrnat.leq (S (@bigop.bigop.body nat nat",
+        "patched": "sum.sum_le_summation_range = fun (f : forall _ : nat, nat) (t \u2017top_assumption\u2017 : nat) => (fun (\u2017evar_0\u2017 : (fun n : nat => forall _ : is_true (ssrnat.leq (S (@bigop.bigop.body nat nat"
+      }
+    },
+    "prosa.util.sum.sum_leq_mono": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": " nat (eqtype.Equality.sort I) i ssrnat.addn (P i) (F i x)) in (fun (x y : nat) (LEQ : is_true (ssrnat.leq x y)) => (fun _evar_0_ : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun i : eqtype.Equality.sort I => @b",
+        "patched": " nat (eqtype.Equality.sort I) i ssrnat.addn (P i) (F i x)) in (fun (x y : nat) (LEQ : is_true (ssrnat.leq x y)) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun i : eqtype.Equality.sort I => @b"
+      }
+    },
+    "prosa.util.sum.sum_majorant_constant": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "rbool.mem (eqtype.Equality.sort I) (seq.seq_predType I) r))) (_ : is_true (P a)), is_true (ssrnat.leq (F a) c)) => (fun _evar_0_ : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun j : eqtype.Equality.sort I => @b",
+        "patched": "rbool.mem (eqtype.Equality.sort I) (seq.seq_predType I) r))) (_ : is_true (P a)), is_true (ssrnat.leq (F a) c)) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun j : eqtype.Equality.sort I => @b"
+      }
+    },
+    "prosa.util.sum.sum_nat_eq0_nat": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "ype.Equality.sort I)) (P : ssrbool.pred (eqtype.Equality.sort I)) (F : forall _ : eqtype.Equality.sort I, nat) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort I) => @eq bool (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equ",
+        "patched": "ype.Equality.sort I)) (P : ssrbool.pred (eqtype.Equality.sort I)) (F : forall _ : eqtype.Equality.sort I, nat) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort I) => @eq bool (@eqtype.eq_op ssrnat.Datatypes_nat__canonical__eqtype_Equ"
+      }
+    },
+    "prosa.util.sum.sum_nat_gt0": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "type.Equality.sort I)) (P : ssrbool.pred (eqtype.Equality.sort I)) (F : forall _ : eqtype.Equality.sort I, nat) => (fun _evar_0_ : @eq bool (negb (ssrnat.leq (S O) (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun i : eqtype.Equality",
+        "patched": "type.Equality.sort I)) (P : ssrbool.pred (eqtype.Equality.sort I)) (F : forall _ : eqtype.Equality.sort I, nat) => (fun \u2017evar_0\u2017 : @eq bool (negb (ssrnat.leq (S O) (@bigop.bigop.body nat (eqtype.Equality.sort I) O r (fun i : eqtype.Equality"
+      }
+    },
+    "prosa.util.sum.sum_of_ones": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "sum.sum_of_ones = fun t \u0394 : nat => (fun _evar_0_ : @eq nat (@ssrnat.iter nat (ssrnat.subn (ssrnat.addn t \u0394) t) (ssrnat.addn (S O)) O) \u0394 => @eq_ind_r nat (@ssrna",
+        "patched": "sum.sum_of_ones = fun t \u0394 : nat => (fun \u2017evar_0\u2017 : @eq nat (@ssrnat.iter nat (ssrnat.subn (ssrnat.addn t \u0394) t) (ssrnat.addn (S O)) O) \u0394 => @eq_ind_r nat (@ssrna"
+      }
+    },
+    "prosa.util.sum.sum_over_partitions_eq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "b (P x) (@eqtype.eq_op Y (x_to_y x) y)) (f x)) in fun _ : is_true (@seq.uniq X (@nil (eqtype.Equality.sort X))) => (fun _evar_0_ : @eq nat O (@bigop.bigop.body nat (eqtype.Equality.sort Y) O ys (fun y : eqtype.Equality.sort Y => @bigop.BigB",
+        "patched": "b (P x) (@eqtype.eq_op Y (x_to_y x) y)) (f x)) in fun _ : is_true (@seq.uniq X (@nil (eqtype.Equality.sort X))) => (fun \u2017evar_0\u2017 : @eq nat O (@bigop.bigop.body nat (eqtype.Equality.sort Y) O ys (fun y : eqtype.Equality.sort Y => @bigop.BigB"
+      }
+    },
+    "prosa.util.sum.sum_over_partitions_le": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "=> @bigop.BigBody nat (eqtype.Equality.sort X) x ssrnat.addn (andb (P x) (@eqtype.eq_op Y (x_to_y x) y)) (f x)) in (fun _evar_0_ : is_true (ssrnat.leq O (@bigop.bigop.body nat (eqtype.Equality.sort Y) O ys (fun y : eqtype.Equality.sort Y =>",
+        "patched": "=> @bigop.BigBody nat (eqtype.Equality.sort X) x ssrnat.addn (andb (P x) (@eqtype.eq_op Y (x_to_y x) y)) (f x)) in (fun \u2017evar_0\u2017 : is_true (ssrnat.leq O (@bigop.bigop.body nat (eqtype.Equality.sort Y) O ys (fun y : eqtype.Equality.sort Y =>"
+      }
+    },
+    "prosa.util.sum.sum_split_exhaustive_mutually_exclusive_preds": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "@eq bool (P x) (orb (Q x) (R x))) (nAnd : forall x : eqtype.Equality.sort I, is_true (negb (andb (Q x) (R x)))) => (fun _evar_0_ : @eq nat (@bigop.Monoid.ComLaw.sort nat O bigop.ssrnat_addn__canonical__Monoid_ComLaw (@bigop.bigop.body nat (",
+        "patched": "@eq bool (P x) (orb (Q x) (R x))) (nAnd : forall x : eqtype.Equality.sort I, is_true (negb (andb (Q x) (R x)))) => (fun \u2017evar_0\u2017 : @eq nat (@bigop.Monoid.ComLaw.sort nat O bigop.ssrnat_addn__canonical__Monoid_ComLaw (@bigop.bigop.body nat ("
+      }
+    },
+    "prosa.util.sum.sum_unit1": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "sum.sum_unit1 = fun F : forall _ : unit, nat => (fun _evar_0_ : @eq nat (@bigop.bigop.body nat (fintype.Finite.sort fintype.Datatypes_unit__canonical__fintype_Finite) O (fin",
+        "patched": "sum.sum_unit1 = fun F : forall _ : unit, nat => (fun \u2017evar_0\u2017 : @eq nat (@bigop.bigop.body nat (fintype.Finite.sort fintype.Datatypes_unit__canonical__fintype_Finite) O (fin"
+      }
+    },
+    "prosa.util.supremum.choose_superior": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "match_return_printing"
+      ]
+    },
+    "prosa.util.supremum.supremum": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.supremum.supremum_exists": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing"
+      ],
+      "body_difference": {
+        "original": "e (@ssrbool.in_mem (eqtype.Equality.sort T) x (@ssrbool.mem (eqtype.Equality.sort T) (seq.seq_predType T) s))) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort T) => forall _ : is_true (@ssrbool.in_mem (eqtype.Equality.sort T) x (@ss",
+        "patched": "e (@ssrbool.in_mem (eqtype.Equality.sort T) x (@ssrbool.mem (eqtype.Equality.sort T) (seq.seq_predType T) s))) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort T) => forall _ : is_true (@ssrbool.in_mem (eqtype.Equality.sort T) x (@ss"
+      }
+    },
+    "prosa.util.supremum.supremum_in": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "m.supremum_in = fun (T : eqtype.Equality.type) (R : ssrbool.rel (eqtype.Equality.sort T)) (x : eqtype.Equality.sort T) (_top_assumption_ : list (eqtype.Equality.sort T)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort T) => forall _",
+        "patched": "m.supremum_in = fun (T : eqtype.Equality.type) (R : ssrbool.rel (eqtype.Equality.sort T)) (x : eqtype.Equality.sort T) (\u2017top_assumption\u2017 : list (eqtype.Equality.sort T)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort T) => forall _"
+      }
+    },
+    "prosa.util.supremum.supremum_none": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": " fun (T : eqtype.Equality.type) (R : ssrbool.rel (eqtype.Equality.sort T)) (s : list (eqtype.Equality.sort T)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort T) => forall _ : @eq (option (eqtype.Equality.sort T)) (@supremum.supremu",
+        "patched": " fun (T : eqtype.Equality.type) (R : ssrbool.rel (eqtype.Equality.sort T)) (s : list (eqtype.Equality.sort T)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort T) => forall _ : @eq (option (eqtype.Equality.sort T)) (@supremum.supremu"
+      }
+    },
+    "prosa.util.supremum.supremum_spec": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "(SOME_x : @eq (option (eqtype.Equality.sort T)) (@supremum.supremum T R s) (@Some (eqtype.Equality.sort T) x)) => (fun (_evar_0_ : (fun l : list (eqtype.Equality.sort T) => forall (x0 : eqtype.Equality.sort T) (_ : @eq (option (eqtype.Equal",
+        "patched": "(SOME_x : @eq (option (eqtype.Equality.sort T)) (@supremum.supremum T R s) (@Some (eqtype.Equality.sort T) x)) => (fun (\u2017evar_0\u2017 : (fun l : list (eqtype.Equality.sort T) => forall (x0 : eqtype.Equality.sort T) (_ : @eq (option (eqtype.Equal"
+      }
+    },
+    "prosa.util.supremum.supremum_unfold": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.tactics.modusponens": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.tactics.neqP": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing"
+      ],
+      "body_difference": {
+        "original": "tactics.neqP = fun (T : eqtype.Equality.type) (x y : eqtype.Equality.sort T) => match @eqtype.eqP T x y in (reflect _ b) return reflect (not (@eq (eqtype.Equality.sort T) x y)) (negb b) with\n                                    ",
+        "patched": "tactics.neqP = fun (T : eqtype.Equality.type) (x y : eqtype.Equality.sort T) => match @eqtype.eqP T x y in reflect _ b return reflect (not (@eq (eqtype.Equality.sort T) x y)) (negb b) with\n                                      "
+      }
+    },
+    "prosa.util.unit_growth.bound_preserved_under_slowed": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.unit_growth.exists_first_intermediate_point": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": " (P t))))) (@ex_intro nat (fun x : nat => is_true (andb (P x) (andb (ssrnat.leq (S t1) x) (ssrnat.leq x t2)))) t2 ((fun _evar_0_ : match true return Prop with\n                                                                                 ",
+        "patched": " (P t))))) (@ex_intro nat (fun x : nat => is_true (andb (P x) (andb (ssrnat.leq (S t1) x) (ssrnat.leq x t2)))) t2 ((fun \u2017evar_0\u2017 : match true return Prop with\n                                                                                 "
+      }
+    },
+    "prosa.util.unit_growth.exists_intermediate_point": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "t (fun x_mid : nat => and (is_true (andb (ssrnat.leq x1 x_mid) (ssrnat.leq (S x_mid) x3))) (@eq nat (f x_mid) y))) (fun _top_assumption_ : nat => (fun (_evar_0_ : (fun n : nat => forall _ : is_true (andb (ssrnat.leq (f x1) y) (ssrnat.leq (S",
+        "patched": "t (fun x_mid : nat => and (is_true (andb (ssrnat.leq x1 x_mid) (ssrnat.leq (S x_mid) x3))) (@eq nat (f x_mid) y))) (fun \u2017top_assumption\u2017 : nat => (fun (\u2017evar_0\u2017 : (fun n : nat => forall _ : is_true (andb (ssrnat.leq (f x1) y) (ssrnat.leq (S"
+      }
+    },
+    "prosa.util.unit_growth.exists_intermediate_point_leq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": " is_true (ssrnat.leq x1 x2)) (y : nat) (H_between : is_true (andb (ssrnat.leq (f x1) y) (ssrnat.leq y (f x2)))) => (fun _view_subject_ : is_true (andb (ssrnat.leq (f x1) y) (ssrnat.leq y (f x2))) => (fun __top_assumption_ : and (is_true (ss",
+        "patched": " is_true (ssrnat.leq x1 x2)) (y : nat) (H_between : is_true (andb (ssrnat.leq (f x1) y) (ssrnat.leq y (f x2)))) => (fun \u2017view_subject\u2017 : is_true (andb (ssrnat.leq (f x1) y) (ssrnat.leq y (f x2))) => (fun \u2017\u2017top_assumption\u2017 : and (is_true (ss"
+      }
+    },
+    "prosa.util.unit_growth.slowed": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.unit_growth.slowed_is_unit_step": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "unit_growth.slowed_is_unit_step = (fun (f : forall _ : nat, nat) (x : nat) => (fun _evar_0_ : is_true (ssrnat.leq (unit_growth.slowed f (S x)) (ssrnat.addn (unit_growth.slowed f x) (S O))) => @eq_ind_r n",
+        "patched": "unit_growth.slowed_is_unit_step = (fun (f : forall _ : nat, nat) (x : nat) => (fun \u2017evar_0\u2017 : is_true (ssrnat.leq (unit_growth.slowed f (S x)) (ssrnat.addn (unit_growth.slowed f x) (S O))) => @eq_ind_r n"
+      }
+    },
+    "prosa.util.unit_growth.slowed_never_exceeds": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.unit_growth.slowed_respects_monotone": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": " => @eq nat y (ssrnat.addn x k)) := @ex_intro nat (fun k : nat => @eq nat y (ssrnat.addn x k)) (ssrnat.subn y x) ((fun (_evar_0_ : @eq nat y y) (_evar_0_0 : is_true (ssrnat.leq x y)) => @eq_ind_r nat y (fun _pattern_value_ : nat => @eq nat ",
+        "patched": " => @eq nat y (ssrnat.addn x k)) := @ex_intro nat (fun k : nat => @eq nat y (ssrnat.addn x k)) (ssrnat.subn y x) ((fun (\u2017evar_0\u2017 : @eq nat y y) (\u2017evar_0\u20170 : is_true (ssrnat.leq x y)) => @eq_ind_r nat y (fun \u2017pattern_value\u2017 : nat => @eq nat "
+      }
+    },
+    "prosa.util.unit_growth.slowed_respects_pointwise_leq": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "nat.addn (unit_growth.slowed F n) (S O))) (ssrnat.leq (S (ssrnat.addn (unit_growth.slowed F n) (S O))) (F (S n)))) (fun __top_assumption_ : ssrnat.leq_xor_gtn (F (S n)) (ssrnat.addn (unit_growth.slowed F n) (S O)) (ssrnat.minn (ssrnat.addn ",
+        "patched": "nat.addn (unit_growth.slowed F n) (S O))) (ssrnat.leq (S (ssrnat.addn (unit_growth.slowed F n) (S O))) (F (S n)))) (fun \u2017\u2017top_assumption\u2017 : ssrnat.leq_xor_gtn (F (S n)) (ssrnat.addn (unit_growth.slowed F n) (S O)) (ssrnat.minn (ssrnat.addn "
+      }
+    },
+    "prosa.util.unit_growth.slowed_subtraction_value_preservation": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "match_return_printing",
+        "scope_delimiter_printing",
+        "ssreflect_rw_relocation"
+      ],
+      "body_difference": {
+        "original": "unit_growth.slowed f (S n)) (ssrnat.addn (unit_growth.slowed f n) (S O)))) (is_true (ssrnat.leq (g n) (g (S n)))) ((fun _evar_0_ : is_true (ssrnat.leq (unit_growth.slowed f (ssrnat.addn n (S O))) (ssrnat.addn (unit_growth.slowed f n) (S O))",
+        "patched": "unit_growth.slowed f (S n)) (ssrnat.addn (unit_growth.slowed f n) (S O)))) (is_true (ssrnat.leq (g n) (g (S n)))) ((fun \u2017evar_0\u2017 : is_true (ssrnat.leq (unit_growth.slowed f (ssrnat.addn n (S O))) (ssrnat.addn (unit_growth.slowed f n) (S O))"
+      }
+    },
+    "prosa.util.unit_growth.unit_growth_function": {
+      "status": "IDENTICAL_MODULO_PRESENTATION",
+      "kind": "Definition",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ]
+    },
+    "prosa.util.unit_growth.unit_growth_function_k_steps_bounded": {
+      "status": "SAME_STATEMENT",
+      "kind": "Parameter",
+      "normalizations": [
+        "scope_delimiter_printing"
+      ],
+      "body_difference": {
+        "original": "on f) (x k : nat) => nat_ind (fun k0 : nat => is_true (ssrnat.leq (f (ssrnat.addn x k0)) (ssrnat.addn k0 (f x)))) ((fun _evar_0_ : is_true (ssrnat.leq (f x) (ssrnat.addn O (f x))) => @eq_ind_r nat x (fun _pattern_value_ : nat => is_true (ss",
+        "patched": "on f) (x k : nat) => nat_ind (fun k0 : nat => is_true (ssrnat.leq (f (ssrnat.addn x k0)) (ssrnat.addn k0 (f x)))) ((fun \u2017evar_0\u2017 : is_true (ssrnat.leq (f x) (ssrnat.addn O (f x))) => @eq_ind_r nat x (fun \u2017pattern_value\u2017 : nat => is_true (ss"
+      }
+    }
+  }
+}

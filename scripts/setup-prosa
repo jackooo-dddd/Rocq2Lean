@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# M6: Prosa v0.6 under the fixed toolchain (Rocq 9.3.0, MathComp 2.6.0; switch from the lock).
+#
+#   1. fetch the ORIGINAL release archive rt-proofs-v0.6.tar.gz (the opam rocq-prosa.0.6 source)
+#      and verify its sha512 (the checksum of the opam package);
+#   2. extract it unchanged to .work/prosa-0.6-src (pristine);
+#   3. copy it to .work/prosa-0.6-rocq93 and apply compat/prosa-0.6/patches/*.patch in order
+#      (documented in compat/prosa-0.6/README.md); nothing else is changed;
+#   4. build with the lock's switch: the FinishTime closure by default, `--full` for all of Prosa;
+#   5. write .work/prosa-0.6-rocq93/R2L_PATCHED.json (sha256 of every patched file).
+#
+# Usage: scripts/setup-prosa [--full] [-jN]
+set -euo pipefail
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+export PATH=$HOME/.local/bin:$PATH
+SW=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rocq"]["opam_switch"])' "$ROOT/toolchains.lock.json")
+URL=https://gitlab.mpi-sws.org/RT-PROOFS/rt-proofs/-/archive/v0.6/rt-proofs-v0.6.tar.gz
+SHA512=128dd213e687653a6ad5a55f33e76d39f4301f4fb22ff2c58379bb9d727ada00da776beee213e89b6be117f4db7c7bd73e467e28f57dfbee017891a4121e6228
+W=$ROOT/.work
+SRC=$W/prosa-0.6-src
+DST=$W/prosa-0.6-rocq93
+FULL=0; J=-j8
+for a in "$@"; do case $a in --full) FULL=1;; -j*) J=$a;; *) echo "unknown argument $a" >&2; exit 2;; esac; done
+mkdir -p "$W"
+CACHE=$HOME/.opam/download-cache/sha512/${SHA512:0:2}/$SHA512     # opam's checksum-addressed cache
+if [ ! -f "$W/rt-proofs-v0.6.tar.gz" ] && [ -f "$CACHE" ]; then cp "$CACHE" "$W/rt-proofs-v0.6.tar.gz"; fi
+if [ ! -f "$W/rt-proofs-v0.6.tar.gz" ]; then curl -fsSL -o "$W/rt-proofs-v0.6.tar.gz.part" "$URL"; mv "$W/rt-proofs-v0.6.tar.gz.part" "$W/rt-proofs-v0.6.tar.gz"; fi
+echo "$SHA512  $W/rt-proofs-v0.6.tar.gz" | sha512sum -c -
+rm -rf "$SRC" "$DST"
+mkdir -p "$SRC"
+tar -xzf "$W/rt-proofs-v0.6.tar.gz" -C "$SRC" --strip-components=1
+cp -a "$SRC" "$DST"
+for p in "$ROOT"/compat/prosa-0.6/patches/*.patch; do
+  echo "applying $(basename "$p")"
+  patch -d "$DST" -p1 --forward --no-backup-if-mismatch < "$p"
+done
+python3 - "$SRC" "$DST" <<'EOF'
+import hashlib, json, sys
+from pathlib import Path
+src, dst = Path(sys.argv[1]), Path(sys.argv[2])
+h = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+changed = {str(p.relative_to(dst)): {"original": h(src / p.relative_to(dst)), "patched": h(p)}
+           for p in sorted(dst.rglob("*.v")) if h(p) != h(src / p.relative_to(dst))}
+(dst / "R2L_PATCHED.json").write_text(json.dumps({"changed_files": changed}, indent=2) + "\n")
+print(f"{len(changed)} files differ from the original release")
+EOF
+cd "$DST"
+opam exec --switch="$SW" -- make prosaCoqProject >/dev/null
+opam exec --switch="$SW" -- make Makefile.coq >/dev/null
+if [ $FULL = 1 ]; then
+  opam exec --switch="$SW" -- make $J -f Makefile.coq
+else
+  opam exec --switch="$SW" -- make $J -f Makefile.coq analysis/definitions/finish_time.vo
+fi
+echo SETUP_PROSA_DONE

@@ -1,0 +1,92 @@
+diff -ruN -x '*.vo*' prev/util/bigop.v cur/util/bigop.v
+--- a/util/bigop.v	2026-10-10 16:02:57.003910328 +0800
++++ b/util/bigop.v	2026-10-10 16:02:57.046232944 +0800
+@@ -1,4 +1,6 @@
+ From mathcomp Require Export ssreflect ssrnat ssrbool eqtype fintype bigop seq div ssrfun.
++(* Rocq 9.3 / MathComp 2.6 compatibility: MathComp 2.4 set this globally in mathcomp.ssreflect.ssreflect. *)
++Global Set SsrOldRewriteGoalsOrder.
+ 
+ (** Consider a sequence of unique elements [xs], an element [x0], and
+     a predicate [P := λ x => x == x0]. Then, any "bigop" over the
+diff -ruN -x '*.vo*' prev/util/int.v cur/util/int.v
+--- a/util/int.v	2026-10-10 16:02:57.003865625 +0800
++++ b/util/int.v	2026-10-10 16:02:57.058114650 +0800
+@@ -1,3 +1,5 @@
+ From mathcomp Require Export ssralg ssrnum ssrint order.
++(* Rocq 9.3 / MathComp 2.6 compatibility: MathComp 2.4 set this globally in mathcomp.ssreflect.ssreflect. *)
++Global Set SsrOldRewriteGoalsOrder.
+ 
+ Export Order.Theory GRing.Theory Num.Theory.
+diff -ruN -x '*.vo*' prev/util/notation.v cur/util/notation.v
+--- a/util/notation.v	2026-10-10 16:02:57.003856071 +0800
++++ b/util/notation.v	2026-10-10 16:02:57.070280288 +0800
+@@ -1,4 +1,6 @@
+ From mathcomp Require Import ssreflect ssrbool eqtype ssrnat seq fintype bigop.
++(* Rocq 9.3 / MathComp 2.6 compatibility: MathComp 2.4 set this globally in mathcomp.ssreflect.ssreflect. *)
++Global Set SsrOldRewriteGoalsOrder.
+ 
+ (** We define a function converting a constant [c] to a function that
+     ignores its argument and returns [c].  *)
+diff -ruN -x '*.vo*' prev/util/rel.v cur/util/rel.v
+--- a/util/rel.v	2026-10-10 16:02:57.003819536 +0800
++++ b/util/rel.v	2026-10-10 16:02:57.081684787 +0800
+@@ -1,4 +1,6 @@
+ From mathcomp Require Import ssreflect ssrbool eqtype ssrnat seq.
++(* Rocq 9.3 / MathComp 2.6 compatibility: MathComp 2.4 set this globally in mathcomp.ssreflect.ssreflect. *)
++Global Set SsrOldRewriteGoalsOrder.
+ 
+ (** In this section, we define the notion of monotonicity for functions. *)
+ Section MonotoneFunction.
+diff -ruN -x '*.vo*' prev/util/seqset.v cur/util/seqset.v
+--- a/util/seqset.v	2026-10-10 16:02:57.003982954 +0800
++++ b/util/seqset.v	2026-10-10 16:02:57.092739831 +0800
+@@ -1,5 +1,7 @@
+ From HB Require Import structures.
+ From mathcomp Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
++(* Rocq 9.3 / MathComp 2.6 compatibility: MathComp 2.4 set this globally in mathcomp.ssreflect.ssreflect. *)
++Global Set SsrOldRewriteGoalsOrder.
+ 
+ (** In this section, we define a notion of a set (based on a sequence
+     without duplicates). *)
+diff -ruN -x '*.vo*' prev/util/setoid.v cur/util/setoid.v
+--- a/util/setoid.v	2026-10-10 16:02:57.003845944 +0800
++++ b/util/setoid.v	2026-10-10 16:02:57.104157968 +0800
+@@ -3,6 +3,8 @@
+ 
+ From Stdlib Require Import Basics Setoid Morphisms.
+ From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
++(* Rocq 9.3 / MathComp 2.6 compatibility: MathComp 2.4 set this globally in mathcomp.ssreflect.ssreflect. *)
++Global Set SsrOldRewriteGoalsOrder.
+ 
+ (** This construction allows us to "rewrite" inequalities with ≤. *)
+ 
+diff -ruN -x '*.vo*' prev/util/subadditivity.v cur/util/subadditivity.v
+--- a/util/subadditivity.v	2026-10-10 16:02:57.003928868 +0800
++++ b/util/subadditivity.v	2026-10-10 16:02:57.115428455 +0800
+@@ -1,4 +1,6 @@
+ From mathcomp Require Export ssreflect ssrbool eqtype ssrnat div seq path fintype bigop.
++(* Rocq 9.3 / MathComp 2.6 compatibility: MathComp 2.4 set this globally in mathcomp.ssreflect.ssreflect. *)
++Global Set SsrOldRewriteGoalsOrder.
+ 
+ (** We define and prove facts about subadditivity and subadditive functions. The
+     definition of subadditivity presented here slightly differs from the
+diff -ruN -x '*.vo*' prev/util/supremum.v cur/util/supremum.v
+--- a/util/supremum.v	2026-10-10 16:02:57.003938961 +0800
++++ b/util/supremum.v	2026-10-10 16:02:57.126645871 +0800
+@@ -1,4 +1,6 @@
+ From mathcomp Require Import ssreflect ssrbool eqtype seq.
++(* Rocq 9.3 / MathComp 2.6 compatibility: MathComp 2.4 set this globally in mathcomp.ssreflect.ssreflect. *)
++Global Set SsrOldRewriteGoalsOrder.
+ 
+ (** * Computation of a Sequence's Supremum *)
+ 
+diff -ruN -x '*.vo*' prev/util/tactics.v cur/util/tactics.v
+--- a/util/tactics.v	2026-10-10 16:02:57.003960318 +0800
++++ b/util/tactics.v	2026-10-10 16:02:57.034393980 +0800
+@@ -1,4 +1,6 @@
+ From mathcomp Require Import ssreflect ssrbool ssrnat eqtype bigop.
++(* Rocq 9.3 / MathComp 2.6 compatibility: MathComp 2.4 set this globally in mathcomp.ssreflect.ssreflect. *)
++Global Set SsrOldRewriteGoalsOrder.
+ 
+ (** Lemmas & tactics adopted (with permission) from [V. Vafeiadis' Vbase.v]. *)
+ 

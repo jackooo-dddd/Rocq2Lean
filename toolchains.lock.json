@@ -23,7 +23,11 @@
       "rocq-hierarchy-builder": "1.10.3",
       "rocq-mathcomp-boot": "2.6.0",
       "rocq-mathcomp-order": "2.6.0",
-      "rocq-mathcomp-ssreflect": "2.6.0"
+      "rocq-mathcomp-ssreflect": "2.6.0",
+      "rocq-mathcomp-algebra": "2.6.0",
+      "rocq-mathcomp-finite-group": "2.6.0",
+      "rocq-mathcomp-zify": "1.7.0+2.4+9.0",
+      "rocq-micromega-plugin": "1.1.1"
     },
     "opam_git_pins": {
       "rocq-equations": "d56dfc2c38feb5054d75ef43540ee89a6beb1a7e",
@@ -31,7 +35,7 @@
       "rocq-metarocq-common": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81",
       "rocq-metarocq-template": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81"
     },
-    "note": "switch rocq930-mc (docs/ENVIRONMENT_M5.md): same pinned Rocq/MetaRocq/Equations/stdlib as rocq930, dune 3.23.1, MathComp 2.6.0"
+    "note": "switch rocq930-mc (docs/ENVIRONMENT_M5.md): same pinned Rocq/MetaRocq/Equations/stdlib as rocq930, dune 3.23.1, MathComp 2.6.0 (+ algebra, finite-group, zify, micromega plugin for Prosa, M6)"
   },
   "frontend": {
     "name": "metarocq-template",

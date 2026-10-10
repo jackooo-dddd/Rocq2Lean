@@ -1,0 +1,11 @@
+--- a/results/transfer_schedulability/criterion.v	2026-10-10 16:11:21.860739874 +0800
++++ b/results/transfer_schedulability/criterion.v	2026-10-10 16:11:21.868970280 +0800
+@@ -514,7 +514,7 @@
+ 
+     Definition slackless_interval t1 t2 :=
+       (t1 < t2)
+-      && \sum_(j <- critical_jobs t1 t2) remaining_cost_bound j t1 == t2 - t1.
++      && (\sum_(j <- critical_jobs t1 t2) remaining_cost_bound j t1 == t2 - t1).
+ 
+     (** In fact, in our proof we require a stronger notion of slackless
+         intervals: slackless intervals without "holes." To this end, we call an

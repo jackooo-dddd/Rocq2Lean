@@ -29,5 +29,8 @@ done
 opam install --switch=$SW -y --ignore-constraints-on=$IGN,rocq-metarocq-utils,rocq-metarocq-common rocq-metarocq-template
 opam install --switch=$SW -y --ignore-constraints-on=$IGN,rocq-metarocq-utils,rocq-metarocq-common,rocq-metarocq-template \
   rocq-mathcomp-ssreflect.2.6.0
+# M6 (Prosa v0.6 needs MathComp algebra and mathcomp-zify): install-only additions.
+opam install --switch=$SW -y --ignore-constraints-on=$IGN,rocq-metarocq-utils,rocq-metarocq-common,rocq-metarocq-template \
+  rocq-mathcomp-algebra.2.6.0 rocq-mathcomp-finite-group.2.6.0 rocq-micromega-plugin.1.1.1 rocq-mathcomp-zify.1.7.0+2.4+9.0
 opam list --switch=$SW --installed --columns=name,version --short
 echo SETUP_SWITCH_MC_DONE
