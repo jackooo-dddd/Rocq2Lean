@@ -65,6 +65,11 @@ def level_param(name):
     return "u_" + name.replace(".", "_")
 
 
+def poly_param(i):
+    """Independent copy of rule R6's naming: universe variable i of a polymorphic constant."""
+    return f"v_{i}"
+
+
 def level_nf(l):
     """Normal form of a Lean level without imax: (constant, {param: offset}), meaning
     max(constant, param_i + offset_i). The constant is dropped when some offset dominates it
@@ -103,6 +108,70 @@ def canon(c, ps):
     return (c, tuple(sorted(ps.items())))
 
 
+def fact_reduce(us):
+    """R2⁺, independently: drop a summand Set+k of an algebraic universe when another summand l+j is
+    at least as large under the native facts (k <= j for a global or variable level, or Set+(k-j) <= l
+    entailed). The two universes are equal in Rocq."""
+    out = []
+    for e in us:
+        if e["l"]["k"] == "set" and any(
+                (o["l"]["k"] == "global" and (e["n"] <= o["n"] or (FACTS is not None and FACTS.entails("Set", o["l"]["n"], e["n"] - o["n"]))))
+                or (o["l"]["k"] == "var" and e["n"] <= o["n"]) for o in us):
+            continue
+        out.append(e)
+    return out
+
+
+REDUCE = [False]        # the row being audited was accepted with fact-reduced universes (R2⁺)
+ADMIT = [set()]         # motive levels of the row being audited (R8: Type@{l + n} -> Sort(u_l + n))
+
+
+def motive_levels(ty):
+    """R8, independently: levels occurring in a source type only as the codomain sort Type@{l} (one
+    summand, offset 0) of a binder type with at least one argument; any other occurrence (another
+    sort, a universe instance) disqualifies the level."""
+    mot, oth = set(), set()
+
+    def codomain(t, n):
+        while t["k"] == "prod":
+            t, n = t["b"], n + 1
+        if n >= 1 and t["k"] == "sort" and t["s"]["k"] == "type" and len(t["s"]["u"]) == 1 \
+                and t["s"]["u"][0]["l"]["k"] == "global" and t["s"]["u"][0]["n"] == 0:
+            return t["s"]["u"][0]["l"]["n"]
+        return None
+
+    def go(t):
+        if isinstance(t, list):
+            for x in t:
+                go(x)
+            return
+        if not isinstance(t, dict):
+            return
+        k = t.get("k")
+        if k == "sort":
+            if t["s"]["k"] == "type":
+                oth.update(e["l"]["n"] for e in t["s"]["u"] if e["l"]["k"] == "global")
+            return
+        if k in ("const", "ind", "construct"):
+            oth.update(l["n"] for l in t.get("u") or [] if l["k"] == "global")
+        if k == "prod":
+            l = codomain(t["ty"], 0)
+            if l is not None:
+                mot.add(l)
+                d = t["ty"]
+                while d["k"] == "prod":
+                    go(d["ty"])
+                    d = d["b"]
+                go(t["b"])
+                return
+        for key, v in t.items():
+            if key == "u" and k in ("const", "ind", "construct"):
+                continue
+            go(v)
+    go(ty)
+    return mot - oth
+
+
 def source_sort_nf(s, body=None):
     """Normal form of the target sort a source sort must become: global levels of the declaration's
     type are parameters u_<name> (R2); proof-local levels (R2B) are read through their solutions
@@ -111,17 +180,22 @@ def source_sort_nf(s, body=None):
         return canon(0, {})
     if s["k"] == "type":
         c, ps = None, {}
-        for e in s["u"]:
+        for e in (fact_reduce(s["u"]) if REDUCE[0] else s["u"]):
             if e["l"]["k"] == "set":
                 c = max(c or 0, e["n"] + 1)
             elif e["l"]["k"] == "global" and body is not None and e["l"]["n"] in body:
                 bc, bps = level_raw(body[e["l"]["n"]])
+                inc = 0 if e["l"]["n"] in ADMIT[0] else 1          # R8: a motive level's solution is the sort level
                 if bc is not None:
-                    c = max(c or 0, bc + e["n"] + 1)
+                    c = max(c or 0, bc + e["n"] + inc)
                 for p, o in bps.items():
-                    ps[p] = max(ps.get(p, 0), o + e["n"] + 1)
+                    ps[p] = max(ps.get(p, 0), o + e["n"] + inc)
             elif e["l"]["k"] == "global":
                 p = level_param(e["l"]["n"])
+                off = e["n"] if e["l"]["n"] in ADMIT[0] else e["n"] + 1      # R8: motive level is a sort level
+                ps[p] = max(ps.get(p, 0), off)
+            elif e["l"]["k"] == "var":           # R6: universe variable of a polymorphic constant
+                p = poly_param(e["l"]["i"])
                 ps[p] = max(ps.get(p, 0), e["n"] + 1)
             else:
                 raise Mismatch(f"source universe outside the audited fragment: {e}")
@@ -129,8 +203,27 @@ def source_sort_nf(s, body=None):
     raise Mismatch(f"source sort outside the audited fragment: {s}")
 
 
+def source_inst_nf(l, body=None):
+    """R6: normal form of the Lean level a source instance *level* must become (no successor:
+    Type@{l} is Sort(l+1), so the level l itself maps to its parameter): Set -> 0, var i -> v_i,
+    a global level -> its parameter u_<name>, or its reported solution when proof-local."""
+    if l["k"] == "set":
+        return canon(0, {})
+    if l["k"] == "var":
+        return canon(None, {poly_param(l["i"]): 0})
+    if l["k"] == "global":
+        if body is not None and l["n"] in body:
+            return level_nf(body[l["n"]])
+        return canon(None, {level_param(l["n"]): 0})
+    raise Mismatch(f"instance level outside the audited fragment: {l}")
+
+
 def source_globals(t, acc):
     if isinstance(t, dict):
+        if t.get("k") in ("const", "ind", "construct"):     # R6: global levels of universe instances
+            for l in t.get("u") or []:
+                if l["k"] == "global":
+                    acc.add(l["n"])
         if t.get("k") == "sort" and t["s"]["k"] == "type":
             for e in t["s"]["u"]:
                 if e["l"]["k"] == "global":
@@ -177,7 +270,11 @@ def ind_params(d, r):
     include every template level. Returns (params, solutions, template binding or None)."""
     tb = template_binding(d)
     if tb is None:
-        return ind_globals(d), {}, None
+        # R3G: implicit levels (free reference levels taken as parameters) join the block's parameters
+        implicit = set(r.get("implicit_levels") or [])
+        if implicit & set(ind_globals(d)):
+            raise Mismatch(f"implicit levels {sorted(implicit & set(ind_globals(d)))} occur explicitly in the source")
+        return sorted(set(ind_globals(d)) | implicit), {}, None
     sol = {x["level"]: x["sigma"] for x in r.get("solved_levels", [])}
     params = sorted(set(ind_globals(d)) - set(sol))
     if not set(sol) <= set(ind_globals(d)) - set(tb) or not set(tb) <= set(params):
@@ -282,9 +379,12 @@ class Auditor:
         if k == "const":
             if t["c"] not in self.ok or self.ok[t["c"]]["status"] != "TRANSLATED_AND_CHECKED":
                 raise Mismatch(f"reference to non-accepted constant {t['c']}")
-            if t["u"]:
-                raise Mismatch("universe instance on constant")
             n = len(self.ok[t["c"]].get("level_params", []))
+            kp = poly_count(self.decls[t["c"]], self.ok[t["c"]])
+            if len(t["u"]) != kp:
+                raise Mismatch(f"universe instance of {len(t['u'])} levels on {t['c']}, which has {kp} universe variables")
+            if kp:
+                return target_name(t["c"]), ("poly", kp, n, t["u"])
             return target_name(t["c"]), ("mono" if n == 0 else ("params", n))
         if k == "ind":
             name, _, univ = self.ind_target(t["ind"])
@@ -397,7 +497,15 @@ class Auditor:
             raise Mismatch(f"{path}: unexpected universe arguments on {name}")
         if univ == "template" and len(e["u"]) != 1:
             raise Mismatch(f"{path}: template constant {name} must have one universe argument")
-        if isinstance(univ, tuple) and len(e["u"]) != univ[1]:
+        if isinstance(univ, tuple) and univ[0] == "poly":
+            # R6: the first arguments are the source instance, level by level; the others obey R3
+            _, kp, n, src = univ
+            if len(e["u"]) != n:
+                raise Mismatch(f"{path}: polymorphic constant {name} must have {n} universe arguments")
+            for i in range(kp):
+                if level_nf(e["u"][i]) != source_inst_nf(src[i], self.body):
+                    raise Mismatch(f"{path}: universe argument {i} of {name} is not the image of the source instance level {src[i]}")
+        elif isinstance(univ, tuple) and len(e["u"]) != univ[1]:
             raise Mismatch(f"{path}: generalized constant {name} must have {univ[1]} universe arguments")
 
     def recursive_fields(self, ref, ctor):
@@ -808,36 +916,47 @@ def const_occurrences(e, acc):
     return acc
 
 
-def check_universe_args(facts, own, gen, exprs, body=None):
+def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None, own_admit=frozenset(), lift=False):
     """Rule R3 (docs/UNIVERSE_TRANSLATION.md) for every reference in `exprs`.
-    own: source global levels of the referring declaration; gen: target name -> source levels."""
+    own: source global levels of the referring declaration; gen: target name -> source levels;
+    poly: target name -> number of leading R6 instance arguments (checked structurally, not by R3)."""
     n = 0
     own_params = {level_param(g): g for g in own}
     for e in exprs:
         for name, us in const_occurrences(e, []):
             if name not in gen:
                 continue
+            us = us[(poly or {}).get(name, 0):]
             ls = gen[name]
+            c_adm = (admit or {}).get(name, set())
             if len(us) != len(ls):
                 raise Mismatch(f"{name}: {len(us)} universe arguments for {len(ls)} parameters")
             for l, sigma in zip(ls, us):
                 if l in TEMPLATE_LEVELS:
                     continue                      # R5: instantiated from the arguments, checked by InstanceLevels
                 c, ps = level_nf(sigma)
+                ca, da = l in c_adm, l in own_admit      # R8: motive-level parameters (one above the image)
+                if da and not ca:
+                    raise Mismatch(f"{name}: source level {l} is a motive level of the referring declaration only")
+                bump = (lambda x: {"k": "succ", "l": x}) if ca and not da else (lambda x: x)
                 if body and l in body:
-                    if (c, ps) != level_nf(body[l]):
+                    if (c, ps) != level_nf(bump(body[l])):
                         raise Mismatch(f"{name}: source level {l} is proof-local, argument must be its solution {body[l]}")
                 elif l in own:
-                    if (c, ps) != canon(None, {level_param(l): 0}):
+                    if (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)})):
                         raise Mismatch(f"{name}: source level {l} is shared, argument must be {level_param(l)}")
                 else:
-                    if c is not None and not facts.entails("Set", l, c):
+                    if c is not None and not (ca and c == 0) and not facts.entails("Set", l, c - 1 if ca else c):
                         raise Mismatch(f"{name}: Set + {c} <= {l} not entailed by the source universe graph")
                     for p, k in ps:
                         if p not in own_params:
                             raise Mismatch(f"{name}: argument mentions {p}, not a parameter of the referring declaration")
-                        if not facts.entails(own_params[p], l, k):
-                            raise Mismatch(f"{name}: {own_params[p]} + {k} <= {l} not entailed by the source universe graph")
+                        m = own_params[p]
+                        e = k + (1 if m in own_admit else 0) - (1 if ca else 0)
+                        # no raising; in rows of the cumulativity tier only (R3-up), also the own level
+                        # itself (effective offset 0) with l <= m
+                        if not (facts.entails(m, l, max(e, 0)) or (lift and e == 0 and facts.entails(l, m, 0))):
+                            raise Mismatch(f"{name}: {m} + {k} <= {l} not entailed by the source universe graph")
                 n += 1
     return n
 
@@ -1048,15 +1167,54 @@ def check_residuals(r):
         raise Mismatch("generic declaration with residual levels at their defaults differs from the reported declaration")
 
 
+def poly_count(d, r):
+    """R6: number of universe variables of a polymorphic source constant (0 if monomorphic); the
+    report's count must agree with the source declaration."""
+    u = d.get("universes") or {}
+    k = len(u.get("names", [])) if u.get("k") == "polymorphic" else 0
+    if (r.get("universe_poly_params") or 0) != k:
+        raise Mismatch(f"reported {r.get('universe_poly_params')} universe variables, the source declares {k}")
+    return k
+
+
 def own_partition(d, r):
     """Rule R2S, independently: the own global levels of a constant (type and body) are exactly the
     union of its parameters (reported `level_params`, which must come from the type's levels) and
-    its solved levels (reported `solved_levels`); returns (parameter levels, solutions)."""
+    its solved levels (reported `solved_levels`); returns (parameter levels, solutions). R6: the
+    universe variables of a polymorphic constant come first, as v_0 .. v_{k-1}."""
+    params, sol, interp = own_partition_full(d, r)
+    return params, {**sol, **interp}
+
+
+def own_partition_full(d, r):
+    """own_partition, also returning the R2F-c interpretation separately: (params, proof-local
+    solutions, interpretation of the own levels). R3G: the reported implicit levels (levels of
+    referenced declarations, absent from the source sorts) count as type levels; R2F-c: the reported
+    interpretation must be exactly the auditor's own R2F recomputation over the native facts among
+    the explicit type levels and the implicit levels."""
     tl = set(source_globals(d["type"], set()))
     own = tl | source_globals(d["body"], set())
+    implicit = set(r.get("implicit_levels") or [])
+    if implicit & own:
+        raise Mismatch(f"implicit levels {sorted(implicit & own)} occur explicitly in the source")
+    tl, own = tl | implicit, own | implicit
     sol = {x["level"]: x["sigma"] for x in r.get("solved_levels", [])}
+    interp = {x["level"]: x["sigma"] for x in r.get("level_interp") or []}
+    if interp:
+        if FACTS is None:
+            raise Mismatch("level interpretation without native facts")
+        if not set(interp) <= tl or set(interp) & set(sol):
+            raise Mismatch(f"interpreted levels {sorted(interp)} must be type or implicit levels {sorted(tl)}, not solved ones")
+        want = own_level_interp(FACTS, sorted(interp))
+        for l, x in interp.items():
+            if level_nf(x) != level_nf(want[l]):
+                raise Mismatch(f"interpretation of {l} is {x}, the R2F interpretation is {want[l]}")
     back = {level_param(g): g for g in own}
+    kp = poly_count(d, r)
     lps = r.get("level_params", [])
+    if lps[:kp] != [poly_param(i) for i in range(kp)]:
+        raise Mismatch(f"universe parameters {lps} do not start with the {kp} universe variables v_0 ..")
+    lps = lps[kp:]
     if any(p not in back for p in lps):
         raise Mismatch(f"universe parameters {lps} are not parameters for source levels")
     params = [back[p] for p in lps]
@@ -1064,17 +1222,17 @@ def own_partition(d, r):
         if isinstance(j, dict):
             return (j.get("k") == "param" and j.get("n") == name) or any(mentions(v, name) for v in j.values())
         return isinstance(j, list) and any(mentions(v, name) for v in j)
-    in_type = [sol[l] for l in tl if l in sol]
+    in_type = [sol[l] for l in tl if l in sol] + list(interp.values())
     if set(params) & set(sol) or set(params) | set(sol) != own or any(
             p not in tl and not mentions(in_type, level_param(p)) for p in params):
         raise Mismatch(f"parameters {params} and solved levels {sorted(sol)} do not partition the own levels "
                        f"{sorted(own)} (a parameter must be a type level or occur in a type level's solution)")
     if lps != [level_param(g) for g in sorted(params)]:
         raise Mismatch(f"universe parameters {lps} are not in source-level order")
-    return params, sol
+    return params, sol, interp
 
 
-def check_body_levels(facts, d, sol, params=None):
+def check_body_levels(facts, d, sol, params=None, admit=frozenset(), prop_offset=False):
     """Rules R2S/R2B, independently: each solution is a level over the declaration's parameters, and
     every native fact between a solved level and Set / a parameter / another solved level holds with
     solved levels read as their solutions (summand-wise entailment in the native graph)."""
@@ -1085,11 +1243,12 @@ def check_body_levels(facts, d, sol, params=None):
         if x not in sol:
             return [(x, 0)]
         c, ps = level_raw(sol[x])
-        out = [("Set", c or 0)]
+        dec = 1 if x in admit else 0                 # R8: a solved motive level's solution is one above its image
+        out = [("Set", max((c or 0) - dec, 0))]
         for p, k in ps.items():
             if p not in back:
                 raise Mismatch(f"solution of {x} mentions {p}, not a parameter of the declaration")
-            out.append((back[p], k))
+            out.append((back[p], max(k + (1 if back[p] in admit else 0) - dec, 0)))     # R8: u_m is one above m
         return out
 
     def leq(lhs, rhs, k):
@@ -1100,7 +1259,9 @@ def check_body_levels(facts, d, sol, params=None):
     mine = set(tl) | set(sol) | {"Set"}
     for (a, b), r in facts.rel.items():
         if (a in sol or b in sol) and a in mine and b in mine:
-            if not leq(summ(a), summ(b), 1 if r == "lt" else 0):
+            # R2B-P (cumulativity-tier rows only): a fact Set < m may stem from Prop's typing
+            # (Type@{Set+1} in Rocq, Sort 1 in Lean)
+            if not leq(summ(a), summ(b), 1 if (r == "lt" and not (prop_offset and a == "Set")) else 0):
                 raise Mismatch(f"proof-local level solution violates the native fact {a} {r} {b}")
 
 
@@ -1233,11 +1394,16 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
     FACTS = facts
     if facts is None:
         problem("universe", "source IR has no native universe facts")
-    gen = {}
+    gen, poly, gen_admit = {}, {}, {}
     for s_, r_ in rows.items():
         if r_.get("status") == "TRANSLATED_AND_CHECKED" and r_.get("level_params"):
             d_ = decls[s_]
             if d_["kind"] == "constant":
+                try:
+                    poly[r_["target"]] = poly_count(d_, r_)
+                except Mismatch:
+                    poly[r_["target"]] = 0
+                gen_admit[r_["target"]] = set(r_.get("admitting_levels") or [])
                 try:
                     gen[r_["target"]] = sorted(own_partition(d_, r_)[0])
                 except Mismatch:
@@ -1261,15 +1427,45 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
             own, bl = set(), {}
             exprs = [r_.get("target_type"), r_.get("target_value")] + [c["type"] for c in r_.get("target_ctors", [])]
             try:
+                own_admit = frozenset()
                 if d_["kind"] == "constant":
-                    params, bl = own_partition(d_, r_)
+                    params, sol_only, interp_ = own_partition_full(d_, r_)
                     own = set(params)
-                    check_body_levels(facts, d_, bl, params)
+                    own_admit = frozenset(r_.get("admitting_levels") or [])
+                    # R8: reported motive levels must be motive levels of the source type, and type levels
+                    if not own_admit <= motive_levels(d_["type"]) & set(source_globals(d_["type"], set())):
+                        raise Mismatch(f"admitting levels {sorted(own_admit)} are not motive levels of the source type")
+                    check_body_levels(facts, d_, sol_only, params, own_admit, bool(r_.get("universe_cumulativity")))
+                    bl = {**sol_only, **interp_}            # coherence: an own level's argument is its image
+                    # R3G: an implicit level must be the source level of a parameter of a referenced
+                    # declaration, and occur as that parameter's argument in the accepted terms
+                    for l in r_.get("implicit_levels") or []:
+                        want = level_nf(interp_[l] if l in interp_ else {"k": "param", "n": level_param(l)})
+                        if not any(len(us) - (poly or {}).get(nm, 0) == len(gen[nm]) and any(
+                                g == l and level_nf(u) == want
+                                for g, u in zip(gen[nm], us[(poly or {}).get(nm, 0):]))
+                                for e_ in exprs if e_ is not None for nm, us in const_occurrences(e_, []) if nm in gen):
+                            raise Mismatch(f"implicit level {l} is not the argument of a reference for that level")
                 else:
-                    # an inductive block's own levels: its parameters, and (template blocks) its solved levels
-                    params_i, bl, _ = ind_params(d_, r_)
+                    # an inductive block's own levels: its parameters, and (template blocks) its solved levels;
+                    # for a non-template block, an argument for an own level must be its R2F interpretation
+                    params_i, bl, tb_i = ind_params(d_, r_)
                     own = set(params_i)
-                univ_checked += check_universe_args(facts, own, gen, [x for x in exprs if x is not None], bl)
+                    if tb_i is None:
+                        bl = own_level_interp(facts, params_i)     # explicit and implicit levels (R2F)
+                    self_n = {r_.get("target")} | {c["name"] for c in r_.get("target_ctors", [])}
+                    for l in r_.get("implicit_levels") or []:
+                        want = level_nf(bl[l]) if l in bl else level_nf({"k": "param", "n": level_param(l)})
+                        if not any(nm not in self_n and len(us) - (poly or {}).get(nm, 0) == len(gen[nm]) and any(
+                                g == l and level_nf(u) == want for g, u in zip(gen[nm], us[(poly or {}).get(nm, 0):]))
+                                for e_ in exprs if e_ is not None for nm, us in const_occurrences(e_, []) if nm in gen):
+                            raise Mismatch(f"implicit level {l} is not the argument of a reference for that level")
+                # a block's references to itself (its constructors' result types) are at its own
+                # parameters by construction, not R3 obligations
+                self_names = {r_.get("target")} | {c["name"] for c in r_.get("target_ctors", [])}
+                gen_ = {k: v for k, v in gen.items() if k not in self_names} if d_["kind"] == "inductive" else gen
+                univ_checked += check_universe_args(facts, own, gen_, [x for x in exprs if x is not None], bl, poly,
+                                                    gen_admit, own_admit, bool(r_.get("universe_cumulativity")))
             except Mismatch as e:
                 problem("universe", f"{s_}: {e}")
     # Structural fidelity of every accepted translation.
@@ -1344,7 +1540,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                 # R2F (non-template): sorts read through the fact-respecting interpretation;
                 # R5S (template): other levels read through their reported solutions (fact-checked)
                 if tb is None:
-                    aud.body = own_level_interp(FACTS, ind_globals(d)) if FACTS is not None else None
+                    aud.body = own_level_interp(FACTS, params0) if FACTS is not None else None   # explicit and implicit levels
                 else:
                     if FACTS is not None:
                         check_body_levels(FACTS, d, sol0, params0)
@@ -1370,11 +1566,15 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
                     raise Mismatch("success claimed without target type/value")
                 params, sol = own_partition(d, r)
                 aud.body = sol
+                REDUCE[0] = bool(r.get("sort_fact_reduced"))
+                ADMIT[0] = set(r.get("admitting_levels") or [])
                 try:
                     aud.check(d["type"], r["target_type"], ["type"])
                     aud.check(d["body"], r["target_value"], ["body"])
                 finally:
                     aud.body = None
+                    REDUCE[0] = False
+                    ADMIT[0] = set()
                 v["verdict"] = "MATCH"
             elif r["status"] == "BOOTSTRAP_RESOLVED":
                 b = BOOTSTRAP.get(d["name"])

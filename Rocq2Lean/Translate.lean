@@ -68,6 +68,13 @@ structure GEnv where
   inds : Std.HashMap String IndTarget := {}
   /-- Global universe names read directly as the level of a Lean `Sort` (adapter checks only). -/
   sortOverride : Std.HashMap String Level := {}
+  /-- R6: universe-polymorphic constants (source key / target name ↦ number of universe variables,
+  which are the target's first universe parameters `v_0 … v_{k-1}`). -/
+  constPoly : Std.HashMap String Nat := {}
+  polyByTarget : Std.HashMap Name Nat := {}
+  /-- R8: motive levels of accepted constants (target name ↦ source levels whose parameter is a
+  sort level, `Type@{l} ↦ Sort u_l`). -/
+  admitting : Std.HashMap Name (Array String) := {}
   deriving Inhabited
 
 structure TCtx where
@@ -75,6 +82,13 @@ structure TCtx where
   /-- Global monomorphic levels of the declaration being translated, as Lean universe
   parameters (`Type@{l+n} ↦ Sort (u_l + n + 1)`). -/
   globalLevels : Std.HashMap String Level := {}
+  /-- R6: the Lean levels standing for the universe variables `var i` of a universe-polymorphic
+  declaration being translated (its parameters `v_i`). -/
+  polyLevels : Array Level := #[]
+  /-- R2⁺: read every source universe through its fact-reduced form (`factReduceUniverse`). -/
+  factReduce : Bool := false
+  /-- R8: own levels translated as sort levels (`Type@{l + n} ↦ Sort (u_l + n)`, admitting Prop). -/
+  admitLevels : Array String := #[]
   /-- `locals[k]` is the Lean value of the `k`-th enclosing source binder, outermost first;
   source `rel i` denotes `locals[locals.size - 1 - i]`. -/
   locals : Array Expr := #[]
@@ -120,10 +134,32 @@ def binderName (n : AName) : Name :=
 
 /-! ## Universes -/
 
+/-- `a + k ≤ b` is entailed by the native facts (`Set` included): `k = 0` needs `≤`, `k = 1`
+needs `<`, larger offsets need a chain of strict steps. -/
+partial def entails (f : IR.UniverseFacts) (a b : String) (k : Nat) : Bool :=
+  if k == 0 then a == b || f.rel a b == "le" || f.rel a b == "lt"
+  else if k == 1 then f.rel a b == "lt"
+  else (("Set" :: f.levels.toList).any fun c => f.rel a c == "lt" && entails f c b (k - 1))
+
+/-- R2⁺ (docs/UNIVERSE_TRANSLATION.md): drop a summand `Set + k` of an algebraic universe when
+another summand `l + j` is at least as large under the native facts (`k ≤ j`, every level being
+≥ `Set`, or `Set + (k - j) ≤ l` entailed). In Rocq the two universes are *equal*; in Lean the
+dropped summand would be a sort floor that the value need not reach (Rocq types `Prop` at
+`Type@{Set+1}`, Lean at `Sort 1`). Used only on a retry after the kernel rejected R2. -/
+def factReduceUniverse (f : IR.UniverseFacts) (u : Array LevelExpr) : Array LevelExpr :=
+  u.filter fun e => match e.level with
+    | .set => !(u.any fun e' => match e'.level with
+        | .global n => e.offset ≤ e'.offset || entails f "Set" n (e.offset - e'.offset)
+        | .var _ => e.offset ≤ e'.offset
+        | .set => false)
+    | _ => true
+
 /-- Lean sort level of a source `Type@{u}` in the pilot fragment: `Set + n ↦ n + 1`, `max`
 componentwise. Global monomorphic levels and polymorphic variables are rejected. -/
 def transTypeLevel (u : Array LevelExpr) : TransM Level := do
   if u.isEmpty then failT "EXPORT_VALIDATION_FAILED" "empty algebraic universe"
+  let ctx ← read
+  let u := if ctx.factReduce then factReduceUniverse ctx.genv.facts u else u
   let parts ← u.mapM fun e => do
     match e.level with
     | .set => pure (Level.ofNat (e.offset + 1))
@@ -134,12 +170,35 @@ def transTypeLevel (u : Array LevelExpr) : TransM Level := do
         else failT "UNSUPPORTED_FEATURE" s!"successor of adapter-bound level {n}"
       | none =>
         match (← read).globalLevels[n]? with
-        | some l => pure (l.addOffset (e.offset + 1))
+        | some l =>
+          -- R8: a motive level's parameter is the sort level itself (it may be 0: Prop)
+          if (← read).admitLevels.contains n then pure (l.addOffset e.offset)
+          else pure (l.addOffset (e.offset + 1))
         | none => failT "UNSUPPORTED_FEATURE" s!"global universe {n} not generalized for this declaration"
-    | .var i => failT "UNSUPPORTED_FEATURE" s!"universe-polymorphic level variable {i}"
+    | .var i =>
+      -- R6: a universe variable of the polymorphic declaration being translated
+      match (← read).polyLevels[i]? with
+      | some l => pure (l.addOffset (e.offset + 1))
+      | none => failT "UNSUPPORTED_FEATURE" s!"universe-polymorphic level variable {i} outside a polymorphic declaration"
   let mut acc := parts[0]!
   for l in parts[1:] do acc := mkLevelMax' acc l
   return acc.normalize
+
+/-- R6: Lean level of one level of a source universe instance (the *level*, not the sort above it):
+`Set ↦ 0`, `var i ↦ v_i`, a global level ↦ the referring declaration's own variable for it
+(R2S; it is one of its own levels). Consistent with `transTypeLevel`: `Type@{l} ↦ Sort (ι l + 1)`. -/
+def transInstLevel : IR.Level → TransM Level
+  | .set => pure .zero
+  | .var i => do
+    match (← read).polyLevels[i]? with
+    | some l => pure l
+    | none => failT "UNSUPPORTED_FEATURE" s!"universe variable {i} in an instance outside a polymorphic declaration"
+  | .global n => do
+    if (← read).genv.sortOverride.contains n then
+      failT "UNSUPPORTED_FEATURE" s!"adapter-bound level {n} in a universe instance"
+    match (← read).globalLevels[n]? with
+    | some l => pure l
+    | none => failT "UNSUPPORTED_FEATURE" s!"global universe {n} in an instance is not generalized for this declaration"
 
 def transSort : SortIR → TransM Expr
   | .prop => pure (.sort .zero)
@@ -590,16 +649,23 @@ the target's universe is computed from them. -/
 partial def transHead (f : IR.Term) (args : Array Expr) : TransM Expr := do
   match f with
   | .const c u =>
-    unless u.isEmpty do failT "UNSUPPORTED_FEATURE" s!"non-empty universe instance on constant {c}"
-    match (← read).genv.consts[c]? with
+    let genv := (← read).genv
+    -- R6: a universe-polymorphic constant takes its source instance, level by level, as its first
+    -- universe arguments; a monomorphic one must be referenced with the empty instance.
+    let kp := genv.constPoly[c]?.getD 0
+    unless u.size == kp do
+      if kp == 0 then failT "UNSUPPORTED_FEATURE" s!"non-empty universe instance on constant {c}"
+      else failT "EXPORT_VALIDATION_FAILED" s!"instance of {u.size} levels for polymorphic constant {c} with {kp} universe variables"
+    let poly ← u.toList.mapM transInstLevel
+    match genv.consts[c]? with
     | some n =>
       -- Universe parameters of a generalized constant: the referring declaration's own variable for
       -- a shared source level, otherwise a fresh metavariable solved by Lean's unifier (`solveLevels`).
-      let k := (← read).genv.constLevels[c]?.getD 0
-      let lvls ← match (← read).genv.constGlobals[n]? with
+      let k := genv.constLevels[c]?.getD 0 - kp
+      let lvls ← match genv.constGlobals[n]? with
         | some gs => if gs.size == k then sharedOrFreshLevels gs else liftMeta do (List.range k).mapM fun _ => mkFreshLevelMVar
         | none => liftMeta do (List.range k).mapM fun _ => mkFreshLevelMVar
-      pure (mkConst n lvls)
+      pure (mkConst n (poly ++ lvls))
     | none => failT "TRANSLATION_FAILED" s!"reference to constant {c}, which has no accepted translation"
   | .ind i u =>
     let t ← lookupInd i
@@ -623,21 +689,25 @@ def transClosed (t : IR.Term) : TransM Expr := do
   if e.hasExprMVar then failT "TRANSLATION_FAILED" "translated term has unresolved metavariables"
   return e
 
-def runTrans {α} (genv : GEnv) (x : TransM α) (globalLevels : Std.HashMap String Level := {}) :
+def runTrans {α} (genv : GEnv) (x : TransM α) (globalLevels : Std.HashMap String Level := {})
+    (polyLevels : Array Level := #[]) (factReduce : Bool := false) (admitLevels : Array String := #[]) :
     MetaM (Except TransError α) :=
-  (x { genv, globalLevels }).run
+  (x { genv, globalLevels, polyLevels, factReduce, admitLevels }).run
 
 /-! ## Universe generalization -/
 
-/-- Global level names occurring in a source term (in sorts). -/
+/-- Global level names occurring in a source term: in sorts and (R6) in universe instances. -/
 partial def globalsOf (t : IR.Term) (acc : Std.HashSet String := {}) : Std.HashSet String :=
   let sortG (s : SortIR) (acc : Std.HashSet String) : Std.HashSet String :=
     match s with
     | .type u => u.foldl (fun a e => match e.level with | .global n => a.insert n | _ => a) acc
     | _ => acc
+  let instG (u : Array IR.Level) (acc : Std.HashSet String) : Std.HashSet String :=
+    u.foldl (fun a l => match l with | .global n => a.insert n | _ => a) acc
   let go := fun (t : IR.Term) (a : Std.HashSet String) => globalsOf t a
   match t with
   | .sort s => sortG s acc
+  | .const _ u | .ind _ u | .construct _ _ u => instG u acc
   | .cast c _ ty => go ty (go c acc)
   | .prod _ a b | .lam _ a b => go b (go a acc)
   | .letIn _ v ty b => go b (go ty (go v acc))
@@ -649,9 +719,50 @@ partial def globalsOf (t : IR.Term) (acc : Std.HashSet String := {}) : Std.HashS
   | .fix ds _ | .cofix ds _ => ds.foldl (fun a (_, ty, b, _) => go b (go ty a)) acc
   | _ => acc
 
+/-- R8: levels that occur in a source type only as the codomain sort `Type@{l}` (one summand,
+offset 0) of a binder type with at least one argument — motive-like binders `K : X → Type@{l}`,
+which Rocq instantiates with Prop-valued families by cumulativity. Any other occurrence (another
+sort, an instance) disqualifies the level. -/
+partial def motiveLevels (ty : IR.Term) : Array String := Id.run do
+  let rec codomain (t : IR.Term) (n : Nat) : Option (Nat × String) :=
+    match t with
+    | .prod _ _ b => codomain b (n + 1)
+    | .sort (.type #[{ level := .global l, offset := 0 }]) => if n ≥ 1 then some (n, l) else none
+    | _ => none
+  -- (motive occurrences, other occurrences)
+  let rec go (t : IR.Term) (acc : Std.HashSet String × Std.HashSet String) : Std.HashSet String × Std.HashSet String :=
+    let (mot, oth) := acc
+    match t with
+    | .sort (.type u) => (mot, u.foldl (fun a e => match e.level with | .global n => a.insert n | _ => a) oth)
+    | .const _ u | .ind _ u | .construct _ _ u =>
+      (mot, u.foldl (fun a l => match l with | .global n => a.insert n | _ => a) oth)
+    | .prod _ a b =>
+      match codomain a 0 with
+      | some (_, l) =>
+        -- walk the domains of the motive's type, not its final sort
+        let rec doms (t : IR.Term) (acc : Std.HashSet String × Std.HashSet String) :=
+          match t with
+          | .prod _ d r => doms r (go d acc)
+          | _ => acc
+        go b (doms a (mot.insert l, oth))
+      | none => go b (go a acc)
+    | .lam _ a b => go b (go a acc)
+    | .letIn _ v a b => go b (go a (go v acc))
+    | .app f args => args.foldl (fun a x => go x a) (go f acc)
+    | .cast c _ a => go a (go c acc)
+    | .case _ _ _ _ ps _ r c brs => brs.foldl (fun a b => go b.2 a) (go c (go r (ps.foldl (fun a x => go x a) acc)))
+    | .proj _ _ _ c => go c acc
+    | .fix ds _ | .cofix ds _ => ds.foldl (fun a (_, t, b, _) => go b (go t a)) acc
+    | _ => acc
+  let (mot, oth) := go ty ({}, {})
+  return (mot.toArray.filter (!oth.contains ·)).qsort (· < ·)
+
 /-- Lean universe parameter for a source global level: `u_` followed by the level name with
 `.` replaced by `_` (e.g. `Corelib.Init.Logic.8 ↦ u_Corelib_Init_Logic_8`). -/
 def levelParamName (n : String) : Name := Name.mkSimple ("u_" ++ n.replace "." "_")
+
+/-- R6: Lean universe parameter for the `i`-th universe variable of a polymorphic declaration. -/
+def polyParamName (i : Nat) : Name := Name.mkSimple s!"v_{i}"
 
 /-- Level metavariables of an expression. -/
 partial def levelMVarsOf (e : Expr) : StateM (Array LMVarId) Unit := do
@@ -666,13 +777,6 @@ partial def levelMVarsOf (e : Expr) : StateM (Array LMVarId) Unit := do
   | .letE _ t v b _ => do levelMVarsOf t; levelMVarsOf v; levelMVarsOf b
   | .mdata _ b | .proj _ _ b => levelMVarsOf b
   | _ => pure ()
-
-/-- `a + k ≤ b` is entailed by the native facts (`Set` included): `k = 0` needs `≤`, `k = 1`
-needs `<`, larger offsets need a chain of strict steps. -/
-partial def entails (f : IR.UniverseFacts) (a b : String) (k : Nat) : Bool :=
-  if k == 0 then a == b || f.rel a b == "le" || f.rel a b == "lt"
-  else if k == 1 then f.rel a b == "lt"
-  else (("Set" :: f.levels.toList).any fun c => f.rel a c == "lt" && entails f c b (k - 1))
 
 /-- Normal form `max(c, p₁ + k₁, …)` of a level without `imax`/metavariables. -/
 partial def levelNF : Level → Option (Nat × List (Name × Nat))
@@ -691,30 +795,47 @@ partial def levelNF : Level → Option (Nat × List (Name × Nat))
 /-- Universe obligation (docs/UNIVERSE_TRANSLATION.md, rule R3) for one reference: the target
 universe argument `σ` for the referenced constant's parameter standing for source level `l`. -/
 def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) (σ : Level)
-    (body : Std.HashMap String Level := {}) : Except String Unit := do
+    (body : Std.HashMap String Level := {}) (cAdmit : Bool := false) (ownAdmit : Array String := #[])
+    (allowLift : Bool := false) : Except String Unit := do
+  -- R8: a motive-level parameter stands for (image of the source level) + 1; `shift` converts the
+  -- referring declaration's level for `l` into the referenced parameter's convention
+  let dAdmit := ownAdmit.contains l
+  if dAdmit && !cAdmit then
+    throw s!"coherence: source level {l} is a motive level of the referring declaration but not of the referenced one"
+  let shift (x : Level) : Level := if cAdmit && !dAdmit then x.succ else x
   if let some s := body[l]? then
-    unless σ.normalize == s.normalize do
+    unless σ.normalize == (shift s).normalize do
       throw s!"coherence: source level {l} is a proof-local level of the referring declaration, solved as {s}; the argument must be the same, not {σ}"
     return
   if own.contains l then
-    unless σ.normalize == .param (levelParamName l) do
+    unless σ.normalize == (shift (.param (levelParamName l))).normalize do
       throw s!"coherence: source level {l} is shared with the referring declaration, so its argument must be u_{l}, not {σ}"
     return
   let some (c, ps) := levelNF σ.normalize | throw s!"argument {σ} for {l} is outside the supported level fragment"
-  unless entails f "Set" l c do throw s!"argument {σ}: Set + {c} ≤ {l} is not entailed by the source universe graph"
+  -- R8: for a motive-level parameter the argument 0 is Prop (always admissible), c ≥ 1 is Set + (c-1)
+  unless (cAdmit && c == 0) || entails f "Set" l (if cAdmit then c - 1 else c) do
+    throw s!"argument {σ}: Set + {c} ≤ {l} is not entailed by the source universe graph"
   for (p, k) in ps do
     let some m := own.find? (fun g => levelParamName g == p)
       | throw s!"argument {σ} mentions {p}, which is not a parameter of the referring declaration"
-    unless entails f m l k do throw s!"argument {σ}: {m} + {k} ≤ {l} is not entailed by the source universe graph"
+    -- effective offset between the referring level m and the referenced level l (R8 conventions)
+    let e : Int := k + (if ownAdmit.contains m then 1 else 0) - (if cAdmit then 1 else 0)
+    -- no raising (m + e ≤ l); in the cumulativity tier only (R3↑, reported per declaration), also the
+    -- referring declaration's own level m itself (effective offset 0) where the source has l ≤ m:
+    -- Rocq used c's level-l value at level m by upward cumulativity
+    unless entails f m l e.toNat || (allowLift && e == 0 && entails f l m 0) do
+      throw s!"argument {σ}: {m} + {k} ≤ {l} is not entailed by the source universe graph, nor is {l} ≤ {m} (with offset 0)"
 
 /-- Summands `(source level, offset)` of a target level over the declaration's parameters, read
 back as source levels (`u_l ↦ l`, constant `c ↦ Set + c`). -/
-def sourceSummands (typeLevels : Array String) (σ : Level) : Except String (List (String × Nat)) := do
+def sourceSummands (typeLevels : Array String) (σ : Level) (admit : Array String := #[]) :
+    Except String (List (String × Nat)) := do
   let some (c, ps) := levelNF σ.normalize | throw s!"level {σ} is outside the supported level fragment"
   let ps ← ps.mapM fun (p, k) => do
     let some m := typeLevels.find? (fun g => levelParamName g == p)
       | throw s!"level {σ} mentions {p}, which is not a parameter of the declaration"
-    pure (m, k)
+    -- R8: a motive-level parameter u_m is one above the image of m, so u_m + k reads as m + k + 1
+    pure (m, if admit.contains m then k + 1 else k)
   return ("Set", c) :: ps
 
 /-- `max lhs + k ≤ max rhs` is entailed by the native facts: every summand of the left side is
@@ -727,15 +848,21 @@ def summandsLeq (f : IR.UniverseFacts) (lhs rhs : List (String × Nat)) (k : Nat
 solved by Lean's unifier as `σ m`; every native fact between `m` and `Set`, a type level or another
 proof-local level must still hold with each proof-local level read as its solution. -/
 def checkBodyLevel (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std.HashMap String Level)
-    (m : String) : Except String Unit := do
+    (m : String) (admit : Array String := #[]) (propOffset : Bool := false) : Except String Unit := do
   let summ (x : String) : Except String (List (String × Nat)) :=
     match sol[x]? with
-    | some σ => sourceSummands typeLevels σ
+    | some σ => do
+      -- R8: a solved motive level's solution is one above its image
+      let ss ← sourceSummands typeLevels σ admit
+      pure (if admit.contains x then ss.map fun (a, k) => (a, k - 1) else ss)
     | none => pure [(x, 0)]
   let mine (x : String) := x == "Set" || typeLevels.contains x || sol.contains x
   for (a, r, b) in f.relations do
     unless (a == m || b == m) && mine a && mine b do continue
-    let k := if r == "lt" then 1 else 0
+    -- R2B-P (cumulativity tier only, reported per declaration): Rocq types Prop at Type@{Set+1}, Lean
+    -- at Sort 1 (the image of Set), so a fact `Set < m` may stem from Prop alone; it is then checked
+    -- as `Set ≤ m` (the kernel checks the typing itself)
+    let k := if r == "lt" && !(propOffset && a == "Set") then 1 else 0
     unless summandsLeq f (← summ a) (← summ b) k do
       throw s!"proof-local level {m} solved as {sol[m]?}: native fact {a} {r} {b} does not hold for the solution"
 
@@ -786,14 +913,18 @@ partial def constOccurrences (e : Expr) (acc : Array (Name × List Level) := #[]
 /-- Check every universe argument at every reference to a generalized constant in `e`;
 returns the number of checked arguments. -/
 def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr)
-    (body : Std.HashMap String Level := {}) : Except String Nat := do
+    (body : Std.HashMap String Level := {}) (ownAdmit : Array String := #[]) (allowLift : Bool := false) :
+    Except String Nat := do
   let mut n := 0
   for (c, ls) in constOccurrences e do
     if let some globals := genv.constGlobals[c]? then
+      -- R6: the first universe arguments of a polymorphic constant are its instance, not R3 obligations
+      let ls := ls.drop (genv.polyByTarget[c]?.getD 0)
       unless globals.size == ls.length do throw s!"{c}: {ls.length} universe arguments for {globals.size} parameters"
       for l in globals, σ in ls do
         if genv.templateLevels.contains l then continue      -- R5, not R3
-        match checkInstantiation genv.facts own l σ body with
+        let cAdmit := (genv.admitting[c]?.getD #[]).contains l
+        match checkInstantiation genv.facts own l σ body cAdmit ownAdmit allowLift with
         | .ok () => n := n + 1
         | .error msg => throw s!"reference to {c}: {msg}"
   return n

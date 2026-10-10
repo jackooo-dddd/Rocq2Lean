@@ -64,6 +64,22 @@ structure DeclResult where
   templateParams : Array (String × Nat) := #[]
   residualType : Option Expr := none
   residualValue : Option Expr := none
+  /-- R6: number of universe variables of a universe-polymorphic source constant; they are the
+  first universe parameters, `v_0 … v_{k-1}`. -/
+  polyParams : Nat := 0
+  /-- R2⁺: accepted on the retry with fact-reduced source universes. -/
+  factReduced : Bool := false
+  /-- R3G: source levels of referenced declarations that occur in the type only implicitly (through
+  the reference) and that typing leaves free: universe parameters `u_l`, like explicit type levels. -/
+  implicitLevels : Array String := #[]
+  /-- R2F-c: own (explicit type and implicit) levels read through the fact interpretation
+  `ι l = max (u_l, ι m + k …)` over the native facts among them (as R2F for inductives). -/
+  levelInterp : Array (String × Level) := #[]
+  /-- R8: motive levels translated as sort levels (`Type@{l} ↦ Sort u_l`, admitting Prop). -/
+  admittingLevels : Array String := #[]
+  /-- Accepted in the cumulativity tier (R3↑ lifting, R2B-P Prop offset), after the strict rules
+  rejected the declaration. -/
+  cumulativity : Bool := false
   deriving Inhabited
 
 def DeclResult.ok (r : DeclResult) : Bool :=
@@ -119,8 +135,9 @@ def justifyResiduals (name : Name) (kind : String) (lps resid : List Name) (gty 
   | .accepted => return none
   | .rejected msg => return some s!"defaulted universe level(s) {resid} not justified: the declaration is not valid for every value ({msg})"
 
-def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl) :
-    MetaM DeclResult := do
+def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
+    (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
+    (extraOwn : Array String := #[]) (discover : Bool := false) : MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
   unless missing.isEmpty do
@@ -132,8 +149,14 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
   let bad := relaxedFlags c.native
   unless bad.isEmpty do
     return { base with status := "AUDIT_REJECTED", message := s!"source declared with relaxed checking: {bad}" }
-  if let .polymorphic .. := c.universes then
-    return { base with status := "UNSUPPORTED_FEATURE", message := "universe-polymorphic constant" }
+  -- R6 (docs/UNIVERSE_TRANSLATION.md): the universe variables of a polymorphic constant become its
+  -- first Lean universe parameters `v_i`; Rocq's constraints among them are not transported: the
+  -- kernel checks the body for *every* value of the parameters (which may reject a body that needs
+  -- a constraint, never accepts one that is ill-typed for some instance).
+  let polyNames : List Name := match c.universes with
+    | .polymorphic names _ => (List.range names.size).map polyParamName
+    | _ => []
+  let polyLvls : Array Level := (polyNames.map Level.param).toArray
   match c.bodyState, c.body with
   | "assumption", _ =>
     return { base with status := "BLOCKED_SOURCE_BODY",
@@ -154,32 +177,132 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     -- become universe parameters `u_l`; the others are *solved* (σ l over the parameters), and the
     -- native facts among the declaration's levels must hold for the solution (R2S/R2B obligation).
     -- Body-only levels left free default to their minimal model (R2B, justified by R3′).
-    let typeLevels := (globalsOf c.type).toArray.qsort (· < ·)
-    let own := (globalsOf body (globalsOf c.type)).toArray.qsort (· < ·)
+    -- R3G: implicit levels found by a discovery pass (`extraOwn`) are own type levels from the start
+    let explicitTy := (globalsOf c.type).toArray
+    let typeLevels := (explicitTy ++ extraOwn).toList.eraseDups.toArray.qsort (· < ·)
+    -- R8: motive levels of the type (only when requested; see the translation ladder)
+    let admitLv := if admit then (motiveLevels c.type).filter explicitTy.contains else #[]
+    let own := ((globalsOf body (globalsOf c.type)).toArray ++ extraOwn).toList.eraseDups.toArray.qsort (· < ·)
     let mut gl : Std.HashMap String Level := {}
     let mut ownMVars : Array (String × Level) := #[]
     for m in own do
       let v ← mkFreshLevelMVar
       gl := gl.insert m v
       ownMVars := ownMVars.push (m, v)
-    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl with
+    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl with
+    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv with
       | .ok e => pure e
       | .error e => return fromTransError base e
     -- after unification: every own level still free that occurs in the (solved) type becomes a
     -- parameter — a type level, or a body level that a type level's solution now mentions
+    let implicitRef ← IO.mkRef (#[] : Array String)
+    let interpRef ← IO.mkRef (#[] : Array (String × Level))
     let keepParams : MetaM Unit := do
+      -- R3G discovery pass: report the source levels of free metavariable classes of the *type* at
+      -- references (a level below every other level of its class, not own, not template, whose
+      -- every argument still contains a free metavariable); nothing is assigned
+      if discover then
+        let tyI ← instLevelMVars ty
+        let valI ← instLevelMVars val
+        let argsFor (e : Expr) : MetaM (Array (String × Level)) := do
+          let mut out := #[]
+          for (n, ls) in constOccurrences e do
+            if let some gs := genv.constGlobals[n]? then
+              let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
+              if gs.size == ls.length then
+                for l in gs, σ in ls do out := out.push (l, ← instantiateLevelMVars σ)
+          return out
+        let inTy ← argsFor tyI
+        let all := inTy ++ (← argsFor valI)
+        let mut picks : Array String := #[]
+        let mut done : Array Level := #[]
+        for (_, σ) in inTy do
+          unless σ.isMVar && !done.contains σ do continue
+          done := done.push σ
+          let cls := (all.filter (·.2 == σ)).map (·.1)
+          let tyCls := (inTy.filter (·.2 == σ)).map (·.1)
+          let pick := tyCls.toList.eraseDups.find? fun l =>
+            !own.contains l && !picks.contains l && !genv.templateLevels.contains l &&
+            cls.all (fun l' => entails genv.facts l l' 0) && (all.filter (·.1 == l)).all (·.2.hasMVar)
+          if let some l := pick then picks := picks.push l
+        implicitRef.set picks
+        return
       -- type levels first, so that a class of levels identified by unification is represented by
       -- a type level (its source level is what R3 checks at references)
-      for (m, v) in ownMVars do
-        if typeLevels.contains m then
-          if let .mvar r ← instantiateLevelMVars v then assignLevelMVar r (.param (levelParamName m))
-      let ((), tyMVars) := (levelMVarsOf (← instLevelMVars ty)).run #[]
-      for (m, v) in ownMVars do
-        if let .mvar r ← instantiateLevelMVars v then
-          if tyMVars.contains r then assignLevelMVar r (.param (levelParamName m))
+      unless interp do
+        for (m, v) in ownMVars do
+          if typeLevels.contains m then
+            if let .mvar r ← instantiateLevelMVars v then assignLevelMVar r (.param (levelParamName m))
+        let ((), tyMVars) := (levelMVarsOf (← instLevelMVars ty)).run #[]
+        for (m, v) in ownMVars do
+          if let .mvar r ← instantiateLevelMVars v then
+            if tyMVars.contains r then assignLevelMVar r (.param (levelParamName m))
+      -- R3G: a universe argument still free in the *type*, at a reference to a declaration whose
+      -- parameter stands for source level `l`, is the source level `l` itself (Rocq references
+      -- monomorphic declarations at their own levels): it becomes the parameter `u_l`, so the
+      -- declaration stays as general as typing allows instead of being fixed at a default. The
+      -- kernel checks the declaration for every value of it.
+      -- A free metavariable may stand for several source levels (Lean's unifier identified the
+      -- arguments of several references). It is taken as `u_l` for a level `l` that occurs in the
+      -- *type* and lies below every other level of its class (`l ≤ l'` entailed by the native
+      -- facts), so every other argument of the class satisfies R3's no-raising condition (which
+      -- `checkUniverseObligations` re-checks). Own levels and template levels are never chosen.
+      let tyI ← instLevelMVars ty
+      let valI ← instLevelMVars val
+      let argsFor (e : Expr) : MetaM (Array (String × Level)) := do
+        let mut out := #[]
+        for (n, ls) in constOccurrences e do
+          if let some gs := genv.constGlobals[n]? then
+            let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
+            if gs.size == ls.length then
+              for l in gs, σ in ls do out := out.push (l, ← instantiateLevelMVars σ)
+        return out
+      let inTy ← argsFor tyI
+      let all := inTy ++ (← argsFor valI)
+      let mut done : Array Level := #[]
+      let mut chosen : Array (String × Array LMVarId) := #[]
+      -- (R2F-c: classes of the body are candidates too; their levels become own levels)
+      for (_, σ) in (if interp then all else inTy) do
+        unless σ.isMVar && !done.contains σ do continue
+        done := done.push σ
+        let cls := (all.filter (·.2 == σ)).map (·.1)
+        let tyCls := ((if interp then all else inTy).filter (·.2 == σ)).map (·.1)
+        -- every argument for `l` anywhere must still be free: they all become `u_l` (coherence)
+        let mut cur : Array (String × Level) := #[]
+        for (l', σ') in all do cur := cur.push (l', ← instantiateLevelMVars σ')
+        let pick := tyCls.toList.eraseDups.find? fun l =>
+          !own.contains l && !genv.templateLevels.contains l && cls.all (fun l' => entails genv.facts l l' 0) &&
+          (cur.filter (·.1 == l)).all (·.2.isMVar)
+        if let some l := pick then
+          let mut ms : Array LMVarId := #[]
+          for (l', σ') in cur do
+            if l' == l then
+              if let .mvar r ← instantiateLevelMVars σ' then
+                if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName l))
+          if interp then chosen := chosen.push (l, ms)
+          implicitRef.modify fun a => if a.contains l then a else a.push l
+      -- R2F-c: the explicit type levels and the chosen implicit levels are the declaration's own
+      -- levels, each read as ι l = max (u_l, ι m + k) over the native facts m (+1) ≤ l among them
+      -- (`ownLevelInterp`, as for inductives): every own fact holds for every parameter value,
+      -- and at u := ρ (any model ρ of the facts) ι is ρ itself.
+      if interp then
+        -- only type levels still free are interpreted; a level that typing already fixed is a solved
+        -- level (R2S) and keeps its R2B fact check
+        let mut freeT : Array String := #[]
+        for (m, v) in ownMVars do
+          if typeLevels.contains m then
+            if (← instantiateLevelMVars v).isMVar then freeT := freeT.push m
+        let ownI := (freeT ++ chosen.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
+        let ι := ownLevelInterp genv.facts ownI
+        interpRef.set (ownI.map fun l => (l, ι[l]!))
+        for (m, v) in ownMVars do
+          if ownI.contains m then
+            if let .mvar r ← instantiateLevelMVars v then assignLevelMVar r ι[m]!
+        for (l, ms) in chosen do
+          for r in ms do
+            if let .mvar r' ← instantiateLevelMVars (.mvar r) then assignLevelMVar r' ι[l]!
     -- default of a still-free proof-local level: its minimal model over the *current* values of the
     -- type levels (parameters or solutions)
     let dflt (id : LMVarId) : MetaM Level := do
@@ -191,21 +314,29 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
         pure (minimalModelLevel genv.facts cur m)
       | none => pure .zero
     let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt keepParams
+    if discover then
+      return { base with status := "DISCOVERED", implicitLevels := (← implicitRef.get).qsort (· < ·) }
     let base := { base with levelDiagnostics := diags, levelDefaults := resid.length }
     let mut sol : Std.HashMap String Level := {}
     let mut paramLevels : Array String := #[]
+    let levelInterp ← interpRef.get
     for (m, v) in ownMVars do
       let s ← instantiateLevelMVars v
+      if levelInterp.any (·.1 == m) then continue        -- R2F-c own level: a parameter, read through ι
       if s == .param (levelParamName m) then paramLevels := paramLevels.push m
       else sol := sol.insert m s.normalize
-    let globals := paramLevels
-    let lparams := globals.toList.map levelParamName
+    let implicitLevels := ((← implicitRef.get) ++ extraOwn.filter (!explicitTy.contains ·)).toList.eraseDups.toArray.qsort (· < ·)
+    let globals := (paramLevels ++ implicitLevels ++ levelInterp.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
+    let lparams := polyNames ++ globals.toList.map levelParamName
+    -- R3 coherence for R2F-c own levels: an argument for `l` must be ι l
+    let solι := levelInterp.foldl (fun (m : Std.HashMap String Level) (l, x) => m.insert l x) sol
     let base := { base with bodyLevels := own.filterMap fun m => sol[m]?.map (m, ·) }
     for m in own do
       if sol.contains m then
-        if let .error msg := checkBodyLevel genv.facts globals sol m then
+        if let .error msg := checkBodyLevel genv.facts globals sol m admitLv cumul then
           return { base with status := "UNIVERSE_REJECTED", message := msg }
-    let nchecks ← match checkUniverseObligations genv globals ty sol, checkUniverseObligations genv globals val sol with
+    let nchecks ← match checkUniverseObligations genv globals ty solι admitLv cumul,
+                         checkUniverseObligations genv globals val solι admitLv cumul with
       | .ok a, .ok b => pure (a + b)
       | .error msg, _ | _, .error msg =>
         return { base with status := "UNIVERSE_REJECTED", message := msg }
@@ -224,7 +355,9 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
       else { base with residualParams := resid, residualDefaults := rdefaults, residualType := gty, residualValue := gval }
     match ← addChecked (← mkConstDecl name kind lparams ty val) with
     | .accepted => return { base with status := "TRANSLATED_AND_CHECKED", targetType := ty, targetValue := val,
-                                      levelParams := lparams, paramLevels := globals }
+                                      levelParams := lparams, paramLevels := globals, polyParams := polyNames.length,
+                                      factReduced := factReduce, implicitLevels, levelInterp,
+                                      admittingLevels := admitLv, cumulativity := cumul }
     | .rejected msg => return { base with status := "KERNEL_REJECTED", message := msg }
   | st, _ =>
     return { base with status := "EXPORT_VALIDATION_FAILED", message := s!"body state '{st}' inconsistent with body" }
@@ -269,7 +402,7 @@ def templateBinding (i : IR.InductiveDecl) (globals : Array String) :
   return out
 
 def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
-    (raw : Json) :
+    (raw : Json) (extraOwn : Array String := #[]) (discover : Bool := false) :
     MetaM (DeclResult × Option IndTarget) := do
   let base : DeclResult := { source := i.name, kind := "inductive", status := "" }
   let (missing, failed) := blockedDeps results (i.typeDeps.filter (· != i.name))
@@ -308,8 +441,11 @@ where
     let (tname, cnames) := inductiveNames i.name body.name (body.ctors.map (·.name))
     -- Source global levels of the declaration become universe parameters (R2T); for a template
     -- inductive they must be exactly its template levels, each bound by one parameter sort (R5).
-    let allGlobals := globalsOfInd i
     let isTemplate := (i.native.getObjValAs? Bool "template").toOption == some true
+    -- R3G for blocks: implicit levels (discovered in a first pass) are own levels of the block from
+    -- the start, interpreted by R2F together with the explicit ones
+    let allGlobals := if isTemplate then globalsOfInd i
+      else (globalsOfInd i ++ extraOwn).toList.eraseDups.toArray.qsort (· < ·)
     let templateParams ← if isTemplate then
         match templateBinding i allGlobals with
         | .ok b => pure b
@@ -380,9 +516,40 @@ where
       if let .error msg := checkBodyLevel genv.facts globals sol m then
         return ({ base with status := "UNIVERSE_REJECTED", message := msg }, none)
     let base := { base with bodyLevels := extra.filterMap fun m => sol[m]?.map (m, ·) }
+    -- R3G (inductives), discovery pass: a level metavariable left free at a reference to a
+    -- declaration whose parameter stands for source level `l` is `l` itself. The pass reports the
+    -- levels so found (same choice and coherence conditions as for constants); the block is then
+    -- translated again with them as own levels (`extraOwn`).
+    if discover && isTemplate then
+      return ({ base with status := "DISCOVERED" }, none)     -- never adds the declaration
+    if discover then
+      let mut occ : Array (String × Level) := #[]
+      for e in #[ty] ++ ctors.map (·.type) do
+        for (n, ls) in constOccurrences (← instLevelMVars e) do
+          if let some gs := genv.constGlobals[n]? then
+            let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
+            if gs.size == ls.length then
+              for l in gs, σ in ls do occ := occ.push (l, ← instantiateLevelMVars σ)
+      -- candidates: classes occurring in the arity (parameter and index types), where a level can
+      -- never make a constructor field too big for the block's sort
+      let mut inArity : Array Level := #[]
+      for (n, ls) in constOccurrences (← instLevelMVars ty) do
+        if genv.constGlobals.contains n then
+          for σ in ls do inArity := inArity.push (← instantiateLevelMVars σ)
+      let mut picks : Array String := #[]
+      let mut done : Array Level := #[]
+      for (_, σ) in occ.filter (fun (_, σ) => inArity.contains σ) do
+        unless σ.isMVar && !done.contains σ do continue
+        done := done.push σ
+        let cls := (occ.filter (·.2 == σ)).map (·.1)
+        let pick := cls.toList.eraseDups.find? fun l =>
+          !globals.contains l && !picks.contains l && !genv.templateLevels.contains l &&
+          cls.all (fun l' => entails genv.facts l l' 0) && (occ.filter (·.1 == l)).all (·.2.hasMVar)
+        if let some l := pick then picks := picks.push l
+      return ({ base with status := "DISCOVERED", implicitLevels := picks.qsort (· < ·) }, none)
     -- R3″: references inside the block (to generalized constants / level-parameter inductives) carry
-    -- level metavariables; those not fixed by type-checking take their least R3-admissible value 0,
-    -- and R3 is checked on every universe argument of the block.
+    -- level metavariables; those not fixed by type-checking (nor taken by R3G) take their least
+    -- R3-admissible value 0, and R3 is checked on every universe argument of the block.
     let mut ms : Array LMVarId := #[]
     for e in #[ty] ++ ctors.map (·.type) do
       let e ← instLevelMVars e
@@ -392,8 +559,12 @@ where
     let ty ← instLevelMVars ty
     ctors ← ctors.mapM fun c => do return { c with type := ← instLevelMVars c.type }
     let mut nchecks := 0
+    -- R3 coherence: an argument for an own level of a non-template block must be the level standing
+    -- for it, its R2F interpretation ι l (u_l itself when no fact constrains l)
+    let interpMap : Std.HashMap String Level :=
+      if isTemplate then {} else (ownLevelInterp genv.facts globals)
     for e in #[ty] ++ ctors.map (·.type) do
-      match checkUniverseObligations genv globals e with
+      match checkUniverseObligations genv globals e interpMap with
       | .ok n => nchecks := nchecks + n
       | .error msg => return ({ base with status := "UNIVERSE_REJECTED", message := msg }, none)
     let base := { base with minimalLevels := ms.size, universeChecks := nchecks }
@@ -410,6 +581,7 @@ where
                                  (fun k => templateParams.any (·.1 == globals[k]!)) }
       return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty, numParams := i.npars, primitiveRecord := isRecord,
                           levelParams := lparams, paramLevels := globals, isTemplate, templateParams,
+                          implicitLevels := extraOwn.filter (!(globalsOfInd i).contains ·),
                           targetCtors := ctors.map fun c => (c.name, c.type) }, some tgt)
     | .rejected msg => return ({ base with status := "KERNEL_REJECTED", message := msg }, none)
 
@@ -421,15 +593,60 @@ def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
   for d in src.decls do
     let r ← match d with
       | .constant c =>
-        let r ← processConstant genv results c
+        -- R8 first when the type has motive levels: the sort-level form is strictly more general
+        -- (u := v+1 gives the R2 form), so it is kept whenever the kernel accepts it
+        -- R3G discovery pass (adds nothing): implicit levels of the type, then every attempt below with
+        -- them as own levels; if all fail, the same attempts without them (the earlier behaviour)
+        -- (The discovery pass for constants, `discover := true`, is not used yet: implicit levels
+        -- relate to other references only through `max` arguments that Lean's level unifier cannot
+        -- invert, which made more general constants break their own dependants. In-place R3G below.)
+        let exts : List (Array String) := [#[]]
+        let mut r : DeclResult := default
+        let mut first : Option DeclResult := none
+        for eo in exts do
+          let r0 ← if (motiveLevels c.type).isEmpty then processConstant genv results c (extraOwn := eo) else do
+              let a ← processConstant genv results c (admit := true) (extraOwn := eo)
+              if a.ok then pure a else processConstant genv results c (extraOwn := eo)
+          first := some r0          -- the diagnosis kept is that of the last (earlier-behaviour) attempt
+          r := r0
+          if r.ok then break
+          -- Universe retry ladder (docs/UNIVERSE_TRANSLATION.md): a kernel or universe rejection under
+          -- R2 is retried with fact-reduced universes (R2⁺), then with the fact interpretation of the
+          -- own levels (R2F-c), then both; the first accepted translation is kept.
+          let retry (st : String) := st == "KERNEL_REJECTED" || st == "UNIVERSE_REJECTED"
+          if retry r.status then
+            -- strict tiers first; the cumulativity tier (R3↑, R2B-P) only when they all fail
+            for (fr, it, cu) in [(true, false, false), (false, true, false), (true, true, false),
+                                 (false, false, true), (true, false, true), (false, true, true), (true, true, true)] do
+              let r' ← processConstant genv results c (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo)
+              if r'.ok then
+                r := r'
+                break
+          if r.ok then break
+        -- a declaration that no attempt accepts keeps the diagnosis of the plain attempt without
+        -- implicit levels (the earlier behaviour)
+        if !r.ok then r := first.getD r
         if r.ok then if let some n := r.target then
           genv := { genv with consts := genv.consts.insert c.name n,
                               constLevels := genv.constLevels.insert c.name r.levelParams.length,
                               constGlobals := if r.levelParams.isEmpty then genv.constGlobals
                                 else genv.constGlobals.insert n r.paramLevels }
+          if r.polyParams > 0 then
+            genv := { genv with constPoly := genv.constPoly.insert c.name r.polyParams,
+                                polyByTarget := genv.polyByTarget.insert n r.polyParams }
+          unless r.admittingLevels.isEmpty do
+            genv := { genv with admitting := genv.admitting.insert n r.admittingLevels }
         pure r
       | .inductive i =>
-        let (r, t?) ← processInductive genv results i src.rawDecls[i.name]!
+        -- R3G for blocks: first with free reference levels as implicit parameters (more general); if
+        -- the kernel rejects that (an implicit level in a field may exceed the block's sort), the
+        -- R3″ translation (free reference levels at 0) as before
+        let (r, t?) ← do
+          let (d, _) ← processInductive genv results i src.rawDecls[i.name]! (discover := true)
+          if d.status == "DISCOVERED" && !d.implicitLevels.isEmpty then
+            let (r1, t1) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := d.implicitLevels)
+            if r1.ok then pure (r1, t1) else processInductive genv results i src.rawDecls[i.name]!
+          else processInductive genv results i src.rawDecls[i.name]!
         if let some t := t? then genv := { genv with inds := genv.inds.insert i.name t }
         -- Non-template inductives with generalized global levels: references obey R3 like
         -- generalized constants (the type and its constructors carry the same parameters).
@@ -488,6 +705,12 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("solved_levels", Json.arr (r.bodyLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
     ("template_params", Json.arr (r.templateParams.map fun (l, k) => Json.mkObj [("level", l), ("param", k)])),
     ("universe_level_defaults", r.levelDefaults),
+    ("universe_poly_params", r.polyParams),
+    ("sort_fact_reduced", r.factReduced),
+    ("implicit_levels", Json.arr (r.implicitLevels.map Json.str)),
+    ("admitting_levels", Json.arr (r.admittingLevels.map Json.str)),
+    ("universe_cumulativity", r.cumulativity),
+    ("level_interp", Json.arr (r.levelInterp.map fun (l, x) => Json.mkObj [("level", l), ("sigma", levelJson x)])),
     ("universe_checks", r.universeChecks),
     ("universe_diagnostics", Json.arr (r.levelDiagnostics.map Json.str)),
     ("universe_residuals", if r.residualParams.isEmpty then .null else Json.mkObj [

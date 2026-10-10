@@ -56,7 +56,7 @@ check(rc == 3 and "TOOL_FAILURE" in out, "preflight: invalid input exits 3")
 NEG = {"M3.M3Neg.evenR": "mutual fixpoint",
        "M3.M3Neg.half": "recursive call on a term that is not a direct recursive constructor field",
        "M3.M3Neg.Stream": "coinductive type", "M3.M3Neg.sprop_id": "SProp",
-       "M3.M3Neg.pid": "universe-polymorphic constant", "M3.M3Neg.rose_size": "match on a nested inductive"}
+       "M3.M3Neg.rose_size": "match on a nested inductive"}
 rc, out = run(PY + ["inspect", "--manifest", M3, "--roots", ",".join(NEG)])
 rep = json.loads(out[:out.rindex("}") + 1])
 check(rc == 2 and "UNSUPPORTED_FEATURE" in out, "inspect of the M3 negative roots exits 2")
@@ -65,6 +65,11 @@ for r, reason in NEG.items():
     check(v["status"] == "UNSUPPORTED_FEATURE" and reason in v["reasons"] and v["blocked_declaration"] == r
           and reason in v["locations"] and v["dependency_path"] == [r],
           f"inspect: {r} blocked by '{reason}' at {v.get('locations', {}).get(reason)}")
+# Universe-polymorphic constants are translated since M6 (rule R6): pid is no longer a blocker.
+rc, out = run(PY + ["inspect", "--manifest", M3, "--roots", "M3.M3Neg.pid"])
+rep = json.loads(out[:out.rindex("}") + 1])
+check(rc == 0 and rep["roots"]["M3.M3Neg.pid"]["status"] == "CANDIDATE_SUPPORTED",
+      "inspect: universe-polymorphic pid is a candidate since M6 (R6)")
 # A blocker reached through a dependency names the dependency path; relaxed checking is a blocker.
 M1 = str(ROOT / "fixtures" / "m1" / "manifest.json")
 rc, out = run(PY + ["inspect", "--manifest", M1, "--roots", "M1.M1Neg.uses_ax,M1.M1Neg.uses_relaxed,M1.M1Chain.uses_color"])

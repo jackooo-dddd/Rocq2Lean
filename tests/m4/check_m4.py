@@ -229,8 +229,7 @@ for name, mut in (("seq-generalized-argument", mut_top_g), ("seq-recursive-call-
                                                 "kernel": "ACCEPTED" if kernel_ok else "REJECTED", "detector": "structure"})
 
 # 9. Known blockers, reported by inspect with dependency paths.
-for root, needles in ((f"{C}.nth", ("fixpoint body is not a match on its decreasing argument",)),
-                      (f"{L}.length_rev", ("universe-polymorphic constant", "universe instance"))):
+for root, needles in ((f"{C}.nth", ("fixpoint body is not a match on its decreasing argument",)),):
     rc, out = cli("inspect", "--manifest", MAN, "--roots", root)
     rep = json.loads(out[:out.rindex("}") + 1]) if "}" in out else {"roots": {}}
     v = rep["roots"].get(root, {})
@@ -238,6 +237,15 @@ for root, needles in ((f"{C}.nth", ("fixpoint body is not a match on its decreas
     check(rc == 2 and needle in v.get("reasons", []),
           f"inspect {root}: blocked by '{needle}' via {' -> '.join(x.split('.')[-1] for x in v.get('dependency_path', []))}")
     RESULTS.setdefault("blockers", []).append({"root": root, "reasons": v.get("reasons"), "dependency_path": v.get("dependency_path")})
+
+# 10. Former M4 blockers (setoid Morphisms: universe-polymorphic constants, relation's sort floor,
+# Prop-typing facts of proof-local levels), translated since M6 (rules R6, R2⁺, R2B-P): VERIFIED.
+fb = ROOT / "runs" / "m4-former-blockers"
+shutil.rmtree(fb, ignore_errors=True)
+rcs = [cli("export", "--manifest", MAN, "--roots", f"{L}.length_rev,{L}.in_rev", "--out", fb)[0]]
+rcs += [cli("translate", "--input", fb / "source.ndjson", "--out", fb)[0], cli("verify", "--run", fb)[0]]
+check(rcs == [0, 0, 0], f"former blockers length_rev and in_rev (through Corelib.Classes.Morphisms) VERIFIED since M6 {rcs}")
+RESULTS["former_blockers_verified"] = {"roots": [f"{L}.length_rev", f"{L}.in_rev"], "exit_codes": rcs}
 
 (ROOT / "reports" / "m4").mkdir(parents=True, exist_ok=True)
 (ROOT / "reports" / "m4" / "m4_results.json").write_text(json.dumps(RESULTS, indent=2) + "\n")

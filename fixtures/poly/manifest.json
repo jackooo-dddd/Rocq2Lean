@@ -1,0 +1,1 @@
+{"name": "poly", "load_paths": [["-Q", ".", "PolyFx"]], "files": ["Poly.v"], "requires": ["PolyFx.Poly"]}

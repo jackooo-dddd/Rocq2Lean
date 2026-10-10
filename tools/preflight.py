@@ -8,7 +8,8 @@ verdict names the dependency path to the first blocked declaration.
 
 Statically detected blockers (the translator rejects the same shapes during translation):
   relaxed source checking flags; node kinds outside the fragment (cofix, proj, primitives, evars, section variables), SProp and
-  irrelevant binders, universe-polymorphic levels and instances, source assumptions and missing
+  irrelevant binders, universe-polymorphic levels and instances outside universe-polymorphic constants
+  (R6 translates those), source assumptions and missing
   bodies; inductives that are polymorphic, coinductive, mutual, primitive records or mention
   template inductives with unbound template levels; `match` on a mutual block, a nested inductive, an inductive with
   functional recursive fields or let-bound constructor arguments; `fix` that is mutual, whose body
@@ -67,6 +68,7 @@ def mentions_rel(t, i):
 class Inductives:
     def __init__(self, decls):
         self.decls = decls
+        self.in_poly = False        # walking a universe-polymorphic constant (R6)
 
     def ctor_args(self, ref, k):
         """Outermost-first constructor arguments of constructor k."""
@@ -126,13 +128,16 @@ def walk(t, found, inds, path):
             found.add("SProp", path)
         elif s["k"] == "type":
             for e in s["u"]:
-                if e["l"]["k"] == "var":
+                if e["l"]["k"] == "var" and not inds.in_poly:
                     found.add("polymorphic universe level", path)
         return
     if k is not None and k not in SUPPORTED_NODES:
         found.add(f"node:{k}", path)
     if k in ("const", "ind", "construct") and t.get("u"):
-        found.add("universe instance", path)
+        # R6: an instance on a universe-polymorphic *constant* is translated; on an inductive it is not
+        tgt = inds.decls.get(t["c"]) if k == "const" else None
+        if not (tgt and tgt["kind"] == "constant" and tgt["universes"]["k"] == "polymorphic"):
+            found.add("universe instance", path)
     if t.get("r") == "I":
         found.add("SProp-irrelevant binder", path)
     if k == "case":
@@ -294,14 +299,14 @@ def classify(d, inds):
     if bad:
         found.add(f"relaxed source checking ({', '.join(bad)})", [])
     if d["kind"] == "constant":
-        if d["universes"]["k"] != "monomorphic":
-            found.add("universe-polymorphic constant", [])
+        inds.in_poly = d["universes"]["k"] == "polymorphic"      # R6: its universe variables are parameters
         if d["body_state"] == "assumption":
             found.add("genuine source assumption", [])
         if d["body_state"] in ("unavailable", "unsupported_primitive"):
             found.add(f"body state {d['body_state']}", [])
         walk(d["type"], found, inds, ["type"])
         walk(d["body"], found, inds, ["body"])
+        inds.in_poly = False
     else:
         if d["name"] in BOOTSTRAP and not found.where:
             return "CANDIDATE_SUPPORTED", {}

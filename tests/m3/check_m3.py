@@ -112,7 +112,7 @@ check(rc == 0, "negative M3 inputs export and round-trip faithfully")
 rc, _ = cli("translate", "--input", neg / "source.ndjson", "--out", neg)
 R, _ = results(neg)
 want = {"evenR": "mutual fixpoint", "half": "not a direct recursive constructor field",
-        "Stream": "coinductive", "sprop_id": "SProp", "pid": "universe-polymorphic",
+        "Stream": "coinductive", "sprop_id": "SProp",
         "rose_size": "mutual or nested"}
 for n, msg in want.items():
     r = R["M3.M3Neg." + n]
@@ -125,4 +125,14 @@ shutil.rmtree(ap, ignore_errors=True)
 rcs = [cli("export", "--manifest", MAN, "--roots", "M3.M3Neg.addPre", "--out", ap)[0],
        cli("translate", "--input", ap / "source.ndjson", "--out", ap)[0], cli("verify", "--run", ap)[0]]
 check(rcs == [0, 0, 0], f"addPre (changed earlier argument, generalized in the motive since M4) VERIFIED {rcs}")
+# pid (universe-polymorphic) was rejected by the pilot; since M6 rule R6 translates universe-polymorphic
+# constants (their universe variables become the first Lean universe parameters v_i). It must now be
+# accepted in the negative run and verify on its own.
+check(R["M3.M3Neg.pid"]["status"] == "TRANSLATED_AND_CHECKED" and R["M3.M3Neg.pid"]["level_params"] == ["v_0"],
+      "pid (universe-polymorphic) translated by R6 since M6 (level parameter v_0)")
+pp = ROOT / "runs" / "m3-pid"
+shutil.rmtree(pp, ignore_errors=True)
+rcs = [cli("export", "--manifest", MAN, "--roots", "M3.M3Neg.pid", "--out", pp)[0],
+       cli("translate", "--input", pp / "source.ndjson", "--out", pp)[0], cli("verify", "--run", pp)[0]]
+check(rcs == [0, 0, 0], f"pid (universe-polymorphic, R6) VERIFIED {rcs}")
 finish("test-m3")
