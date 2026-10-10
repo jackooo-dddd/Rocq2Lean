@@ -1,0 +1,18 @@
+{
+  "schema": "rocq2lean-evidence/2",
+  "commit": "de0bfcd7c24550d2068bbef53150d0ee148c70f0",
+  "run": "runs/evidence-m3d",
+  "roots": [
+    "M3.M3Proofs.addR_n_RZ",
+    "M3.M3Proofs.length_map",
+    "M3.M3Proofs.mirror_mirror",
+    "M3.M3Proofs.vmap_id",
+    "M3.M3Proofs.vid_id"
+  ],
+  "verify_status": "VERIFIED",
+  "required_closure_size": 24,
+  "toolchain_fingerprint": "493c3a2086b912a1c9942b93729f47b9687a88388546ec0d3c3b368f97361775",
+  "archive": "rocq2lean-evidence-de0bfcd.tar.gz",
+  "archive_sha256": "b9f56842cf2b93ac5dd06b05fd481b87b1ad2a6a937994a57387b22f35f792a7",
+  "files": 244
+}

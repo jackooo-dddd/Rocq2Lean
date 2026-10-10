@@ -1,0 +1,33 @@
+{
+  "schema": "rocq2lean-acceptance/1",
+  "verdict": "HARDENED_M1_M3_ACCEPTED",
+  "head": "de0bfcd7c24550d2068bbef53150d0ee148c70f0",
+  "gates": {
+    "clean_rebuild": {
+      "ok": true,
+      "detail": "15 suites PASS, 286 checks, commit dbf7c2be21cb",
+      "toolchain_rebuilt": false
+    },
+    "in_place_suite": {
+      "ok": true,
+      "detail": "15 suites PASS, 286 checks, commit 7faa5db674fa"
+    },
+    "fixtures_preserved": {
+      "ok": true,
+      "detail": "identical to 7adb40b"
+    },
+    "freezes": {
+      "ok": true,
+      "detail": "pilot-freeze-1=6a4054dbb131, hardening-freeze-1=742b3a9cbaab, implementation unchanged since: True"
+    },
+    "fresh_holdouts": {
+      "ok": true,
+      "detail": "14/14 roots translated; verified=True; freeze=742b3a9cbaab"
+    },
+    "evidence_package": {
+      "ok": true,
+      "detail": "rocq2lean-evidence-de0bfcd.tar.gz sha256 b9f56842cf2b93ac (recorded b9f56842cf2b93ac); run runs/evidence-m3d VERIFIED; commit de0bfcd7c245"
+    }
+  },
+  "failing": []
+}
