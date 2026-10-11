@@ -1,0 +1,654 @@
+[
+ {
+  "declaration": "Corelib.Classes.Morphisms.normalization_done",
+  "family": "external",
+  "nature": "inductive",
+  "historical_reasons": [
+   "coinductive type"
+  ],
+  "preflight_locations": {
+   "coinductive type": "<top>"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": false,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "Corelib.ssr.ssreflect_rw.nary_congruence",
+  "family": "external",
+  "nature": "proof_opaque",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": true,
+  "needed_for": [
+   "obligation"
+  ],
+  "proof_valued": true,
+  "verdict": "STATEMENT_NEEDED_BODY_IRRELEVANT",
+  "example_path": [
+   "prosa.implementation.refinements.arrival_bound.refine_ArrivalPrefix",
+   "Corelib.ssr.ssreflect_rw.nary_congruence"
+  ],
+  "roots_reaching": {
+   "modern": 438,
+   "classic": 744
+  }
+ },
+ {
+  "declaration": "Corelib.ssr.ssrfun.pair_of_and",
+  "family": "external",
+  "nature": "data_definition",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": false,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "mathcomp.boot.bigop.big_const_seq",
+  "family": "external",
+  "nature": "proof_opaque",
+  "historical_reasons": [
+   "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution"
+  ],
+  "preflight_locations": {},
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "mathcomp.boot.bigop.big_morph",
+  "family": "external",
+  "nature": "proof_opaque",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "mathcomp.boot.choice.PCanHasChoice",
+  "family": "external",
+  "nature": "data_opaque",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": true,
+  "needed_for": [
+   "computation"
+  ],
+  "proof_valued": false,
+  "verdict": "STILL_REQUIRED",
+  "example_path": [
+   "prosa.analysis.abstract.restricted_supply.search_space.elf.is_in_search_space",
+   "mathcomp.algebra.ssrint.ssrint_int__canonical__GRing_PzSemiRing",
+   "mathcomp.algebra.ssrint.HB_unnamed_mixin_5",
+   "mathcomp.algebra.ssrint.HB_unnamed_factory_1",
+   "mathcomp.boot.choice.eqtype_can_type__canonical__choice_Countable",
+   "mathcomp.boot.choice.HB_unnamed_factory_9",
+   "mathcomp.boot.choice.PCanHasChoice"
+  ],
+  "roots_reaching": {
+   "modern": 437,
+   "classic": 744
+  }
+ },
+ {
+  "declaration": "mathcomp.boot.div.edivn_rec",
+  "family": "external",
+  "nature": "data_definition",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": true,
+  "needed_for": [
+   "computation"
+  ],
+  "proof_valued": false,
+  "verdict": "STILL_REQUIRED",
+  "example_path": [
+   "prosa.analysis.definitions.hyperperiod.hyperperiod_index",
+   "mathcomp.boot.div.divn",
+   "mathcomp.boot.div.edivn",
+   "mathcomp.boot.div.edivn_rec"
+  ],
+  "roots_reaching": {
+   "modern": 165,
+   "classic": 530
+  }
+ },
+ {
+  "declaration": "mathcomp.boot.div.modn_rec",
+  "family": "external",
+  "nature": "data_definition",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": true,
+  "needed_for": [
+   "computation"
+  ],
+  "proof_valued": false,
+  "verdict": "STILL_REQUIRED",
+  "example_path": [
+   "prosa.classic.analysis.apa.interference_bound_edf/InterferenceBoundEDF.edf_specific_interference_bound",
+   "mathcomp.boot.div.modn",
+   "mathcomp.boot.div.modn_rec"
+  ],
+  "roots_reaching": {
+   "modern": 97,
+   "classic": 396
+  }
+ },
+ {
+  "declaration": "mathcomp.boot.eqtype.Sub_spec",
+  "family": "external",
+  "nature": "inductive",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": false,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "mathcomp.boot.eqtype.insub_spec",
+  "family": "external",
+  "nature": "inductive",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": false,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "mathcomp.boot.fintype/isFinite.axioms_",
+  "family": "external",
+  "nature": "inductive",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": true,
+  "needed_for": [
+   "computation",
+   "datatype",
+   "statement"
+  ],
+  "proof_valued": false,
+  "verdict": "STILL_REQUIRED",
+  "example_path": [
+   "prosa.analysis.facts.behavior.service.same_service_implies_scheduled_at_earlier_times",
+   "mathcomp.boot.fintype.fintype_ordinal__canonical__fintype_Finite",
+   "mathcomp.boot.fintype.HB_unnamed_factory_66",
+   "mathcomp.boot.fintype/isFinite.axioms_"
+  ],
+  "roots_reaching": {
+   "modern": 1118,
+   "classic": 708
+  }
+ },
+ {
+  "declaration": "mathcomp.boot.seq.mask_cat",
+  "family": "external",
+  "nature": "proof_opaque",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "mathcomp.boot.ssrnat.leqif",
+  "family": "external",
+  "nature": "type_former",
+  "historical_reasons": [
+   "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+  ],
+  "preflight_locations": {},
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": false,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "mathcomp.boot.ssrnat.nat_of_add_pos",
+  "family": "external",
+  "nature": "proof_opaque",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.classic.implementation.uni.basic.extraction_tdma.Task_T",
+  "family": "classic",
+  "nature": "inductive",
+  "historical_reasons": [
+   "coinductive type"
+  ],
+  "preflight_locations": {
+   "coinductive type": "<top>"
+  },
+  "in_statement_closure": true,
+  "needed_for": [
+   "computation",
+   "statement"
+  ],
+  "proof_valued": false,
+  "verdict": "STILL_REQUIRED",
+  "example_path": [
+   "prosa.classic.implementation.uni.basic.extraction_tdma.Task_T"
+  ],
+  "roots_reaching": {
+   "modern": 0,
+   "classic": 13
+  }
+ },
+ {
+  "declaration": "prosa.classic.implementation.uni.basic.tdma_rta_example/ResponseTimeAnalysisExemple.WCRT_le_period",
+  "family": "classic",
+  "nature": "assumption",
+  "historical_reasons": [
+   "genuine source assumption"
+  ],
+  "preflight_locations": {
+   "genuine source assumption": "<top>"
+  },
+  "in_statement_closure": true,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "STATEMENT_NEEDED_BODY_IRRELEVANT",
+  "example_path": [
+   "prosa.classic.implementation.uni.basic.tdma_rta_example/ResponseTimeAnalysisExemple.WCRT_le_period"
+  ],
+  "roots_reaching": {
+   "modern": 0,
+   "classic": 1
+  }
+ },
+ {
+  "declaration": "prosa.classic.implementation.uni.basic.tdma_rta_example/ResponseTimeAnalysisExemple.respects_TDMA_policy",
+  "family": "classic",
+  "nature": "assumption",
+  "historical_reasons": [
+   "genuine source assumption"
+  ],
+  "preflight_locations": {
+   "genuine source assumption": "<top>"
+  },
+  "in_statement_closure": true,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "STATEMENT_NEEDED_BODY_IRRELEVANT",
+  "example_path": [
+   "prosa.classic.implementation.uni.basic.tdma_rta_example/ResponseTimeAnalysisExemple.respects_TDMA_policy"
+  ],
+  "roots_reaching": {
+   "modern": 0,
+   "classic": 1
+  }
+ },
+ {
+  "declaration": "prosa.classic.implementation.uni.basic.tdma_rta_example/ResponseTimeAnalysisExemple.ts_is_schedulable_by_tdma",
+  "family": "classic",
+  "nature": "assumption",
+  "historical_reasons": [
+   "genuine source assumption"
+  ],
+  "preflight_locations": {
+   "genuine source assumption": "<top>"
+  },
+  "in_statement_closure": true,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "STATEMENT_NEEDED_BODY_IRRELEVANT",
+  "example_path": [
+   "prosa.classic.implementation.uni.basic.tdma_rta_example/ResponseTimeAnalysisExemple.ts_is_schedulable_by_tdma"
+  ],
+  "roots_reaching": {
+   "modern": 0,
+   "classic": 1
+  }
+ },
+ {
+  "declaration": "prosa.classic.implementation.uni.basic.tdma_rta_example/ResponseTimeAnalysisExemple.valid_tdma_bounds",
+  "family": "classic",
+  "nature": "assumption",
+  "historical_reasons": [
+   "genuine source assumption"
+  ],
+  "preflight_locations": {
+   "genuine source assumption": "<top>"
+  },
+  "in_statement_closure": true,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "STATEMENT_NEEDED_BODY_IRRELEVANT",
+  "example_path": [
+   "prosa.classic.implementation.uni.basic.tdma_rta_example/ResponseTimeAnalysisExemple.valid_tdma_bounds"
+  ],
+  "roots_reaching": {
+   "modern": 0,
+   "classic": 1
+  }
+ },
+ {
+  "declaration": "prosa.classic.model.schedule.uni.end_time/end_time.diagnosis_option_sind",
+  "family": "classic",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/ty/b",
+   "SProp-irrelevant binder": "type/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.classic.model.schedule.uni.end_time/end_time.end_time_predicate_sind",
+  "family": "classic",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/b/b/b/ty/b/b/b",
+   "SProp-irrelevant binder": "type/b/b/b/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.classic.model.schedule.uni.sustainability/Sustainability.parameter_label_sind",
+  "family": "classic",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/ty/b",
+   "SProp-irrelevant binder": "type/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.implementation.definitions.arrival_bound.task_arrivals_bound_sind",
+  "family": "modern",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/ty/b",
+   "SProp-irrelevant binder": "type/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.implementation.definitions.extrapolated_arrival_curve.ArrivalCurvePrefix",
+  "family": "modern",
+  "nature": "type_former",
+  "historical_reasons": [
+   "INTERFACE_REJECTED: protected public declaration: statement specialization refused (R2B-S result-sort levels #[\u2026], R2B-P statement levels #[]) [plain attempt: UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution"
+  ],
+  "preflight_locations": {},
+  "in_statement_closure": true,
+  "needed_for": [
+   "computation",
+   "datatype",
+   "statement"
+  ],
+  "proof_valued": false,
+  "verdict": "STILL_REQUIRED",
+  "example_path": [
+   "prosa.implementation.definitions.extrapolated_arrival_curve.ArrivalCurvePrefix"
+  ],
+  "roots_reaching": {
+   "modern": 196,
+   "classic": 0
+  }
+ },
+ {
+  "declaration": "prosa.implementation.definitions.task.concrete_job",
+  "family": "modern",
+  "nature": "inductive",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": true,
+  "needed_for": [
+   "computation",
+   "statement"
+  ],
+  "proof_valued": false,
+  "verdict": "STILL_REQUIRED",
+  "example_path": [
+   "prosa.implementation.definitions.task.concrete_job"
+  ],
+  "roots_reaching": {
+   "modern": 48,
+   "classic": 0
+  }
+ },
+ {
+  "declaration": "prosa.implementation.refinements.arrival_bound.task_arrivals_bound_T_sind",
+  "family": "modern",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/b/ty/b",
+   "SProp-irrelevant binder": "type/b/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.model.priority.definitions.FP_policy",
+  "family": "modern",
+  "nature": "type_former",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": true,
+  "needed_for": [
+   "computation",
+   "statement"
+  ],
+  "proof_valued": false,
+  "verdict": "STILL_REQUIRED",
+  "example_path": [
+   "prosa.model.priority.definitions.FP_policy"
+  ],
+  "roots_reaching": {
+   "modern": 249,
+   "classic": 0
+  }
+ },
+ {
+  "declaration": "prosa.model.priority.definitions.JLDP_policy",
+  "family": "modern",
+  "nature": "type_former",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": true,
+  "needed_for": [
+   "computation",
+   "statement"
+  ],
+  "proof_valued": false,
+  "verdict": "STILL_REQUIRED",
+  "example_path": [
+   "prosa.model.priority.definitions.JLDP_policy"
+  ],
+  "roots_reaching": {
+   "modern": 226,
+   "classic": 0
+  }
+ },
+ {
+  "declaration": "prosa.model.priority.definitions.JLFP_policy",
+  "family": "modern",
+  "nature": "type_former",
+  "historical_reasons": [],
+  "preflight_locations": {},
+  "in_statement_closure": true,
+  "needed_for": [
+   "computation",
+   "statement"
+  ],
+  "proof_valued": false,
+  "verdict": "STILL_REQUIRED",
+  "example_path": [
+   "prosa.model.priority.definitions.JLFP_policy"
+  ],
+  "roots_reaching": {
+   "modern": 448,
+   "classic": 0
+  }
+ },
+ {
+  "declaration": "prosa.model.processor.ideal_uni_exceed.exceedance_processor_state_sind",
+  "family": "modern",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/b/ty/b",
+   "SProp-irrelevant binder": "type/b/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.model.processor.overheads.proc_state_sind",
+  "family": "modern",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/b/ty/b",
+   "SProp-irrelevant binder": "type/b/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.model.processor.restricted_supply.processor_state_sind",
+  "family": "modern",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/b/ty/b",
+   "SProp-irrelevant binder": "type/b/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.model.processor.spin.processor_state_sind",
+  "family": "modern",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/b/ty/b",
+   "SProp-irrelevant binder": "type/b/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.model.processor.varspeed.processor_state_sind",
+  "family": "modern",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/b/ty/b",
+   "SProp-irrelevant binder": "type/b/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ },
+ {
+  "declaration": "prosa.util.setoid.leb_sind",
+  "family": "modern",
+  "nature": "proof_transparent",
+  "historical_reasons": [
+   "SProp",
+   "SProp-irrelevant binder"
+  ],
+  "preflight_locations": {
+   "SProp": "type/b/b/ty/b",
+   "SProp-irrelevant binder": "type/b/b/b/n"
+  },
+  "in_statement_closure": false,
+  "needed_for": [],
+  "proof_valued": true,
+  "verdict": "PROOF_ONLY_REMOVED",
+  "example_path": null
+ }
+]

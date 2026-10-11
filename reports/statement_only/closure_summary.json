@@ -1,0 +1,78 @@
+{
+ "schema": "rocq2lean-statement-closure/1",
+ "roots": {
+  "total": 4474,
+  "by_family": {
+   "modern": 2504,
+   "classic": 1970
+  }
+ },
+ "old_proof_preserving_closure": 10588,
+ "statement_closure": 6017,
+ "statement_closure_by_family": {
+  "modern": 2615,
+  "classic": 2024,
+  "mathcomp": 1001,
+  "Corelib": 234,
+  "CoqEAL": 95,
+  "Stdlib": 43,
+  "HB": 5
+ },
+ "statement_closure_by_translation": {
+  "statement": 3060,
+  "definition": 2780,
+  "datatype": 177
+ },
+ "eliminated_proof_only": 4571,
+ "eliminated_by_family": {
+  "mathcomp": 2646,
+  "Stdlib": 1460,
+  "Corelib": 360,
+  "modern": 92,
+  "classic": 10,
+  "CoqEAL": 3
+ },
+ "eliminated_by_nature": {
+  "proof_opaque": 2255,
+  "data_definition": 1281,
+  "proof_transparent": 504,
+  "inductive": 207,
+  "type_former": 162,
+  "data_opaque": 118,
+  "unknown_opaque": 23,
+  "unknown_transparent": 21
+ },
+ "proof_tasks": {
+  "total": 3060,
+  "by_family": {
+   "modern": 1502,
+   "classic": 1309,
+   "mathcomp": 177,
+   "Corelib": 36,
+   "Stdlib": 23,
+   "CoqEAL": 12,
+   "HB": 1
+  },
+  "in_scope_theorem_statements": 2811
+ },
+ "obligation_statements": {
+  "total": 300,
+  "by_family": {
+   "mathcomp": 177,
+   "modern": 37,
+   "Corelib": 36,
+   "Stdlib": 23,
+   "classic": 14,
+   "CoqEAL": 12,
+   "HB": 1
+  }
+ },
+ "definitions_needing_obligations": 300,
+ "edge_kinds": {
+  "statement": 66843,
+  "computation": 26221,
+  "obligation": 825,
+  "datatype": 996
+ },
+ "approximation": "inline proof subterms of definition bodies are not delimited (typing needed); their references count as computation edges"
+}
