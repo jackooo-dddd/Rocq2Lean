@@ -1,24 +1,23 @@
 # Status
 
-**Current phase: Prosa-only scope locked; full inventory `INVENTORY_PARTIAL`**
-(`reports/prosa_inventory/FULL_INVENTORY_REPORT.md`, scope in `docs/SCOPE.md`).
-- Scope: Prosa v0.6 (`414e6676`, 357 files incl. 14 CoqEAL refinements) + Classic (ProsaBuddy
-  `f692cb74`, all 190 files), with the dependencies their declarations reach.
-- Census from the compiled environment: P 2,707 declarations (2,440 public; all 2,439 RTS names
-  present), C 1,985 declarations (1,870 public; the 49-file plan matches RTS's 525) + 562 module
-  aliases. Combined closure 10,539 declarations (5,847 external).
-- Gap: 3 Classic files do not compile without RTS's proof-script patch (not applied); their
-  declarations are `UNKNOWN`.
-- Coverage: 163 P declarations VERIFIED (87 as roots); 2,183 in-scope declarations have no known
-  blocker; 2,509 are blocked by 14 mechanisms. The largest are universe entailment at references
-  (incl. Prosa's own `FP_policy`/`JLFP_policy`/`JLDP_policy`), MathComp proof-local levels
-  (`PCanHasChoice`, `big_const_seq`), `eqtype.insub_spec` casts and recursion through `subn`
-  (`edivn_rec`). One public Prosa definition (`ArrivalCurvePrefix`) was specialized as a
-  dependency: an interface conflict to fix.
-- Next tasks T1–T5 in `reports/prosa_inventory/blockers.json` (`recommended_tasks`).
+**Current phase: statement-only migration (direction change 2026-10-11).** Rocq2Lean now translates
+Prosa v0.6 + Classic datatypes, definitions and theorem *statements*. A separate Lean proving agent
+writes new proofs; original Rocq proof terms are no longer translated. The proof-preserving pipeline
+and its evidence (M1–M6, P0) are preserved as historical. Plan and status:
+`docs/STATEMENT_ONLY_DESIGN.md`, `reports/statement_only/`.
 
-Regenerate: `scripts/inventory-prosa`; tests: `scripts/test-inventory`. The translator is unchanged
-(implementation tree `819383b9…`).
+**P0 (historical, proof-transport): `INVENTORY_COMPLETE`, `P0_ACCEPTED`**
+(`reports/prosa_inventory/P0_REPORT.md`).
+- **Classic build gap closed** with the authorized RTS patch (applied exactly; only proof-block
+  lines change). All 357 + 190 files are enumerated: 4,741 in-scope declarations, 4,474 protected.
+- **Request-dependent failures fixed:** R3G no longer requires facts about template levels (fixes
+  `isFinite.axioms_`), and the universe facts are indexed per export (no batch-only resource
+  limits).
+- **Explained:** `nary_congruence` is a genuine instance blocker, not request-dependent.
+- **Public-interface protection** is enforced in export, translator, consumer, audit and verify
+  (`INTERFACE_REJECTED`; `ArrivalCurvePrefix`).
+- **Regression on implementation `9951effd`:** `test-all` 18/18, `test-p0` 26/26, `test-inventory`
+  OK, `test-m6-prosa` OK, FinishTime gate PASS (closure 1,717), and a clean-checkout reproduction.
 
 ## M6 completion (summary)
 

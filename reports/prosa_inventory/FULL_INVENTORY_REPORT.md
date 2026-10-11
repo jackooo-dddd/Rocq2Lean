@@ -1,10 +1,18 @@
 # Prosa v0.6 + Classic: full inventory and gap analysis
 
-**Verdict: `INVENTORY_PARTIAL`.** Every authoritative file is accounted for and every compiled
-module has a mechanical declaration inventory. The one gap is 3 of the 190 Classic files, which do
-not compile under the fixed toolchain without editing a proof. Their declarations are recorded as
-`UNKNOWN`, not zero. Nothing here is a translation result: no declaration was promoted to VERIFIED
-by this work.
+**Current verdict (after P0): `INVENTORY_COMPLETE`.** The authorized RTS proof-script compatibility
+patch closed the Classic build gap: all 357 modern and 190 Classic files compile and are enumerated.
+That gives 4,741 in-scope declarations (4,358 public, 4,474 protected) and no gaps. Current numbers
+are in `summary.json`, `blockers.json` and `P0_REPORT.md`.
+
+**Historical.** Sections 1–9 below are the census as first published at `1f33207`
+(`INVENTORY_PARTIAL`: 3 Classic files uncompiled, their declarations `UNKNOWN`). They are kept as
+written; their counts are pre-patch. Nothing here is a translation result: no declaration was
+promoted to VERIFIED by the inventory.
+
+**Direction change (2026-10-11).** The project now targets statement-only translation, so the
+proof-transport coverage and task order below are historical. See `docs/STATEMENT_ONLY_DESIGN.md`
+and `reports/statement_only/`.
 
 Regenerate with `scripts/inventory-prosa` (stage logs in `.work/inventory/logs/`, run record in
 `run_log.json`). Consistency tests: `scripts/test-inventory`. Scope: `docs/SCOPE.md`.

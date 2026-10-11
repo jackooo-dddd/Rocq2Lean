@@ -92,6 +92,8 @@ def recommendations(g, groups, fam_of, prot_of, cov_rows):
     """The curated next tasks (inventory/recommendations.json), each checked against the blocker map:
     every task names mechanisms or declarations with a real dependency path from an in-scope root."""
     recs = json.loads((ROOT / "inventory" / "recommendations.json").read_text())
+    if isinstance(recs, dict) and recs.get("superseded"):
+        return recs                                   # a recorded change of direction, not a task list
     by_mech = {x["mechanism"]: x for x in groups}
     ctx = g.get("context_dependent", {})
     contra = g.get("preflight_contradicted_by_evidence", {})
