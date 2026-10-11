@@ -1,10 +1,34 @@
 # Status
 
-**Current phase: statement-only migration (direction change 2026-10-11).** Rocq2Lean now translates
-Prosa v0.6 + Classic datatypes, definitions and theorem *statements*. A separate Lean proving agent
-writes new proofs; original Rocq proof terms are no longer translated. The proof-preserving pipeline
-and its evidence (M1–M6, P0) are preserved as historical. Plan and status:
-`docs/STATEMENT_ONLY_DESIGN.md`, `reports/statement_only/`.
+**Current phase: statement-only translation (direction change 2026-10-11).** Rocq2Lean translates
+the datatypes, definitions and theorem *statements* of Prosa v0.6 and Classic, plus what they need,
+mechanically. It never translates a Rocq proof and never writes a Lean proof: proofs are tasks for a
+separate Lean proving agent. Design: `docs/STATEMENT_ONLY_DESIGN.md`. Report:
+`reports/statement_only/STATEMENT_ONLY_REPORT.md`.
+
+**Statement-only results (`reports/statement_only/`).**
+- **Closure:** 5,622 source declarations (proof-preserving: 10,588). 4,966 proof-only declarations
+  are eliminated (47%); 4,348 proof subterms are extracted as obligations.
+- **Corpus run** (all 4,474 protected roots, 9,970 records): consumer OK, independent audit OK.
+  3,990 claimed rows all MATCH: 1,668 accepted and 2,322 pending on proof tasks.
+- **Protected interface translated and audited:** modern 1,346 / 2,504 and Classic 1,237 / 1,970
+  (statements and definitions, accepted or pending on proof tasks).
+- **Proof tasks:** 2,277 (`PROOF_TASKS.jsonl`), ranked by the pending declarations they unblock.
+  `eqnP` comes first (needed by 2,114).
+- **CLI:** `export --mode statement`, `translate`, `validate` (`STATEMENT_VALIDATED`), `tasks`,
+  `check-proof`.
+- **Tests:** `scripts/test-statement` 29/29. It covers 6 type-correct statement mutations
+  (kernel-accepted, audit-rejected), the irrelevant-proof-change control (byte-identical), and 6
+  rejected check-proof submissions. `test-all` 18/18 (proof transport, unchanged).
+- **Remaining blockers:**
+  * `edivn_rec`/`modn_rec`: recursion through `subn`; needs a termination-obligation rule;
+  * `JLFP`/`FP`/`JLDP_policy` universes;
+  * ideal `processor_state` obligations;
+  * three protected declarations that would need narrowing (`taskset_of`, `affinity`,
+    `ArrivalCurvePrefix`);
+  * MathComp `nmodule` HB structures.
+
+  See `BLOCKER_REASSESSMENT.md`.
 
 **P0 (historical, proof-transport): `INVENTORY_COMPLETE`, `P0_ACCEPTED`**
 (`reports/prosa_inventory/P0_REPORT.md`).

@@ -897,95 +897,102 @@ def tasks(run_dir, out=None):
     run_dir = Path(run_dir).resolve()
     with RunLock(run_dir):
         v = _current_validation(run_dir)
-        log = run_dir / "logs" / "tasks.log"
-        rep = json.loads((run_dir / "translation_report.json").read_text())
-        rows = {r["source"]: r for r in rep["results"]}
-        ir = {}
-        with open(json.loads((run_dir / "source_snapshot.json").read_text())["ir"]) as fh:
-            for line in fh:
-                d = json.loads(line)
-                if d.get("kind") in ("constant", "inductive"):
-                    ir[d["name"]] = d
-        audit = json.loads((run_dir / "audit.json").read_text())
-        verdict = {x["source"]: x for x in audit["verdicts"]}
-        inv = {}
-        invp = ROOT / "reports" / "prosa_inventory" / "declarations.jsonl"
-        if invp.exists():
-            for line in open(invp):
-                d = json.loads(line)
-                inv[d["name"]] = d
-        leaves = [n for n, r in rows.items() if r["status"] in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
-                  and verdict.get(n, {}).get("verdict") == "MATCH"]
-        lean_dir = run_dir / "lean"
-        tin = lean_dir / "tasks_in.json"
-        tout = lean_dir / "tasks_out.json"
-        tin.write_text(json.dumps([{"statement_constant": rows[n]["target"], "hypotheses": len(rows[n].get("pending_hypotheses") or [])}
-                                   for n in leaves]))
-        p = _lean_in_run(run_dir, f'import Rocq2LeanOut\nimport Rocq2Lean.Tasks\n#rocq2lean_render_tasks "{tin}" "{tout}"\n',
-                         "Rocq2LeanTasks", log)
-        if p.returncode != 0 or not tout.exists():
-            raise Rejected("TOOL_FAILURE", f"task rendering failed; see {log}")
-        rendered = {x["statement_constant"]: x for x in json.loads(tout.read_text())}
-        need = {}
-        sole = {}
-        for n, r in rows.items():
-            if r["status"] in ("PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED"):
-                hs = r.get("pending_hypotheses") or []
-                for h in hs:
-                    need.setdefault(h, set()).add(n)
-                if len(hs) == 1:
-                    sole.setdefault(hs[0], set()).add(n)
-        fam = lambda n: inv.get(n, {}).get("family", "external")
-        vsha = sha256_file(run_dir / "validate.json")
-        recs = []
-        for n in leaves:
-            r, d = rows[n], ir[n]
-            rd = rendered[r["target"]]
-            st = d.get("body_state")
-            if st == "obligation":
-                kind = "obligation"
-            elif st == "opaque_interface":
-                kind = "opaque_value"
-            elif inv.get(n, {}).get("nature") == "assumption":
-                kind = "source_assumption"
-            else:
-                kind = "theorem_statement"
-            ty_sha = hashlib.sha256(json.dumps(rd["task_type"], sort_keys=True).encode()).hexdigest()
-            tid = hashlib.sha256(f"{n}\n{ty_sha}".encode()).hexdigest()
-            comps = [c for part in n.split("/") for c in part.split(".")]
-            src = inv.get(n, {})
-            recs.append({
-                "schema": "rocq2lean-proof-task/1", "task_id": tid, "status": "PROOF_PENDING", "kind": kind,
-                "source": {"kernel_name": n, "family": fam(n), "module": src.get("module") or d.get("name").rsplit(".", 1)[0],
-                           "file": src.get("file"), "line": (src.get("source") or {}).get("line"),
-                           "keyword": (src.get("source") or {}).get("keyword"),
-                           "obligation_of": (d.get("native") or {}).get("obligation", {}).get("of") if kind == "obligation" else None,
-                           "counted_as_proved": False if kind == "source_assumption" else None},
-                "lean": {"statement_constant": r["target"], "level_params": rd["level_params"],
-                         "statement": rd["statement_pp"], "task_statement": rd["task_type_pp"],
-                         "task_statement_sha256": ty_sha,
-                         "reserved_name": "Rocq." + ".".join(comps),
-                         "declaration_kind": "def or theorem (a value of the type)" if kind == "opaque_value" else "theorem",
-                         "required_modules": ["Rocq2LeanOut"],
-                         "output_module": "RocqProofs." + ".".join(comps), "output_file": "RocqProofs/" + "/".join(comps) + ".lean"},
-                "prerequisites": {"pending": r.get("pending_hypotheses") or [], "proved": [],
-                                  "note": "the task statement is generalized over its prerequisites; they bind only the assembly"},
-                "priority": {"pending_declarations_needing_it": len(need.get(n, ())),
-                             "sole_prerequisite_of": len(sole.get(n, ())),
-                             "in_scope_needing_it": sum(1 for x in need.get(n, ()) if fam(x) in ("modern", "classic"))},
-                "validation": {"row_status": r["status"], "audit_verdict": "MATCH", "validate_sha256": vsha,
-                               "run_id": v["run_id"]},
-                "allowed_axioms": DEFAULT_ALLOWED_AXIOMS,
-            })
-        recs.sort(key=lambda x: (-x["priority"]["pending_declarations_needing_it"], x["source"]["kernel_name"]))
-        text = "".join(json.dumps(x, sort_keys=True) + "\n" for x in recs)
-        (run_dir / "PROOF_TASKS.jsonl").write_text(text)
-        if out:
-            Path(out).parent.mkdir(parents=True, exist_ok=True)
-            Path(out).write_text(text)
-        from collections import Counter
-        print(f"{len(recs)} proof task(s): {dict(Counter(x['kind'] for x in recs))}")
-        return recs
+        return build_tasks(run_dir, {"run_id": v["run_id"], "validate_sha256": sha256_file(run_dir / "validate.json")},
+                           out, json.loads((run_dir / "source_snapshot.json").read_text())["ir"])
+
+
+def build_tasks(run_dir, evidence, out=None, ir_path=None):
+    """The task records of a run whose claimed rows were checked (consumer + audit); `evidence` is
+    recorded in every task. Used by `tasks` (after a current validation) and by the corpus driver."""
+    run_dir = Path(run_dir).resolve()
+    log = run_dir / "logs" / "tasks.log"
+    (run_dir / "logs").mkdir(exist_ok=True)
+    rep = json.loads((run_dir / "translation_report.json").read_text())
+    rows = {r["source"]: r for r in rep["results"]}
+    ir = {}
+    with open(ir_path or run_dir / "source.ndjson") as fh:
+        for line in fh:
+            d = json.loads(line)
+            if d.get("kind") in ("constant", "inductive"):
+                ir[d["name"]] = d
+    audit = json.loads((run_dir / "audit.json").read_text())
+    verdict = {x["source"]: x for x in audit["verdicts"]}
+    inv = {}
+    invp = ROOT / "reports" / "prosa_inventory" / "declarations.jsonl"
+    if invp.exists():
+        for line in open(invp):
+            d = json.loads(line)
+            inv[d["name"]] = d
+    leaves = [n for n, r in rows.items() if r["status"] in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
+              and verdict.get(n, {}).get("verdict") == "MATCH"]
+    lean_dir = run_dir / "lean"
+    tin = lean_dir / "tasks_in.json"
+    tout = lean_dir / "tasks_out.json"
+    tin.write_text(json.dumps([{"statement_constant": rows[n]["target"], "hypotheses": len(rows[n].get("pending_hypotheses") or [])}
+                               for n in leaves]))
+    p = _lean_in_run(run_dir, f'import Rocq2LeanOut\nimport Rocq2Lean.Tasks\n#rocq2lean_render_tasks "{tin}" "{tout}"\n',
+                     "Rocq2LeanTasks", log)
+    if p.returncode != 0 or not tout.exists():
+        raise Rejected("TOOL_FAILURE", f"task rendering failed; see {log}")
+    rendered = {x["statement_constant"]: x for x in json.loads(tout.read_text())}
+    need = {}
+    sole = {}
+    for n, r in rows.items():
+        if r["status"] in ("PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED"):
+            hs = r.get("pending_hypotheses") or []
+            for h in hs:
+                need.setdefault(h, set()).add(n)
+            if len(hs) == 1:
+                sole.setdefault(hs[0], set()).add(n)
+    fam = lambda n: inv.get(n, {}).get("family", "external")
+    recs = []
+    for n in leaves:
+        r, d = rows[n], ir[n]
+        rd = rendered[r["target"]]
+        st = d.get("body_state")
+        if st == "obligation":
+            kind = "obligation"
+        elif st == "opaque_interface":
+            kind = "opaque_value"
+        elif inv.get(n, {}).get("nature") == "assumption":
+            kind = "source_assumption"
+        else:
+            kind = "theorem_statement"
+        ty_sha = hashlib.sha256(json.dumps(rd["task_type"], sort_keys=True).encode()).hexdigest()
+        tid = hashlib.sha256(f"{n}\n{ty_sha}".encode()).hexdigest()
+        comps = [c for part in n.split("/") for c in part.split(".")]
+        src = inv.get(n, {})
+        recs.append({
+            "schema": "rocq2lean-proof-task/1", "task_id": tid, "status": "PROOF_PENDING", "kind": kind,
+            "source": {"kernel_name": n, "family": fam(n), "module": src.get("module") or d.get("name").rsplit(".", 1)[0],
+                       "file": src.get("file"), "line": (src.get("source") or {}).get("line"),
+                       "keyword": (src.get("source") or {}).get("keyword"),
+                       "obligation_of": (d.get("native") or {}).get("obligation", {}).get("of") if kind == "obligation" else None,
+                       "counted_as_proved": False if kind == "source_assumption" else None},
+            "lean": {"statement_constant": r["target"], "level_params": rd["level_params"],
+                     "statement": rd["statement_pp"], "task_statement": rd["task_type_pp"],
+                     "task_statement_sha256": ty_sha,
+                     "reserved_name": "Rocq." + ".".join(comps),
+                     "declaration_kind": "def or theorem (a value of the type)" if kind == "opaque_value" else "theorem",
+                     "required_modules": ["Rocq2LeanOut"],
+                     "output_module": "RocqProofs." + ".".join(comps), "output_file": "RocqProofs/" + "/".join(comps) + ".lean"},
+            "prerequisites": {"pending": r.get("pending_hypotheses") or [], "proved": [],
+                              "note": "the task statement is generalized over its prerequisites; they bind only the assembly"},
+            "priority": {"pending_declarations_needing_it": len(need.get(n, ())),
+                         "sole_prerequisite_of": len(sole.get(n, ())),
+                         "in_scope_needing_it": sum(1 for x in need.get(n, ()) if fam(x) in ("modern", "classic"))},
+            "validation": dict(evidence, row_status=r["status"], audit_verdict="MATCH"),
+            "allowed_axioms": DEFAULT_ALLOWED_AXIOMS,
+        })
+    recs.sort(key=lambda x: (-x["priority"]["pending_declarations_needing_it"], x["source"]["kernel_name"]))
+    text = "".join(json.dumps(x, sort_keys=True) + "\n" for x in recs)
+    (run_dir / "PROOF_TASKS.jsonl").write_text(text)
+    if out:
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_text(text)
+    from collections import Counter
+    print(f"{len(recs)} proof task(s): {dict(Counter(x['kind'] for x in recs))}")
+    return recs
 
 
 def check_proof(run_dir, task_id, file, allow_axioms=None):

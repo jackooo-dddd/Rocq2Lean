@@ -88,6 +88,34 @@ them by extracted obligation constants. The counts are then recomputed from the 
 | obligation (non-proof body → proof-valued constant) | 825 |
 | proof-only (bodies of proofs) | not followed |
 
+## Exact closure (measured, statement exporter)
+
+The statement-mode exporter (Phase C) computes the closure exactly. It classifies constants with
+Rocq's kernel and extracts inline proof subterms as obligations stated by their expected type.
+
+| | Phase B approximation | exact |
+|---|---|---|
+| source declarations | 6,017 | **5,622** |
+| eliminated vs the proof-preserving 10,588 | 4,571 | **4,966** |
+| extracted obligation constants | (not delimited) | 4,348 |
+
+The exact closure is contained in the approximation; the 395 declarations it drops were reachable
+only through inline proof subterms.
+
+Exact closure by role:
+* 2,819 proof-valued (statement only);
+* 121 opaque data (interface only);
+* 2,509 definitions (4 sealed implementations);
+* 173 datatypes.
+
+Eliminated by library:
+* MathComp 2,820
+* Stdlib 1,492
+* Corelib 459
+* modern Prosa 125
+* CoqEAL 58
+* Classic 12
+
 ## Reproduce
 
 ```

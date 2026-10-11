@@ -251,6 +251,23 @@ def summary():
         print(x)
 
 
+def tasks():
+    """reports/statement_only/PROOF_TASKS.jsonl: the proof tasks of the corpus run (rocq2lean's task
+    builder), with the corpus consumer and audit as evidence (both must be OK)."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import rocq2lean
+    c = json.loads((RUN / "consumer_result.json").read_text())
+    a = json.loads((RUN / "audit.json").read_text())
+    if c.get("status") != "OK" or a.get("status") != "OK":
+        sys.exit("corpus consumer/audit not OK: no tasks")
+    sha = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()
+    ev = {"run": str(RUN.relative_to(ROOT)), "consumer_sha256": sha(RUN / "consumer_result.json"),
+          "audit_sha256": sha(RUN / "audit.json"), "report_sha256": sha(RUN / "translation_report.json"),
+          "ir_sha256": sha(RUN / "source.ndjson")}
+    recs = rocq2lean.build_tasks(RUN, ev, OUT / "PROOF_TASKS.jsonl")
+    print(len(recs))
+
+
 def subset(roots, out):
     """Debugging aid: the closure of `roots` cut out of the merged corpus IR (all universe lines
     kept), as a translate-only input."""
@@ -286,4 +303,4 @@ if __name__ == "__main__":
     if sys.argv[1] == "subset":
         subset(sys.argv[2].split(","), sys.argv[3])
         sys.exit(0)
-    {"merge": merge, "translate": translate, "check": check, "summary": summary}[sys.argv[1]]()
+    {"merge": merge, "translate": translate, "check": check, "summary": summary, "tasks": tasks}[sys.argv[1]]()
