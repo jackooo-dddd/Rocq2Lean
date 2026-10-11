@@ -19,9 +19,9 @@
   "root_failures_in_closure": {},
   "blocked_dependents": 0,
   "binding": {
-    "git_head": "33ed4686a7c0790ae2d7244ee62c999a2309ac70",
+    "git_head": "4862c7b5c5f4252799214a006c2c10f8e070456a",
     "git_dirty": true,
-    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "impl_tree_sha256": "9951effd76a8cff36087d1672db46ea67ddc3963878b2459bec213baf2632dc0",
     "toolchain_fingerprint": {
       "digest": "b3abee0cf3aaa40a9cf2cb36f1a1f93e35bd435cf13707eb9ba496880bc42922",
       "files": 93,

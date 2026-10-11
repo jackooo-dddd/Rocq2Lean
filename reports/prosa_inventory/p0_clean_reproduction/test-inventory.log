@@ -1,0 +1,51 @@
+modern: 6 distinct declarations, 7 roots requested, 0 covered, 1 aliases, 0 unquotable, 0 failed, 1 inconsistent copies
+classic: 0 distinct declarations, 0 roots requested, 0 covered, 0 aliases, 0 unquotable, 0 failed, 0 inconsistent copies
+PASS merge: identical chunk copies are stored once (6 distinct declarations)
+PASS merge: a differing copy of one name is recorded as inconsistent
+PASS merge: the store is sorted by name (deterministic)
+modern 7 {'public_source': 5, 'source_local_helper': 1, 'alias_reexport': 1} {'assumption': 1, 'type_former': 5, 'proof_opaque': 1}
+classic 0 {} {}
+external 0 {} {}
+PASS classify: every enumerated entry has exactly one record
+PASS classify: a module-alias entry is an alias/re-export of its canonical declaration, not a new declaration
+PASS classify: a missing body is a source assumption
+PASS classify: an opaque proof of a Prop-valued type is proof_opaque
+PASS classify: a definition of type Prop is a type former
+PASS classify: #[local] definitions are source-local helpers
+PASS classify: a public lemma is a protected interface declaration
+PASS classify: attribution ignores commented-out sentences
+PASS files: every source file is listed, including failed builds
+PASS files: alias entries are counted separately from declarations
+PASS files: an import-only module is recorded with zero declarations
+PASS files: a failed build has UNKNOWN counts, not zero
+PASS classify: a declaration attributed to two modules is refused as a duplicate identity
+modern 7 {'public_source': 5, 'source_local_helper': 1, 'alias_reexport': 1} {'assumption': 1, 'type_former': 5, 'proof_opaque': 1}
+classic 0 {} {}
+external 0 {} {}
+nodes 6, edges 4, blocked 1, sccs 5 (1 nontrivial), conflicts 0, missing targets 1
+Counter({'CANDIDATE_SUPPORTED': 3, 'BLOCKED_DEPENDENCY': 2, 'UNSUPPORTED_FEATURE': 1}) Counter({'NO_KNOWN_BLOCKER': 3, 'KNOWN_BLOCKER_DOWNSTREAM': 2, 'KNOWN_BLOCKER_DIRECT': 1})
+genuine source assumption {'modern': 3, 'classic': 0, 'combined': 3} 3 1
+PASS graph: the assumption is a direct blocker
+PASS graph: a root reaching the assumption through its type is blocked downstream
+PASS graph: an independent declaration stays a candidate
+PASS graph: an alias entry is not a separate root
+PASS graph: a dependency absent from the export is recorded, not dropped
+PASS graph: opaque proof dependencies are a separate edge kind
+PASS graph: the missing target is listed on its node
+PASS graph: a dependency cycle is one strongly connected component
+PASS blockers: affected roots count the direct and the downstream roots (ax, p, thm)
+nodes 6, edges 4, blocked 2, sccs 5 (1 nontrivial), conflicts 0, missing targets 1
+Counter({'CANDIDATE_SUPPORTED': 3, 'BLOCKED_DEPENDENCY': 2, 'UNSUPPORTED_FEATURE': 1}) Counter({'KNOWN_BLOCKER_DOWNSTREAM': 3, 'KNOWN_BLOCKER_DIRECT': 2, 'NO_KNOWN_BLOCKER': 1})
+genuine source assumption {'modern': 3, 'classic': 0, 'combined': 3} 3 1
+UNSUPPORTED_FEATURE: synthetic {'modern': 2, 'classic': 0, 'combined': 2} 2 1
+PASS graph: a known translation failure blocks its cycle partner without changing the preflight verdict
+PASS graph: the failing declaration is a direct known blocker
+nodes 6, edges 4, blocked 2, sccs 5 (1 nontrivial), conflicts 0, missing targets 1
+Counter({'CANDIDATE_SUPPORTED': 3, 'BLOCKED_DEPENDENCY': 2, 'UNSUPPORTED_FEATURE': 1}) Counter({'NO_KNOWN_BLOCKER': 4, 'KNOWN_BLOCKER_DOWNSTREAM': 1, 'KNOWN_BLOCKER_DIRECT': 1})
+UNSUPPORTED_FEATURE: synthetic {'modern': 2, 'classic': 0, 'combined': 2} 2 1
+PASS graph: a preflight blocker contradicted by translation evidence keeps the preflight verdict but is not a known blocker
+PASS coverage: kernel acceptance in an unverified run is not VERIFIED
+PASS coverage: a verified dependency is not a verified root
+PASS coverage: evidence for a different elaborated declaration is stale
+PASS coverage: evidence from another implementation is stale
+test-inventory: OK

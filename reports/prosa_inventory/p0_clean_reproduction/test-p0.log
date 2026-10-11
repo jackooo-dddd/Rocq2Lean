@@ -1,0 +1,27 @@
+PASS isFinite.axioms_ VERIFIED with only fintype loaded and with the gate's libraries ({'export': 0, 'translate': 0, 'verify': 0}, {'export': 0, 'translate': 0, 'verify': 0})
+PASS finite_axiom / isFinite.axioms_ have the same level parameters and statements in both environments
+PASS request singleton JobReady: VERIFIED ({'export': 0, 'translate': 0, 'verify': 0})
+PASS request singleton isFinite: VERIFIED ({'export': 0, 'translate': 0, 'verify': 0})
+PASS request combined: VERIFIED ({'export': 0, 'translate': 0, 'verify': 0})
+PASS request reordered: VERIFIED ({'export': 0, 'translate': 0, 'verify': 0})
+PASS request with an added independent root: VERIFIED ({'export': 0, 'translate': 0, 'verify': 0})
+PASS singleton/combined: consistent acceptance and identical accepted interfaces ([])
+PASS combined/reordered: consistent acceptance and identical accepted interfaces ([])
+PASS combined/added root: consistent acceptance and identical accepted interfaces ([])
+PASS singleton isFinite/combined: consistent acceptance and identical accepted interfaces ([])
+PASS the combined request contains protected Prosa declarations
+PASS the alternative dependency order differs from the exporter's
+PASS a legal reordering of the dependencies gives the same acceptance and interfaces
+PASS positive: JobReady and its protected dependencies VERIFIED with full statements (consumer 20, audit 20 protected declarations checked)
+PASS positive: 10 non-protected external statement specializations still VERIFIED (checked policy)
+PASS negative: ArrivalCurvePrefix (protected) needing R2B-S as a dependency is refused (INTERFACE_REJECTED)
+PASS negative: concrete_job is honestly blocked by it
+PASS negative: the same declaration as a requested root is refused the same way
+PASS negative: the audit rejects a forged specialized protected row (prosa.behavior.job.JobType)
+PASS negative: the consumer rejects the forged specialized protected row
+PASS negative: tampered (one protected name removed) contract protection is rejected by the audit and the consumer
+PASS negative: omitted (no binding) contract protection is rejected by the audit and the consumer
+PASS negative: verify rejects a run whose contract protection was tampered with
+PASS negative: an altered protected-interface manifest is refused
+PASS negative: a stale protected-interface manifest (inventory changed) is refused
+test-p0: OK

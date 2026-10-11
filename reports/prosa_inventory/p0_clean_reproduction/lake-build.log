@@ -1,0 +1,31 @@
+✔ [2/14] Built Rocq2Lean.Signature (156ms)
+✔ [3/14] Built Rocq2Lean.Sha256 (253ms)
+✔ [4/14] Built Rocq2Lean.Kernel (528ms)
+✔ [5/14] Built Rocq2Lean.Eval (574ms)
+✔ [6/14] Built Rocq2Lean.IR (993ms)
+⚠ [7/14] Built Rocq2Lean.Translate (4.7s)
+warning: Rocq2Lean/Translate.lean:1244:71: Variable name `puinst` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _puinst
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Rocq2Lean/Translate.lean:1619:8: Variable name `pairOf` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _pairOf
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+✔ [8/14] Built Rocq2Lean.Bootstrap (641ms)
+⚠ [9/14] Built Rocq2Lean.Emit (2.7s)
+warning: Rocq2Lean/Emit.lean:512:8: Variable name `lparams` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _lparams
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+✔ [10/14] Built Rocq2Lean.Replay (602ms)
+✔ [11/14] Built Rocq2Lean.Command (691ms)
+✔ [12/14] Built Rocq2Lean.Verify (1.4s)
+✔ [13/14] Built Rocq2Lean (399ms)
+Build completed successfully (14 jobs).

@@ -1,0 +1,8 @@
+{"schema": "rocq2lean-p0-clean-reproduction/1", "commit": "4862c7b5c5f4252799214a006c2c10f8e070456a", "fresh_clone": true, "clone_path": "/home/shunqwang4/research/r2l-p0clean-4862c7b5c5f4",
+ "impl_tree_sha256": "9951effd76a8cff36087d1672db46ea67ddc3963878b2459bec213baf2632dc0", "started": "2026-10-11T17:02:17+08:00", "finished": "2026-10-11T17:10:52+08:00", "seconds": 515,
+ "lake_build_exit": 0, "setup_prosa_exit": 0, "test_p0_exit": 0, "test_inventory_exit": 0,
+ "test_p0_checks_passed": 26, "test_p0_checks_failed": 0,
+ "rebuilt": ["Lean translator (lake build from an empty .lake)", "Rocq exporter plugin (built by export)",
+             "Prosa v0.6 from the verified release archive with the compatibility patches"],
+ "reused": ["elan toolchain Lean v4.33.1", "opam switch rocq930-mc (Rocq 9.3.0, MathComp 2.6.0, MetaRocq)",
+            "the opam download cache entry of the Prosa release (sha512-checked)"]}
