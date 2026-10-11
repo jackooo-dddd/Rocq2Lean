@@ -28,6 +28,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 RUNS = ["m6-gate-finishtime5", "m6p-behavior61", "m6p-finishtime4", "m6p-holdout13_prosa", "m6p-holdout14_mathcomp",
         "m6p-holdout20_prosa", "m6h-verified8", "m6h-translated9", "m6h-holdout_completion_prosa",
         "m6h-holdout_completion_mathcomp"]
+# plus the full-CLI confirmation runs of the diagnostic probes (inventory/probe.py confirm)
+RUNS += sorted(p.name for p in (ROOT / "runs").glob("inv-confirm-*") if p.is_dir() and (p / "source_snapshot.json").exists())
 RANK = ["VERIFIED_AS_ROOT", "VERIFIED_AS_DEPENDENCY", "KERNEL_CHECKED_UNVERIFIED", "ATTEMPTED_NOT_TRANSLATED",
         "STALE_EVIDENCE_ONLY", "NOT_ATTEMPTED"]
 

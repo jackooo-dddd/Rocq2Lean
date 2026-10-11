@@ -88,7 +88,7 @@ PROBES = {"stack": [
     {"root": "prosa.results.rta.ideal.elf.bounded_pi.bound_on_ep_workload", "default_stack": "Stack overflow"}]}
 
 
-def recommendations(g, groups, fam_of, prot_of):
+def recommendations(g, groups, fam_of, prot_of, cov_rows):
     """The curated next tasks (inventory/recommendations.json), each checked against the blocker map:
     every task names mechanisms or declarations with a real dependency path from an in-scope root."""
     recs = json.loads((ROOT / "inventory" / "recommendations.json").read_text())
@@ -105,7 +105,10 @@ def recommendations(g, groups, fam_of, prot_of):
             paths.append(x["example_path"])
             for f in roots:
                 roots[f] += x["sole_blocker_roots"][f]
+        conflicts = {x["id"] for x in cov_rows if x["interface_conflict"]}
         for n in r.get("declarations", []):
+            if n in g.get("known_blockers", {}) or n in conflicts:
+                continue
             if n not in ctx and n not in contra:
                 raise SystemExit(f"recommendation {r['task']}: {n} is not a recorded issue")
             reach = (ctx.get(n) or contra.get(n))["roots_reaching"]
@@ -119,6 +122,16 @@ def recommendations(g, groups, fam_of, prot_of):
                 unlocked["protected"] += prot_of[rid]
         out.append(dict(r, example_paths=paths, sole_blocker_roots=roots if ms else None,
                         roots_without_known_blocker_after_task=unlocked if ms else None))
+    # cumulative: roots whose known blockers are all covered by tasks 1..k
+    acc = set()
+    for t in out:
+        acc |= set(t.get("mechanisms", []))
+        c = {"modern": 0, "classic": 0, "protected": 0}
+        for rid, rr in g["roots"].items():
+            if rr["mechanisms"] and set(rr["mechanisms"]) <= acc:
+                c[fam_of[rid]] += 1
+                c["protected"] += prot_of[rid]
+        t["roots_without_known_blocker_after_tasks_up_to_here"] = c if t.get("mechanisms") else None
     return out
 
 
@@ -252,7 +265,7 @@ def main():
                     "preflight_python_recursion": {"category": "resource_limit", "declarations": g.get("preflight_recursion_limited", []),
                                                    "note": "tools/preflight.py exceeds Python's default recursion limit on these terms; the census classified them with a raised limit"}},
                 "recommended_tasks": recommendations(g, groups, {d["id"]: d["family"] for d in owned},
-                                                     {d["id"]: bool(d["protected_interface"]) for d in owned}),
+                                                     {d["id"]: bool(d["protected_interface"]) for d in owned}, list(cov.values())),
                 "notes": ["A root's blockers are all known-blocked declarations its closure reaches; a mechanism's "
                           "sole_blocker_roots are the roots that no other known mechanism blocks.",
                           "Preflight is static: CANDIDATE_SUPPORTED is not a translation result. Translation-only "

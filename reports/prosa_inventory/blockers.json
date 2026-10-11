@@ -41,39 +41,52 @@
  "co_blocking_combinations": [
   {
    "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
+   ],
+   "roots": 388
+  },
+  {
+   "mechanisms": [
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
+   ],
+   "roots": 366
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
+   ],
+   "roots": 272
+  },
+  {
+   "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution"
    ],
-   "roots": 677
+   "roots": 190
   },
   {
    "mechanisms": [
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
-   ],
-   "roots": 414
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution"
-   ],
-   "roots": 151
-  },
-  {
-   "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
-   "roots": 112
+   "roots": 182
   },
   {
    "mechanisms": [
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
-   "roots": 111
+   "roots": 176
   },
   {
    "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
@@ -81,11 +94,13 @@
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
     "coinductive type"
    ],
-   "roots": 86
+   "roots": 89
   },
   {
    "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
    "roots": 79
@@ -93,18 +108,22 @@
   {
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
-   "roots": 78
+   "roots": 67
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
-   "roots": 70
+   "roots": 66
+  },
+  {
+   "mechanisms": [
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 55
   },
   {
    "mechanisms": [
@@ -114,8 +133,17 @@
   },
   {
    "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 53
+  },
+  {
+   "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
     "coinductive type"
    ],
@@ -123,6 +151,8 @@
   },
   {
    "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
@@ -131,9 +161,23 @@
   },
   {
    "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 27
+  },
+  {
+   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) application type mismatch"
+   ],
+   "roots": 25
+  },
+  {
+   "mechanisms": [
     "coinductive type"
    ],
-   "roots": 24
+   "roots": 23
   },
   {
    "mechanisms": [
@@ -144,6 +188,48 @@
   },
   {
    "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 22
+  },
+  {
+   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type"
+   ],
+   "roots": 22
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
+   ],
+   "roots": 20
+  },
+  {
+   "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+    "coinductive type"
+   ],
+   "roots": 18
+  },
+  {
+   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) application type mismatch",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
+   ],
+   "roots": 18
+  },
+  {
+   "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
@@ -156,44 +242,24 @@
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
-   ],
-   "roots": 18
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "coinductive type"
-   ],
-   "roots": 15
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution"
-   ],
-   "roots": 14
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "coinductive type"
-   ],
-   "roots": 12
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "KERNEL_REJECTED: (kernel) application type mismatch",
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+    "UNIVERSE_REJECTED: reference to \u2026: argument max \u2026 \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive",
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
-   "roots": 12
+   "roots": 16
+  },
+  {
+   "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 13
   },
   {
    "mechanisms": [
@@ -204,9 +270,16 @@
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+    "coinductive type"
+   ],
+   "roots": 10
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "coinductive type"
    ],
    "roots": 9
   },
@@ -219,33 +292,33 @@
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "coinductive type"
-   ],
-   "roots": 7
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
-   ],
-   "roots": 7
-  },
-  {
-   "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 8
+  },
+  {
+   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) application type mismatch",
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+    "UNIVERSE_REJECTED: reference to \u2026: argument max \u2026 \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive",
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
    "roots": 7
   },
   {
    "mechanisms": [
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "coinductive type"
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+    "UNIVERSE_REJECTED: reference to \u2026: argument max \u2026 \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive"
    ],
-   "roots": 6
+   "roots": 7
   },
   {
    "mechanisms": [
@@ -256,7 +329,23 @@
   },
   {
    "mechanisms": [
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 6
+  },
+  {
+   "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
+   ],
+   "roots": 6
+  },
+  {
+   "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
     "coinductive type"
    ],
@@ -264,14 +353,44 @@
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+    "UNIVERSE_REJECTED: reference to \u2026: argument max \u2026 \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 5
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)"
+   ],
+   "roots": 4
+  },
+  {
+   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) application type mismatch",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution"
+   ],
+   "roots": 4
+  },
+  {
+   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) application type mismatch",
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type"
+   ],
+   "roots": 4
+  },
+  {
+   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+    "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
    "roots": 4
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)"
+    "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive"
    ],
    "roots": 4
   },
@@ -284,11 +403,34 @@
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 3
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
     "coinductive type"
+   ],
+   "roots": 3
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
+   ],
+   "roots": 3
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
    "roots": 3
   },
@@ -302,55 +444,81 @@
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
     "coinductive type"
    ],
-   "roots": 2
+   "roots": 3
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "coinductive type"
+    "KERNEL_REJECTED: (kernel) application type mismatch",
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
-   "roots": 2
+   "roots": 3
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "coinductive type"
-   ],
-   "roots": 2
-  },
-  {
-   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) application type mismatch",
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
-   "roots": 1
+   "roots": 2
   },
   {
    "mechanisms": [
+    "KERNEL_REJECTED: (kernel) application type mismatch",
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive"
+   ],
+   "roots": 2
+  },
+  {
+   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+    "UNIVERSE_REJECTED: reference to \u2026: argument max \u2026 \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
+   ],
+   "roots": 2
+  },
+  {
+   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) application type mismatch",
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+    "UNIVERSE_REJECTED: reference to \u2026: argument max \u2026 \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 2
+  },
+  {
+   "mechanisms": [
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+    "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive"
+   ],
+   "roots": 2
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
    "roots": 1
   },
   {
    "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
+    "coinductive type"
    ],
    "roots": 1
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution"
+    "KERNEL_REJECTED: (kernel) application type mismatch",
+    "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+    "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive"
    ],
    "roots": 1
   }
@@ -719,6 +887,300 @@
  "groups": [
   {
    "affected_protected_interface": {
+    "classic": 813,
+    "combined": 1508,
+    "modern": 695
+   },
+   "affected_root_ids": [
+    "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
+    "prosa.analysis.abstract.IBF.task.completed_before_beginning_of_busy_interval",
+    "prosa.analysis.abstract.IBF.task.cumul_interference_plus_sched_le_serv_of_task_plus_cumul_task_interference",
+    "prosa.analysis.abstract.IBF.task.cumulative_job_interference_bound",
+    "prosa.analysis.abstract.IBF.task.cumulative_job_interference_le_task_interference_bound",
+    "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference",
+    "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference_j",
+    "prosa.analysis.abstract.IBF.task.task_IBF_implies_job_IBF",
+    "prosa.analysis.abstract.busy_interval.busy_interval_is_bounded",
+    "prosa.analysis.abstract.busy_interval.exists_busy_interval_prefix",
+    "prosa.analysis.abstract.ideal.abstract_seq_rta.uniprocessor_response_time_bound_seq",
+    "prosa.analysis.abstract.ideal.cumulative_bounds.cumulative_interference_is_bounded_by_total_service",
+    "prosa.analysis.abstract.ideal.cumulative_bounds.cumulative_priority_inversion_is_bounded",
+    "prosa.analysis.abstract.ideal.cumulative_bounds.ideal_jlfp_interference",
+    "prosa.analysis.abstract.ideal.cumulative_bounds.ideal_jlfp_interfering_workload",
+    "prosa.analysis.abstract.ideal.iw_instantiation.abstract_busy_interval_classic_busy_interval_prefix",
+    "prosa.analysis.abstract.ideal.iw_instantiation.abstract_busy_interval_classic_quiet_time",
+    "prosa.analysis.abstract.ideal.iw_instantiation.cumulative_interference_split",
+    "prosa.analysis.abstract.ideal.iw_instantiation.cumulative_interfering_workload_split",
+    "prosa.analysis.abstract.ideal.iw_instantiation.cumulative_iw_hep_eq_workload_of_ohep",
+    "prosa.analysis.abstract.ideal.iw_instantiation.cumulative_task_interference_split",
+    "prosa.analysis.abstract.ideal.iw_instantiation.ideal_jlfp_interference",
+    "prosa.analysis.abstract.ideal.iw_instantiation.ideal_jlfp_interfering_workload",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_busy_interval_equivalent_busy_interval",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_busy_interval_prefix_equivalent_busy_interval_prefix",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_busy_intervals_are_bounded",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_i_and_w_are_coherent_with_schedule",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_interference_and_workload_consistent_with_sequential_tasks",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_quiet_time_equivalent_quiet_time",
+    "prosa.analysis.abstract.ideal.iw_instantiation.no_interference_when_idle",
+    "prosa.analysis.abstract.ideal.iw_instantiation.no_task_interference_when_idle",
+    "prosa.analysis.abstract.ideal.iw_instantiation.not_interference_implies_scheduled",
+    "prosa.analysis.abstract.ideal.iw_instantiation.quiet_time_ab_implies_quiet_time_cl",
+    "prosa.analysis.abstract.ideal.iw_instantiation.quiet_time_cl_implies_quiet_time_ab",
+    "prosa.analysis.abstract.ideal.iw_instantiation.sched_athep_implies_task_interference",
+    "prosa.analysis.abstract.ideal.iw_instantiation.scheduled_implies_no_interference",
+    "prosa.analysis.abstract.ideal.iw_instantiation.task_interference_eq_false",
+    "prosa.analysis.abstract.restricted_supply.abstract_seq_rta.IBF_P_bounds_interference",
+    "prosa.analysis.abstract.restricted_supply.abstract_seq_rta.uniprocessor_response_time_bound_restricted_supply_seq",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.busy_interval_prefix_exists",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.rs_jlfp_interference",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.rs_jlfp_interfering_workload",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.service_lt_workload_in_busy",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.workload_exceeds_interval",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_intervals_are_bounded_rs_edf",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_prefix_is_bounded_case1",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_prefix_is_bounded_case2",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.job_arrival_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.longest_bi_with_pi_bound_is_valid",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.rs_jlfp_interference",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.rs_jlfp_interfering_workload",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.workload_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_intervals_are_bounded_rs_elf",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_prefix_is_bounded_case1",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_prefix_is_bounded_case2",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.job_arrival_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.rs_jlfp_interference",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.rs_jlfp_interfering_workload",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.workload_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_intervals_are_bounded_rs_fp",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_prefix_is_bounded_case1",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_prefix_is_bounded_case2",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.job_arrival_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.rs_jlfp_interference",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.rs_jlfp_interfering_workload",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.workload_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_intervals_are_bounded_rs_jlfp",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_prefix_is_bounded_case1",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_prefix_is_bounded_case2",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.job_arrival_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.rs_jlfp_interference",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.rs_jlfp_interfering_workload",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.workload_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.busy_prefix.service_inversion_is_bounded_by",
+    "prosa.analysis.abstract.restricted_supply.busy_prefix.service_inversion_of_job_is_bounded_by",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.abstract_busy_interval_classic_busy_interval_prefix",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.abstract_busy_interval_classic_quiet_time",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.busy_implies_not_idle",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.cumulative_interference_split",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.cumulative_interfering_workload_split",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.cumulative_intra_interference_split",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.cumulative_iw_hep_eq_workload_of_ohep",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.cumulative_task_interference_split",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_busy_interval_equivalent_busy_interval",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_busy_interval_prefix_equivalent_busy_interval_prefix",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_i_and_w_are_coherent_with_schedule",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_i_and_w_no_speculative_execution",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_interference_and_workload_consistent_with_sequential_tasks",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_quiet_time_equivalent_quiet_time",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.not_interference_implies_scheduled",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.quiet_time_ab_implies_quiet_time_cl",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.quiet_time_cl_implies_quiet_time_ab",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.rs_jlfp_interference",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.rs_jlfp_interfering_workload",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.scheduled_implies_no_interference",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.abstract_busy_interval_classic_busy_interval_prefix",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.abstract_busy_interval_classic_quiet_time",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.cumulative_interference_split",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.cumulative_interfering_workload_split",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.cumulative_intra_interference_split",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.cumulative_iw_hep_eq_workload_of_ohep",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.cumulative_task_interference_split",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_busy_interval_equivalent_busy_interval",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_busy_interval_prefix_equivalent_busy_interval_prefix",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_i_and_w_are_coherent_with_schedule",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_i_and_w_no_speculative_execution",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_interference_and_workload_consistent_with_sequential_tasks",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_quiet_time_equivalent_quiet_time",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.not_interference_implies_scheduled",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.pending_hep_job_exists_inside_busy_interval",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.quiet_time_ab_implies_quiet_time_cl",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.quiet_time_cl_implies_quiet_time_ab",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.rs_readiness_jlfp_interference",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.rs_readiness_jlfp_interfering_workload",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.scheduled_implies_no_interference",
+    "prosa.analysis.abstract.restricted_supply.search_space.elf.is_in_search_space",
+    "prosa.analysis.abstract.restricted_supply.search_space.elf.search_space_sub",
+    "prosa.analysis.abstract.restricted_supply.search_space.fifo_fixpoint.soln_abstract_response_time_recurrence",
+    "prosa.analysis.abstract.restricted_supply.search_space.fp.search_space_sub",
+    "prosa.analysis.abstract.restricted_supply.task_ibf_readiness.instantiated_task_intra_interference_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.task_ibf_readiness.rs_jlfp_interference",
+    "prosa.analysis.abstract.restricted_supply.task_ibf_readiness.rs_jlfp_interfering_workload",
+    "prosa.analysis.abstract.restricted_supply.task_intra_interference_bound.instantiated_task_intra_interference_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.task_intra_interference_bound.rs_jlfp_interference",
+    "prosa.analysis.abstract.restricted_supply.task_intra_interference_bound.rs_jlfp_interfering_workload",
+    "prosa.analysis.definitions.always_higher_priority.always_higher_priority",
+    "prosa.analysis.definitions.always_higher_priority.always_higher_priority_jlfp",
+    "prosa.analysis.definitions.blocking_bound.elf.blocking_bound",
+    "prosa.analysis.definitions.blocking_bound.fp.blocking_bound",
+    "prosa.analysis.definitions.busy_interval.classical.busy_interval",
+    "prosa.analysis.definitions.busy_interval.classical.busy_interval_prefix",
+    "prosa.analysis.definitions.busy_interval.classical.quiet_time",
+    "prosa.analysis.definitions.busy_interval.classical.quiet_time_P",
+    "prosa.analysis.definitions.busy_interval.classical.quiet_time_dec",
+    "prosa.analysis.definitions.interference.another_hep_job_interference",
+    "prosa.analysis.definitions.interference.another_hep_job_of_same_task_interference",
+    "prosa.analysis.definitions.interference.another_task_hep_job_interference",
+    "prosa.analysis.definitions.interference.cumulative_another_hep_job_interference",
+    "prosa.analysis.definitions.interference.cumulative_another_task_hep_job_interference",
+    "prosa.analysis.definitions.interference.cumulative_interference_from_hep_jobs_from_hp_tasks",
+    "prosa.analysis.definitions.interference.cumulative_interference_from_hep_jobs_from_other_ep_tasks",
+    "prosa.analysis.definitions.interference.cumulative_other_hep_jobs_interfering_workload",
+    "prosa.analysis.definitions.interference.ep_task_hep_job",
+    "prosa.analysis.definitions.interference.hep_job_from_hp_task_interference",
+    "prosa.analysis.definitions.interference.hep_job_from_other_ep_task_interference",
+    "prosa.analysis.definitions.interference.hp_task_hep_job",
+    "prosa.analysis.definitions.interference.hp_task_interference",
+    "prosa.analysis.definitions.interference.other_ep_task_hep_job",
+    "prosa.analysis.definitions.interference.other_hep_jobs_interfering_workload",
+    "prosa.analysis.definitions.overheads.priority_bump.priority_bump",
+    "prosa.analysis.definitions.priority.classes.JLFP_FP_compatible",
+    "prosa.analysis.definitions.priority_inversion.cumulative_priority_inversion",
+    "prosa.analysis.definitions.priority_inversion.cumulative_priority_inversion_cond",
+    "prosa.analysis.definitions.priority_inversion.priority_inversion",
+    "prosa.analysis.definitions.priority_inversion.priority_inversion_cond",
+    "prosa.analysis.definitions.priority_inversion.priority_inversion_cond_is_bounded_by",
+    "prosa.analysis.definitions.priority_inversion.priority_inversion_is_bounded_by",
+    "prosa.analysis.definitions.priority_inversion.priority_inversion_of_job_cond_is_bounded_by",
+    "prosa.analysis.definitions.priority_inversion.priority_inversion_of_job_is_bounded_by",
+    "prosa.analysis.definitions.readiness_interference.cumulative_readiness_interference",
+    "prosa.analysis.definitions.readiness_interference.readiness_interference_is_bounded",
+    "prosa.analysis.definitions.readiness_interference.some_hep_job_ready",
+    "prosa.analysis.definitions.request_bound_function.total_ep_request_bound_function_FP",
+    "prosa.analysis.definitions.request_bound_function.total_hep_request_bound_function_FP",
+    "prosa.analysis.definitions.request_bound_function.total_hp_request_bound_function_FP",
+    "prosa.analysis.definitions.request_bound_function.total_ohep_request_bound_function_FP",
+    "prosa.analysis.definitions.sbf.busy.sbf_respected_in_busy_interval",
+    "prosa.analysis.definitions.sbf.busy.valid_busy_sbf",
+    "prosa.analysis.definitions.service_inversion.busy_prefix.service_inversion_is_bounded_by",
+    "prosa.analysis.definitions.service_inversion.busy_prefix.service_inversion_of_job_is_bounded_by",
+    "prosa.analysis.definitions.service_inversion.pred.cumulative_service_inversion",
+    "prosa.analysis.definitions.service_inversion.pred.pred_service_inversion_is_bounded_by",
+    "prosa.analysis.definitions.service_inversion.pred.pred_service_inversion_of_job_is_bounded_by",
+    "prosa.analysis.definitions.service_inversion.pred.service_inversion",
+    "prosa.analysis.definitions.service_inversion.readiness_aware.cumulative_service_inversion",
+    "prosa.analysis.definitions.service_inversion.readiness_aware.service_inversion",
+    "prosa.analysis.definitions.service_inversion.readiness_aware.service_inversion_is_bounded",
+    "prosa.analysis.definitions.work_bearing_readiness.work_bearing_readiness",
+    "prosa.analysis.definitions.workload.bounded.athep_workload_is_bounded",
+    "prosa.analysis.definitions.workload.elf_athep_bound.bound_on_athep_workload",
+    "prosa.analysis.definitions.workload.elf_athep_bound.bound_on_ep_task_workload",
+    "prosa.analysis.definitions.workload.elf_athep_bound.bound_on_hp_task_workload",
+    "prosa.analysis.facts.behavior.service.same_service_implies_scheduled_at_earlier_times",
+    "prosa.analysis.facts.behavior.service.same_service_implies_serviced_at_earlier_times",
+    "prosa.analysis.facts.blocking_bound.edf.nonpreemptive_segments_bounded_by_blocking",
+    "prosa.analysis.facts.blocking_bound.elf.nonpreemptive_segments_bounded_by_blocking",
+    "prosa.analysis.facts.blocking_bound.fp.nonpreemptive_segments_bounded_by_blocking",
+    "prosa.analysis.facts.busy_interval.arrival.busy_interval_job_arrival",
+    "prosa.analysis.facts.busy_interval.arrival.busy_interval_prefix_job_arrival",
+    "prosa.analysis.facts.busy_interval.arrival.busy_prefix_starts_when_hep_job_arrives",
+    "prosa.analysis.facts.busy_interval.carry_in.busy_interval_from_total_workload_bound",
+    "prosa.analysis.facts.busy_interval.carry_in.completion_of_all_jobs_implies_no_carry_in",
+    "prosa.analysis.facts.busy_interval.carry_in.idle_instant_next_no_carry_in",
+    "prosa.analysis.facts.busy_interval.carry_in.idle_instant_no_carry_in",
+    "prosa.analysis.facts.busy_interval.carry_in.low_total_service_implies_existence_of_time_with_no_carry_in",
+    "prosa.analysis.facts.busy_interval.carry_in.pending_job_not_idle",
+    "prosa.analysis.facts.busy_interval.carry_in.processor_is_not_too_busy",
+    "prosa.analysis.facts.busy_interval.carry_in.total_service_is_bounded_by_\u0394",
+    "prosa.analysis.facts.busy_interval.existence.busy_interval_bounds_response_time",
+    "prosa.analysis.facts.busy_interval.existence.busy_interval_has_uninterrupted_service"
+   ],
+   "affected_root_ids_truncated": true,
+   "affected_roots": {
+    "classic": 825,
+    "combined": 1598,
+    "modern": 773
+   },
+   "category": "universe_instance",
+   "co_blocking_mechanisms": [
+    [
+     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+     1192
+    ],
+    [
+     "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+     1079
+    ],
+    [
+     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+     562
+    ],
+    [
+     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+     323
+    ],
+    [
+     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
+     307
+    ],
+    [
+     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
+     189
+    ],
+    [
+     "coinductive type",
+     177
+    ],
+    [
+     "KERNEL_REJECTED: (kernel) application type mismatch",
+     29
+    ]
+   ],
+   "defining_nodes": 5,
+   "defining_nodes_in_scope": 3,
+   "defining_nodes_sample": [
+    "mathcomp.boot.bigop.big_morph",
+    "mathcomp.boot.eqtype.Sub_spec",
+    "prosa.model.priority.definitions.FP_policy",
+    "prosa.model.priority.definitions.JLDP_policy",
+    "prosa.model.priority.definitions.JLFP_policy"
+   ],
+   "direct_roots": 3,
+   "downstream_roots": 1595,
+   "evidence": [
+    "translation:inv-confirm-137d43809c03",
+    "translation:inv-confirm-29d2a1cca196",
+    "translation:inv-confirm-6ecd06b36278",
+    "translation:inv-confirm-a77e6278cce2",
+    "translation:m6h-holdout_completion_prosa"
+   ],
+   "example_path": [
+    "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
+    "prosa.analysis.abstract.IBF.task.completed_before_beginning_of_busy_interval",
+    "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_equiv_workload_eq_service",
+    "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_impl_workload_eq_service",
+    "mathcomp.boot.bigop.exchange_big",
+    "mathcomp.boot.bigop.exchange_big_idem",
+    "mathcomp.boot.bigop.exchange_big_dep_idem",
+    "mathcomp.boot.bigop.big_tnth",
+    "mathcomp.boot.fintype.ltn_ord",
+    "mathcomp.boot.eqtype.valP",
+    "mathcomp.boot.eqtype.Sub_spec"
+   ],
+   "mechanism": "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+   "reproducer": {
+    "affected_roots_through_it": 1079,
+    "declaration": "mathcomp.boot.eqtype.Sub_spec",
+    "detail": "reference to Rocq.mathcomp.boot.eqtype.SubType.type: argument u_mathcomp_boot_eqtype_695: mathcomp.boot.eqtype.695 + 0 \u2264 mathcomp.boot.eqtype.577 is not entailed by the source universe graph, nor is mathcomp.boot.eqtype.577 \u2264 mathcomp.boot.eqtype.695 (with offset 0) [R3\u2193 attempt: UNIVERSE_REJECTED: reference to Rocq.mathcomp.boot.eqtype.SubType.type: argument u_mathcomp_boot_eqtype_695: mathcomp.boot.eqtype.695 + 0 \u2264 mathcomp.boot.eqtype.577 is not entailed by the source universe graph, nor is mathcomp.boot.eqtype.577 \u2264 mathcomp.boot.eqtype.695 (with offset 0)]",
+    "location": null
+   },
+   "sole_blocker_roots": {
+    "classic": 0,
+    "combined": 272,
+    "modern": 272,
+    "protected": 251
+   }
+  },
+  {
+   "affected_protected_interface": {
     "classic": 810,
     "combined": 1365,
     "modern": 555
@@ -934,20 +1396,24 @@
    "category": "universe_instance",
    "co_blocking_mechanisms": [
     [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     1192
+    ],
+    [
+     "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+     1073
+    ],
+    [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
      535
     ],
     [
+     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+     298
+    ],
+    [
      "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
      279
-    ],
-    [
-     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-     276
-    ],
-    [
-     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     242
     ],
     [
      "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
@@ -956,6 +1422,10 @@
     [
      "coinductive type",
      174
+    ],
+    [
+     "KERNEL_REJECTED: (kernel) application type mismatch",
+     22
     ]
    ],
    "defining_nodes": 1,
@@ -991,10 +1461,294 @@
     "location": null
    },
    "sole_blocker_roots": {
-    "classic": 368,
-    "combined": 677,
-    "modern": 309,
-    "protected": 630
+    "classic": 0,
+    "combined": 190,
+    "modern": 190,
+    "protected": 174
+   }
+  },
+  {
+   "affected_protected_interface": {
+    "classic": 811,
+    "combined": 1038,
+    "modern": 227
+   },
+   "affected_root_ids": [
+    "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
+    "prosa.analysis.abstract.IBF.task.completed_before_beginning_of_busy_interval",
+    "prosa.analysis.abstract.IBF.task.cumul_interference_plus_sched_le_serv_of_task_plus_cumul_task_interference",
+    "prosa.analysis.abstract.IBF.task.cumulative_job_interference_bound",
+    "prosa.analysis.abstract.IBF.task.cumulative_job_interference_le_task_interference_bound",
+    "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference",
+    "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference_j",
+    "prosa.analysis.abstract.IBF.task.task_IBF_implies_job_IBF",
+    "prosa.analysis.abstract.busy_interval.busy_interval_is_bounded",
+    "prosa.analysis.abstract.busy_interval.exists_busy_interval_prefix",
+    "prosa.analysis.abstract.ideal.abstract_seq_rta.uniprocessor_response_time_bound_seq",
+    "prosa.analysis.abstract.ideal.cumulative_bounds.cumulative_interference_is_bounded_by_total_service",
+    "prosa.analysis.abstract.ideal.cumulative_bounds.cumulative_priority_inversion_is_bounded",
+    "prosa.analysis.abstract.ideal.iw_instantiation.abstract_busy_interval_classic_busy_interval_prefix",
+    "prosa.analysis.abstract.ideal.iw_instantiation.abstract_busy_interval_classic_quiet_time",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_busy_interval_equivalent_busy_interval",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_busy_interval_prefix_equivalent_busy_interval_prefix",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_busy_intervals_are_bounded",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_i_and_w_are_coherent_with_schedule",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_interference_and_workload_consistent_with_sequential_tasks",
+    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_quiet_time_equivalent_quiet_time",
+    "prosa.analysis.abstract.ideal.iw_instantiation.not_interference_implies_scheduled",
+    "prosa.analysis.abstract.ideal.iw_instantiation.quiet_time_ab_implies_quiet_time_cl",
+    "prosa.analysis.abstract.ideal.iw_instantiation.quiet_time_cl_implies_quiet_time_ab",
+    "prosa.analysis.abstract.restricted_supply.abstract_seq_rta.IBF_P_bounds_interference",
+    "prosa.analysis.abstract.restricted_supply.abstract_seq_rta.uniprocessor_response_time_bound_restricted_supply_seq",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.busy_interval_prefix_exists",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.service_lt_workload_in_busy",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.workload_exceeds_interval",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_intervals_are_bounded_rs_edf",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_prefix_is_bounded_case1",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_prefix_is_bounded_case2",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.job_arrival_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.longest_bi_with_pi_bound_is_valid",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.workload_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_intervals_are_bounded_rs_elf",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_prefix_is_bounded_case1",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_prefix_is_bounded_case2",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.job_arrival_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.workload_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_intervals_are_bounded_rs_fp",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_prefix_is_bounded_case1",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_prefix_is_bounded_case2",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.job_arrival_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.workload_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_intervals_are_bounded_rs_jlfp",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_prefix_is_bounded_case1",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_prefix_is_bounded_case2",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.job_arrival_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.workload_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.abstract_busy_interval_classic_busy_interval_prefix",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.abstract_busy_interval_classic_quiet_time",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.busy_implies_not_idle",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_busy_interval_equivalent_busy_interval",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_busy_interval_prefix_equivalent_busy_interval_prefix",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_i_and_w_are_coherent_with_schedule",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_i_and_w_no_speculative_execution",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_interference_and_workload_consistent_with_sequential_tasks",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_quiet_time_equivalent_quiet_time",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.not_interference_implies_scheduled",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.quiet_time_ab_implies_quiet_time_cl",
+    "prosa.analysis.abstract.restricted_supply.iw_instantiation.quiet_time_cl_implies_quiet_time_ab",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.abstract_busy_interval_classic_busy_interval_prefix",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.abstract_busy_interval_classic_quiet_time",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_busy_interval_equivalent_busy_interval",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_busy_interval_prefix_equivalent_busy_interval_prefix",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_i_and_w_no_speculative_execution",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_interference_and_workload_consistent_with_sequential_tasks",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_quiet_time_equivalent_quiet_time",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.pending_hep_job_exists_inside_busy_interval",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.quiet_time_ab_implies_quiet_time_cl",
+    "prosa.analysis.abstract.restricted_supply.iw_readiness.quiet_time_cl_implies_quiet_time_ab",
+    "prosa.analysis.abstract.restricted_supply.task_ibf_readiness.instantiated_task_intra_interference_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.task_intra_interference_bound.instantiated_task_intra_interference_is_bounded",
+    "prosa.analysis.facts.behavior.service.same_service_implies_scheduled_at_earlier_times",
+    "prosa.analysis.facts.behavior.service.same_service_implies_serviced_at_earlier_times",
+    "prosa.analysis.facts.blocking_bound.elf.nonpreemptive_segments_bounded_by_blocking",
+    "prosa.analysis.facts.busy_interval.carry_in.busy_interval_from_total_workload_bound",
+    "prosa.analysis.facts.busy_interval.carry_in.completion_of_all_jobs_implies_no_carry_in",
+    "prosa.analysis.facts.busy_interval.carry_in.low_total_service_implies_existence_of_time_with_no_carry_in",
+    "prosa.analysis.facts.busy_interval.carry_in.processor_is_not_too_busy",
+    "prosa.analysis.facts.busy_interval.carry_in.total_service_is_bounded_by_\u0394",
+    "prosa.analysis.facts.busy_interval.existence.busy_interval_bounds_response_time",
+    "prosa.analysis.facts.busy_interval.existence.busy_interval_has_uninterrupted_service",
+    "prosa.analysis.facts.busy_interval.existence.busy_interval_is_bounded",
+    "prosa.analysis.facts.busy_interval.existence.busy_interval_workload_larger_than_interval",
+    "prosa.analysis.facts.busy_interval.existence.exists_busy_interval",
+    "prosa.analysis.facts.busy_interval.existence.exists_busy_interval_prefix",
+    "prosa.analysis.facts.busy_interval.existence.hep_jobs_receive_no_service_before_quiet_time",
+    "prosa.analysis.facts.busy_interval.existence.no_idle_time_within_non_quiet_time_interval",
+    "prosa.analysis.facts.interference.cumulative_i_ohep_eq_service_of_ohep",
+    "prosa.analysis.facts.interference.cumulative_i_thep_eq_service_of_othep",
+    "prosa.analysis.facts.model.arrival_curves.fp_hep_arrivals_bounded_by_sum_max_arrivals",
+    "prosa.analysis.facts.model.arrival_curves.jlfp_hep_arrivals_bounded_by_sum_max_arrivals",
+    "prosa.analysis.facts.model.dbf.total_demand_within_le_sum_task_rbf_shifted",
+    "prosa.analysis.facts.model.dbf.total_demand_within_le_total_dbf",
+    "prosa.analysis.facts.model.dynamic_suspension.job_suspension_bounded",
+    "prosa.analysis.facts.model.dynamic_suspension.suspension_of_task_bounded",
+    "prosa.analysis.facts.model.ideal.service_of_jobs.low_service_implies_existence_of_idle_time",
+    "prosa.analysis.facts.model.ideal.service_of_jobs.low_service_implies_existence_of_idle_time_rs",
+    "prosa.analysis.facts.model.overheads.sbf.fifo.overheads_sbf_busy_valid",
+    "prosa.analysis.facts.model.overheads.sbf.fp.overheads_sbf_busy_valid",
+    "prosa.analysis.facts.model.overheads.sbf.jlfp.overheads_sbf_busy_valid",
+    "prosa.analysis.facts.model.overheads.schedule_change_bound.bumps_and_completions_bounded_by_hep_arrivals",
+    "prosa.analysis.facts.model.overheads.schedule_change_bound.bumps_and_completions_bounded_by_hep_arrivals_fifo",
+    "prosa.analysis.facts.model.overheads.schedule_change_bound.hep_completions_bounded_by_arrivals",
+    "prosa.analysis.facts.model.overheads.schedule_change_bound.priority_bumps_bounded_by_hep_arrivals",
+    "prosa.analysis.facts.model.overheads.schedule_change_bound.schedule_changes_bounded_by_total_arrivals_FIFO",
+    "prosa.analysis.facts.model.overheads.schedule_change_bound.schedule_changes_bounded_by_total_arrivals_FP",
+    "prosa.analysis.facts.model.overheads.schedule_change_bound.schedule_changes_bounded_by_total_arrivals_JLFP",
+    "prosa.analysis.facts.model.rbf.athep_workload_le_total_ohep_rbf",
+    "prosa.analysis.facts.model.rbf.hep_workload_le_total_hep_rbf",
+    "prosa.analysis.facts.model.rbf.hep_workload_le_total_rbf",
+    "prosa.analysis.facts.model.rbf.ohep_workload_le_rbf",
+    "prosa.analysis.facts.model.rbf.total_workload_le_total_rbf",
+    "prosa.analysis.facts.model.rbf.workload_of_jobs_bounded",
+    "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_equiv_workload_eq_service",
+    "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_impl_workload_eq_service",
+    "prosa.analysis.facts.model.service_of_jobs.cumulative_pred_served_eq_service",
+    "prosa.analysis.facts.model.service_of_jobs.service_of_jobs_always_scheduled",
+    "prosa.analysis.facts.model.service_of_jobs.service_of_jobs_cat_last",
+    "prosa.analysis.facts.model.service_of_jobs.service_of_jobs_cat_scheduling_interval",
+    "prosa.analysis.facts.model.service_of_jobs.service_of_jobs_le_length_of_interval",
+    "prosa.analysis.facts.model.service_of_jobs.service_of_jobs_le_length_of_interval'",
+    "prosa.analysis.facts.model.service_of_jobs.service_of_jobs_sum_over_time_interval",
+    "prosa.analysis.facts.model.service_of_jobs.workload_eq_service_impl_all_jobs_have_completed",
+    "prosa.analysis.facts.model.workload.workload_of_jobs_le_sum_over_partitions",
+    "prosa.analysis.facts.model.workload.workload_of_jobs_partitioned_by_tasks",
+    "prosa.analysis.facts.priority.fifo_ahep_bound.bound_on_hep_workload",
+    "prosa.analysis.facts.priority.gel.hep_job_arrives_after_zero",
+    "prosa.analysis.facts.priority.gel.hep_job_arrives_before",
+    "prosa.analysis.facts.priority.jlfp_with_fp.hep_workload_from_other_ep_partitioned_by_tasks",
+    "prosa.analysis.facts.workload.edf_athep_bound.bound_on_athep_workload_is_valid",
+    "prosa.analysis.facts.workload.elf_athep_bound.bound_on_athep_workload_is_valid",
+    "prosa.analysis.facts.workload.elf_athep_bound.sum_of_ep_tsk_workloads_is_at_most_bound_on_ep_task_workload",
+    "prosa.analysis.facts.workload.elf_athep_bound.sum_of_workloads_is_at_most_bound_on_total_hep_workload",
+    "prosa.analysis.facts.workload.elf_athep_bound.total_ep_tsk_workload_shorten_range",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.bertogna_edf_comp_f_converges_early",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.bertogna_edf_comp_f_converges_with_no_tasks",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.bertogna_edf_comp_f_increases",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.bertogna_edf_comp_iteration_inductive",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.bertogna_edf_comp_iteration_monotonic",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.bertogna_edf_comp_iteration_preserves_minimum",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.bertogna_edf_comp_iteration_preserves_order",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.bertogna_edf_comp_rt_grows_too_much",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_analysis_yields_response_time_bounds",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_claimed_bounds",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_claimed_bounds_finds_fixed_point_for_each_bound",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_claimed_bounds_finds_fixed_point_of_list",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_claimed_bounds_finds_least_fixed_point",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_claimed_bounds_ge_cost",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_claimed_bounds_has_R_for_every_task",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_claimed_bounds_le_deadline",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_claimed_bounds_size",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_claimed_bounds_unzip1_iteration",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_claimed_bounds_unzip1_update_bound",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_response_time_bound",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_rta_iteration",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_schedulable",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.jobs_schedulable_by_edf_rta",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.no_deadline_missed_by_job",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.no_deadline_missed_by_task",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.taskset_schedulable_by_edf_rta",
+    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.update_bound",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_cirinei_response_time_bound_edf",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_R_other_ge_cost",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_all_cpus_in_affinity_busy",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_all_cpus_in_subaffinity_busy",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_all_previous_jobs_complete_by_their_period",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_alpha'_is_full",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_exists_task_that_exceeds_bound",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_interference_by_different_tasks",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_interference_in_non_full_processors",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_interference_on_subaffinity",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_minimum_exceeds_interference",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_specific_bound_holds",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_sum_exceeds_total_interference",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_too_much_interference",
+    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_workload_bounds_interference",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.bertogna_fp_comp_f_converges_early",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.bertogna_fp_comp_f_increases",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.bertogna_fp_comp_f_monotonic",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.bertogna_fp_comp_rt_grows_too_much",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_analysis_yields_response_time_bounds",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_bound_of_task",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_claimed_bounds",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_claimed_bounds_ge_cost",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_claimed_bounds_hp_tasks_have_smaller_index",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_claimed_bounds_le_deadline",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_claimed_bounds_rcons",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_claimed_bounds_take",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_claimed_bounds_unzip",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_schedulable",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.jobs_schedulable_by_fp_rta",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.per_task_rta",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.per_task_rta_converges",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.per_task_rta_fold",
+    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.taskset_schedulable_by_fp_rta",
+    "prosa.classic.analysis.apa.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_cirinei_response_time_bound_fp",
+    "prosa.classic.analysis.apa.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_all_cpus_in_affinity_busy"
+   ],
+   "affected_root_ids_truncated": true,
+   "affected_roots": {
+    "classic": 823,
+    "combined": 1079,
+    "modern": 256
+   },
+   "category": "missing_rule",
+   "co_blocking_mechanisms": [
+    [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     1079
+    ],
+    [
+     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+     1073
+    ],
+    [
+     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+     529
+    ],
+    [
+     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
+     279
+    ],
+    [
+     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+     214
+    ],
+    [
+     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
+     189
+    ],
+    [
+     "coinductive type",
+     172
+    ]
+   ],
+   "defining_nodes": 1,
+   "defining_nodes_in_scope": 0,
+   "defining_nodes_sample": [
+    "mathcomp.boot.eqtype.insub_spec"
+   ],
+   "direct_roots": 0,
+   "downstream_roots": 1079,
+   "evidence": [
+    "translation:inv-confirm-cd30284cddfc"
+   ],
+   "example_path": [
+    "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
+    "prosa.analysis.abstract.IBF.task.completed_before_beginning_of_busy_interval",
+    "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_equiv_workload_eq_service",
+    "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_impl_workload_eq_service",
+    "mathcomp.boot.bigop.exchange_big",
+    "mathcomp.boot.bigop.exchange_big_idem",
+    "mathcomp.boot.bigop.exchange_big_dep_idem",
+    "mathcomp.boot.fintype.fintype_ordinal__canonical__fintype_Finite",
+    "mathcomp.boot.fintype.HB_unnamed_factory_66",
+    "mathcomp.boot.fintype.mem_ord_enum",
+    "mathcomp.boot.fintype.val_ord_enum",
+    "mathcomp.boot.eqtype.insubK",
+    "mathcomp.boot.eqtype.insub_spec"
+   ],
+   "mechanism": "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+   "reproducer": {
+    "affected_roots_through_it": 1079,
+    "declaration": "mathcomp.boot.eqtype.insub_spec",
+    "detail": "default cast annotation is not convertible in Lean",
+    "location": null
+   },
+   "sole_blocker_roots": {
+    "classic": 0,
+    "combined": 0,
+    "modern": 0,
+    "protected": 0
    }
   },
   {
@@ -1214,6 +1968,14 @@
    "category": "missing_rule",
    "co_blocking_mechanisms": [
     [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     307
+    ],
+    [
+     "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+     279
+    ],
+    [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
      279
     ],
@@ -1222,24 +1984,20 @@
      213
     ],
     [
-     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     89
+     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+     43
+    ],
+    [
+     "KERNEL_REJECTED: (kernel) application type mismatch",
+     28
     ],
     [
      "coinductive type",
      27
     ],
     [
-     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-     18
-    ],
-    [
-     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-     18
-    ],
-    [
-     "genuine source assumption",
-     4
+     "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+     25
     ]
    ],
    "defining_nodes": 2,
@@ -1271,9 +2029,9 @@
    },
    "sole_blocker_roots": {
     "classic": 257,
-    "combined": 414,
-    "modern": 157,
-    "protected": 408
+    "combined": 366,
+    "modern": 109,
+    "protected": 363
    }
   },
   {
@@ -1493,24 +2251,28 @@
    "category": "universe_instance",
    "co_blocking_mechanisms": [
     [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     562
+    ],
+    [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
      535
     ],
     [
-     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     252
+     "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+     529
     ],
     [
      "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
      213
     ],
     [
-     "coinductive type",
-     148
+     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+     155
     ],
     [
-     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-     147
+     "coinductive type",
+     148
     ],
     [
      "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
@@ -1553,8 +2315,8 @@
   {
    "affected_protected_interface": {
     "classic": 0,
-    "combined": 375,
-    "modern": 375
+    "combined": 441,
+    "modern": 441
    },
    "affected_root_ids": [
     "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
@@ -1562,6 +2324,7 @@
     "prosa.analysis.abstract.IBF.task.cumul_interference_plus_sched_le_serv_of_task_plus_cumul_task_interference",
     "prosa.analysis.abstract.IBF.task.cumulative_job_interference_bound",
     "prosa.analysis.abstract.IBF.task.cumulative_job_interference_le_task_interference_bound",
+    "prosa.analysis.abstract.IBF.task.interference_and_service_eq_1",
     "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference",
     "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference_idle",
     "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference_j",
@@ -1597,6 +2360,8 @@
     "prosa.analysis.abstract.ideal.iw_instantiation.quiet_time_cl_implies_quiet_time_ab",
     "prosa.analysis.abstract.ideal.iw_instantiation.scheduled_implies_no_interference",
     "prosa.analysis.abstract.restricted_supply.abstract_rta.IBF_NP_bounds_interference",
+    "prosa.analysis.abstract.restricted_supply.abstract_rta.IBF_P_bounds_interference",
+    "prosa.analysis.abstract.restricted_supply.abstract_rta.cumulative_job_interference_bound",
     "prosa.analysis.abstract.restricted_supply.abstract_rta.uniprocessor_response_time_bound_restricted_supply",
     "prosa.analysis.abstract.restricted_supply.abstract_seq_rta.IBF_P_bounds_interference",
     "prosa.analysis.abstract.restricted_supply.abstract_seq_rta.uniprocessor_response_time_bound_restricted_supply_seq",
@@ -1623,6 +2388,7 @@
     "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_prefix_is_bounded_case1",
     "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_prefix_is_bounded_case2",
     "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.job_arrival_is_bounded",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.workload_is_bounded",
     "prosa.analysis.abstract.restricted_supply.iw_instantiation.abstract_busy_interval_classic_busy_interval_prefix",
     "prosa.analysis.abstract.restricted_supply.iw_instantiation.abstract_busy_interval_classic_quiet_time",
     "prosa.analysis.abstract.restricted_supply.iw_instantiation.busy_implies_not_idle",
@@ -1653,8 +2419,10 @@
     "prosa.analysis.abstract.restricted_supply.iw_readiness.quiet_time_ab_implies_quiet_time_cl",
     "prosa.analysis.abstract.restricted_supply.iw_readiness.quiet_time_cl_implies_quiet_time_ab",
     "prosa.analysis.abstract.restricted_supply.iw_readiness.scheduled_implies_no_interference",
+    "prosa.analysis.abstract.restricted_supply.search_space.fifo_fixpoint.soln_abstract_response_time_recurrence",
     "prosa.analysis.abstract.restricted_supply.task_ibf_readiness.instantiated_task_intra_interference_is_bounded",
     "prosa.analysis.abstract.restricted_supply.task_intra_interference_bound.instantiated_task_intra_interference_is_bounded",
+    "prosa.analysis.facts.SBF.blackout_during_bound_SBF",
     "prosa.analysis.facts.behavior.completion.completed_implies_scheduled_before",
     "prosa.analysis.facts.behavior.completion.completed_on_arrival_implies_zero_cost",
     "prosa.analysis.facts.behavior.completion.cumulative_service_le_job_cost",
@@ -1688,6 +2456,7 @@
     "prosa.analysis.facts.behavior.service.service_during_scheduled_at_earliest",
     "prosa.analysis.facts.behavior.service.service_in_implies_scheduled_in",
     "prosa.analysis.facts.behavior.service.unit_service_at1",
+    "prosa.analysis.facts.blocking_bound.elf.nonpreemptive_segments_bounded_by_blocking",
     "prosa.analysis.facts.busy_interval.arrival.busy_prefix_starts_when_hep_job_arrives",
     "prosa.analysis.facts.busy_interval.carry_in.busy_interval_from_total_workload_bound",
     "prosa.analysis.facts.busy_interval.carry_in.completion_of_all_jobs_implies_no_carry_in",
@@ -1746,33 +2515,34 @@
     "prosa.analysis.facts.completes_at.scheduled_at_precedes_completes_at",
     "prosa.analysis.facts.edf_definitions.EDF_schedule_equiv",
     "prosa.analysis.facts.edf_definitions.EDF_schedule_implies_respects_policy_at_preemption_point",
+    "prosa.analysis.facts.interference.another_task_hep_job_split_hp_ep",
     "prosa.analysis.facts.interference.athep_interference_if",
     "prosa.analysis.facts.interference.athep_interference_iff",
-    "prosa.analysis.facts.interference.cumulative_hep_interference_split_tasks_new",
-    "prosa.analysis.facts.interference.cumulative_i_ohep_eq_service_of_ohep",
-    "prosa.analysis.facts.interference.cumulative_i_thep_eq_service_of_othep",
-    "prosa.analysis.facts.interference.interference_ahep_def",
-    "prosa.analysis.facts.interference.interference_athep_def",
-    "prosa.analysis.facts.interference.no_ahep_interference_when_scheduled",
-    "prosa.analysis.facts.interference.no_ahep_interference_when_scheduled_lp",
-    "prosa.analysis.facts.interference.no_ahep_interference_when_served",
-    "prosa.analysis.facts.interference.no_athep_interference_when_scheduled"
+    "prosa.analysis.facts.interference.cumulative_hep_interference_split_tasks_new"
    ],
    "affected_root_ids_truncated": true,
    "affected_roots": {
     "classic": 0,
-    "combined": 405,
-    "modern": 405
+    "combined": 479,
+    "modern": 479
    },
    "category": "universe_instance",
    "co_blocking_mechanisms": [
     [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     323
+    ],
+    [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-     276
+     298
+    ],
+    [
+     "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+     214
     ],
     [
      "coinductive type",
-     183
+     187
     ],
     [
      "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
@@ -1780,25 +2550,29 @@
     ],
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-     147
-    ],
-    [
-     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     114
+     155
     ],
     [
      "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-     18
+     43
+    ],
+    [
+     "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+     40
     ]
    ],
-   "defining_nodes": 1,
+   "defining_nodes": 3,
    "defining_nodes_in_scope": 0,
    "defining_nodes_sample": [
-    "mathcomp.boot.ssrnat.leqif"
+    "Corelib.ssr.ssrfun.pair_of_and",
+    "mathcomp.boot.ssrnat.leqif",
+    "mathcomp.boot.ssrnat.nat_of_add_pos"
    ],
    "direct_roots": 0,
-   "downstream_roots": 405,
+   "downstream_roots": 479,
    "evidence": [
+    "translation:inv-confirm-04080457f685",
+    "translation:inv-confirm-b2e72d9f942e",
     "translation:m6p-holdout20_prosa"
    ],
    "example_path": [
@@ -1821,283 +2595,9 @@
    },
    "sole_blocker_roots": {
     "classic": 0,
-    "combined": 111,
-    "modern": 111,
-    "protected": 107
-   }
-  },
-  {
-   "affected_protected_interface": {
-    "classic": 107,
-    "combined": 251,
-    "modern": 144
-   },
-   "affected_root_ids": [
-    "prosa.analysis.abstract.IBF.task.cumulative_job_interference_bound",
-    "prosa.analysis.abstract.IBF.task.task_IBF_implies_job_IBF",
-    "prosa.analysis.abstract.ideal.abstract_seq_rta.uniprocessor_response_time_bound_seq",
-    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_busy_intervals_are_bounded",
-    "prosa.analysis.abstract.restricted_supply.abstract_seq_rta.IBF_P_bounds_interference",
-    "prosa.analysis.abstract.restricted_supply.abstract_seq_rta.uniprocessor_response_time_bound_restricted_supply_seq",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_intervals_are_bounded_rs_edf",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_prefix_is_bounded_case1",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_prefix_is_bounded_case2",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.job_arrival_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.longest_bi_with_pi_bound_is_valid",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.workload_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_intervals_are_bounded_rs_elf",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_prefix_is_bounded_case1",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_prefix_is_bounded_case2",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.job_arrival_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.workload_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_intervals_are_bounded_rs_fp",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_prefix_is_bounded_case1",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_prefix_is_bounded_case2",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.job_arrival_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.workload_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_intervals_are_bounded_rs_jlfp",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_prefix_is_bounded_case1",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_prefix_is_bounded_case2",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.job_arrival_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.workload_is_bounded",
-    "prosa.analysis.facts.blocking_bound.elf.nonpreemptive_segments_bounded_by_blocking",
-    "prosa.analysis.facts.model.dbf.task_demand_within_le_task_dbf",
-    "prosa.analysis.facts.model.dbf.task_demand_within_le_task_rbf_shifted",
-    "prosa.analysis.facts.model.dbf.total_demand_within_le_sum_task_rbf_shifted",
-    "prosa.analysis.facts.model.dbf.total_demand_within_le_total_dbf",
-    "prosa.analysis.facts.model.dynamic_suspension.job_suspension_bounded",
-    "prosa.analysis.facts.model.dynamic_suspension.suspension_of_task_bounded",
-    "prosa.analysis.facts.model.rbf.athep_workload_le_total_ohep_rbf",
-    "prosa.analysis.facts.model.rbf.hep_workload_le_total_hep_rbf",
-    "prosa.analysis.facts.model.rbf.hep_workload_le_total_rbf",
-    "prosa.analysis.facts.model.rbf.ohep_workload_le_rbf",
-    "prosa.analysis.facts.model.rbf.rbf_spec",
-    "prosa.analysis.facts.model.rbf.rbf_spec'",
-    "prosa.analysis.facts.model.rbf.task_rbf_without_job_under_analysis",
-    "prosa.analysis.facts.model.rbf.task_rbf_without_job_under_analysis_from_arrival",
-    "prosa.analysis.facts.model.rbf.task_workload_between_bounded",
-    "prosa.analysis.facts.model.rbf.total_workload_le_total_rbf",
-    "prosa.analysis.facts.model.rbf.workload_of_jobs_bounded",
-    "prosa.analysis.facts.model.service_of_jobs.service_of_jobs_always_scheduled",
-    "prosa.analysis.facts.model.service_of_jobs.service_of_jobs_at_scheduled1",
-    "prosa.analysis.facts.model.service_of_jobs.service_of_jobs_geq",
-    "prosa.analysis.facts.model.task_cost.sum_job_costs_bounded",
-    "prosa.analysis.facts.priority.fifo_ahep_bound.bound_on_hep_workload",
-    "prosa.analysis.facts.priority.gel.hep_job_arrives_after_zero",
-    "prosa.analysis.facts.priority.gel.hep_job_arrives_before",
-    "prosa.analysis.facts.suspension.suspension_bounded_in_interval",
-    "prosa.analysis.facts.suspension.suspension_bounded_in_interval_aux",
-    "prosa.analysis.facts.suspension.suspension_bounded_longer_interval",
-    "prosa.analysis.facts.suspension.suspension_bounded_trivial",
-    "prosa.analysis.facts.workload.edf_athep_bound.bound_on_athep_workload_is_valid",
-    "prosa.analysis.facts.workload.edf_athep_bound.sum_of_workloads_is_at_most_bound_on_total_hep_workload",
-    "prosa.analysis.facts.workload.elf_athep_bound.bound_on_athep_workload_is_valid",
-    "prosa.analysis.facts.workload.elf_athep_bound.sum_of_ep_tsk_workloads_is_at_most_bound_on_ep_task_workload",
-    "prosa.analysis.facts.workload.elf_athep_bound.sum_of_hp_tsk_workloads_is_at_most_bound_on_hp_task_workload",
-    "prosa.analysis.facts.workload.elf_athep_bound.sum_of_workloads_is_at_most_bound_on_total_hep_workload",
-    "prosa.analysis.facts.workload.elf_athep_bound.total_ep_tsk_workload_shorten_range",
-    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.edf_analysis_yields_response_time_bounds",
-    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.jobs_schedulable_by_edf_rta",
-    "prosa.classic.analysis.apa.bertogna_edf_comp/ResponseTimeIterationEDF.taskset_schedulable_by_edf_rta",
-    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_cirinei_response_time_bound_edf",
-    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_all_cpus_in_affinity_busy",
-    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_all_cpus_in_subaffinity_busy",
-    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_exists_task_that_exceeds_bound",
-    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_interference_in_non_full_processors",
-    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_interference_on_subaffinity",
-    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_minimum_exceeds_interference",
-    "prosa.classic.analysis.apa.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_sum_exceeds_total_interference",
-    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.fp_analysis_yields_response_time_bounds",
-    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.jobs_schedulable_by_fp_rta",
-    "prosa.classic.analysis.apa.bertogna_fp_comp/ResponseTimeIterationFP.taskset_schedulable_by_fp_rta",
-    "prosa.classic.analysis.apa.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_cirinei_response_time_bound_fp",
-    "prosa.classic.analysis.apa.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_all_cpus_in_affinity_busy",
-    "prosa.classic.analysis.apa.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_all_cpus_in_subaffinity_busy",
-    "prosa.classic.analysis.apa.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_exists_task_that_exceeds_bound",
-    "prosa.classic.analysis.apa.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_interference_in_non_full_processors",
-    "prosa.classic.analysis.apa.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_interference_on_subaffinity",
-    "prosa.classic.analysis.apa.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_minimum_exceeds_interference",
-    "prosa.classic.analysis.apa.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_sum_exceeds_total_interference",
-    "prosa.classic.analysis.global.basic.bertogna_edf_comp/ResponseTimeIterationEDF.edf_analysis_yields_response_time_bounds",
-    "prosa.classic.analysis.global.basic.bertogna_edf_comp/ResponseTimeIterationEDF.jobs_schedulable_by_edf_rta",
-    "prosa.classic.analysis.global.basic.bertogna_edf_comp/ResponseTimeIterationEDF.taskset_schedulable_by_edf_rta",
-    "prosa.classic.analysis.global.basic.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_cirinei_response_time_bound_edf",
-    "prosa.classic.analysis.global.basic.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_exists_task_that_exceeds_bound",
-    "prosa.classic.analysis.global.basic.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_interference_in_non_full_processors",
-    "prosa.classic.analysis.global.basic.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_interference_on_all_cpus",
-    "prosa.classic.analysis.global.basic.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_minimum_exceeds_interference",
-    "prosa.classic.analysis.global.basic.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_sum_exceeds_total_interference",
-    "prosa.classic.analysis.global.basic.bertogna_fp_comp/ResponseTimeIterationFP.fp_analysis_yields_response_time_bounds",
-    "prosa.classic.analysis.global.basic.bertogna_fp_comp/ResponseTimeIterationFP.jobs_schedulable_by_fp_rta",
-    "prosa.classic.analysis.global.basic.bertogna_fp_comp/ResponseTimeIterationFP.taskset_schedulable_by_fp_rta",
-    "prosa.classic.analysis.global.basic.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_cirinei_response_time_bound_fp",
-    "prosa.classic.analysis.global.basic.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_exists_task_that_exceeds_bound",
-    "prosa.classic.analysis.global.basic.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_interference_in_non_full_processors",
-    "prosa.classic.analysis.global.basic.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_interference_on_all_cpus",
-    "prosa.classic.analysis.global.basic.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_minimum_exceeds_interference",
-    "prosa.classic.analysis.global.basic.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_sum_exceeds_total_interference",
-    "prosa.classic.analysis.global.jitter.bertogna_fp_comp/ResponseTimeIterationFP.fp_analysis_yields_response_time_bounds",
-    "prosa.classic.analysis.global.jitter.bertogna_fp_comp/ResponseTimeIterationFP.jobs_schedulable_by_fp_rta",
-    "prosa.classic.analysis.global.jitter.bertogna_fp_comp/ResponseTimeIterationFP.taskset_schedulable_by_fp_rta",
-    "prosa.classic.analysis.global.jitter.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_cirinei_response_time_bound_fp",
-    "prosa.classic.analysis.global.jitter.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_exists_task_that_exceeds_bound",
-    "prosa.classic.analysis.global.jitter.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_interference_in_non_full_processors",
-    "prosa.classic.analysis.global.jitter.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_interference_on_all_cpus",
-    "prosa.classic.analysis.global.jitter.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_minimum_exceeds_interference",
-    "prosa.classic.analysis.global.jitter.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_sum_exceeds_total_interference",
-    "prosa.classic.analysis.global.parallel.bertogna_edf_comp/ResponseTimeIterationEDF.edf_analysis_yields_response_time_bounds",
-    "prosa.classic.analysis.global.parallel.bertogna_edf_comp/ResponseTimeIterationEDF.jobs_schedulable_by_edf_rta",
-    "prosa.classic.analysis.global.parallel.bertogna_edf_comp/ResponseTimeIterationEDF.taskset_schedulable_by_edf_rta",
-    "prosa.classic.analysis.global.parallel.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_cirinei_response_time_bound_edf",
-    "prosa.classic.analysis.global.parallel.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_exists_task_that_exceeds_bound",
-    "prosa.classic.analysis.global.parallel.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_interference_on_all_cpus",
-    "prosa.classic.analysis.global.parallel.bertogna_edf_theory/ResponseTimeAnalysisEDF.bertogna_edf_sum_exceeds_total_interference",
-    "prosa.classic.analysis.global.parallel.bertogna_fp_comp/ResponseTimeIterationFP.fp_analysis_yields_response_time_bounds",
-    "prosa.classic.analysis.global.parallel.bertogna_fp_comp/ResponseTimeIterationFP.jobs_schedulable_by_fp_rta",
-    "prosa.classic.analysis.global.parallel.bertogna_fp_comp/ResponseTimeIterationFP.taskset_schedulable_by_fp_rta",
-    "prosa.classic.analysis.global.parallel.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_cirinei_response_time_bound_fp",
-    "prosa.classic.analysis.global.parallel.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_all_cpus_are_busy",
-    "prosa.classic.analysis.global.parallel.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_exists_task_that_exceeds_bound",
-    "prosa.classic.analysis.global.parallel.bertogna_fp_theory/ResponseTimeAnalysisFP.bertogna_fp_sum_exceeds_total_interference",
-    "prosa.classic.analysis.uni.arrival_curves.workload_bound/MaxArrivalsWorkloadBound.task_workload_le_task_rbf",
-    "prosa.classic.analysis.uni.arrival_curves.workload_bound/MaxArrivalsWorkloadBound.total_workload_le_total_rbf",
-    "prosa.classic.analysis.uni.arrival_curves.workload_bound/MaxArrivalsWorkloadBound.total_workload_le_total_rbf'",
-    "prosa.classic.analysis.uni.arrival_curves.workload_bound/MaxArrivalsWorkloadBound.total_workload_le_total_rbf''",
-    "prosa.classic.analysis.uni.basic.fp_rta_comp/ResponseTimeIterationFP.fp_analysis_yields_response_time_bounds",
-    "prosa.classic.analysis.uni.basic.fp_rta_comp/ResponseTimeIterationFP.jobs_schedulable_by_fp_rta",
-    "prosa.classic.analysis.uni.basic.fp_rta_comp/ResponseTimeIterationFP.taskset_schedulable_by_fp_rta",
-    "prosa.classic.analysis.uni.basic.fp_rta_theory/ResponseTimeAnalysisFP.uniprocessor_response_time_bound_fp",
-    "prosa.classic.analysis.uni.basic.workload_bound_fp/WorkloadBoundFP.fp_workload_bound_holds",
-    "prosa.classic.analysis.uni.jitter.fp_rta_comp/ResponseTimeIterationFP.fp_analysis_yields_response_time_bounds",
-    "prosa.classic.analysis.uni.jitter.fp_rta_comp/ResponseTimeIterationFP.jobs_schedulable_by_fp_rta",
-    "prosa.classic.analysis.uni.jitter.fp_rta_comp/ResponseTimeIterationFP.taskset_schedulable_by_fp_rta",
-    "prosa.classic.analysis.uni.jitter.fp_rta_theory/ResponseTimeAnalysisFP.uniprocessor_response_time_bound_fp",
-    "prosa.classic.analysis.uni.jitter.workload_bound_fp/WorkloadBoundFP.fp_workload_bound_holds",
-    "prosa.classic.analysis.uni.susp.dynamic.oblivious.fp_rta/SuspensionObliviousFP.suspension_oblivious_fp_rta_implies_schedulability",
-    "prosa.classic.implementation.apa.bertogna_edf_example/ResponseTimeAnalysisEDF.ts_is_schedulable",
-    "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.ts_is_schedulable",
-    "prosa.classic.implementation.global.basic.bertogna_edf_example/ResponseTimeAnalysisEDF.ts_is_schedulable",
-    "prosa.classic.implementation.global.basic.bertogna_fp_example/ResponseTimeAnalysisFP.ts_is_schedulable",
-    "prosa.classic.implementation.global.jitter.bertogna_fp_example/ResponseTimeAnalysisFP.ts_is_schedulable",
-    "prosa.classic.implementation.global.parallel.bertogna_edf_example/ResponseTimeAnalysisEDF.ts_is_schedulable",
-    "prosa.classic.implementation.global.parallel.bertogna_fp_example/ResponseTimeAnalysisFP.ts_is_schedulable",
-    "prosa.classic.implementation.uni.basic.fp_rta_example/ResponseTimeAnalysisFP.ts_is_schedulable",
-    "prosa.classic.implementation.uni.jitter.fp_rta_example/ResponseTimeAnalysisFP.ts_is_schedulable",
-    "prosa.classic.implementation.uni.susp.dynamic.oblivious.fp_rta_example/ResponseTimeAnalysisFP.ts_is_schedulable",
-    "prosa.classic.model.schedule.uni.limited.abstract_RTA.abstract_seq_rta/AbstractSeqRTA.bound_for_cumulative_job_interference",
-    "prosa.classic.model.schedule.uni.limited.abstract_RTA.abstract_seq_rta/AbstractSeqRTA.task_rbf_excl_tsk_bounds_task_workload_excl_j",
-    "prosa.classic.model.schedule.uni.limited.abstract_RTA.abstract_seq_rta/AbstractSeqRTA.uniprocessor_response_time_bound_seq",
-    "prosa.classic.model.schedule.uni.limited.edf.nonpr_reg.concrete_models.response_time_bound/RTAforConcreteModels.uniprocessor_response_time_bound_edf_with_fixed_preemption_points",
-    "prosa.classic.model.schedule.uni.limited.edf.nonpr_reg.concrete_models.response_time_bound/RTAforConcreteModels.uniprocessor_response_time_bound_edf_with_floating_nonpreemptive_regions",
-    "prosa.classic.model.schedule.uni.limited.edf.nonpr_reg.concrete_models.response_time_bound/RTAforConcreteModels.uniprocessor_response_time_bound_fully_nonpreemptive_edf",
-    "prosa.classic.model.schedule.uni.limited.edf.nonpr_reg.concrete_models.response_time_bound/RTAforConcreteModels.uniprocessor_response_time_bound_fully_preemptive_edf",
-    "prosa.classic.model.schedule.uni.limited.edf.nonpr_reg.response_time_bound/RTAforEDFwithBoundedNonpreemptiveSegmentsWithArrivalCurves.uniprocessor_response_time_bound_edf_with_bounded_nonpreemptive_segments",
-    "prosa.classic.model.schedule.uni.limited.edf.response_time_bound/AbstractRTAforEDFwithArrivalCurves.instantiated_busy_intervals_are_bounded",
-    "prosa.classic.model.schedule.uni.limited.edf.response_time_bound/AbstractRTAforEDFwithArrivalCurves.instantiated_task_interference_is_bounded",
-    "prosa.classic.model.schedule.uni.limited.edf.response_time_bound/AbstractRTAforEDFwithArrivalCurves.uniprocessor_response_time_bound_edf",
-    "prosa.classic.model.schedule.uni.limited.fixed_priority.nonpr_reg.concrete_models.response_time_bound/RTAforConcreteModels.uniprocessor_response_time_bound_fp_with_fixed_preemption_points",
-    "prosa.classic.model.schedule.uni.limited.fixed_priority.nonpr_reg.concrete_models.response_time_bound/RTAforConcreteModels.uniprocessor_response_time_bound_fp_with_floating_nonpreemptive_regions",
-    "prosa.classic.model.schedule.uni.limited.fixed_priority.nonpr_reg.concrete_models.response_time_bound/RTAforConcreteModels.uniprocessor_response_time_bound_fully_nonpreemptive_fp",
-    "prosa.classic.model.schedule.uni.limited.fixed_priority.nonpr_reg.concrete_models.response_time_bound/RTAforConcreteModels.uniprocessor_response_time_bound_fully_preemptive_fp",
-    "prosa.classic.model.schedule.uni.limited.fixed_priority.nonpr_reg.response_time_bound/RTAforFPwithBoundedNonpreemptiveSegmentsWithArrivalCurves.uniprocessor_response_time_bound_fp_with_bounded_nonpreemptive_segments",
-    "prosa.classic.model.schedule.uni.limited.fixed_priority.response_time_bound/AbstractRTAforFPwithArrivalCurves.instantiated_busy_intervals_are_bounded",
-    "prosa.classic.model.schedule.uni.limited.fixed_priority.response_time_bound/AbstractRTAforFPwithArrivalCurves.instantiated_task_interference_is_bounded",
-    "prosa.classic.model.schedule.uni.limited.fixed_priority.response_time_bound/AbstractRTAforFPwithArrivalCurves.uniprocessor_response_time_bound_fp",
-    "prosa.model.priority.gel.GEL_is_total",
-    "prosa.model.task.arrival.curve_as_rbf.respects_arrival_curve_to_max_rbf",
-    "prosa.model.task.arrival.curve_as_rbf.respects_arrival_curve_to_min_rbf",
-    "prosa.model.task.arrival.curve_as_rbf.taskset_respects_arrival_curve_to_max_rbf",
-    "prosa.model.task.arrival.curve_as_rbf.taskset_respects_arrival_curve_to_min_rbf",
-    "prosa.model.task.arrival.example.Unnamed_thm4",
-    "prosa.results.rta.arm.edf.floating_nonpreemptive.uniprocessor_response_time_bound_floating_edf",
-    "prosa.results.rta.arm.edf.fully_nonpreemptive.uniprocessor_response_time_bound_fully_nonpreemptive_edf",
-    "prosa.results.rta.arm.edf.fully_preemptive.uniprocessor_response_time_bound_fully_preemptive_edf",
-    "prosa.results.rta.arm.edf.limited_preemptive.uniprocessor_response_time_bound_limited_edf",
-    "prosa.results.rta.arm.fifo.bounded_nps.uniprocessor_response_time_bound_fifo",
-    "prosa.results.rta.arm.fp.floating_nonpreemptive.uniprocessor_response_time_bound_floating_fp",
-    "prosa.results.rta.arm.fp.fully_nonpreemptive.uniprocessor_response_time_bound_fully_non_preemptive_fp",
-    "prosa.results.rta.arm.fp.fully_preemptive.uniprocessor_response_time_bound_fully_preemptive_fp",
-    "prosa.results.rta.arm.fp.limited_preemptive.uniprocessor_response_time_bound_limited_fp",
-    "prosa.results.rta.exc.fp.fully_nonpreemptive.uniprocessor_response_time_bound_fully_nonpreemptive_fp",
-    "prosa.results.rta.ideal.edf.bounded_nps.uniprocessor_response_time_bound_edf_with_bounded_nonpreemptive_segments",
-    "prosa.results.rta.ideal.edf.bounded_pi.instantiated_task_interference_is_bounded",
-    "prosa.results.rta.ideal.edf.bounded_pi.uniprocessor_response_time_bound_edf",
-    "prosa.results.rta.ideal.edf.floating_nonpreemptive.uniprocessor_response_time_bound_edf_with_floating_nonpreemptive_regions",
-    "prosa.results.rta.ideal.edf.fully_nonpreemptive.uniprocessor_response_time_bound_fully_nonpreemptive_edf",
-    "prosa.results.rta.ideal.edf.fully_preemptive.uniprocessor_response_time_bound_fully_preemptive_edf",
-    "prosa.results.rta.ideal.edf.limited_preemptive.uniprocessor_response_time_bound_edf_with_fixed_preemption_points",
-    "prosa.results.rta.ideal.elf.bounded_pi.bound_on_ep_workload",
-    "prosa.results.rta.ideal.elf.bounded_pi.bound_on_hp_workload",
-    "prosa.results.rta.ideal.elf.bounded_pi.instantiated_busy_intervals_are_bounded",
-    "prosa.results.rta.ideal.elf.bounded_pi.instantiated_task_interference_is_bounded",
-    "prosa.results.rta.ideal.elf.bounded_pi.total_workload_shorten_range",
-    "prosa.results.rta.ideal.elf.bounded_pi.uniprocessor_response_time_bound_elf",
-    "prosa.results.rta.ideal.fifo.bounded_nps.IBF_correct"
-   ],
-   "affected_root_ids_truncated": true,
-   "affected_roots": {
-    "classic": 107,
-    "combined": 268,
-    "modern": 161
-   },
-   "category": "universe_instance",
-   "co_blocking_mechanisms": [
-    [
-     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-     252
-    ],
-    [
-     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-     242
-    ],
-    [
-     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-     122
-    ],
-    [
-     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-     114
-    ],
-    [
-     "coinductive type",
-     108
-    ],
-    [
-     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-     89
-    ]
-   ],
-   "defining_nodes": 1,
-   "defining_nodes_in_scope": 0,
-   "defining_nodes_sample": [
-    "mathcomp.boot.bigop.big_morph"
-   ],
-   "direct_roots": 0,
-   "downstream_roots": 268,
-   "evidence": [
-    "translation:m6h-holdout_completion_prosa"
-   ],
-   "example_path": [
-    "prosa.analysis.abstract.IBF.task.cumulative_job_interference_bound",
-    "prosa.analysis.facts.model.rbf.task_rbf_without_job_under_analysis",
-    "prosa.analysis.facts.model.rbf.task_rbf_without_job_under_analysis_from_arrival",
-    "prosa.util.sum.sum_majorant_constant",
-    "mathcomp.boot.bigop.big_distrr",
-    "mathcomp.boot.bigop.big_endo",
-    "mathcomp.boot.bigop.big_morph"
-   ],
-   "mechanism": "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-   "reproducer": {
-    "affected_roots_through_it": 268,
-    "declaration": "mathcomp.boot.bigop.big_morph",
-    "detail": "reference to Rocq.Corelib.ssr.ssrfun.morphism_2: argument u_mathcomp_boot_bigop_1255: mathcomp.boot.bigop.1255 + 0 \u2264 Corelib.ssr.ssrfun.348 is not entailed by the source universe graph, nor is Corelib.ssr.ssrfun.348 \u2264 mathcomp.boot.bigop.1255 (with offset 0) [last tier: UNIVERSE_REJECTED: proof-local level mathcomp.boot.bigop.1121 solved as (some u_mathcomp_boot_bigop_1255): native fact mathcomp.boot.bigop.1256 le mathcomp.boot.bigop.1121 does not hold for the solution]",
-    "location": null
-   },
-   "sole_blocker_roots": {
-    "classic": 0,
-    "combined": 1,
-    "modern": 1,
-    "protected": 1
+    "combined": 55,
+    "modern": 55,
+    "protected": 54
    }
   },
   {
@@ -2318,11 +2818,19 @@
    "co_blocking_mechanisms": [
     [
      "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-     183
+     187
+    ],
+    [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     177
     ],
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
      174
+    ],
+    [
+     "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+     172
     ],
     [
      "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
@@ -2331,10 +2839,6 @@
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
      148
-    ],
-    [
-     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     108
     ],
     [
      "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
@@ -2365,9 +2869,9 @@
    },
    "sole_blocker_roots": {
     "classic": 8,
-    "combined": 24,
-    "modern": 16,
-    "protected": 23
+    "combined": 23,
+    "modern": 15,
+    "protected": 22
    }
   },
   {
@@ -2585,6 +3089,14 @@
      190
     ],
     [
+     "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+     189
+    ],
+    [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     189
+    ],
+    [
      "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
      157
     ],
@@ -2595,10 +3107,6 @@
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
      139
-    ],
-    [
-     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     122
     ],
     [
      "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
@@ -2639,6 +3147,561 @@
     "combined": 4,
     "modern": 4,
     "protected": 4
+   }
+  },
+  {
+   "affected_protected_interface": {
+    "classic": 0,
+    "combined": 78,
+    "modern": 78
+   },
+   "affected_root_ids": [
+    "prosa.implementation.definitions.job_constructor.Job",
+    "prosa.implementation.definitions.job_constructor.generate_job_at",
+    "prosa.implementation.definitions.job_constructor.generate_jobs_at",
+    "prosa.implementation.definitions.task.HB_unnamed_factory_3",
+    "prosa.implementation.definitions.task.JobArrival",
+    "prosa.implementation.definitions.task.JobCost",
+    "prosa.implementation.definitions.task.JobTask",
+    "prosa.implementation.definitions.task.concrete_job",
+    "prosa.implementation.definitions.task.eqn_job",
+    "prosa.implementation.definitions.task.job_arrival",
+    "prosa.implementation.definitions.task.job_cost",
+    "prosa.implementation.definitions.task.job_deadline",
+    "prosa.implementation.definitions.task.job_eqdef",
+    "prosa.implementation.definitions.task.job_id",
+    "prosa.implementation.definitions.task.job_task",
+    "prosa.implementation.definitions.task.task_concrete_job__canonical__eqtype_Equality",
+    "prosa.implementation.facts.job_constructor.arrivals_at_unique",
+    "prosa.implementation.facts.job_constructor.arrivals_between_unique",
+    "prosa.implementation.facts.job_constructor.generate_jobs_at_unique",
+    "prosa.implementation.facts.job_constructor.job_arrival_consistent",
+    "prosa.implementation.facts.job_constructor.job_generation_valid_jobs",
+    "prosa.implementation.facts.job_constructor.job_generation_valid_number",
+    "prosa.implementation.refinements.EDF.fast_search_space.Job",
+    "prosa.implementation.refinements.EDF.nonpreemptive_sched.Job",
+    "prosa.implementation.refinements.EDF.nonpreemptive_sched.basic_ready_instance",
+    "prosa.implementation.refinements.EDF.nonpreemptive_sched.respects_policy_at_preemption_point_edf_np",
+    "prosa.implementation.refinements.EDF.nonpreemptive_sched.sched",
+    "prosa.implementation.refinements.EDF.nonpreemptive_sched.sched_jobs_must_be_ready_to_execute",
+    "prosa.implementation.refinements.EDF.nonpreemptive_sched.sched_nonpreemptive",
+    "prosa.implementation.refinements.EDF.nonpreemptive_sched.sched_nonpreemptive_next",
+    "prosa.implementation.refinements.EDF.nonpreemptive_sched.sched_valid",
+    "prosa.implementation.refinements.EDF.preemptive_sched.Job",
+    "prosa.implementation.refinements.EDF.preemptive_sched.basic_ready_instance",
+    "prosa.implementation.refinements.EDF.preemptive_sched.respects_policy_at_preemption_point_edf_fp",
+    "prosa.implementation.refinements.EDF.preemptive_sched.sched",
+    "prosa.implementation.refinements.EDF.preemptive_sched.sched_valid",
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'",
+    "prosa.implementation.refinements.EDF.refinements.refine_search_space_emax_EDF",
+    "prosa.implementation.refinements.EDF.refinements.refine_task_eqdef",
+    "prosa.implementation.refinements.EDF.refinements.refine_task_search_space_emax_EDF",
+    "prosa.implementation.refinements.EDF.refinements.refine_total_rbf",
+    "prosa.implementation.refinements.EDF.refinements.refine_total_rbf'",
+    "prosa.implementation.refinements.FP.nonpreemptive_sched.Job",
+    "prosa.implementation.refinements.FP.nonpreemptive_sched.respects_policy_at_preemption_point_np",
+    "prosa.implementation.refinements.FP.nonpreemptive_sched.sched",
+    "prosa.implementation.refinements.FP.nonpreemptive_sched.sched_jobs_must_be_ready_to_execute",
+    "prosa.implementation.refinements.FP.nonpreemptive_sched.sched_nonpreemptive",
+    "prosa.implementation.refinements.FP.nonpreemptive_sched.sched_nonpreemptive_next",
+    "prosa.implementation.refinements.FP.nonpreemptive_sched.sched_valid",
+    "prosa.implementation.refinements.FP.nonpreemptive_sched.sequential_ready_instance",
+    "prosa.implementation.refinements.FP.preemptive_sched.Job",
+    "prosa.implementation.refinements.FP.preemptive_sched.respects_policy_at_preemption_point",
+    "prosa.implementation.refinements.FP.preemptive_sched.sched",
+    "prosa.implementation.refinements.FP.preemptive_sched.sched_valid",
+    "prosa.implementation.refinements.FP.preemptive_sched.sequential_ready_instance",
+    "prosa.implementation.refinements.FP.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.FP.refinements.refine_blocking_bound'",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point'",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point_NP",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'",
+    "prosa.implementation.refinements.FP.refinements.refine_hep_task",
+    "prosa.implementation.refinements.FP.refinements.refine_ohep_task",
+    "prosa.implementation.refinements.FP.refinements.refine_search_space_emax",
+    "prosa.implementation.refinements.FP.refinements.refine_task_eqdef",
+    "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf",
+    "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf'",
+    "prosa.implementation.refinements.FP.refinements.refine_total_ohep_rbf",
+    "prosa.implementation.refinements.arrival_bound.refine_arrival_curve_prefix",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals'",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve",
+    "prosa.implementation.refinements.arrival_curve.refine_task_rbf",
+    "prosa.implementation.refinements.refinements.refine_div_ceil",
+    "prosa.implementation.refinements.refinements.refine_dvdn",
+    "prosa.implementation.refinements.refinements.refine_foldr_max",
+    "prosa.implementation.refinements.refinements.refine_maxn",
+    "prosa.implementation.refinements.refinements.refine_minn",
+    "prosa.implementation.refinements.task.Job"
+   ],
+   "affected_root_ids_truncated": false,
+   "affected_roots": {
+    "classic": 0,
+    "combined": 84,
+    "modern": 84
+   },
+   "category": "incorrect_implementation",
+   "co_blocking_mechanisms": [
+    [
+     "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+     34
+    ],
+    [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     29
+    ],
+    [
+     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
+     28
+    ],
+    [
+     "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive",
+     26
+    ],
+    [
+     "UNIVERSE_REJECTED: reference to \u2026: argument max \u2026 \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     25
+    ],
+    [
+     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+     25
+    ],
+    [
+     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+     22
+    ]
+   ],
+   "defining_nodes": 2,
+   "defining_nodes_in_scope": 1,
+   "defining_nodes_sample": [
+    "CoqEAL.refinements.refinements.refines_abstr2",
+    "prosa.implementation.definitions.task.concrete_job"
+   ],
+   "direct_roots": 1,
+   "downstream_roots": 83,
+   "evidence": [
+    "translation:inv-confirm-38170cc2f604",
+    "translation:inv-confirm-5ec6782f21c5"
+   ],
+   "example_path": [
+    "prosa.implementation.definitions.job_constructor.Job",
+    "prosa.implementation.definitions.task.concrete_job"
+   ],
+   "mechanism": "KERNEL_REJECTED: (kernel) application type mismatch",
+   "reproducer": {
+    "affected_roots_through_it": 50,
+    "declaration": "prosa.implementation.definitions.task.concrete_job",
+    "detail": "(kernel) application type mismatch\n  @Rocq.Corelib.Init.Prelude.reverse_coercion Rocq.mathcomp.boot.eqtype.Equality.type\n    (Type u_prosa_implementation_definitions_task_25)\nargument has type\n  Type (u_prosa_implementation_definitions_task_25 + 1)\nbut function has type\n  (T : Type (max (u_prosa_implementation_definitions_task_25 + 1) u_prosa_implementation_definitions_task_27)) \u2192\n    Rocq.mathcomp.boot.eqtype.Equality.type \u2192\n      @Rocq.Corelib.Init.Prelude.ReverseCoercionSource T \u2192\n        @Rocq.Corelib.Init.Prelude.ReverseCoercionTarget Rocq.mathcomp.boot.eqtype.Equality.type [R3\u2193 attempt: ",
+    "location": null
+   },
+   "sole_blocker_roots": {
+    "classic": 0,
+    "combined": 25,
+    "modern": 25,
+    "protected": 23
+   }
+  },
+  {
+   "affected_protected_interface": {
+    "classic": 0,
+    "combined": 68,
+    "modern": 68
+   },
+   "affected_root_ids": [
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'",
+    "prosa.implementation.refinements.EDF.refinements.refine_search_space_emax_EDF",
+    "prosa.implementation.refinements.EDF.refinements.refine_task_eqdef",
+    "prosa.implementation.refinements.EDF.refinements.refine_task_search_space_emax_EDF",
+    "prosa.implementation.refinements.EDF.refinements.refine_task_search_space_emax_EDF_h",
+    "prosa.implementation.refinements.EDF.refinements.refine_total_rbf",
+    "prosa.implementation.refinements.EDF.refinements.refine_total_rbf'",
+    "prosa.implementation.refinements.FP.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.FP.refinements.refine_blocking_bound'",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point'",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point_NP",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'",
+    "prosa.implementation.refinements.FP.refinements.refine_hep_task",
+    "prosa.implementation.refinements.FP.refinements.refine_ohep_task",
+    "prosa.implementation.refinements.FP.refinements.refine_search_space_emax",
+    "prosa.implementation.refinements.FP.refinements.refine_search_space_emax_h",
+    "prosa.implementation.refinements.FP.refinements.refine_task_eqdef",
+    "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf",
+    "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf'",
+    "prosa.implementation.refinements.FP.refinements.refine_total_ohep_rbf",
+    "prosa.implementation.refinements.arrival_bound.RArrivalCurvePrefix",
+    "prosa.implementation.refinements.arrival_bound.Rtask_ab",
+    "prosa.implementation.refinements.arrival_bound.refine_ACPrefixT_to_ACPrefix",
+    "prosa.implementation.refinements.arrival_bound.refine_ArrivalPrefix",
+    "prosa.implementation.refinements.arrival_bound.refine_arrival_curve_prefix",
+    "prosa.implementation.refinements.arrival_bound.refine_get_time_steps",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq",
+    "prosa.implementation.refinements.arrival_bound.refine_value_at",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals'",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve",
+    "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix",
+    "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix'",
+    "prosa.implementation.refinements.arrival_curve.refine_get_horizon_of_task",
+    "prosa.implementation.refinements.arrival_curve.refine_large_horizon",
+    "prosa.implementation.refinements.arrival_curve.refine_no_inf_arrivals",
+    "prosa.implementation.refinements.arrival_curve.refine_positive_horizon",
+    "prosa.implementation.refinements.arrival_curve.refine_repeat_steps_with_offset",
+    "prosa.implementation.refinements.arrival_curve.refine_sorted_leq_steps",
+    "prosa.implementation.refinements.arrival_curve.refine_specified_bursts",
+    "prosa.implementation.refinements.arrival_curve.refine_task_rbf",
+    "prosa.implementation.refinements.arrival_curve.refine_valid_arrival_curve_prefix",
+    "prosa.implementation.refinements.arrival_curve.refine_valid_arrivals",
+    "prosa.implementation.refinements.refinements.Rnat_pred",
+    "prosa.implementation.refinements.refinements.eq_SnPos_to_nPred",
+    "prosa.implementation.refinements.refinements.refine_abstract",
+    "prosa.implementation.refinements.refinements.refine_b2n",
+    "prosa.implementation.refinements.refinements.refine_div_ceil",
+    "prosa.implementation.refinements.refinements.refine_dvdn",
+    "prosa.implementation.refinements.refinements.refine_foldr",
+    "prosa.implementation.refinements.refinements.refine_foldr_lemma",
+    "prosa.implementation.refinements.refinements.refine_foldr_max",
+    "prosa.implementation.refinements.refinements.refine_iota",
+    "prosa.implementation.refinements.refinements.refine_ltn",
+    "prosa.implementation.refinements.refinements.refine_maxn",
+    "prosa.implementation.refinements.refinements.refine_minn",
+    "prosa.implementation.refinements.refinements.refine_shift_points_neg",
+    "prosa.implementation.refinements.refinements.refine_shift_points_pos",
+    "prosa.implementation.refinements.refinements.refine_size",
+    "prosa.implementation.refinements.refinements.refine_uncond_foldr",
+    "prosa.implementation.refinements.refinements.refine_zip",
+    "prosa.implementation.refinements.task.Rtask",
+    "prosa.implementation.refinements.task.refine_Periodic",
+    "prosa.implementation.refinements.task.refine_Sporadic",
+    "prosa.implementation.refinements.task.refine_task",
+    "prosa.implementation.refinements.task.refine_task'",
+    "prosa.implementation.refinements.task.refine_task_arrival",
+    "prosa.implementation.refinements.task.refine_task_cost",
+    "prosa.implementation.refinements.task.refine_task_deadline",
+    "prosa.implementation.refinements.task.refine_task_id",
+    "prosa.implementation.refinements.task.refine_task_priority",
+    "prosa.implementation.refinements.task.refine_task_set'"
+   ],
+   "affected_root_ids_truncated": false,
+   "affected_roots": {
+    "classic": 0,
+    "combined": 82,
+    "modern": 82
+   },
+   "category": "incorrect_implementation",
+   "co_blocking_mechanisms": [
+    [
+     "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive",
+     44
+    ],
+    [
+     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+     40
+    ],
+    [
+     "UNIVERSE_REJECTED: reference to \u2026: argument max \u2026 \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     39
+    ],
+    [
+     "KERNEL_REJECTED: (kernel) application type mismatch",
+     34
+    ],
+    [
+     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
+     25
+    ],
+    [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     11
+    ]
+   ],
+   "defining_nodes": 1,
+   "defining_nodes_in_scope": 0,
+   "defining_nodes_sample": [
+    "CoqEAL.refinements.hrel.fun_hrel"
+   ],
+   "direct_roots": 0,
+   "downstream_roots": 82,
+   "evidence": [
+    "translation:inv-confirm-32c3405e9e43"
+   ],
+   "example_path": [
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound",
+    "CoqEAL.refinements.binnat.Rnat",
+    "CoqEAL.refinements.hrel.fun_hrel"
+   ],
+   "mechanism": "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+   "reproducer": {
+    "affected_roots_through_it": 82,
+    "declaration": "CoqEAL.refinements.hrel.fun_hrel",
+    "detail": "(kernel) declaration type mismatch, 'Rocq.CoqEAL.refinements.hrel.fun_hrel' has type\n  (A : Type u_CoqEAL_refinements_hrel_1061) \u2192 (B : Type u_CoqEAL_refinements_hrel_1060) \u2192 (B \u2192 A) \u2192 A \u2192 B \u2192 Prop\nbut it is expected to have type\n  (A : Type u_CoqEAL_refinements_hrel_1061) \u2192\n    (B : Type u_CoqEAL_refinements_hrel_1060) \u2192 (B \u2192 A) \u2192 A \u2192 B \u2192 Type u_CoqEAL_refinements_hrel_1062 [last tier: KERNEL_REJECTED: (kernel) declaration type mismatch, 'Rocq.CoqEAL.refinements.hrel.fun_hrel' has type\n  (A : Type u_CoqEAL_refinements_hrel_1061) \u2192 (B : Type u_CoqEAL_refinements_hrel_1060) \u2192 (B \u2192 A) \u2192 A \u2192 B \u2192 ",
+    "location": null
+   },
+   "sole_blocker_roots": {
+    "classic": 0,
+    "combined": 22,
+    "modern": 22,
+    "protected": 19
+   }
+  },
+  {
+   "affected_protected_interface": {
+    "classic": 0,
+    "combined": 39,
+    "modern": 39
+   },
+   "affected_root_ids": [
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'",
+    "prosa.implementation.refinements.EDF.refinements.refine_search_space_emax_EDF",
+    "prosa.implementation.refinements.EDF.refinements.refine_task_search_space_emax_EDF",
+    "prosa.implementation.refinements.EDF.refinements.refine_task_search_space_emax_EDF_h",
+    "prosa.implementation.refinements.EDF.refinements.refine_total_rbf",
+    "prosa.implementation.refinements.EDF.refinements.refine_total_rbf'",
+    "prosa.implementation.refinements.FP.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.FP.refinements.refine_blocking_bound'",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point'",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point_NP",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'",
+    "prosa.implementation.refinements.FP.refinements.refine_search_space_emax",
+    "prosa.implementation.refinements.FP.refinements.refine_search_space_emax_h",
+    "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf",
+    "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf'",
+    "prosa.implementation.refinements.FP.refinements.refine_total_ohep_rbf",
+    "prosa.implementation.refinements.arrival_bound.refine_arrival_curve_prefix",
+    "prosa.implementation.refinements.arrival_bound.refine_get_time_steps",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted",
+    "prosa.implementation.refinements.arrival_bound.refine_value_at",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals'",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve",
+    "prosa.implementation.refinements.arrival_curve.refine_large_horizon",
+    "prosa.implementation.refinements.arrival_curve.refine_no_inf_arrivals",
+    "prosa.implementation.refinements.arrival_curve.refine_repeat_steps_with_offset",
+    "prosa.implementation.refinements.arrival_curve.refine_sorted_leq_steps",
+    "prosa.implementation.refinements.arrival_curve.refine_specified_bursts",
+    "prosa.implementation.refinements.arrival_curve.refine_task_rbf",
+    "prosa.implementation.refinements.arrival_curve.refine_valid_arrival_curve_prefix",
+    "prosa.implementation.refinements.arrival_curve.refine_valid_arrivals",
+    "prosa.implementation.refinements.refinements.refine_all",
+    "prosa.implementation.refinements.refinements.refine_flatten",
+    "prosa.implementation.refinements.refinements.refine_foldr",
+    "prosa.implementation.refinements.refinements.refine_foldr_max",
+    "prosa.implementation.refinements.refinements.refine_last",
+    "prosa.implementation.refinements.refinements.refine_map",
+    "prosa.implementation.refinements.refinements.refine_shift_points_neg",
+    "prosa.implementation.refinements.refinements.refine_shift_points_pos",
+    "prosa.implementation.refinements.refinements.refine_uncond_foldr",
+    "prosa.implementation.refinements.refinements.refine_zip"
+   ],
+   "affected_root_ids_truncated": false,
+   "affected_roots": {
+    "classic": 0,
+    "combined": 48,
+    "modern": 48
+   },
+   "category": "missing_rule",
+   "co_blocking_mechanisms": [
+    [
+     "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+     44
+    ],
+    [
+     "UNIVERSE_REJECTED: reference to \u2026: argument max \u2026 \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     35
+    ],
+    [
+     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+     32
+    ],
+    [
+     "KERNEL_REJECTED: (kernel) application type mismatch",
+     26
+    ],
+    [
+     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
+     23
+    ],
+    [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     9
+    ]
+   ],
+   "defining_nodes": 8,
+   "defining_nodes_in_scope": 0,
+   "defining_nodes_sample": [
+    "CoqEAL.refinements.param.all_R",
+    "CoqEAL.refinements.param.cat_R",
+    "CoqEAL.refinements.param.filter_R",
+    "CoqEAL.refinements.param.foldr_R",
+    "CoqEAL.refinements.param.has_R",
+    "CoqEAL.refinements.param.last_R",
+    "CoqEAL.refinements.param.map_R",
+    "CoqEAL.refinements.param.zip_R"
+   ],
+   "direct_roots": 0,
+   "downstream_roots": 48,
+   "evidence": [
+    "translation:inv-confirm-1287c83c0758",
+    "translation:inv-confirm-19c15830963a",
+    "translation:inv-confirm-3761541a7f6e",
+    "translation:inv-confirm-4f7ce1fadd89",
+    "translation:inv-confirm-60a56e92470c",
+    "translation:inv-confirm-70feb2f64e4f",
+    "translation:inv-confirm-da022ea90b6b",
+    "translation:inv-confirm-e2da53dd7f9a"
+   ],
+   "example_path": [
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.refinements.refine_foldr_max",
+    "CoqEAL.refinements.param.map_R"
+   ],
+   "mechanism": "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive",
+   "reproducer": {
+    "affected_roots_through_it": 34,
+    "declaration": "CoqEAL.refinements.param.map_R",
+    "detail": "recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive",
+    "location": null
+   },
+   "sole_blocker_roots": {
+    "classic": 0,
+    "combined": 4,
+    "modern": 4,
+    "protected": 4
+   }
+  },
+  {
+   "affected_protected_interface": {
+    "classic": 0,
+    "combined": 30,
+    "modern": 30
+   },
+   "affected_root_ids": [
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP",
+    "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'",
+    "prosa.implementation.refinements.EDF.refinements.refine_search_space_emax_EDF",
+    "prosa.implementation.refinements.EDF.refinements.refine_task_search_space_emax_EDF",
+    "prosa.implementation.refinements.EDF.refinements.refine_task_search_space_emax_EDF_h",
+    "prosa.implementation.refinements.EDF.refinements.refine_total_rbf",
+    "prosa.implementation.refinements.EDF.refinements.refine_total_rbf'",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point'",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point_NP",
+    "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'",
+    "prosa.implementation.refinements.FP.refinements.refine_search_space_emax",
+    "prosa.implementation.refinements.FP.refinements.refine_search_space_emax_h",
+    "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf",
+    "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf'",
+    "prosa.implementation.refinements.FP.refinements.refine_total_ohep_rbf",
+    "prosa.implementation.refinements.arrival_bound.refine_arrival_curve_prefix",
+    "prosa.implementation.refinements.arrival_bound.refine_get_time_steps",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted",
+    "prosa.implementation.refinements.arrival_bound.refine_value_at",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals'",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve",
+    "prosa.implementation.refinements.arrival_curve.refine_get_horizon_of_task",
+    "prosa.implementation.refinements.arrival_curve.refine_large_horizon",
+    "prosa.implementation.refinements.arrival_curve.refine_no_inf_arrivals",
+    "prosa.implementation.refinements.arrival_curve.refine_repeat_steps_with_offset",
+    "prosa.implementation.refinements.arrival_curve.refine_sorted_leq_steps",
+    "prosa.implementation.refinements.arrival_curve.refine_specified_bursts",
+    "prosa.implementation.refinements.arrival_curve.refine_task_rbf",
+    "prosa.implementation.refinements.arrival_curve.refine_valid_arrival_curve_prefix",
+    "prosa.implementation.refinements.arrival_curve.refine_valid_arrivals",
+    "prosa.implementation.refinements.refinements.refine_div_ceil",
+    "prosa.implementation.refinements.refinements.refine_dvdn"
+   ],
+   "affected_root_ids_truncated": false,
+   "affected_roots": {
+    "classic": 0,
+    "combined": 39,
+    "modern": 39
+   },
+   "category": "universe_instance",
+   "co_blocking_mechanisms": [
+    [
+     "KERNEL_REJECTED: (kernel) declaration type mismatch, '\u2026 has type",
+     39
+    ],
+    [
+     "UNSUPPORTED_FEATURE: recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Prop-only inductive",
+     35
+    ],
+    [
+     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+     30
+    ],
+    [
+     "KERNEL_REJECTED: (kernel) application type mismatch",
+     25
+    ],
+    [
+     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
+     25
+    ],
+    [
+     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+     7
+    ]
+   ],
+   "defining_nodes": 2,
+   "defining_nodes_in_scope": 0,
+   "defining_nodes_sample": [
+    "CoqEAL.refinements.refinements.refines_fst_R",
+    "CoqEAL.refinements.refinements.refines_snd_R"
+   ],
+   "direct_roots": 0,
+   "downstream_roots": 39,
+   "evidence": [
+    "translation:inv-confirm-090ff43cbe88",
+    "translation:inv-confirm-2bae6342e56f"
+   ],
+   "example_path": [
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals",
+    "prosa.implementation.refinements.arrival_bound.refine_arrival_curve_prefix",
+    "CoqEAL.refinements.refinements.refines_fst_R"
+   ],
+   "mechanism": "UNIVERSE_REJECTED: reference to \u2026: argument max \u2026 \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+   "reproducer": {
+    "affected_roots_through_it": 36,
+    "declaration": "CoqEAL.refinements.refinements.refines_fst_R",
+    "detail": "reference to Rocq.CoqEAL.refinements.refinements.refines: argument max u_CoqEAL_refinements_refinements_39035 u_CoqEAL_refinements_refinements_39038: CoqEAL.refinements.refinements.39035 + 0 \u2264 CoqEAL.refinements.refinements.38662 is not entailed by the source universe graph, nor is CoqEAL.refinements.refinements.38662 \u2264 CoqEAL.refinements.refinements.39035 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.CoqEAL.refinements.refinements.refines: argument max u_CoqEAL_refinements_refinements_39035 u_CoqEAL_refinements_refinements_39038: CoqEAL.refinements.refinements.39035 + 0 \u2264 C",
+    "location": null
+   },
+   "sole_blocker_roots": {
+    "classic": 0,
+    "combined": 0,
+    "modern": 0,
+    "protected": 0
    }
   },
   {
@@ -2835,7 +3898,9 @@
    }
   }
  ],
- "interface_conflicts": [],
+ "interface_conflicts": [
+  "prosa.implementation.definitions.extrapolated_arrival_curve.ArrivalCurvePrefix"
+ ],
  "notes": [
   "A root's blockers are all known-blocked declarations its closure reaches; a mechanism's sole_blocker_roots are the roots that no other known mechanism blocks.",
   "Preflight is static: CANDIDATE_SUPPORTED is not a translation result. Translation-only failures are known only where a current run reached the declaration."
@@ -2863,10 +3928,28 @@
  "recommended_tasks": [
   {
    "defining_nodes": [
+    "prosa.model.priority.definitions.FP_policy",
+    "prosa.model.priority.definitions.JLFP_policy",
+    "prosa.model.priority.definitions.JLDP_policy",
+    "mathcomp.boot.eqtype.Sub_spec",
+    "mathcomp.boot.bigop.big_morph",
     "mathcomp.boot.choice.PCanHasChoice",
     "mathcomp.boot.bigop.big_const_seq"
    ],
    "example_paths": [
+    [
+     "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
+     "prosa.analysis.abstract.IBF.task.completed_before_beginning_of_busy_interval",
+     "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_equiv_workload_eq_service",
+     "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_impl_workload_eq_service",
+     "mathcomp.boot.bigop.exchange_big",
+     "mathcomp.boot.bigop.exchange_big_idem",
+     "mathcomp.boot.bigop.exchange_big_dep_idem",
+     "mathcomp.boot.bigop.big_tnth",
+     "mathcomp.boot.fintype.ltn_ord",
+     "mathcomp.boot.eqtype.valP",
+     "mathcomp.boot.eqtype.Sub_spec"
+    ],
     [
      "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
      "prosa.analysis.abstract.IBF.task.completed_before_beginning_of_busy_interval",
@@ -2892,22 +3975,28 @@
      "mathcomp.boot.bigop.big_const_seq"
     ]
    ],
-   "kind": "universe solver (R2F-c / proof-local levels)",
+   "kind": "universe/instance (R3 references, R2F-c proof-local levels)",
    "mechanisms": [
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution"
    ],
    "roots_without_known_blocker_after_task": {
-    "classic": 553,
-    "modern": 330,
-    "protected": 834
+    "classic": 43,
+    "modern": 567,
+    "protected": 554
+   },
+   "roots_without_known_blocker_after_tasks_up_to_here": {
+    "classic": 43,
+    "modern": 567,
+    "protected": 554
    },
    "sole_blocker_roots": {
-    "classic": 409,
-    "modern": 323
+    "classic": 41,
+    "modern": 476
    },
-   "task": "T1 MathComp proof-local universe levels (PCanHasChoice, big_const_seq)",
-   "why": "Largest sole-blocker group; the two failures co-block a further 151 roots, so they are one task: solve proof-local levels so that native strict facts (Set < u) and le facts hold."
+   "task": "T1 Universe solving on the Prosa closure: reference entailment and proof-local levels",
+   "why": "Prosa's own priority classes are rejected as roots (a level of TaskType/JobType not entailed by the source graph); with the MathComp proof-local-level failures these are the largest blocker family."
   },
   {
    "defining_nodes": [
@@ -2925,25 +4014,74 @@
      "mathcomp.boot.div.edivn_rec"
     ]
    ],
-   "kind": "missing translation rule (non-structural recursive call)",
+   "kind": "missing translation rule (recursive call on a non-field term)",
    "mechanisms": [
     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
    "roots_without_known_blocker_after_task": {
     "classic": 257,
-    "modern": 157,
-    "protected": 408
+    "modern": 109,
+    "protected": 363
+   },
+   "roots_without_known_blocker_after_tasks_up_to_here": {
+    "classic": 309,
+    "modern": 697,
+    "protected": 946
    },
    "sole_blocker_roots": {
     "classic": 257,
-    "modern": 157
+    "modern": 109
    },
    "task": "T2 Recursion through subn in MathComp div (edivn_rec, modn_rec)",
-   "why": "divn/modn underlie hyperperiods and the Classic arithmetic; second-largest sole-blocker group, mostly Classic."
+   "why": "Largest single-mechanism gain; divn/modn underlie hyperperiods and much of Classic."
   },
   {
    "defining_nodes": [
-    "mathcomp.boot.ssrnat.leqif"
+    "mathcomp.boot.eqtype.insub_spec"
+   ],
+   "example_paths": [
+    [
+     "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
+     "prosa.analysis.abstract.IBF.task.completed_before_beginning_of_busy_interval",
+     "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_equiv_workload_eq_service",
+     "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_impl_workload_eq_service",
+     "mathcomp.boot.bigop.exchange_big",
+     "mathcomp.boot.bigop.exchange_big_idem",
+     "mathcomp.boot.bigop.exchange_big_dep_idem",
+     "mathcomp.boot.fintype.fintype_ordinal__canonical__fintype_Finite",
+     "mathcomp.boot.fintype.HB_unnamed_factory_66",
+     "mathcomp.boot.fintype.mem_ord_enum",
+     "mathcomp.boot.fintype.val_ord_enum",
+     "mathcomp.boot.eqtype.insubK",
+     "mathcomp.boot.eqtype.insub_spec"
+    ]
+   ],
+   "kind": "missing/incorrect cast lowering",
+   "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean"
+   ],
+   "roots_without_known_blocker_after_task": {
+    "classic": 0,
+    "modern": 0,
+    "protected": 0
+   },
+   "roots_without_known_blocker_after_tasks_up_to_here": {
+    "classic": 1100,
+    "modern": 737,
+    "protected": 1758
+   },
+   "sole_blocker_roots": {
+    "classic": 0,
+    "modern": 0
+   },
+   "task": "T3 Default cast annotations in MathComp eqtype (insub_spec)",
+   "why": "Reached by 1079 roots (823 Classic) together with Sub_spec (T1); unlocks a large Classic share once T1 is done."
+  },
+  {
+   "defining_nodes": [
+    "mathcomp.boot.ssrnat.leqif",
+    "Corelib.ssr.ssrfun.pair_of_and",
+    "mathcomp.boot.ssrnat.nat_of_add_pos"
    ],
    "example_paths": [
     [
@@ -2964,38 +4102,38 @@
    ],
    "roots_without_known_blocker_after_task": {
     "classic": 0,
-    "modern": 111,
-    "protected": 107
+    "modern": 55,
+    "protected": 54
+   },
+   "roots_without_known_blocker_after_tasks_up_to_here": {
+    "classic": 1100,
+    "modern": 980,
+    "protected": 1987
    },
    "sole_blocker_roots": {
     "classic": 0,
-    "modern": 111
+    "modern": 55
    },
-   "task": "T3 Template prod at Prop (leqif)",
-   "why": "Sole blocker of 111 modern roots through bigop sum lemmas (sum_nat_eq0)."
+   "task": "T4 Template prod at Prop (leqif, pair_of_and, nat_of_add_pos)",
+   "why": "Modern-only; bigop sum lemmas used throughout the analysis facts."
   },
   {
    "declarations": [
     "mathcomp.boot.fintype/isFinite.axioms_",
-    "Corelib.ssr.ssreflect_rw.nary_congruence"
-   ],
-   "example_paths": [],
-   "kind": "incorrect implementation / instance metadata",
-   "roots_without_known_blocker_after_task": null,
-   "sole_blocker_roots": null,
-   "task": "T4 Correctness: context-dependent kernel rejection of fintype isFinite.axioms_ and the nary_congruence R2B-P instance",
-   "why": "Both translate in some current runs and fail in others; more than 2000 in-scope roots reach each, so a request that combines them can fail after the other blockers are gone."
-  },
-  {
-   "declarations": [
+    "Corelib.ssr.ssreflect_rw.nary_congruence",
+    "prosa.implementation.definitions.task.concrete_job",
+    "CoqEAL.refinements.hrel.fun_hrel",
+    "CoqEAL.refinements.refinements.refines_abstr2",
+    "prosa.implementation.definitions.extrapolated_arrival_curve.ArrivalCurvePrefix",
     "Corelib.Init.Wf.Acc_rect"
    ],
    "example_paths": [],
-   "kind": "incorrect metadata / resource limits",
+   "kind": "incorrect implementation / interface specialization / resource limits",
    "roots_without_known_blocker_after_task": null,
+   "roots_without_known_blocker_after_tasks_up_to_here": null,
    "sole_blocker_roots": null,
-   "task": "T5 Tooling limits on the Prosa closure: stale preflight rule (Acc_rect), exporter stack at the CLI default, preflight recursion",
-   "why": "Preflight rejects Acc_rect although M6 translates it (1022 roots reach it); the CLI exporter overflows its default stack on ELF/GEL results; preflight hits Python's recursion limit on one Classic example. No new translation rule."
+   "task": "T5 Correctness, interface protection and tooling limits",
+   "why": "Kernel rejections of generated terms (isFinite.axioms_ fails in some requests, e.g. JobReady's, and passes in others; concrete_job; CoqEAL hrel/refinements), a protected Prosa definition specialized by R2B-S as a dependency (ArrivalCurvePrefix in the concrete_job request), the stale preflight rule for Acc_rect, the exporter's stack at the CLI default and per-declaration heartbeats that depend on request size."
   }
  ],
  "resource_limits": {

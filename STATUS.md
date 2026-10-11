@@ -9,9 +9,12 @@
   aliases. Combined closure 10,539 declarations (5,847 external).
 - Gap: 3 Classic files do not compile without RTS's proof-script patch (not applied); their
   declarations are `UNKNOWN`.
-- Coverage: 163 P declarations VERIFIED (87 as roots); 2,555 in-scope declarations have no known
-  blocker; 2,137 are blocked by 9 mechanisms, chiefly MathComp proof-local universe levels
-  (`PCanHasChoice`, `big_const_seq`) and recursion through `subn` (`edivn_rec`).
+- Coverage: 163 P declarations VERIFIED (87 as roots); 2,183 in-scope declarations have no known
+  blocker; 2,509 are blocked by 14 mechanisms. The largest are universe entailment at references
+  (incl. Prosa's own `FP_policy`/`JLFP_policy`/`JLDP_policy`), MathComp proof-local levels
+  (`PCanHasChoice`, `big_const_seq`), `eqtype.insub_spec` casts and recursion through `subn`
+  (`edivn_rec`). One public Prosa definition (`ArrivalCurvePrefix`) was specialized as a
+  dependency: an interface conflict to fix.
 - Next tasks T1–T5 in `reports/prosa_inventory/blockers.json` (`recommended_tasks`).
 
 Regenerate: `scripts/inventory-prosa`; tests: `scripts/test-inventory`. The translator is unchanged

@@ -127,37 +127,55 @@ def translate(fam):
         print(" ", n, v)
 
 
-def confirm(fam):
+def confirm_one(n, status, exp):
     import rocq2lean
+    lib = n.split("/")[0].rsplit(".", 1)[0] if "/" in n else n.rsplit(".", 1)[0]
+    d = ROOT / "runs" / f"inv-confirm-{hashlib.sha256(n.encode()).hexdigest()[:12]}"
+    man = d.with_suffix(".manifest.json")
+    man.write_text(json.dumps({"name": f"inv-confirm {n}", "load_paths": [exp[i:i + 3] for i in range(0, len(exp), 3)],
+                               "files": [], "requires": [lib]}, indent=1) + "\n")
+    res = {"declaration": n, "probe_status": status, "run": d.name}
+    try:
+        rocq2lean.export(str(man), [n.replace("/", ".")], str(d))
+        res["export"] = 0
+        p = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "rocq2lean.py"), "translate",
+                            "--input", str(d / "source.ndjson"), "--out", str(d)], capture_output=True, text=True)
+        res["translate"] = p.returncode
+        rep = json.loads((d / "translation_report.json").read_text())
+        st = {r["source"]: r for r in rep["results"]}
+        res["status"] = st.get(n, {}).get("status")
+        res["message"] = (st.get(n, {}).get("message") or "")[:300]
+        res["other_direct_failures"] = sorted(k for k, r in st.items() if k != n and r["status"] not in OK)
+    except Exception as e:                       # Rejected or tool failure: recorded, never dropped
+        res["export"] = f"{type(e).__name__}: {e.args}"[:400]
+    return res
+
+
+def confirm(fam, workers=3):
+    """Confirm each new direct probe failure as its own root through the full CLI. Failures of
+    declarations that a current run already translated are recorded as probe artifacts instead."""
+    from concurrent.futures import ThreadPoolExecutor
     run = ROOT / "runs" / f"inv-probe-{fam}"
     fails = json.loads((run / "direct_failures.json").read_text())
-    dec = {r["id"]: r for r in jl(OUT / "declarations.jsonl")}
-    mods = json.loads((W / "modules.json").read_text())["modules"]
-    lp = json.loads((W / f"merge-{fam}.json").read_text())
+    translated = json.loads((W / "extra_blockers.json").read_text()).get("translated_in_current_runs", {})
     exp = json.loads((W / f"export-{fam}" / "summary.json").read_text())["exporter"]["load_paths"]
+    out = run / "confirmations.jsonl"
+    done = {json.loads(l)["declaration"] for l in open(out)} if out.exists() else set()
+    todo = []
     for n in sorted(fails):
-        # the module that defines n (a file of the census) or, for external declarations, its library
-        lib = n.split("/")[0].rsplit(".", 1)[0] if "/" in n else n.rsplit(".", 1)[0]
-        d = ROOT / "runs" / f"inv-confirm-{hashlib.sha256(n.encode()).hexdigest()[:12]}"
-        man = d.with_suffix(".manifest.json")
-        man.write_text(json.dumps({"name": f"inv-confirm {n}", "load_paths": [exp[i:i + 3] for i in range(0, len(exp), 3)],
-                                   "files": [], "requires": [lib]}, indent=1) + "\n")
-        res = {"declaration": n, "probe_status": fails[n][0], "run": d.name}
-        try:
-            rocq2lean.export(str(man), [n.replace("/", ".")], str(d))
-            res["export"] = 0
-            p = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "rocq2lean.py"), "translate",
-                                "--input", str(d / "source.ndjson"), "--out", str(d)], capture_output=True, text=True)
-            res["translate"] = p.returncode
-            rep = json.loads((d / "translation_report.json").read_text())
-            st = {r["source"]: r for r in rep["results"]}
-            res["status"] = st.get(n, {}).get("status")
-            res["message"] = (st.get(n, {}).get("message") or "")[:300]
-        except rocq2lean.Rejected as e:
-            res["export"] = f"rejected: {e.args}"[:400]
-        print(json.dumps(res))
-        with open(run / "confirmations.jsonl", "a") as fh:
-            fh.write(json.dumps(res) + "\n")
+        if n in done:
+            continue
+        if n in translated:
+            with open(out, "a") as fh:
+                fh.write(json.dumps({"declaration": n, "probe_status": fails[n][0], "status": "PROBE_ARTIFACT",
+                                     "translated_in": translated[n]}) + "\n")
+        else:
+            todo.append(n)
+    with ThreadPoolExecutor(workers) as ex:
+        for res in ex.map(lambda n: confirm_one(n, fails[n][0], exp), todo):
+            print(json.dumps(res)[:400], flush=True)
+            with open(out, "a") as fh:
+                fh.write(json.dumps(res) + "\n")
 
 
 if __name__ == "__main__":

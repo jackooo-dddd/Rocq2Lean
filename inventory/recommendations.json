@@ -1,20 +1,26 @@
 [
  {
-  "task": "T1 MathComp proof-local universe levels (PCanHasChoice, big_const_seq)",
-  "kind": "universe solver (R2F-c / proof-local levels)",
+  "task": "T1 Universe solving on the Prosa closure: reference entailment and proof-local levels",
+  "kind": "universe/instance (R3 references, R2F-c proof-local levels)",
   "mechanisms": [
+   "UNIVERSE_REJECTED: reference to …: argument …: … + 0 ≤ … is not entailed by the source universe graph, nor is … ≤ … (with offset 0)",
    "UNIVERSE_REJECTED: proof-local level … solved as …: native fact Set lt … does not hold for the solution",
    "UNIVERSE_REJECTED: proof-local level … solved as …: native fact … le … does not hold for the solution"
   ],
   "defining_nodes": [
+   "prosa.model.priority.definitions.FP_policy",
+   "prosa.model.priority.definitions.JLFP_policy",
+   "prosa.model.priority.definitions.JLDP_policy",
+   "mathcomp.boot.eqtype.Sub_spec",
+   "mathcomp.boot.bigop.big_morph",
    "mathcomp.boot.choice.PCanHasChoice",
    "mathcomp.boot.bigop.big_const_seq"
   ],
-  "why": "Largest sole-blocker group; the two failures co-block a further 151 roots, so they are one task: solve proof-local levels so that native strict facts (Set < u) and le facts hold."
+  "why": "Prosa's own priority classes are rejected as roots (a level of TaskType/JobType not entailed by the source graph); with the MathComp proof-local-level failures these are the largest blocker family."
  },
  {
   "task": "T2 Recursion through subn in MathComp div (edivn_rec, modn_rec)",
-  "kind": "missing translation rule (non-structural recursive call)",
+  "kind": "missing translation rule (recursive call on a non-field term)",
   "mechanisms": [
    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
   ],
@@ -22,34 +28,44 @@
    "mathcomp.boot.div.edivn_rec",
    "mathcomp.boot.div.modn_rec"
   ],
-  "why": "divn/modn underlie hyperperiods and the Classic arithmetic; second-largest sole-blocker group, mostly Classic."
+  "why": "Largest single-mechanism gain; divn/modn underlie hyperperiods and much of Classic."
  },
  {
-  "task": "T3 Template prod at Prop (leqif)",
+  "task": "T3 Default cast annotations in MathComp eqtype (insub_spec)",
+  "kind": "missing/incorrect cast lowering",
+  "mechanisms": [
+   "TRANSLATION_FAILED: default cast annotation is not convertible in Lean"
+  ],
+  "defining_nodes": [
+   "mathcomp.boot.eqtype.insub_spec"
+  ],
+  "why": "Reached by 1079 roots (823 Classic) together with Sub_spec (T1); unlocks a large Classic share once T1 is done."
+ },
+ {
+  "task": "T4 Template prod at Prop (leqif, pair_of_and, nat_of_add_pos)",
   "kind": "universe/instance (template inductive at quality Prop)",
   "mechanisms": [
    "UNSUPPORTED_FEATURE: template inductive … instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop ≤ Type cumulativity), which Lean cannot express without a lift"
   ],
   "defining_nodes": [
-   "mathcomp.boot.ssrnat.leqif"
+   "mathcomp.boot.ssrnat.leqif",
+   "Corelib.ssr.ssrfun.pair_of_and",
+   "mathcomp.boot.ssrnat.nat_of_add_pos"
   ],
-  "why": "Sole blocker of 111 modern roots through bigop sum lemmas (sum_nat_eq0)."
+  "why": "Modern-only; bigop sum lemmas used throughout the analysis facts."
  },
  {
-  "task": "T4 Correctness: context-dependent kernel rejection of fintype isFinite.axioms_ and the nary_congruence R2B-P instance",
-  "kind": "incorrect implementation / instance metadata",
+  "task": "T5 Correctness, interface protection and tooling limits",
+  "kind": "incorrect implementation / interface specialization / resource limits",
   "declarations": [
    "mathcomp.boot.fintype/isFinite.axioms_",
-   "Corelib.ssr.ssreflect_rw.nary_congruence"
-  ],
-  "why": "Both translate in some current runs and fail in others; more than 2000 in-scope roots reach each, so a request that combines them can fail after the other blockers are gone."
- },
- {
-  "task": "T5 Tooling limits on the Prosa closure: stale preflight rule (Acc_rect), exporter stack at the CLI default, preflight recursion",
-  "kind": "incorrect metadata / resource limits",
-  "declarations": [
+   "Corelib.ssr.ssreflect_rw.nary_congruence",
+   "prosa.implementation.definitions.task.concrete_job",
+   "CoqEAL.refinements.hrel.fun_hrel",
+   "CoqEAL.refinements.refinements.refines_abstr2",
+   "prosa.implementation.definitions.extrapolated_arrival_curve.ArrivalCurvePrefix",
    "Corelib.Init.Wf.Acc_rect"
   ],
-  "why": "Preflight rejects Acc_rect although M6 translates it (1022 roots reach it); the CLI exporter overflows its default stack on ELF/GEL results; preflight hits Python's recursion limit on one Classic example. No new translation rule."
+  "why": "Kernel rejections of generated terms (isFinite.axioms_ fails in some requests, e.g. JobReady's, and passes in others; concrete_job; CoqEAL hrel/refinements), a protected Prosa definition specialized by R2B-S as a dependency (ArrivalCurvePrefix in the concrete_job request), the stale preflight rule for Acc_rect, the exporter's stack at the CLI default and per-declaration heartbeats that depend on request size."
  }
 ]

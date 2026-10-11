@@ -98,54 +98,66 @@ External `unknown_*` natures (67) do not affect in-scope counts.
 |---|---|---|
 | Built and exported | 2,707 | 1,985 (3 files `UNKNOWN`) |
 | Preflight (current `tools/preflight.py`, unchanged): candidate / blocked dependency / direct | 1,930 / 769 / 8 | 1,697 / 280 / 8 |
-| Known blocker (preflight + current translation evidence): none / downstream / direct | 1,721 / 978 / 8 | 834 / 1,143 / 8 |
-| Protected interface with no known blocker | 1,603 of 2,504 | 786 of 1,922 |
+| Known blocker (preflight + current translation evidence): none / downstream / direct | 1,350 / 1,345 / 12 | 833 / 1,144 / 8 |
+| Protected interface with no known blocker | 1,271 of 2,504 | 785 of 1,922 |
 | VERIFIED as a root / as a dependency only | 87 / 76 | 0 / 0 |
-| Kernel-checked in an unverified run / attempted, not translated | 11 / 19 | 0 / 0 |
-| Never attempted | 2,514 | 1,985 |
-| Public interface specialized (R2B-P/R2B-S) in a current run | 0 | 0 |
+| Kernel-checked in an unverified run / attempted, not translated | 43 / 24 | 0 / 0 |
+| Never attempted | 2,477 | 1,985 |
+| Public interface specialized (R2B-P/R2B-S) as a dependency | **1** (`ArrivalCurvePrefix`) | 0 |
 
-Evidence comes from the ten current-implementation runs (implementation tree `819383b9…`, the M6
-completion). A run counts for a declaration only when the elaborated record is **byte-identical** to
-the census record. All 11,359 run records that are also in the census are identical. Only 47
-MathComp holdout records lie outside the Prosa closure. 172 external dependencies were translated
-as statement specializations; **none** of them is a P or C declaration.
+Evidence comes from current-implementation runs only (implementation tree `819383b9…`): the ten M6
+completion runs and the 30 single-root confirmation runs of section 7. A run counts for a
+declaration only when the elaborated record is **byte-identical** to the census record. All 11,359
+M6 run records that are also in the census are identical. 47 MathComp holdout records lie outside
+the Prosa closure.
+
+**Interface conflict.** In the confirmation run for `concrete_job`, the public definition
+`prosa.implementation.definitions.extrapolated_arrival_curve.ArrivalCurvePrefix` was translated as
+a dependency with R2B-S result-sort lowering (level `…extrapolated_arrival_curve.21` := 0). The
+current translator allows statement specialization of a protected Prosa declaration when it is
+not itself a root. 172 external dependencies are specialized the same way, which is allowed.
 
 "No known blocker" is not a translation result. Most of those closures were never attempted, and
-preflight is static. Section 7 adds bounded probes.
+preflight is static.
 
 ## 6. Blocker map (`blockers.json`)
 
-Grouped by mechanism. Each group gives its defining declaration, a reproducer, the affected roots
+Grouped by mechanism. Each group gives its defining declarations, a reproducer, the affected roots
 (modern / Classic) and an in-scope dependency path. "Sole" means no other known mechanism blocks
-the root.
+the root. Evidence: `preflight` (static), `translation:<run>` (M6 runs) or `inv-confirm-*`
+(confirmed probe failures).
 
-| Mechanism | Category | Defining node | Affected roots M / C | Sole M / C | Example path |
+| Mechanism | Category | Defining nodes | Affected M / C | Sole M / C | Example path |
 |---|---|---|---|---|---|
-| Proof-local universe level, strict native fact `Set < u` | universe | `mathcomp.boot.choice.PCanHasChoice` | 619 / 822 | 309 / 368 | IBF `arrives_after_beginning_of_busy_interval` → `exchange_big` → fintype `prod` instance → `PCanHasChoice` |
-| Recursive call on a non-constructor-field term (recursion through `subn`) | missing rule | `mathcomp.boot.div.edivn_rec`, `modn_rec` | 180 / 536 | 157 / 257 | `hyperperiod` → `lcml` → `lcmn` → `divn` → `edivn` → `edivn_rec` |
-| Proof-local universe level, native `le` fact | universe | `mathcomp.boot.bigop.big_const_seq` | 222 / 427 | 14 / 41 | `cumulative_job_interference_bound` → `sum_majorant_constant` → `sum1_size` → `big_const_seq` |
-| Template `prod` at quality Prop | universe | `mathcomp.boot.ssrnat.leqif` | 405 / 0 | 111 / 0 | `service_in_implies_scheduled_in` → `sum_nat_eq0` → `leqif` |
-| Reference argument not entailed by the universe graph | universe | `mathcomp.boot.bigop.big_morph` | 161 / 107 | 1 / 0 | `sum_majorant_constant` → `big_distrr` → `big_endo` → `big_morph` |
-| Defaulted universe level not justified | universe | `mathcomp.boot.seq.mask_cat` | 162 / 32 | 4 / 0 | `eq_sum_leq_seq` → `mem_rem` → `subseqP` → `mask_cat` |
-| Coinductive type | missing rule | `Corelib.Classes.Morphisms.normalization_done`; Classic `extraction_tdma.Task_T` | 219 / 13 | 16 / 8 | setoid-rewriting proofs → `normalization_done` |
+| Reference argument not entailed by the source universe graph | universe | **`FP_policy`, `JLFP_policy`, `JLDP_policy`** (Prosa), `eqtype.Sub_spec`, `bigop.big_morph` | 773 / 825 | 272 / 0 | IBF `arrives_after_beginning_of_busy_interval` → `ltn_ord` → `valP` → `Sub_spec` |
+| Proof-local level, strict native fact `Set < u` | universe | `choice.PCanHasChoice` | 619 / 822 | 190 / 0 | … → `eqtype_can_type__canonical__choice_Countable` → `PCanHasChoice` |
+| Default cast annotation not convertible in Lean | missing rule | `eqtype.insub_spec` | 256 / 823 | 0 / 0 | … → `val_ord_enum` → `insubK` → `insub_spec` |
+| Recursive call on a non-field term (recursion through `subn`) | missing rule | `div.edivn_rec`, `div.modn_rec` | 180 / 536 | 109 / 257 | `corresponding_job_in_hyperperiod` → `lcml` → `divn` → `edivn` → `edivn_rec` |
+| Proof-local level, native `le` fact | universe | `bigop.big_const_seq` | 222 / 427 | 14 / 41 | `cumulative_job_interference_bound` → `sum1_size` → `big_const_seq` |
+| Template `prod` at quality Prop | universe | `ssrnat.leqif`, `ssrfun.pair_of_and`, `ssrnat.nat_of_add_pos` | 479 / 0 | 55 / 0 | `service_in_implies_scheduled_in` → `sum_nat_eq0` → `leqif` |
+| Coinductive type | missing rule | `Morphisms.normalization_done`; Classic `extraction_tdma.Task_T` | 219 / 13 | 15 / 8 | setoid-rewriting proofs → `normalization_done` |
+| Defaulted universe level not justified | universe | `seq.mask_cat` | 162 / 32 | 4 / 0 | … → `subseqP` → `mask_cat` |
+| Kernel: application type mismatch | incorrect implementation | **`implementation.definitions.task.concrete_job`** (Prosa), CoqEAL `refines_abstr2` | 84 / 0 | 25 / 0 | `concrete_job` (direct) |
+| Kernel: declaration type mismatch | incorrect implementation | CoqEAL `hrel.fun_hrel` | 82 / 0 | 22 / 0 | refinements `refine_blocking_bound` → `Rnat` → `fun_hrel` |
+| Course-of-values recursion on an indexed inductive | missing rule | CoqEAL `param.{all,cat,filter,foldr,has,last,map,zip}_R` | 48 / 0 | 4 / 0 | `refine_blocking_bound` → `refine_foldr_max` → `map_R` |
+| Reference argument (`max`) not entailed | universe | CoqEAL `refines_fst_R`, `refines_snd_R` | 39 / 0 | 0 / 0 | `refine_arrival_curve_prefix` → `refines_fst_R` |
 | Genuine source assumption | source assumption | 4 `Admitted` facts in Classic `implementation/uni/basic/tdma_rta_example.v` (incl. the example's main theorem `ts_is_schedulable_by_tdma`) | 0 / 4 | 0 / 0 | direct |
 | SProp eliminators (`_sind`) | universe | 11 generated schemes | 8 / 3 | 0 / 0 | direct, not protected |
 
-**Co-blocking.** The two proof-local-level failures together block 151 more roots, and with `edivn`
-112 more. 86 roots reach six mechanisms. The full list of combinations is in `blockers.json`.
+**Co-blocking.** The largest combination is `insub_spec` + `Sub_spec`-type entailment +
+`PCanHasChoice`, which blocks 388 roots that none of them unlocks alone. Most Classic roots sit
+behind such MathComp `eqtype`/`choice` combinations. The full list is in `blockers.json`.
 
 **Not counted as blockers:**
 
-* **Context-dependent failures.** `mathcomp.boot.fintype/isFinite.axioms_` (kernel rejection,
-  "application type mismatch" in one run, VERIFIED in the gate) and
-  `Corelib.ssr.ssreflect_rw.nary_congruence` (its R2B-P statement specialization rejected by Rocq in
-  one run; translated in four) are recorded with the runs on both sides. Over 2,000 in-scope roots
-  reach each of them.
+* **Context-dependent failures.** `mathcomp.boot.fintype/isFinite.axioms_` gets a kernel
+  rejection ("application type mismatch") in some requests: a holdout run, and the single-root
+  request for Prosa's `JobReady`. It is VERIFIED in others, including the gate.
+  `Corelib.ssr.ssreflect_rw.nary_congruence`'s R2B-P statement specialization was rejected by Rocq
+  in one run; it translated in four. Over 2,000 in-scope roots reach each of them.
 * **Preflight contradicted by evidence.** Preflight rejects `Corelib.Init.Wf.Acc_rect` ("a type
   depends on an argument that recursive calls change"), but current runs translate it, including
-  the VERIFIED gate. 754 modern and 268 Classic roots reach it. The pure preflight verdict still
-  records this, because preflight's static rule predates M6's accessibility lowering.
+  the VERIFIED gate. 754 modern and 268 Classic roots reach it.
 
 **Resource limits (not semantic):**
 
@@ -155,6 +167,12 @@ the root.
   and `results.rta.ideal.elf.bounded_pi.bound_on_ep_workload`. The largest single proofs
   (`cumulative_task_interference_split`, 36 MB) export fine, so the culprit is a combination
   inside those closures and is not isolated.
+* Per-declaration heartbeats depend on the request. In the 2,629-declaration modern probe, 18
+  declarations hit the limit:
+  * 5 were already translated in M6 runs;
+  * 9 Prosa ones translate when run alone;
+  * `JobReady` is blocked when run alone by `isFinite.axioms_`;
+  * the 3 CoqEAL ones fail for real (kernel/universe) reasons when run alone.
 * Preflight exceeds Python's recursion limit on one Classic declaration
   (`apa.bertogna_edf_example…schedulability_test_succeeds`).
 
@@ -163,47 +181,73 @@ No root was unquotable (sort-polymorphic) and no export failed.
 ## 7. Bounded diagnostic probes
 
 `inventory/probe.py` assembles translate-only probes from the census store. Each probe takes every
-in-scope root with no known blocker at the time it was built, together with that root's closure:
-modern 1,462 roots (closure 2,629), Classic 834 roots (closure 3,336). The unchanged
-`rocq2lean translate` runs them under a memory limit. Any direct failure a probe finds is only a
-candidate. It becomes evidence only after `probe.py confirm` re-runs it as its own root through the
-full CLI (export with round trip, then translate).
+in-scope root with no known blocker at the time it was built (before the probes), together with
+that root's closure:
 
-**Status at this report: both probes are still running** (`runs/inv-probe-modern`,
-`runs/inv-probe-classic`; the translator writes its report only at the end). No probe result is
-counted anywhere in this inventory. The "no known blocker" figures therefore rest on preflight and
-the ten existing runs only. Probe results and confirmations will be added to this section and to
-`blockers.json` when they finish.
+* modern: 1,462 roots, closure 2,629;
+* Classic: 834 roots, closure 3,336.
+
+The unchanged `rocq2lean translate` runs them under a memory limit. A direct failure in a probe is
+only a candidate. `probe.py confirm` re-runs each candidate as its own root through the full CLI
+(export with round trip, then translate) in `runs/inv-confirm-*`. Only those runs are evidence.
+
+**Modern probe:** 2,075 translated and kernel-checked, 516 blocked by dependencies, 36 direct
+failures.
+
+* **6** are probe artifacts: the declarations were translated in current M6 runs (heartbeat or
+  universe effects of the large probe request).
+* **9** Prosa resource-limit failures translate when run alone (`util.list.*`,
+  `supremum_spec`, `arrivals_at_sorted`, `TDMA_slot_order`).
+* **`JobReady`** is blocked when run alone by the context-dependent `isFinite.axioms_` rejection.
+* **Confirmed new blockers:**
+  * `FP_policy`, `JLFP_policy`, `JLDP_policy` (universe entailment);
+  * `concrete_job` (kernel);
+  * MathComp `eqtype.Sub_spec`, `eqtype.insub_spec`;
+  * `ssrfun.pair_of_and`, `ssrnat.nat_of_add_pos` (template `prod` at Prop);
+  * CoqEAL `hrel.fun_hrel`, eight `param.*_R` lemmas, `refines_abstr2`, `refines_fst_R`,
+    `refines_snd_R`.
+
+  All of these are folded into section 6.
+
+**Classic probe:** still translating when this report was written; no Classic probe result is counted. Results and confirmations will be added here.
 
 ## 8. What remains to migrate (Prosa v0.6 + Classic)
 
 * **Whole targets:** 4,310 public declarations (2,440 P + 1,870 C) plus 116 projections, with
   their 10,539-declaration closure. 163 P declarations are VERIFIED today, 87 of them as roots.
-  No C declaration has been attempted yet.
-* **Known blocked:** 2,137 of 4,692 in-scope declarations (P 986, C 1,151), through 9 mechanisms
-  defined in MathComp/Corelib (8) and Classic (assumptions, `Task_T`).
+  No C declaration has been translated yet.
+* **Known blocked:** 2,509 of 4,692 in-scope declarations (P 1,357, C 1,152), through 14
+  mechanisms. 9 are defined in MathComp/Corelib/CoqEAL. The Prosa/Classic-owned ones are:
+  * the three priority-policy classes;
+  * `concrete_job`;
+  * the 4 `Admitted` Classic facts;
+  * Classic's coinductive `Task_T`;
+  * 11 SProp schemes.
+* **No known blocker:** 2,183 declarations. Their closures are only partly attempted (the modern
+  probe translated 2,075 of 2,629; the Classic probe is pending).
 * **Unknown:** the declarations of the 3 unbuilt Classic files.
 
 ## 9. Recommended next tasks (`blockers.json` → `recommended_tasks`)
 
-Each task's mechanisms have a dependency path from an in-scope root (checked by `inventory/report.py`).
-"Unlocked" counts the roots whose remaining known blockers are all covered by the task.
+Each task's mechanisms have a dependency path from an in-scope root (checked by
+`inventory/report.py`). "Cumulative" counts the roots whose remaining known blockers are all
+covered by tasks 1..k.
 
-1. **T1: proof-local universe levels in MathComp** (`PCanHasChoice`, `big_const_seq`). Unlocks
-   330 P + 553 C roots (834 protected). Largest single gain.
-2. **T2: recursion through `subn`** (`edivn_rec`, `modn_rec`: a recursive call on a non-field
-   term). Unlocks 157 P + 257 C roots (408 protected).
-3. **T3: template `prod` at Prop** (`leqif`). Unlocks 111 P roots.
-4. **T4: correctness of context-dependent failures.** The kernel rejection of
-   `fintype/isFinite.axioms_` and the `nary_congruence` R2B-P instance. Each is reached by more than
-   2,000 roots, and either can fail a combined request once T1–T3 are done.
-5. **T5: tooling limits on the Prosa closure.** Update preflight's stale rule for `Acc_rect`, the
-   exporter's stack under the CLI, and preflight's recursion. These need no new translation rule
-   but are needed to run Prosa-scale requests through the CLI.
+| Task | Alone M / C | Cumulative M / C (protected) |
+|---|---|---|
+| **T1** universe solving on the Prosa closure: reference entailment (Prosa priority classes, `Sub_spec`, `big_morph`) and proof-local levels (`PCanHasChoice`, `big_const_seq`) | 567 / 43 | 567 / 43 (554) |
+| **T2** recursion through `subn` (`edivn_rec`, `modn_rec`) | 109 / 257 | 697 / 309 (946) |
+| **T3** default cast annotation in `eqtype.insub_spec` | 0 / 0 | 737 / 1,100 (1,758) |
+| **T4** template `prod` at Prop (`leqif`, `pair_of_and`, `nat_of_add_pos`) | 55 / 0 | 980 / 1,100 (1,987) |
+| **T5** correctness, interface protection and tooling: the context-dependent `isFinite.axioms_` / `nary_congruence` failures, kernel rejections (`concrete_job`, CoqEAL `fun_hrel`, `refines_abstr2`), protecting the Prosa interface from dependency specialization (`ArrivalCurvePrefix`), the stale preflight rule (`Acc_rect`), exporter stack and heartbeat limits | (correctness) | |
 
-Not recommended now: coinduction (`normalization_done` is a setoid-rewriting marker; sole blocker
-of 24 roots) and Classic's 4 source assumptions (they are `Admitted` in the ProsaBuddy source. A
-faithful translation keeps them unproved, so they cannot be VERIFIED without new source proofs).
+T3 unlocks nothing alone because `insub_spec` always co-occurs with the T1 failures. After T1–T2
+it is the step that releases most of Classic. Not recommended now:
+
+* coinduction (`normalization_done` is a setoid-rewriting marker; sole blocker of 23 roots);
+* the CoqEAL course-of-values lemmas (4 sole roots);
+* Classic's 4 source assumptions. They are `Admitted` in the ProsaBuddy source, so a faithful
+  translation keeps them unproved and they cannot be VERIFIED without new source proofs.
 
 ## 10. Commands and logs
 
@@ -219,7 +263,7 @@ faithful translation keeps them unproved, so they cannot be VERIFIED without new
 | graph | `inventory/graph.py` | `dependencies.jsonl`, `.work/inventory/graph.json` |
 | coverage | `inventory/coverage.py` | `coverage.jsonl` |
 | report | `inventory/report.py` | `summary.json`, `blockers.json` |
-| probes | `inventory/probe.py build\|translate\|confirm` | `runs/inv-probe-*`, `runs/inv-confirm-*` |
+| probes | `inventory/probe.py build\|translate\|confirm modern\|classic` | `runs/inv-probe-*` (direct_failures.json, confirmations.jsonl), `runs/inv-confirm-*` |
 
 Translator code (`Rocq2Lean*.lean`, `tools/`, the exporter) is unchanged by this inventory:
 the implementation tree digest is still `819383b9…`.

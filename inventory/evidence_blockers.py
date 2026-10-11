@@ -30,7 +30,7 @@ NAME = re.compile(r"(?:Rocq\.)?[A-Za-z_][A-Za-z0-9_']*(?:[./][A-Za-z_][A-Za-z0-9
 
 def normalize(msg):
     """The reusable mechanism of a translator message: drop names, levels and solver details."""
-    m = msg.split(" [last tier:")[0].split("\n")[0]
+    m = re.split(r" \[(?:last tier|R3↓ attempt):", msg)[0].split("\n")[0]
     m = re.sub(r"\(some [^)]*\)", "…", m)
     m = NAME.sub("…", m)
     m = re.sub(r"\bu_[A-Za-z0-9_]+\b", "…", m)
