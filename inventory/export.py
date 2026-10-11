@@ -46,8 +46,8 @@ CFG = json.loads((ROOT / "inventory" / "config.json").read_text())
 W = ROOT / ".work" / "inventory"
 X = lambda p: Path(os.path.expanduser(p)) if p.startswith("~") else ROOT / p
 EXP = ROOT / "rocq" / "exporter"
-CHUNK = 24
-MEMORY_MAX = "12G"
+CHUNK = int(os.environ.get("INVENTORY_EXPORT_CHUNK", "24"))
+MEMORY_MAX = os.environ.get("INVENTORY_EXPORT_MEMORY", "12G")
 BIG_MEMORY = "24G"
 TIMEOUT = 1800
 BIG_STACK = 4 << 30
@@ -56,6 +56,13 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 def sha(b):
     return hashlib.sha256(b).hexdigest()
+
+
+# statement-only mode (docs/STATEMENT_ONLY_DESIGN.md): `Rocq2Lean ExportStatements` of the protected
+# roots, in their own chunk directories (export-statement-<fam>)
+MODE = os.environ.get("INVENTORY_EXPORT_MODE", "proof")
+SUFFIX = "" if MODE == "proof" else f"-{MODE}"
+COMMAND = {"proof": "Export", "statement": "ExportStatements"}[MODE]
 
 
 def load_paths(fam):
@@ -107,7 +114,7 @@ def run_export(fam, d, items, env, tag, stack=None, memory=MEMORY_MAX):
     reqs = sorted({m for m, _ in items})
     v = d / f"Export_{tag}.v"
     v.write_text("From Rocq2LeanExport Require Import Loader.\n" + "".join(f"Require {m}.\n" for m in reqs)
-                 + f'Rocq2Lean Export "{ir}" {" ".join(r for _, r in items)}.\n')
+                 + f'Rocq2Lean {COMMAND} "{ir}" {" ".join(r for _, r in items)}.\n')
     cmd = ["systemd-run", "--user", "--scope", "-q", "-p", f"MemoryMax={memory}", "-p", "MemorySwapMax=0",
            "rocq", "compile", "-I", str(EXP / "src"), "-Q", str(EXP / "theories"), "Rocq2LeanExport",
            *load_paths(fam), str(v)]
@@ -128,7 +135,7 @@ def run_export(fam, d, items, env, tag, stack=None, memory=MEMORY_MAX):
 
 
 def do_chunk(fam, i, items, env, exporter_digest):
-    d = W / f"export-{fam}" / f"chunk-{i:04d}"
+    d = W / f"export{SUFFIX}-{fam}" / f"chunk-{i:04d}"
     res = {"exporter": exporter_digest, "chunk": i, "roots": [r for _, r in items], "modules": sorted({m for m, _ in items}),
            "irs": [], "unquotable": {}, "failed": {}, "stack_overflow_default": [], "big_memory": [], "memory_kills": 0}
     queue, n = [items], 0
@@ -180,11 +187,14 @@ def main(fam, workers=2):
     import rocq2lean
     from concurrent.futures import FIRST_COMPLETED, wait
     env = rocq2lean.opam_env()
-    base = W / f"export-{fam}"
+    base = W / f"export{SUFFIX}-{fam}"
     base.mkdir(parents=True, exist_ok=True)
     plugin = rocq2lean.build_exporter(base / "plugin-build.log")
-    exporter_digest = {"plugin_sha256": sha(Path(plugin).read_bytes()), "load_paths": load_paths(fam)}
+    exporter_digest = {"plugin_sha256": sha(Path(plugin).read_bytes()), "load_paths": load_paths(fam), "mode": MODE}
     order = module_order(fam)
+    if MODE == "statement":
+        prot = {norm(n) for n in json.loads((ROOT / "reports/prosa_inventory/protected_interface.json").read_text())["protected"]}
+        order = [(m, r) for m, r in order if norm(r) in prot]
     (base / "order.json").write_text(json.dumps(order) + "\n")
     covered, handled, results = set(), set(), []
 

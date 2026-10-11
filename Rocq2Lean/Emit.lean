@@ -779,7 +779,10 @@ where
         -- (The discovery pass for constants, `discover := true`, is not used yet: implicit levels
         -- relate to other references only through `max` arguments that Lean's level unifier cannot
         -- invert, which made more general constants break their own dependants. In-place R3G below.)
-        let exts : List (Array String) := [if isStmt then (globalsOf c0.type).toArray.qsort (· < ·) else #[]]
+        -- (an opaque interface's levels include those of its native sort, which can name a level that
+        -- its type only reaches through a referenced constant)
+        let exts : List (Array String) :=
+          [if isStmt then (globalsOf c0.type (sortT?.map (globalsOf ·) |>.getD {})).toArray.qsort (· < ·) else #[]]
         let mut r : DeclResult := default
         let mut first : Option DeclResult := none
         let mut lastTier : Option DeclResult := none
@@ -810,7 +813,7 @@ where
                 r := r'
                 break
             -- M6 last: δ-inline Set-motive constants (Prop ≤ Set at a family argument), then retry
-            if !r.ok then
+            if !r.accepted then
               for (fr, it, cu, lo) in [(false, false, false, false), (true, true, true, true)] do
                 let r' ← processConstant genv results c (stmt := isStmt) (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo)
                   (lower := lo) (delta := true)
@@ -822,7 +825,7 @@ where
           if r.accepted then break
         -- a declaration that no attempt accepts keeps the diagnosis of the plain attempt without
         -- implicit levels (the earlier behaviour)
-        if !r.ok then
+        if !r.accepted then
           r := first.getD r
           -- the last tier's diagnosis (R2⁺ + R2F-c + cumulativity + R3↓ with the bounded solver) is
           -- appended, with its solver log

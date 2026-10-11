@@ -382,11 +382,14 @@ type stmt_info = {
   obligation_of : (string, string * int) Hashtbl.t;
   def_obligations : (string, string list) Hashtbl.t;
   failed : (string, string) Hashtbl.t;
+  (* rewritten definitions accepted by Rocq's kernel only without the guard check: a recursive call
+     whose structural argument was a proof subterm, now an obligation (termination is deferred) *)
+  deferred_guard : (string, string) Hashtbl.t;
 }
 
 let new_stmt_info () =
   { proof_only = Hashtbl.create 97; opaque_data = Hashtbl.create 17; obligation_of = Hashtbl.create 97; def_obligations = Hashtbl.create 97;
-    failed = Hashtbl.create 17 }
+    failed = Hashtbl.create 17; deferred_guard = Hashtbl.create 7 }
 
 (* The IR key of a native kernel name (same scheme as [kn_key]). *)
 let rec native_mp_key = function
@@ -551,6 +554,12 @@ let decl_json ?stmt ~opaque_access env ((kn : K.kername), (d : E.global_decl)) =
         [ ("obligations", J.Arr (List.map (fun o -> J.Str o) (Hashtbl.find st.def_obligations key))) ]
       | Some st when Hashtbl.mem st.failed key -> [ ("extraction_refused", J.Str (Hashtbl.find st.failed key)) ]
       | _ -> []
+    in
+    let stmt_fields =
+      match stmt with
+      | Some st when Hashtbl.mem st.deferred_guard key ->
+        stmt_fields @ [ ("termination", J.Obj [ ("state", J.Str "deferred"); ("guard_error", J.Str (Hashtbl.find st.deferred_guard key)) ]) ]
+      | _ -> stmt_fields
     in
     let stmt_fields =
       match stmt with
@@ -776,6 +785,36 @@ let proof_valued env c =
   let sigma = Evd.from_env env in
   try is_proof_type env sigma (EConstr.of_constr cb.Declarations.const_type) with _ -> false
 
+(* A stable, environment-free description of why Rocq's kernel refused a rewritten declaration. *)
+let refusal_reason e =
+  let open Type_errors in
+  match e with
+  | TypeError (_, err) -> (
+    "kernel type error: "
+    ^
+    match err with
+    | IllFormedRecBody (FixGuardError g, _, i, _, _) ->
+      "ill-formed recursive definition (fixpoint " ^ string_of_int i ^ "): "
+      ^ (match g with
+         | NotEnoughAbstractionInFixBody _ -> "not enough abstractions"
+         | RecursionNotOnInductiveType _ -> "recursion not on an inductive type"
+         | RecursionOnIllegalTerm (k, _, _) -> "recursive call " ^ string_of_int k ^ " on a term that is not a structural subterm"
+         | NotEnoughArgumentsForFixCall k -> "recursive call " ^ string_of_int k ^ " with too few arguments"
+         | FixpointOnNonEliminable _ -> "fixpoint on a non-eliminable type")
+    | IllFormedRecBody (CoFixGuardError _, _, _, _, _) -> "ill-formed corecursive definition"
+    | IllTypedRecBody _ -> "ill-typed recursive body"
+    | ActualType _ -> "actual type mismatch"
+    | CantApplyBadType _ -> "application to an argument of the wrong type"
+    | CantApplyNonFunctional _ -> "application of a non-function"
+    | UnsatisfiedUnivConstraints _ | UnsatisfiedPConstraints _ -> "universe constraints not satisfied"
+    | UndeclaredUniverses _ | UndeclaredQualities _ -> "undeclared universe levels or qualities"
+    | ElimArity _ -> "elimination not allowed"
+    | BadCaseRelevance _ | BadBinderRelevance _ -> "relevance mismatch"
+    | IllFormedBranch _ -> "ill-formed branch"
+    | _ -> "other")
+  | Failure m -> m
+  | e -> Printexc.to_string e
+
 (* Replace the maximal proof subterms of [t] (closed in [env0]) by applications of fresh obligations;
    [mk stmt] returns the obligation constant for the closed statement [stmt]. *)
 let extract_proofs env0 sigma mk t =
@@ -826,8 +865,14 @@ let statement_env ?(follow = true) ~opaque_access st env0 roots =
            EConstr.mkConstU (o, inst)
          in
          let is_proof = proof_valued env0 c in
+         (* opacity as declared in Rocq (the native environment): the preparation may have replaced
+            an opaque body by its lowered form, which does not make it transparent *)
          let is_opaque_data =
-           (not is_proof) && (match cb.Declarations.const_body with Declarations.OpaqueDef _ -> true | _ -> false)
+           (not is_proof)
+           && (match (Environ.lookup_constant c (Global.env ())).Declarations.const_body with
+               | Declarations.OpaqueDef _ -> true
+               | _ -> false
+               | exception Not_found -> false)
          in
          let ty' = EConstr.to_constr sigma (extract_proofs env0 sigma mk (EConstr.of_constr cb.Declarations.const_type)) in
          let body' =
@@ -848,8 +893,16 @@ let statement_env ?(follow = true) ~opaque_access st env0 roots =
                  e)
              e obls
          in
-         let env' = add_obls env0 in
-         let checked =
+         (* a polymorphic constant is re-checked under its abstract universe context (De Bruijn
+            universe variables), as Rocq's checker does *)
+         let env' =
+           if poly then Environ.push_context ~strict:false (UVars.AbstractContext.repr (Declareops.constant_polymorphic_context cb)) (add_obls env0)
+           else add_obls env0
+         in
+         (* the constant's own typing flags, as when Rocq checked it *)
+         let flags = cb.Declarations.const_typing_flags in
+         let env' = Environ.set_typing_flags flags env' in
+         let check env' =
            try
              let _ = Typeops.infer_type env' ty' in
              List.iter (fun (_, stmt) -> ignore (Typeops.infer_type env' stmt)) obls;
@@ -859,7 +912,21 @@ let statement_env ?(follow = true) ~opaque_access st env0 roots =
                 if Conversion.conv_leq env' j.Environ.uj_type ty' <> Ok () then failwith "rewritten body does not have the rewritten type"
               | None -> ());
              None
-           with e -> Some (Printexc.to_string e)
+           with e -> Some (e, refusal_reason e)
+         in
+         let checked =
+           match check env' with
+           | None -> None
+           | Some (Type_errors.TypeError (_, Type_errors.IllFormedRecBody (Type_errors.FixGuardError (Type_errors.RecursionOnIllegalTerm _), _, _, _, _)), why)
+             when flags.Declarations.check_guarded && not is_proof ->
+             (* Rocq accepted the original under the guard check; the rewritten body differs only in
+                proof subterms, one of which was a recursive call's structural argument. Re-check
+                everything but the guard; termination becomes an explicit obligation of the
+                translation (never assumed). *)
+             (match check (Environ.set_typing_flags { flags with Declarations.check_guarded = false } env') with
+              | None -> Hashtbl.replace st.deferred_guard key why; None
+              | Some (_, why') -> Some why')
+           | Some (_, why) -> Some why
          in
          (match checked with
           | Some why when not is_proof ->
@@ -987,7 +1054,9 @@ let export_in ?stmt ~opaque_access env file (roots : Libnames.qualid list) =
                 ("proof_only", J.Int (Hashtbl.length st.proof_only));
                 ("obligations", J.Int (Hashtbl.length st.obligation_of));
                 ( "extraction_refused",
-                  J.Obj (List.sort compare (Hashtbl.fold (fun k v acc -> (k, J.Str v) :: acc) st.failed [])) ) ] );
+                  J.Obj (List.sort compare (Hashtbl.fold (fun k v acc -> (k, J.Str v) :: acc) st.failed [])) );
+                ( "termination_deferred",
+                  J.Arr (List.map (fun k -> J.Str k) (List.sort compare (Hashtbl.fold (fun k _ acc -> k :: acc) st.deferred_guard []))) ) ] );
         ( "conventions",
           J.Obj
             [ ("bvar", J.Str "MetaRocq tRel n = IR rel n, 0 = innermost binder");
@@ -1065,7 +1134,8 @@ let check_statement_prepared ~opaque_access key =
   in
   Feedback.msg_info
     Pp.(str ("STATEMENT " ^ key ^ " " ^ J.to_string (J.Obj [ ("type", q cb.Declarations.const_type); ("body", body);
-                                                                ("state", J.Str state); ("obligations", J.Arr obls) ])))
+                                                                ("state", J.Str state); ("obligations", J.Arr obls);
+                                                                ("termination", if Hashtbl.mem st.deferred_guard key then J.Str "deferred" else J.Null) ])))
 
 (* Fresh-process recomputation for the round trip: the prepared type and body of one constant, quoted,
    after the kernel re-check (prepare_env raises otherwise). *)

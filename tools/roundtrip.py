@@ -310,7 +310,8 @@ def check_statement(decls, out, loadpaths, requires):
             results[d["name"]] = "RT_STATEMENT_NOT_RECOMPUTED"
             continue
         ok = g["type"] == d["type"] and g["body"] == d["body"] and g["state"] == want_state.get(d["body_state"], "kept") \
-            and [o["name"] for o in g["obligations"]] == (d.get("obligations") or [])
+            and [o["name"] for o in g["obligations"]] == (d.get("obligations") or []) \
+            and g.get("termination") == (d.get("termination") or {}).get("state")
         for o in g["obligations"]:
             od = by_name.get(o["name"])
             if od is None or od["body_state"] != "obligation" or od["type"] != o["type"] or od["body"] is not None:
