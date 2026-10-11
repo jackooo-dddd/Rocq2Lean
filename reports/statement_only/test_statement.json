@@ -10,8 +10,8 @@
    "by_validation": {
     "DEFINITION_AUDITED": 73,
     "DEFINITION_AUDITED_PENDING": 18,
-    "STATEMENT_AUDITED": 2,
-    "STATEMENT_AUDITED_PENDING": 9
+    "STATEMENT_AUDITED": 1,
+    "STATEMENT_AUDITED_PENDING": 5
    },
    "roots": [
     {
@@ -22,7 +22,6 @@
      "pending_prerequisites": [
       "mathcomp.boot.ssrnat.eqnP",
       "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1",
-      "mathcomp.boot.ssrnat.ex_minn__rocq2lean_obligation_1",
       "mathcomp.boot.ssrnat.find_ex_minn"
      ]
     },
@@ -33,9 +32,7 @@
      "validation": "STATEMENT_AUDITED_PENDING",
      "pending_prerequisites": [
       "mathcomp.boot.ssrnat.eqnP",
-      "prosa.analysis.definitions.finish_time.finished_at_finish_time__rocq2lean_obligation_1",
       "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1",
-      "mathcomp.boot.ssrnat.ex_minn__rocq2lean_obligation_1",
       "mathcomp.boot.ssrnat.find_ex_minn"
      ]
     },
@@ -46,9 +43,7 @@
      "validation": "STATEMENT_AUDITED_PENDING",
      "pending_prerequisites": [
       "mathcomp.boot.ssrnat.eqnP",
-      "prosa.analysis.definitions.finish_time.earliest_finish_time__rocq2lean_obligation_1",
       "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1",
-      "mathcomp.boot.ssrnat.ex_minn__rocq2lean_obligation_1",
       "mathcomp.boot.ssrnat.find_ex_minn"
      ]
     },
@@ -59,9 +54,7 @@
      "validation": "DEFINITION_AUDITED_PENDING",
      "pending_prerequisites": [
       "mathcomp.boot.ssrnat.eqnP",
-      "prosa.analysis.definitions.finish_time.response_time__rocq2lean_obligation_1",
       "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1",
-      "mathcomp.boot.ssrnat.ex_minn__rocq2lean_obligation_1",
       "mathcomp.boot.ssrnat.find_ex_minn"
      ]
     },
@@ -72,9 +65,7 @@
      "validation": "STATEMENT_AUDITED_PENDING",
      "pending_prerequisites": [
       "mathcomp.boot.ssrnat.eqnP",
-      "prosa.analysis.definitions.finish_time.completes_at_finish_time__rocq2lean_obligation_1",
       "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1",
-      "mathcomp.boot.ssrnat.ex_minn__rocq2lean_obligation_1",
       "mathcomp.boot.ssrnat.find_ex_minn"
      ]
     }
@@ -345,8 +336,8 @@
    "validation": {
     "audit_verdict": "MATCH",
     "row_status": "STATEMENT_KERNEL_CHECKED",
-    "run_id": "d24b504a-b86a-42ca-a535-0eee8106eb22",
-    "validate_sha256": "4cdb6fcf38177e36c0d5ccb33eeab04a7b8ddeb6de500ca3941ccac01c126442"
+    "run_id": "6bf61cbf-3e48-432e-80f2-f9e91c93c5b4",
+    "validate_sha256": "f6e7182b3492acf700d10d1dd2c4b0a859c8d07ab7e632a7cd787928ae669c9a"
    }
   }
  },

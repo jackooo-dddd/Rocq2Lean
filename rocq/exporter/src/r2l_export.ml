@@ -834,9 +834,15 @@ let extract_proofs env0 sigma mk t =
       let o = mk (EConstr.it_mkProd_or_LetIn (canon env ty) ctx) in
       EConstr.mkApp (o, Context.Rel.instance EConstr.mkRel 0 ctx)
   in
+  (* local variables (hypotheses of the context) stay: they are not proof terms of the source *)
+  let atomic t =
+    match EConstr.kind sigma t with
+    | Constr.Rel _ | Constr.Var _ | Constr.Sort _ | Constr.Meta _ | Constr.Evar _ -> true
+    | _ -> false
+  in
   let rec go env t =
     match EConstr.kind sigma t with
-    | Constr.Rel _ | Constr.Var _ | Constr.Sort _ | Constr.Meta _ | Constr.Evar _ -> t
+    | _ when atomic t -> t
     | _ when is_proof env t -> extract env (Retyping.get_type_of env sigma t) t
     | Constr.App (f, args) ->
       let f' = go env f in
@@ -853,7 +859,7 @@ let extract_proofs env0 sigma mk t =
             in
             let a' =
               match dom_cod with
-              | Some (d, _) when is_proof env a -> extract env d a
+              | Some (d, _) when (not (atomic a)) && is_proof env a -> extract env d a
               | _ -> go env a
             in
             fty := (match dom_cod with Some (_, b) -> Some (EConstr.Vars.subst1 a' b) | None -> None);
@@ -863,7 +869,7 @@ let extract_proofs env0 sigma mk t =
       EConstr.mkApp (f', args')
     | Constr.LetIn (na, v, ty, b) ->
       let ty' = go env ty in
-      let v' = if is_proof env v then extract env ty' v else go env v in
+      let v' = if (not (atomic v)) && is_proof env v then extract env ty' v else go env v in
       EConstr.mkLetIn (na, v', ty', go (EConstr.push_rel (Context.Rel.Declaration.LocalDef (na, v', ty')) env) b)
     | _ -> Termops.map_constr_with_full_binders env sigma EConstr.push_rel go env t
   in

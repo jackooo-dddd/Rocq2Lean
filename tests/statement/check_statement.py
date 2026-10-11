@@ -209,6 +209,11 @@ ft, rcs, v = pipeline("st-finishtime", ROOT / "fixtures" / "m6" / "manifest.json
 check(rcs == [0, 0, 0] and v.get("status") == "STATEMENT_VALIDATED", f"FinishTime statement pipeline validated ({rcs})")
 check(all(r["validation"] in ("DEFINITION_AUDITED_PENDING", "STATEMENT_AUDITED_PENDING", "DEFINITION_AUDITED", "STATEMENT_AUDITED")
           for r in v.get("roots", [])), "every FinishTime root is translated and audited (possibly pending)")
+check(all(set(r["pending_prerequisites"]) == {"mathcomp.boot.ssrnat.eqnP", "mathcomp.boot.ssrnat.find_ex_minn",
+                                               "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1"}
+          for r in v.get("roots", [])),
+      "FinishTime roots wait exactly for eqnP, a value of opaque find_ex_minn and finish_time's obligation "
+      "(local hypotheses are never extracted as obligations)")
 fa, rcs, v = pipeline("st-fixture-a", ROOT / "fixtures" / "stmt" / "a" / "manifest.json", FX_ROOTS)
 check(rcs == [0, 0, 0] and v.get("status") == "STATEMENT_VALIDATED", f"fixture A statement pipeline validated ({rcs})")
 RA, _ = results(fa)
