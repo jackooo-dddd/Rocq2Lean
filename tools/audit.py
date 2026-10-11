@@ -44,6 +44,7 @@ class Mismatch(Exception):
 
 
 FACTS = None     # native universe facts of the audited export (set by main)
+STATEMENT_MODE = [False]     # set by main_statement
 
 
 def target_name(key):
@@ -2175,11 +2176,15 @@ def own_partition_full(d, r):
     referenced declarations, absent from the source sorts) count as type levels; R2F-c: the reported
     interpretation must be exactly the auditor's own R2F recomputation over the native facts among
     the explicit type levels and the implicit levels."""
-    tl = set(source_globals(d["type"], set()))
+    # (statement mode: a statement definition's type levels are the statement's own levels)
+    tl = set(source_globals(d["type"], set())) | set(d.get("statement_levels") or [])
     own = tl | source_globals(d["body"], set())
     implicit = set(r.get("implicit_levels") or [])
-    if implicit & own:
-        raise Mismatch(f"implicit levels {sorted(implicit & own)} occur explicitly in the source")
+    # (statement mode: an implicit level may be a body level shared with a referenced declaration; it
+    # must not occur explicitly in the type, and must be the argument of a reference for it, checked
+    # with the universe arguments)
+    if implicit & (tl if STATEMENT_MODE[0] else own):
+        raise Mismatch(f"implicit levels {sorted(implicit & (tl if STATEMENT_MODE[0] else own))} occur explicitly in the source")
     tl, own = tl | implicit, own | implicit
     sol = {x["level"]: x["sigma"] for x in r.get("solved_levels", [])}
     interp = {x["level"]: x["sigma"] for x in r.get("level_interp") or []}
@@ -2668,6 +2673,7 @@ LEAF_STATES = ("statement_only", "obligation", "opaque_interface")
 ACCEPTED_ST = ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED", "STATEMENT_KERNEL_CHECKED")
 PENDING_ST = ("PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
 _PROP = {"k": "sort", "s": {"k": "prop"}}
+_SET_SORT = {"k": "sort", "s": {"k": "type", "u": [{"l": {"k": "set"}, "n": 0}]}}
 
 
 def statement_mode(header):
@@ -2687,13 +2693,15 @@ def statement_view(d):
     sort s); every other declaration is itself."""
     if not is_leaf(d):
         return d, ""
+    lv = sorted(source_globals(d["type"], set()))     # a statement definition's levels: the statement's
     if d["body_state"] == "opaque_interface":
         if d.get("type_sort") is None:
             raise Mismatch("opaque data without its native sort")
-        return dict(d, type=d["type_sort"], body=d["type"], body_state="transparent"), ".type"
+        # declared at the sort Lean infers for the type (audited as a sort, contributes no levels)
+        return dict(d, type=_SET_SORT, body=d["type"], body_state="transparent", statement_levels=lv), ".type"
     if d.get("body") is not None:
         raise Mismatch("a proof task exported with a body")
-    return dict(d, type=_PROP, body=d["type"], body_state="transparent"), ".statement"
+    return dict(d, type=_PROP, body=d["type"], body_state="transparent", statement_levels=lv), ".statement"
 
 
 def check_hyp_telescope(rows, leaves, hs, hyp_t):
@@ -2727,6 +2735,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     source (the exporter dropped them); a body on a proof task is refused."""
     from collections import Counter
     import hashlib
+    STATEMENT_MODE[0] = True
     decls = {d["name"]: d for d in lines if d["kind"] in ("constant", "inductive")}
     con = json.load(open(contract_path))
     report = json.load(open(report_path))

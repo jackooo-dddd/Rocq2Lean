@@ -225,7 +225,8 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     -- native facts among the declaration's levels must hold for the solution (R2S/R2B obligation).
     -- Body-only levels left free default to their minimal model (R2B, justified by R3′).
     -- R3G: implicit levels found by a discovery pass (`extraOwn`) are own type levels from the start
-    let explicitTy := (globalsOf c.type).toArray
+    -- (a statement definition's levels are those of its value, the statement)
+    let explicitTy := (if stmt then globalsOf body (globalsOf c.type) else globalsOf c.type).toArray
     let typeLevels := (explicitTy ++ extraOwn).toList.eraseDups.toArray.qsort (· < ·)
     -- R8: motive levels of the type (only when requested; see the translation ladder)
     let admitLv := if admit then (motiveLevels c.type).filter explicitTy.contains else #[]
@@ -296,10 +297,30 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
         for (m, v) in ownMVars do
           if typeLevels.contains m then
             if let .mvar r ← instantiateLevelMVars v then assignLevelMVar r (.param (levelParamName m))
-        let ((), tyMVars) := (levelMVarsOf (← instLevelMVars ty)).run #[]
+        let tyI0 ← instLevelMVars ty
+        let ((), tyMVars) := (levelMVarsOf tyI0).run #[]
+        -- statement mode: the source levels of the type's reference arguments (to tell a body level
+        -- shared with a referenced declaration from one unification merely identified with an argument)
+        let mut tyRefArgs : Array (String × Level) := #[]
+        if genv.stmtMode then
+          for (n, ls) in constOccurrences tyI0 do
+            if let some gs := genv.constGlobals[n]? then
+              let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
+              if gs.size == ls.length then
+                for l in gs, σ in ls do tyRefArgs := tyRefArgs.push (l, ← instantiateLevelMVars σ)
         for (m, v) in ownMVars do
           if let .mvar r ← instantiateLevelMVars v then
-            if tyMVars.contains r then assignLevelMVar r (.param (levelParamName m))
+            if tyMVars.contains r then
+              if !genv.stmtMode || typeLevels.contains m then
+                assignLevelMVar r (.param (levelParamName m))
+              -- statement mode, a body level in the type: if it is the argument of a reference for that
+              -- very level (a level shared with a referenced monomorphic declaration, e.g. `id` and `ID`),
+              -- it is a type level through that reference (reported implicit; the audit checks the
+              -- reference); otherwise it is left to the R3G pick below, which names the class after the
+              -- referenced level, and this level is solved to it (fact-checked)
+              else if tyRefArgs.any (fun (l, σ) => l == m && σ == .mvar r) then
+                assignLevelMVar r (.param (levelParamName m))
+                implicitRef.modify fun a => if a.contains m then a else a.push m
       -- R3G: a universe argument still free in the *type*, at a reference to a declaration whose
       -- parameter stands for source level `l`, is the source level `l` itself (Rocq references
       -- monomorphic declarations at their own levels): it becomes the parameter `u_l`, so the
@@ -322,6 +343,8 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
         return out
       let inTy ← argsFor tyI
       let all := inTy ++ (← argsFor valI)
+      -- (statement mode: a class that contains an own level is represented by that own level)
+      let ownCur ← ownMVars.mapM fun (_, v) => instantiateLevelMVars v
       let mut done : Array Level := #[]
       let mut chosen : Array (String × Array LMVarId) := #[]
       -- (R2F-c: classes of the body are candidates too; their levels become own levels)
@@ -338,7 +361,7 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
         -- kernel and the audit check it like every argument)
         let pick := tyCls.toList.eraseDups.find? fun l =>
           !own.contains l && !genv.templateLevels.contains l && cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) &&
-          (if genv.stmtMode then (cur.filter (·.1 == l)).any (·.2 == σ) else (cur.filter (·.1 == l)).all (·.2.isMVar))
+          (if genv.stmtMode then (cur.filter (·.1 == l)).any (·.2 == σ) && !ownCur.contains σ else (cur.filter (·.1 == l)).all (·.2.isMVar))
         if let some l := pick then
           let mut ms : Array LMVarId := #[]
           for (l', σ') in cur do
@@ -384,6 +407,14 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let mut sol : Std.HashMap String Level := {}
     let mut paramLevels : Array String := #[]
     let levelInterp ← interpRef.get
+    -- statement mode: every own level reported as read through ι must actually be ι l (two own levels
+    -- that unification identified are not both their own R2F reading: the tier is refused)
+    if genv.stmtMode then
+      for (m, v) in ownMVars do
+        if let some (_, x) := levelInterp.find? (·.1 == m) then
+          unless (← instantiateLevelMVars v).normalize == x.normalize do
+            return { base with status := "UNIVERSE_REJECTED",
+                               message := s!"R2F-c: own level {m} was identified with another own level by unification; it is not its own reading" }
     for (m, v) in ownMVars do
       let s ← instantiateLevelMVars v
       if levelInterp.any (·.1 == m) then continue        -- R2F-c own level: a parameter, read through ι
@@ -785,9 +816,12 @@ where
         if c0.bodyState == "opaque_interface" && sortT?.isNone then
           return ({ source := c0.name, kind := "constant", status := "EXPORT_VALIDATION_FAILED",
                     message := "opaque data without its native sort" }, genv)
+        -- (an opaque interface's declared sort is inferred from its translated type, `inferSort`; the
+        -- native sort only certifies that the export carries one and contributes no levels: `Set`)
         let c : IR.ConstantDecl := if isStmt then
             { c0 with name := c0.name ++ (if c0.bodyState == "opaque_interface" then ".type" else ".statement"),
-                      type := sortT?.getD (.sort .prop), body := some c0.type,
+                      type := if sortT?.isSome then .sort (.type #[{ level := .set, offset := 0 }]) else .sort .prop,
+                      body := some c0.type,
                       bodyState := "transparent", typeDeps := #[], bodyDeps := c0.typeDeps }
           else c0
         -- R8 first when the type has motive levels: the sort-level form is strictly more general
@@ -799,8 +833,7 @@ where
         -- invert, which made more general constants break their own dependants. In-place R3G below.)
         -- (an opaque interface's levels include those of its native sort, which can name a level that
         -- its type only reaches through a referenced constant)
-        let exts : List (Array String) :=
-          [if isStmt then (globalsOf c0.type (sortT?.map (globalsOf ·) |>.getD {})).toArray.qsort (· < ·) else #[]]
+        let exts : List (Array String) := [if isStmt then (globalsOf c0.type).toArray.qsort (· < ·) else #[]]
         let mut r : DeclResult := default
         let mut first : Option DeclResult := none
         let mut lastTier : Option DeclResult := none

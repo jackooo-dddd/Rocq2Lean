@@ -646,6 +646,29 @@ partial def IR.betaApp (f : IR.Term) (args : Array IR.Term) : IR.Term :=
     | _ => .app f args
   else f
 
+/-- Statement mode: ζ-normalization of a fixpoint body *before* any lowering (the audit's
+`zeta_fix_lets`, same order): a `let` whose value mentions a function of the block (`rel` in
+`[lo, lo + n)`) is inlined (definitional), so its uses become recursive calls, in every minor premise
+alike (applying ζ per minor premise after ι-reduction kept such a `let` where ι removed the call). -/
+partial def IR.Term.zetaFixLets (t : IR.Term) (lo n : Nat) : IR.Term :=
+  let go (u : IR.Term) (d : Nat) := u.zetaFixLets (lo + d) n
+  match t with
+  | .letIn _ v _ b => if v.mentionsRels lo n then ((b.subst0 v).flattenApps).zetaFixLets lo n
+      else match t with
+        | .letIn nm v ty b => .letIn nm (go v 0) (go ty 0) (go b 1)
+        | _ => t
+  | .evar ev args => .evar ev (args.map (go · 0))
+  | .cast c kd ty => .cast (go c 0) kd (go ty 0)
+  | .prod nm ty b => .prod nm (go ty 0) (go b 1)
+  | .lam nm ty b => .lam nm (go ty 0) (go b 1)
+  | .app f args => .app (go f 0) (args.map (go · 0))
+  | .case i np r pu ps pctx ret c brs =>
+    .case i np r pu (ps.map (go · 0)) pctx (go ret pctx.size) (go c 0) (brs.map fun (ctx, b) => (ctx, go b ctx.size))
+  | .proj i np a c => .proj i np a (go c 0)
+  | .fix ds idx => .fix (ds.map fun (nm, ty, b, r) => (nm, go ty 0, go b ds.size, r)) idx
+  | .cofix ds idx => .cofix (ds.map fun (nm, ty, b, r) => (nm, go ty 0, go b ds.size, r)) idx
+  | _ => t
+
 /-- A binder type `∀ xs, Set` with at least one argument (a `Set`-valued family). -/
 partial def IR.Term.isSetFamily : IR.Term → Nat → Bool
   | .prod _ _ b, n => b.isSetFamily (n + 1)
@@ -1481,6 +1504,8 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
   let bodies := (← read).genv.irBodies
   let need := defs.reverse.map (·.2.2.2 + 1)
   let defs := defs.map fun (n, ty, b, r) => (n, ty, inlineRecArgs bodies need b, r)
+  -- statement mode: ζ on the source body first, as the audit reads it (proof mode unchanged)
+  let defs := if (← read).genv.stmtMode then defs.map fun (n, ty, b, r) => (n, ty, b.zetaFixLets 0 defs.size, r) else defs
   if defs.size > 1 then return ← transFixMutual defs fidx
   -- M6 course-of-values recursion, only when the structural lowering finds a recursive call on a
   -- subterm that is not a direct recursive field (Ring_polynom `norm_aux`)
