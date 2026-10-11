@@ -1,0 +1,15 @@
+{
+ "name": "holdout_completion_prosa_verified8",
+ "manifest": "fixtures/m6/holdout_util_manifest.json",
+ "roots": [
+  "prosa.util.sum.sum_nat_eq0_nat",
+  "prosa.util.sum.big_sum_eq_in_eq_sized_intervals",
+  "prosa.util.list.iotaD_impl",
+  "prosa.util.list.exists_two",
+  "prosa.util.list.has_all_nilp",
+  "prosa.util.list.nin_rem_all",
+  "prosa.util.list.max0_cons",
+  "prosa.util.list.index_iota_filter_eqx"
+ ],
+ "note": "the translated holdouts except sum_split_exhaustive_mutually_exclusive_preds, whose dependency Corelib.ssr.ssreflect_rw.nary_congruence fails the R2B-P source-instance obligation"
+}

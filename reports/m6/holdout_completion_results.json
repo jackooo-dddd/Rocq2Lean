@@ -1,0 +1,117 @@
+{
+  "git_head": "a1b9227a138d0555094bf44f3a5de6c10175b3c9",
+  "freeze": "m6-completion-freeze-1",
+  "runs": {
+    "holdout_completion_prosa": {
+      "roots": {
+        "prosa.util.sum.sum_unit1": "BLOCKED_DEPENDENCY",
+        "prosa.util.sum.sum_nat_eq0_nat": "TRANSLATED_AND_CHECKED",
+        "prosa.util.sum.big_sum_eq_in_eq_sized_intervals": "TRANSLATED_AND_CHECKED",
+        "prosa.util.sum.sum_split_exhaustive_mutually_exclusive_preds": "TRANSLATED_AND_CHECKED",
+        "prosa.util.sum.ltn_sum_leq_seq": "BLOCKED_DEPENDENCY",
+        "prosa.util.sum.sum_majorant_constant": "BLOCKED_DEPENDENCY",
+        "prosa.util.div_mod.div_ceil0": "BLOCKED_DEPENDENCY",
+        "prosa.util.div_mod.div_ceil_subadditive": "BLOCKED_DEPENDENCY",
+        "prosa.util.div_mod.divn_leq": "BLOCKED_DEPENDENCY",
+        "prosa.util.div_mod.eqdivn_leqmodn": "BLOCKED_DEPENDENCY",
+        "prosa.util.div_mod.addmod_le_mod": "BLOCKED_DEPENDENCY",
+        "prosa.util.div_mod.div_ceil_gt0": "BLOCKED_DEPENDENCY",
+        "prosa.util.list.iotaD_impl": "TRANSLATED_AND_CHECKED",
+        "prosa.util.list.exists_two": "TRANSLATED_AND_CHECKED",
+        "prosa.util.list.has_all_nilp": "TRANSLATED_AND_CHECKED",
+        "prosa.util.list.nin_rem_all": "TRANSLATED_AND_CHECKED",
+        "prosa.util.list.max0_cons": "TRANSLATED_AND_CHECKED",
+        "prosa.util.list.index_iota_filter_eqx": "TRANSLATED_AND_CHECKED"
+      },
+      "translated": 9,
+      "requested": 18,
+      "exit_codes": {
+        "export": 0,
+        "translate": 2,
+        "verify": 2,
+        "status": 2
+      },
+      "verify": "AUDIT_REJECTED",
+      "reason": "missing translation manifest: /home/shunqwang4/research/Rocq2Lean/runs/m6h-holdout_completion_prosa/translation_manifest.json",
+      "required_closure": null,
+      "blocked_causes": {
+        "mathcomp.boot.fintype/isFinite.axioms_": {
+          "status": "KERNEL_REJECTED",
+          "message": "(kernel) application type mismatch\n  @Rocq.mathcomp.boot.fintype.finite_axiom\n    (@Rocq.mathcomp.boot.eqtype.Equality.type.Pack T\n      (@Rocq.mathcomp.boot.eqtype.Equality.axioms_.Class T local_mixi"
+        },
+        "mathcomp.boot.choice.PCanHasChoice": {
+          "status": "UNIVERSE_REJECTED",
+          "message": "proof-local level Corelib.ssr.ssrfun.52 solved as (some 0): native fact Set lt Corelib.ssr.ssrfun.52 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level Corelib.ssr.ssrfun."
+        },
+        "mathcomp.boot.seq.mask_cat": {
+          "status": "UNIVERSE_REJECTED",
+          "message": "defaulted universe level(s) [u_residual_0] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @Rocq.mathcomp.boot.seq.seq_ind2 Rocq.Corelib.Init.Datatype"
+        },
+        "mathcomp.boot.bigop.big_const_seq": {
+          "status": "UNIVERSE_REJECTED",
+          "message": "proof-local level mathcomp.boot.bigop.1120 solved as (some u_mathcomp_boot_bigop_2719): native fact mathcomp.boot.bigop.2716 le mathcomp.boot.bigop.1120 does not hold for the solution [last tier: UNIV"
+        },
+        "mathcomp.boot.bigop.big_morph": {
+          "status": "UNIVERSE_REJECTED",
+          "message": "reference to Rocq.Corelib.ssr.ssrfun.morphism_2: argument u_mathcomp_boot_bigop_1255: mathcomp.boot.bigop.1255 + 0 \u2264 Corelib.ssr.ssrfun.348 is not entailed by the source universe graph, nor is Corelib"
+        },
+        "mathcomp.boot.div.edivn_rec": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "recursive call on a term that is not a direct recursive constructor field"
+        },
+        "mathcomp.boot.div.modn_rec": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "recursive call on a term that is not a direct recursive constructor field"
+        }
+      },
+      "source_ir_sha256": "aac85dcf64409f5e8d1acf9a2c3521ce4c15416c4a15e8c898d39ff8766d5f6c"
+    },
+    "holdout_completion_mathcomp": {
+      "roots": {
+        "mathcomp.boot.div.dvdn_odd": "BLOCKED_DEPENDENCY",
+        "mathcomp.boot.div.dvdnn": "BLOCKED_DEPENDENCY",
+        "mathcomp.boot.div.lcmn1": "BLOCKED_DEPENDENCY",
+        "mathcomp.boot.div.modnDl": "BLOCKED_DEPENDENCY",
+        "mathcomp.boot.div.muln_lcmr": "BLOCKED_DEPENDENCY",
+        "mathcomp.boot.div.dvdn_lcml": "BLOCKED_DEPENDENCY",
+        "mathcomp.boot.div.coprime_pexpl": "BLOCKED_DEPENDENCY",
+        "mathcomp.boot.div.gcdn_idPl": "BLOCKED_DEPENDENCY"
+      },
+      "translated": 0,
+      "requested": 8,
+      "exit_codes": {
+        "export": 0,
+        "translate": 2,
+        "verify": 2,
+        "status": 2
+      },
+      "verify": "AUDIT_REJECTED",
+      "reason": "missing translation manifest: /home/shunqwang4/research/Rocq2Lean/runs/m6h-holdout_completion_mathcomp/translation_manifest.json",
+      "required_closure": null,
+      "blocked_causes": {
+        "mathcomp.boot.div.modn_rec": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "recursive call on a term that is not a direct recursive constructor field"
+        },
+        "mathcomp.boot.div.edivn_rec": {
+          "status": "UNSUPPORTED_FEATURE",
+          "message": "recursive call on a term that is not a direct recursive constructor field"
+        }
+      },
+      "source_ir_sha256": "02b9cc03a3ac6b5cd2aad0fe894c68b95f7085953a581b3af8ea086145afb7bb"
+    }
+  },
+  "follow_up": {
+    "translated9_as_own_request": {
+      "request": "fixtures/m6/regression/holdout_completion_prosa_translated.json",
+      "verify": "AUDIT_REJECTED",
+      "reason": "R2B-P source instance rejected by Rocq's kernel: Corelib.ssr.ssreflect_rw.nary_congruence (INSTANCE_REJECTED), a dependency of prosa.util.sum.sum_split_exhaustive_mutually_exclusive_preds only"
+    },
+    "verified8_as_own_request": {
+      "request": "fixtures/m6/regression/holdout_completion_prosa_verified8.json",
+      "verify": "VERIFIED",
+      "required_closure": 1895,
+      "status_exit": 0
+    }
+  }
+}
