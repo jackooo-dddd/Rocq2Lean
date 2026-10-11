@@ -1,0 +1,1 @@
+{"name": "p0-external-specializations", "load_paths": [["-Q", "../m4", "M4"]], "files": [], "requires": ["Stdlib.Lists.List"]}

@@ -28,7 +28,12 @@ Detectors (each recorded separately in `result.json`):
   declaration (residuals as fresh universe parameters) is accepted by the kernel here, and
   instantiating its residual parameters with `0` gives exactly the imported declaration;
 * `target_deps` — every constant referenced by an accepted target is an accepted target of
-  this run, a bootstrap target, or a kernel-generated constructor/recursor of one.
+  this run, a bootstrap target, or a kernel-generated constructor/recursor of one;
+* `interface` (P0) — the contract carries a protection binding (the pinned inventory's protected
+  public declarations present in the export), the report's binding agrees with it, every result row's
+  `protected` flag equals membership in it, and no accepted protected declaration was translated with
+  a specialized statement (R2B-S result-sort lowering or R2B-P on a statement level), whether it is a
+  requested root or a dependency.
 
 Any failure fails the module (non-zero exit of the consumer process).
 -/
@@ -309,15 +314,39 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
       | _, none => problems := note "residual_levels" s!"{tgt}: residual record on a declaration without value" problems
     let axs ← liftCoreM (collectAxioms tgt.toName)
     unless axs.isEmpty do problems := note "axioms" s!"{tgt}: depends on axioms {axs}" problems
+  -- interface (P0): protection binding from the contract (never from the report under audit)
+  let mut ifaceChecked : Nat := 0
+  match contract.getObjVal? "protection" with
+  | .ok prot@(.obj _) =>
+    let names := (prot.getObjValAs? (Array String) "protected").toOption.getD #[]
+    let pset : Std.HashSet String := names.foldl (·.insert ·) {}
+    let repProt := (report.getObjVal? "protection").toOption.getD .null
+    if (repProt.getObjValAs? Nat "protected_in_export").toOption != some names.size ||
+       (repProt.getObjVal? "manifest_sha256").toOption != (prot.getObjVal? "manifest_sha256").toOption then
+      problems := note "interface" "the report's protection binding differs from the contract's" problems
+    for r in results do
+      let s := getStr r "source"
+      if ((r.getObjValAs? Bool "protected").toOption.getD false) != pset.contains s then
+        problems := note "interface" s!"{s}: protection flag differs from the contract" problems
+    for (s, r) in accepted do
+      if pset.contains s then
+        ifaceChecked := ifaceChecked + 1
+        let sl := (r.getObjValAs? (Array Json) "sort_lowered_levels").toOption.getD #[]
+        let pin := ((r.getObjValAs? (Array Json) "r2bp_levels").toOption.getD #[]).filter fun x =>
+          (x.getObjValAs? Bool "in_type").toOption == some true
+        unless sl.isEmpty && pin.isEmpty do
+          problems := note "interface" s!"{s}: protected public declaration translated with a specialized statement ({sl.size} R2B-S, {pin.size} R2B-P statement level(s))" problems
+  | _ => problems := note "interface" "the contract carries no protection binding" problems
   for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)
   let dets := ["binding", "coverage", "roots", "presence", "kind", "safety", "levels", "type", "value", "ctors",
-               "target_deps", "axioms", "rec_indices", "residual_levels", "instance_levels"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
+               "target_deps", "axioms", "rec_indices", "residual_levels", "instance_levels", "interface"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
   let res := Json.mkObj [
     ("schema", "rocq2lean-consumer/1"), ("status", if problems.isEmpty then "OK" else "AUDIT_REJECTED"),
     ("run_id", getStr contract "run_id"), ("accepted_checked", accepted.size),
     ("recursor_applications_checked", recApps),
     ("residual_levels_checked", residualsChecked),
     ("instance_levels_checked", instChecked),
+    ("interface_checked", ifaceChecked),
     ("recursors", Json.arr (recs.toArray.map (recursorJson ·.2))),
     ("detectors", Json.mkObj dets),
     ("problems", Json.arr (problems.map fun (d, m) => Json.mkObj [("detector", d), ("message", m)]))]

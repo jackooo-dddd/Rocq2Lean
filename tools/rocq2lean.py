@@ -171,7 +171,7 @@ IMPL_GLOBS = ["Rocq2Lean.lean", "Rocq2Lean/*.lean", "tools/*.py", "rocq/exporter
               "rocq/exporter/src/*.mlg", "rocq/exporter/src/*.mlpack", "rocq/exporter/src/META.*",
               "rocq/exporter/theories/*.v", "rocq/exporter/Makefile*", "rocq/exporter/_RocqProject",
               "rocq/roundtrip/RtEq.v", "lakefile.lean", "lake-manifest.json", "lean-toolchain",
-              "toolchains.lock.json"]
+              "toolchains.lock.json", "tools/protected_interface.pin.json"]
 
 
 def impl_files():
@@ -364,8 +364,18 @@ def _export(manifest, roots, raw_roots, out, log_name):
     if rt.returncode != 0 or rt_status != "OK":
         raise Rejected("EXPORT_VALIDATION_FAILED",
                        f"independent round trip failed (exit {rt.returncode}, status {rt_status}); see {out / 'roundtrip.json'}")
+    # P0: the pinned protected public interface, bound to this export's contract (refused when the
+    # manifest is missing, altered or stale)
+    sys.path.insert(0, str(ROOT / "tools"))
+    import protection
     try:
-        con = contract_mod.build(ir, roots)
+        with ir.open() as fh:
+            names = [json.loads(l)["name"] for l in fh if l.startswith('{"kind":"constant"') or l.startswith('{"kind":"inductive"')]
+        prot = protection.binding(names)
+    except protection.ProtectionError as e:
+        raise Rejected("EXPORT_VALIDATION_FAILED", f"protection: {e}")
+    try:
+        con = contract_mod.build(ir, roots, protection=prot)
     except contract_mod.ContractError as e:
         raise Rejected("ROOT_CONTRACT_REJECTED", str(e))
     atomic_write_json(out / "contract.json", con)
@@ -456,7 +466,10 @@ def _translate(inp, out):
     run_id = run_id or f"translate-only-{in_sha[:16]}"
     run(["lake", "-d", str(ROOT), "build", "Rocq2Lean"], log, env=lean_env())
     mod = lean_dir / "Rocq2LeanOut.lean"
-    mod.write_text(f'import Rocq2Lean\n#rocq2lean_import "{inp}" "{report}" "{in_sha}" "{run_id}"\n')
+    # P0: the contract (when this run's export wrote one for this IR) carries the protection binding
+    # that the translator enforces; a translate-only run has none (protection: null, not verifiable)
+    prot_args = f' "{con_p}" "{sha256_file(con_p)}"' if run_id and not run_id.startswith("translate-only") else ""
+    mod.write_text(f'import Rocq2Lean\n#rocq2lean_import "{inp}" "{report}" "{in_sha}" "{run_id}"{prot_args}\n')
     p = run(["lake", "-d", str(ROOT), "env", "lean", str(mod), "-o", str(lean_dir / "Rocq2LeanOut.olean"),
              "-i", str(lean_dir / "Rocq2LeanOut.ilean")], log, cwd=lean_dir, env=lean_env(), check=False)
     if not report.exists():
@@ -629,6 +642,17 @@ def _verify(run_dir):
     con = json.loads(con_p.read_text())
     if con["run_id"] != snap["run_id"] or con["ir_sha256"] != snap["ir_sha256"] or con["request"] != snap["request"]:
         problems.append("contract is not bound to this export (run id / IR digest / request)")
+    # P0: the protection binding is present and equals the one recomputed now from the pinned manifest
+    # and the exported declarations (omitted, altered or stale protection data is refused)
+    sys.path.insert(0, str(ROOT / "tools"))
+    import protection
+    try:
+        want = protection.binding(con.get("exported", []))
+        if con.get("protection") != want:
+            problems.append("protection binding of the contract differs from the pinned protected interface "
+                            "(omitted, altered or stale)")
+    except protection.ProtectionError as e:
+        problems.append(f"protection: {e}")
     if problems:
         raise Rejected("AUDIT_REJECTED", "; ".join(problems))
     # Artifact freshness: translation bound to this export and still current.
@@ -637,6 +661,14 @@ def _verify(run_dir):
         problems.append("translation belongs to a different run")
     if tm["input_sha256"] != con["ir_sha256"] or rep.get("input_sha256") != con["ir_sha256"]:
         problems.append("translation input digest differs from the contract")
+    prot = rep.get("protection") or {}
+    if prot.get("contract_sha256") != sha256_file(con_p) or prot.get("protected_in_export") != len(con["protection"]["protected"]):
+        problems.append("translation was not run under this contract's protection binding")
+    pset = set(con["protection"]["protected"])
+    narrowed = [r["source"] for r in rep["results"] if r["source"] in pset and r.get("status") == "TRANSLATED_AND_CHECKED"
+                and (r.get("sort_lowered_levels") or any(x.get("in_type") for x in r.get("r2bp_levels") or []))]
+    if narrowed:
+        problems.append(f"protected public declarations translated with a specialized statement: {narrowed}")
     for k, hk in (("report_sha256", "translation_report"), ("module_lean_sha256", "module_lean"),
                   ("module_olean_sha256", "module_olean"), ("module_ilean_sha256", "module_ilean"),
                   ("impl_tree_sha256", "impl_tree"), ("translator_build_sha256", "translator_build"),

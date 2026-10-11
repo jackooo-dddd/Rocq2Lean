@@ -2257,6 +2257,36 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
         problem("binding", "report input digest differs from the audited source")
     if report.get("run_id") != con.get("run_id"):
         problem("binding", "report run id differs from the contract")
+    # P0 interface protection, recomputed independently (not via tools/protection.py): the pinned
+    # manifest's digest, the protected names present in the audited source, the contract's binding,
+    # and every accepted protected row keeping its full statement (no R2B-S, no R2B-P statement level).
+    # Whether those relaxations happened is itself checked independently by the universe checks below
+    # (a row that hides a relaxation fails its strict level check).
+    import hashlib
+    root_dir = Path(__file__).resolve().parent.parent
+    iface_checked = 0
+    try:
+        pin = json.load(open(root_dir / "tools" / "protected_interface.pin.json"))
+        mbytes = (root_dir / pin["manifest"]).read_bytes()
+        msha = hashlib.sha256(mbytes).hexdigest()
+        if msha != pin["sha256"]:
+            problem("interface", "protected-interface manifest differs from its pin")
+        prot = set(json.loads(mbytes)["protected"]) & set(decls)
+        cp = con.get("protection") or {}
+        if cp.get("manifest_sha256") != msha or cp.get("protected") != sorted(prot):
+            problem("interface", "contract protection binding differs from the pinned manifest for this source")
+        rp = report.get("protection") or {}
+        if rp.get("protected_in_export") != len(prot) or rp.get("contract_sha256") != sha256_path(contract_path):
+            problem("interface", "the translation was not run under this contract's protection binding")
+        for r_ in results:
+            if bool(r_.get("protected")) != (r_.get("source") in prot):
+                problem("interface", f"{r_.get('source')}: protection flag differs from the pinned manifest")
+            if r_.get("source") in prot and r_.get("status") == "TRANSLATED_AND_CHECKED":
+                iface_checked += 1
+                if r_.get("sort_lowered_levels") or any(x.get("in_type") for x in r_.get("r2bp_levels") or []):
+                    problem("interface", f"{r_.get('source')}: protected public declaration translated with a specialized statement")
+    except (OSError, KeyError, ValueError) as e:
+        problem("interface", f"protection data unreadable: {e}")
     # Requested roots, re-derived from the source root records.
     request = con.get("request") or []
     if not request:
@@ -2548,6 +2578,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
         verdicts.append(v)
     out = {"schema": "rocq2lean-audit/2", "status": "OK" if not problems else "AUDIT_REJECTED",
            "universe_arguments_checked": univ_checked,
+           "interface_checked": iface_checked,
            "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
            "coverage": {"requested_roots": len(canon), "required_closure": len(closure), "accepted": len(accepted),
                         "extra_exported": sorted(set(decls) - closure)},

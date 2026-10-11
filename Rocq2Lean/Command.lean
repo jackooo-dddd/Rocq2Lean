@@ -5,7 +5,8 @@ import Rocq2Lean.Sha256
 /-!
 # `#rocq2lean_import`
 
-`#rocq2lean_import "source.ndjson" "report.json" "<sha256>" "<run id>"` translates an export,
+`#rocq2lean_import "source.ndjson" "report.json" "<sha256>" "<run id>" ["contract.json" "<sha256>"]`
+translates an export,
 refusing to start unless the file's SHA-256 is the expected one and the request recorded in the
 export is a valid root contract (non-empty, no duplicate spellings or resolutions, every root an
 exported constant or inductive). It adds the accepted declarations to the current module (so the
@@ -13,13 +14,38 @@ module's `.olean` carries them), and writes the report. The command fails — an
 fails to build — unless every requested root is `TRANSLATED_AND_CHECKED`; the report is written
 in either case, with a top-level `status` (`OK`, `ROOTS_NOT_TRANSLATED` or
 `ROOT_CONTRACT_REJECTED`).
+
+P0: with the export's coverage contract (and its SHA-256), the contract's `protection` binding — the
+protected public declarations of the pinned inventory present in this export — is enforced by the
+translator: a protected declaration keeps its full statement (`INTERFACE_REJECTED` otherwise). The
+contract must be bound to this IR and must carry the binding; translating without a contract (a
+diagnostic translate-only run) records `protection: null`, and such a run cannot be verified.
 -/
 
 namespace Rocq2Lean
 
 open Lean Elab Command
 
-syntax (name := rocqImport) "#rocq2lean_import " str str str str : command
+syntax (name := rocqImport) "#rocq2lean_import " str str str str (str str)? : command
+
+/-- The contract's protection binding for an export with IR digest `irSha`: its JSON (for the report)
+and the protected declaration names. -/
+def readProtection (path wantSha irSha : String) : IO (Json × Std.HashSet String) := do
+  let bytes ← IO.FS.readBinFile path
+  let got := Sha256.hexDigest bytes
+  unless got == wantSha do throw <| IO.userError s!"PROTECTION_REJECTED: {path} has SHA-256 {got}, expected {wantSha}"
+  let some txt := String.fromUTF8? bytes | throw <| IO.userError "PROTECTION_REJECTED: contract is not UTF-8"
+  let con ← IO.ofExcept (Json.parse txt)
+  unless (con.getObjValAs? String "ir_sha256").toOption == some irSha do
+    throw <| IO.userError "PROTECTION_REJECTED: the contract is not bound to this export"
+  let prot ← match con.getObjVal? "protection" with
+    | .ok p@(.obj _) => pure p
+    | _ => throw <| IO.userError "PROTECTION_REJECTED: the contract carries no protection binding"
+  let names ← IO.ofExcept (prot.getObjValAs? (Array String) "protected")
+  let summary := Json.mkObj [("contract_sha256", got),
+    ("manifest_sha256", (prot.getObjVal? "manifest_sha256").toOption.getD .null),
+    ("protected_in_export", names.size)]
+  return (summary, names.foldl (·.insert ·) {})
 
 /-- Root records of the report: the requested spelling, the resolved declaration and the status
 of that declaration's (unique) result row. -/
@@ -50,6 +76,13 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
   let some repPath := stx[2].isStrLit? | throwError "expected a report path"
   let some wantSha := stx[3].isStrLit? | throwError "expected the source SHA-256"
   let some runId := stx[4].isStrLit? | throwError "expected a run id"
+  -- the optional `(str str)?` group: a null node with the two literals, or with none
+  let opt := stx[5].getArgs
+  let conArg : Option (String × String) :=
+    if opt.size == 2 then match opt[0]!.isStrLit?, opt[1]!.isStrLit? with
+      | some a, some b => if a.isEmpty then none else some (a, b)
+      | _, _ => none
+    else none
   let bytes ← IO.FS.readBinFile srcPath
   let gotSha := Sha256.hexDigest bytes
   unless gotSha == wantSha do
@@ -64,7 +97,10 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
       ("lean_version", Lean.versionString), ("source", srcPath), ("input_sha256", gotSha), ("run_id", runId),
       ("roots", Json.arr #[]), ("results", Json.arr #[])]).pretty ++ "\n")
     throwError "ROOT_CONTRACT_REJECTED: {msg}"
-  let results ← liftTermElabM (translateSource source)
+  let (protJson, protNames) ← match conArg with
+    | some (p, h) => readProtection p h gotSha
+    | none => pure (Json.null, {})
+  let results ← liftTermElabM (translateSource source protNames)
   let roots := rootSummary source results
   let count (p : DeclResult → Bool) := (results.filter p).size
   let rootNames := source.roots.map (·.name)
@@ -84,6 +120,7 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
     ("input_sha256", gotSha),
     ("run_id", runId),
     ("source_header", source.header),
+    ("protection", protJson),
     ("roots", Json.arr (roots.map fun (q, n, s) => Json.mkObj [("requested", q), ("name", n), ("status", s)])),
     ("summary", summary),
     ("results", Json.arr (results.map (·.toJson)))]

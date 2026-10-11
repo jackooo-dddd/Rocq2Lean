@@ -148,13 +148,26 @@ of the export (and `Set`), computed from Rocq's universe graph by the exporter. 
 structure UniverseFacts where
   levels : Array String
   relations : Array (String × String × String)
-  deriving Inhabited, Repr
+  /-- P0 resource accounting: `(a, b) ↦ relation`, and the strict successors of each level, built
+  once per export (`UniverseFacts.indexed`). A query no longer scans the request-sized relation
+  table, so a declaration's cost (its heartbeat budget) does not grow with the size of the request. -/
+  index : Std.HashMap (String × String) String := {}
+  ltSucc : Std.HashMap String (Array String) := {}
+  deriving Inhabited
+
+def UniverseFacts.indexed (levels : Array String) (relations : Array (String × String × String)) : UniverseFacts :=
+  let index := relations.foldl (init := ({} : Std.HashMap (String × String) String)) fun m (a, r, b) => m.insert (a, b) r
+  let ltSucc := relations.foldl (init := ({} : Std.HashMap String (Array String))) fun m (a, r, b) =>
+    if r == "lt" then m.insert a ((m.getD a #[]).push b) else m
+  { levels, relations, index, ltSucc }
 
 def UniverseFacts.rel (f : UniverseFacts) (a b : String) : String :=
   if a == b then "eq" else
-  match f.relations.find? (fun (x, _, y) => x == a && y == b) with
-  | some (_, r, _) => r
-  | none => "none"
+  if f.index.isEmpty then
+    match f.relations.find? (fun (x, _, y) => x == a && y == b) with
+    | some (_, r, _) => r
+    | none => "none"
+  else f.index.getD (a, b) "none"
 
 structure Root where
   requested : String
@@ -336,12 +349,12 @@ def parseSource (contents : String) : P Source := do
     unless kind == "le" || kind == "eq" do throw s!"unknown constraint kind {kind}"
     return { l := ← parseLevel (← field c "l"), kind, offset, r := ← parseLevel (← field c "r") : UConstraint }
   let fj := js[4]!
-  let facts : UniverseFacts := {
-    levels := ← (← arr fj "levels").mapM (·.getStr?),
-    relations := ← (← arr fj "relations").mapM fun x => do
+  let facts : UniverseFacts := UniverseFacts.indexed
+    (← (← arr fj "levels").mapM (·.getStr?))
+    (← (← arr fj "relations").mapM fun x => do
       let r ← str x "rel"
       unless r == "lt" || r == "le" do throw s!"unknown universe relation {r}"
-      return ((← str x "l"), r, (← str x "r")) }
+      return ((← str x "l"), r, (← str x "r")))
   let footer := js[js.size - 1]!
   unless (← str footer "kind") == "footer" do throw "missing footer (export incomplete?)"
   let roots ← (← arr js[1]! "roots").mapM fun r => do

@@ -84,6 +84,10 @@ structure GEnv where
   /-- M6: transparent monomorphic constants with a `Set`-motive binder (`P : … → Set`), whose uses at
   a `Prop`-valued family (Rocq's `Prop ≤ Set`) can only be translated through their body. -/
   setMotive : Std.HashSet String := {}
+  /-- P0: protected public interface (pinned Prosa/Classic inventory, bound in the export contract):
+  these declarations keep their full source statement — no R2B-S result-sort lowering and no R2B-P
+  specialization of a statement level — whether they are requested roots or dependencies. -/
+  protectedNames : Std.HashSet String := {}
   deriving Inhabited
 
 /-- M6 accessibility lowering (`transFixAcc`): the recursive calls of the fixpoint being lowered.
@@ -201,7 +205,10 @@ needs `<`, larger offsets need a chain of strict steps. -/
 partial def entails (f : IR.UniverseFacts) (a b : String) (k : Nat) : Bool :=
   if k == 0 then a == b || f.rel a b == "le" || f.rel a b == "lt"
   else if k == 1 then f.rel a b == "lt"
-  else (("Set" :: f.levels.toList).any fun c => f.rel a c == "lt" && entails f c b (k - 1))
+  else if f.ltSucc.isEmpty && !f.relations.isEmpty then
+    (("Set" :: f.levels.toList).any fun c => f.rel a c == "lt" && entails f c b (k - 1))
+  -- the strict successors of `a` are exactly the `c` with `a < c` (indexed once per export)
+  else (f.ltSucc.getD a #[]).any fun c => entails f c b (k - 1)
 
 /-- R2⁺ (docs/UNIVERSE_TRANSLATION.md): drop a summand `Set + k` of an algebraic universe when
 another summand `l + j` is at least as large under the native facts (`k ≤ j`, every level being

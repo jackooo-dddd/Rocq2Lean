@@ -1,8 +1,8 @@
 {
  "closure": {
-  "classic": 5268,
+  "classic": 5317,
   "classic_uses_modern_owned": 60,
-  "combined_distinct": 10539,
+  "combined_distinct": 10588,
   "cross_family_conflicts": 0,
   "external_by_library": {
    "coqeal": 98,
@@ -22,11 +22,11 @@
    "unknown_transparent": 40
   },
   "graph": {
-   "edges": 314316,
+   "edges": 317766,
    "missing_edge_targets": 0,
-   "nodes": 10539,
+   "nodes": 10588,
    "nontrivial_sccs": 0,
-   "sccs": 10539
+   "sccs": 10588
   },
   "inconsistent_chunk_copies": {
    "classic": 0,
@@ -37,55 +37,55 @@
   "shared_by_both": 2985
  },
  "combined": {
-  "declarations": 4692,
-  "protected_interface": 4426,
-  "public_source": 4310
+  "declarations": 4741,
+  "protected_interface": 4474,
+  "public_source": 4358
  },
  "declarations": {
   "classic": {
    "alias_reexport_entries": 562,
    "aliases": 5,
    "by_kind": {
-    "constant": 1970,
+    "constant": 2019,
     "inductive": 15
    },
    "by_nature": {
     "assumption": 4,
-    "data_definition": 478,
-    "data_opaque": 20,
+    "data_definition": 484,
+    "data_opaque": 21,
     "inductive": 15,
-    "proof_opaque": 1261,
+    "proof_opaque": 1303,
     "proof_transparent": 8,
     "type_former": 197,
     "unknown_opaque": 2
    },
    "by_role": {
     "generated_hb": 22,
-    "generated_obligation": 26,
+    "generated_obligation": 27,
     "generated_projection": 52,
     "generated_scheme": 14,
-    "public_source": 1870,
+    "public_source": 1918,
     "source_local_helper": 1
    },
-   "declarations": 1985,
-   "enumerated_entries": 2547,
+   "declarations": 2034,
+   "enumerated_entries": 2596,
    "export": {
-    "exported": 1985
+    "exported": 2034
    },
-   "protected_interface": 1922,
+   "protected_interface": 1970,
    "public_by_nature": {
     "assumption": 4,
-    "data_definition": 396,
-    "data_opaque": 20,
+    "data_definition": 402,
+    "data_opaque": 21,
     "inductive": 15,
-    "proof_opaque": 1236,
+    "proof_opaque": 1277,
     "type_former": 197,
     "unknown_opaque": 2
    },
-   "public_source": 1870,
+   "public_source": 1918,
    "relaxed_checking": 0,
    "universe_polymorphic": 0,
-   "unknown_in_failed_files": "UNKNOWN"
+   "unknown_in_failed_files": 0
   },
   "modern": {
    "alias_reexport_entries": 0,
@@ -135,8 +135,8 @@
  "evidence": {
   "external": {
    "ATTEMPTED_NOT_TRANSLATED": 128,
-   "KERNEL_CHECKED_UNVERIFIED": 463,
-   "NOT_ATTEMPTED": 3260,
+   "KERNEL_CHECKED_UNVERIFIED": 489,
+   "NOT_ATTEMPTED": 3234,
    "VERIFIED_AS_DEPENDENCY": 1985,
    "VERIFIED_AS_ROOT": 11
   },
@@ -146,24 +146,26 @@
   ],
   "owned": {
    "classic": {
-    "NOT_ATTEMPTED": 1985
+    "KERNEL_CHECKED_UNVERIFIED": 24,
+    "NOT_ATTEMPTED": 2010
    },
    "modern": {
     "ATTEMPTED_NOT_TRANSLATED": 24,
-    "KERNEL_CHECKED_UNVERIFIED": 43,
-    "NOT_ATTEMPTED": 2477,
+    "KERNEL_CHECKED_UNVERIFIED": 44,
+    "NOT_ATTEMPTED": 2476,
     "VERIFIED_AS_DEPENDENCY": 76,
     "VERIFIED_AS_ROOT": 87
    }
   },
   "protected": {
    "classic": {
-    "NOT_ATTEMPTED": 1922
+    "KERNEL_CHECKED_UNVERIFIED": 24,
+    "NOT_ATTEMPTED": 1946
    },
    "modern": {
     "ATTEMPTED_NOT_TRANSLATED": 24,
-    "KERNEL_CHECKED_UNVERIFIED": 39,
-    "NOT_ATTEMPTED": 2282,
+    "KERNEL_CHECKED_UNVERIFIED": 40,
+    "NOT_ATTEMPTED": 2281,
     "VERIFIED_AS_DEPENDENCY": 72,
     "VERIFIED_AS_ROOT": 87
    }
@@ -316,6 +318,18 @@
    {
     "absent_from_inventory": 0,
     "current_impl": true,
+    "declarations": 13,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 13,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "5d6fc02b52905f5afcafdb89e03b1fe5feec8952c6c8512a5f72ef5905ec2004",
+    "results": 13,
+    "run": "inv-confirm-0c94c600bc80",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
     "declarations": 4,
     "differs_from_inventory": 0,
     "identical_to_inventory": 4,
@@ -340,6 +354,18 @@
    {
     "absent_from_inventory": 0,
     "current_impl": true,
+    "declarations": 87,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 87,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "bd2e79123438c229812f3728a8a52100de86db351f44a1a7ab9e90006cc9d34f",
+    "results": 87,
+    "run": "inv-confirm-149023dce8a4",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
     "declarations": 10,
     "differs_from_inventory": 0,
     "identical_to_inventory": 10,
@@ -347,6 +373,18 @@
     "ir_sha256": "6ca8a457fd94c6d3b28c48e5b4f12767db62b66c9dd74124dc09b69d99da066c",
     "results": 10,
     "run": "inv-confirm-19c15830963a",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 65,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 65,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "df0b86a99347d3795a142e23758730106890d2fe211c94d844d8e5808938fa2f",
+    "results": 65,
+    "run": "inv-confirm-1b68585effe7",
     "verify": "NOT_RUN"
    },
    {
@@ -376,6 +414,18 @@
    {
     "absent_from_inventory": 0,
     "current_impl": true,
+    "declarations": 50,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 50,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "601721d5ecfa1793044b62ab0337681ac1242b39f2b23bde27a5a2806b7cbf60",
+    "results": 50,
+    "run": "inv-confirm-307fabc5f7fa",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
     "declarations": 90,
     "differs_from_inventory": 0,
     "identical_to_inventory": 90,
@@ -395,6 +445,18 @@
     "ir_sha256": "ccb37cd92b1b27819ca41ed42b4fa44c1c970719a362aad90a6660f96b2e7ee2",
     "results": 2,
     "run": "inv-confirm-32c3405e9e43",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 54,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 54,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "bf4752260eb6fd0a23a9dce1fbfe0923b324d36c892f6161fee20995f5a50186",
+    "results": 54,
+    "run": "inv-confirm-345892dd7be2",
     "verify": "NOT_RUN"
    },
    {
@@ -428,9 +490,45 @@
     "differs_from_inventory": 0,
     "identical_to_inventory": 13,
     "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "85a173a650bb9d306184f12ad8a8d34b475e56f89a20a995c602d9a664797676",
+    "results": 13,
+    "run": "inv-confirm-392e5dec1bf1",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 48,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 48,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "d197a7a3ded946a3bb15fbd6c37d9a3700e36895104e06a99c744fee052611d2",
+    "results": 48,
+    "run": "inv-confirm-3c034a36c60e",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 13,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 13,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
     "ir_sha256": "b78bd486f1563bd7061f0915afcba9c1cb1e0f66403ea4e943d9ac2805bd56d5",
     "results": 13,
     "run": "inv-confirm-3c2f8c1ad285",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 13,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 13,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "8d57b85b12ce3f8e5e88b697434b6da371eb994db71d767ebefe99746ed0eaad",
+    "results": 13,
+    "run": "inv-confirm-44aeff09f296",
     "verify": "NOT_RUN"
    },
    {
@@ -484,6 +582,18 @@
    {
     "absent_from_inventory": 0,
     "current_impl": true,
+    "declarations": 52,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 52,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "11275a8dbbe296c2930b52ea48f0db49295f7646453b35aa12807b43def91a1e",
+    "results": 52,
+    "run": "inv-confirm-62e42f7cfd89",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
     "declarations": 44,
     "differs_from_inventory": 0,
     "identical_to_inventory": 44,
@@ -491,6 +601,18 @@
     "ir_sha256": "65e5f52ebadac62b3962751cbce216c76d70e50e81d9f3ab13488a98c9cc116f",
     "results": 44,
     "run": "inv-confirm-67de1d652095",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 51,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 51,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "c0351cd565c047351cdcd86a70b55ab395fb200ea6935ccb40293ceffee08bb7",
+    "results": 51,
+    "run": "inv-confirm-6baab3bad8b0",
     "verify": "NOT_RUN"
    },
    {
@@ -515,6 +637,18 @@
     "ir_sha256": "b70d983fd489b7158588275163b9290f8cfa1a9e775dd75ad4464443fc29916e",
     "results": 10,
     "run": "inv-confirm-70feb2f64e4f",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 51,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 51,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "80cff3321479f16b234dece5a53a19c98dadfcc42332775b8151a4e2e245636f",
+    "results": 51,
+    "run": "inv-confirm-729ca44a29c1",
     "verify": "NOT_RUN"
    },
    {
@@ -568,6 +702,30 @@
    {
     "absent_from_inventory": 0,
     "current_impl": true,
+    "declarations": 15,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 15,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "4fad03f8c332ef61c6b1d9485555712db7d9bd499017d55fe0589fb4030ac171",
+    "results": 15,
+    "run": "inv-confirm-aa1b2526c726",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 52,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 52,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "e260d232a3552cb6d0c734b31ac81b7d02f9b23a798016a784f5246d7fd5bb2d",
+    "results": 52,
+    "run": "inv-confirm-ab582cd060e4",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
     "declarations": 87,
     "differs_from_inventory": 0,
     "identical_to_inventory": 87,
@@ -580,6 +738,18 @@
    {
     "absent_from_inventory": 0,
     "current_impl": true,
+    "declarations": 85,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 85,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "9bcd19b4a30e36ab79e0c5c1d0a9313d7e4ddb9bcfdb2820bac099dbaa600be5",
+    "results": 85,
+    "run": "inv-confirm-bb321f712705",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
     "declarations": 61,
     "differs_from_inventory": 0,
     "identical_to_inventory": 61,
@@ -587,6 +757,18 @@
     "ir_sha256": "ee4397814e76f8b81a4b387faf4b77d97072da3d811f3eefa90389f628932192",
     "results": 61,
     "run": "inv-confirm-cc8a4453b00c",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 56,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 56,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "bab45f8be11b7cd2951a527395c65bc817b8d6d5e06087413b9a047c89c5dfa1",
+    "results": 56,
+    "run": "inv-confirm-cd205a06d3ff",
     "verify": "NOT_RUN"
    },
    {
@@ -640,6 +822,30 @@
    {
     "absent_from_inventory": 0,
     "current_impl": true,
+    "declarations": 48,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 48,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "e9e4828fd13db35dfda1d7fafb161c992485fc13e6bdbfe8a0a71c612c5b0c63",
+    "results": 48,
+    "run": "inv-confirm-ed3b9a533c67",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 14,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 14,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "6f6254a806348c200ccb3ac93b52e8f5ebedf9f37fecbf5bd34525144fbbf9f0",
+    "results": 14,
+    "run": "inv-confirm-efc06a02d746",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
     "declarations": 70,
     "differs_from_inventory": 0,
     "identical_to_inventory": 70,
@@ -647,6 +853,42 @@
     "ir_sha256": "175c2fd15e86afa33b7c9e6bd4206f36162cc39cfd2b4f8ff6d8f8cf409fdfcb",
     "results": 70,
     "run": "inv-confirm-f2149c3a350d",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 72,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 72,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "b8bb4843002ac0bc176ed79e258dc160a92ea463670d95593b7b5933c2551d9f",
+    "results": 72,
+    "run": "inv-confirm-f2852287678a",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 53,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 53,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "9e9bb10df473ea81dfa0abab0080eb4157d37f5970adef2ccf6e7a9de204fceb",
+    "results": 53,
+    "run": "inv-confirm-f3d51dd4bbcb",
+    "verify": "NOT_RUN"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 65,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 65,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "9fe9890dcb3ea9ca12cbb76dfcf769737fb0a66dac2a5cb1cbd7f1f283bb30ea",
+    "results": 65,
+    "run": "inv-confirm-f493f08a9eda",
     "verify": "NOT_RUN"
    }
   ],
@@ -656,8 +898,8 @@
   "classic": {
    "big_memory": "24G",
    "chunk_size": 24,
-   "chunks": 45,
-   "covered_by_closures": 1985,
+   "chunks": 47,
+   "covered_by_closures": 2034,
    "exporter": {
     "load_paths": [
      "-R",
@@ -678,8 +920,8 @@
    "failed": 0,
    "family": "classic",
    "memory_max": "12G",
-   "requested": 1006,
-   "roots": 2547,
+   "requested": 1054,
+   "roots": 2596,
    "stack_overflow_parts_at_default_stack": 0,
    "timeout_s": 1800,
    "unquotable": 0,
@@ -715,18 +957,12 @@
  "files": {
   "classic": {
    "build": {
-    "COMPILED": 187,
-    "COMPILE_ERROR": 1,
-    "NOT_BUILT_DEPENDENCY_FAILED": 2
+    "COMPILED": 190
    },
    "files": 190,
    "import_only": 3,
    "unattributed_declarations": 0,
-   "unknown_counts": [
-    "classic/analysis/global/jitter/bertogna_edf_comp.v",
-    "classic/analysis/global/jitter/bertogna_edf_theory.v",
-    "classic/implementation/global/jitter/bertogna_edf_example.v"
-   ]
+   "unknown_counts": []
   },
   "modern": {
    "build": {
@@ -742,30 +978,14 @@
    "unknown_counts": []
   }
  },
- "gaps": [
-  {
-   "family": "classic",
-   "file": "classic/analysis/global/jitter/bertogna_edf_comp.v",
-   "gap": "not compiled under the fixed toolchain; declarations UNKNOWN"
-  },
-  {
-   "family": "classic",
-   "file": "classic/analysis/global/jitter/bertogna_edf_theory.v",
-   "gap": "not compiled under the fixed toolchain; declarations UNKNOWN"
-  },
-  {
-   "family": "classic",
-   "file": "classic/implementation/global/jitter/bertogna_edf_example.v",
-   "gap": "not compiled under the fixed toolchain; declarations UNKNOWN"
-  }
- ],
+ "gaps": [],
  "preflight": {
   "all_owned": {
    "known": {
     "classic": {
      "KNOWN_BLOCKER_DIRECT": 8,
-     "KNOWN_BLOCKER_DOWNSTREAM": 1144,
-     "NO_KNOWN_BLOCKER": 833
+     "KNOWN_BLOCKER_DOWNSTREAM": 1186,
+     "NO_KNOWN_BLOCKER": 840
     },
     "modern": {
      "KNOWN_BLOCKER_DIRECT": 12,
@@ -775,8 +995,8 @@
    },
    "preflight": {
     "classic": {
-     "BLOCKED_DEPENDENCY": 280,
-     "CANDIDATE_SUPPORTED": 1697,
+     "BLOCKED_DEPENDENCY": 299,
+     "CANDIDATE_SUPPORTED": 1727,
      "UNSUPPORTED_FEATURE": 8
     },
     "modern": {
@@ -794,8 +1014,8 @@
    "known": {
     "classic": {
      "KNOWN_BLOCKER_DIRECT": 5,
-     "KNOWN_BLOCKER_DOWNSTREAM": 1132,
-     "NO_KNOWN_BLOCKER": 785
+     "KNOWN_BLOCKER_DOWNSTREAM": 1174,
+     "NO_KNOWN_BLOCKER": 791
     },
     "modern": {
      "KNOWN_BLOCKER_DIRECT": 4,
@@ -805,8 +1025,8 @@
    },
    "preflight": {
     "classic": {
-     "BLOCKED_DEPENDENCY": 280,
-     "CANDIDATE_SUPPORTED": 1637,
+     "BLOCKED_DEPENDENCY": 299,
+     "CANDIDATE_SUPPORTED": 1666,
      "UNSUPPORTED_FEATURE": 5
     },
     "modern": {
@@ -1204,5 +1424,5 @@
   "modern": "414e66760333eaa4ef78c685bcf53291c527a548",
   "rts": "f23ca67247e55cd7bd11ca02baff7cc1db3a924a"
  },
- "verdict": "INVENTORY_PARTIAL"
+ "verdict": "INVENTORY_COMPLETE"
 }

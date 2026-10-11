@@ -166,6 +166,16 @@ references monomorphic declarations at their own levels).
   (coherence).
 - *Report and audit.* `implicit_levels`. The auditor checks that each implicit level is absent
   from the source sorts and occurs as the argument of a reference for that level.
+- *P0: template levels in the class.* A template level in the class (a template inductive's level
+  parameter, R5) imposes nothing: Rocq instantiates a template parameter afresh at each use, so no
+  fact `l ≤ l'` is required for it, exactly as `checkUniverseObligations` exempts template levels from
+  R3. Requiring one made the choice depend on whatever global constraints the request's loaded
+  libraries happened to add (e.g. `eqtype.51 ≤ Datatypes.190` from an unrelated library), so
+  `fintype.finite_axiom` lost a parameter in small requests and `fintype/isFinite.axioms_` was then
+  kernel-rejected (`reports/prosa_inventory/P0_REPORT.md`).
+- *P0: indexed facts.* `UniverseFacts.rel` and `entails` use a map and a strict-successor table
+  built once per export, so a query no longer scans the request-sized relation table and a
+  declaration's cost does not grow with the size of the request.
 
 **R2F-c. Fact interpretation of a constant's own levels (retry).**
 - *Own levels.* The explicit type levels, plus the implicit levels of free metavariables of the

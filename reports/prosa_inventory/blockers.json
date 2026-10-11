@@ -1,34 +1,5 @@
 {
- "build": [
-  {
-   "build": "NOT_BUILT_DEPENDENCY_FAILED",
-   "category": "source_build",
-   "family": "classic",
-   "file": "classic/analysis/global/jitter/bertogna_edf_comp.v",
-   "proposed_change": null,
-   "reason": "a file it requires did not compile"
-  },
-  {
-   "build": "COMPILE_ERROR",
-   "category": "source_build",
-   "family": "classic",
-   "file": "classic/analysis/global/jitter/bertogna_edf_theory.v",
-   "proposed_change": {
-    "applied": false,
-    "kind": "proof script (one hunk), statement unchanged",
-    "source": "RTS Prosa-Shunqi/classic-prosa/rocq93-port/prosabuddy-classic-rocq93.patch"
-   },
-   "reason": "File \"./analysis/global/jitter/bertogna_edf_theory.v\", line 332, characters 17-34: Error: The LHS of ltn_add2r (_ + _ < _ + _) does not match any subterm of the goal"
-  },
-  {
-   "build": "NOT_BUILT_DEPENDENCY_FAILED",
-   "category": "source_build",
-   "family": "classic",
-   "file": "classic/implementation/global/jitter/bertogna_edf_example.v",
-   "proposed_change": null,
-   "reason": "a file it requires did not compile"
-  }
- ],
+ "build": [],
  "categories": [
   "missing_rule",
   "incorrect_implementation",
@@ -45,19 +16,29 @@
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
-   "roots": 388
+   "roots": 389
   },
   {
    "mechanisms": [
     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
-   "roots": 366
+   "roots": 389
   },
   {
    "mechanisms": [
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
    "roots": 272
+  },
+  {
+   "mechanisms": [
+    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
+   ],
+   "roots": 194
   },
   {
    "mechanisms": [
@@ -70,19 +51,9 @@
     "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
-   ],
-   "roots": 182
-  },
-  {
-   "mechanisms": [
-    "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
-   "roots": 176
+   "roots": 179
   },
   {
    "mechanisms": [
@@ -103,7 +74,7 @@
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
-   "roots": 79
+   "roots": 82
   },
   {
    "mechanisms": [
@@ -532,6 +503,7 @@
      "reason": "INSTANCE_REJECTED Type_errors.TypeError(_, _): R2B-P statement specialization rejected by Rocq's kernel",
      "source": "source_instances:m6h-translated9",
      "translated_in": [
+      "inv-confirm-149023dce8a4",
       "m6h-holdout_completion_mathcomp",
       "m6h-holdout_completion_prosa",
       "m6h-translated9",
@@ -540,7 +512,7 @@
     }
    ],
    "roots_reaching": {
-    "classic": 1021,
+    "classic": 1045,
     "modern": 995
    }
   },
@@ -561,7 +533,7 @@
     }
    ],
    "roots_reaching": {
-    "classic": 774,
+    "classic": 793,
     "modern": 1248
    }
   }
@@ -887,8 +859,8 @@
  "groups": [
   {
    "affected_protected_interface": {
-    "classic": 813,
-    "combined": 1508,
+    "classic": 832,
+    "combined": 1527,
     "modern": 695
    },
    "affected_root_ids": [
@@ -1095,23 +1067,23 @@
    ],
    "affected_root_ids_truncated": true,
    "affected_roots": {
-    "classic": 825,
-    "combined": 1598,
+    "classic": 844,
+    "combined": 1617,
     "modern": 773
    },
    "category": "universe_instance",
    "co_blocking_mechanisms": [
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-     1192
+     1211
     ],
     [
      "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
-     1079
+     1098
     ],
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-     562
+     577
     ],
     [
      "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
@@ -1119,7 +1091,7 @@
     ],
     [
      "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-     307
+     322
     ],
     [
      "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
@@ -1144,7 +1116,7 @@
     "prosa.model.priority.definitions.JLFP_policy"
    ],
    "direct_roots": 3,
-   "downstream_roots": 1595,
+   "downstream_roots": 1614,
    "evidence": [
     "translation:inv-confirm-137d43809c03",
     "translation:inv-confirm-29d2a1cca196",
@@ -1167,7 +1139,7 @@
    ],
    "mechanism": "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
    "reproducer": {
-    "affected_roots_through_it": 1079,
+    "affected_roots_through_it": 1098,
     "declaration": "mathcomp.boot.eqtype.Sub_spec",
     "detail": "reference to Rocq.mathcomp.boot.eqtype.SubType.type: argument u_mathcomp_boot_eqtype_695: mathcomp.boot.eqtype.695 + 0 \u2264 mathcomp.boot.eqtype.577 is not entailed by the source universe graph, nor is mathcomp.boot.eqtype.577 \u2264 mathcomp.boot.eqtype.695 (with offset 0) [R3\u2193 attempt: UNIVERSE_REJECTED: reference to Rocq.mathcomp.boot.eqtype.SubType.type: argument u_mathcomp_boot_eqtype_695: mathcomp.boot.eqtype.695 + 0 \u2264 mathcomp.boot.eqtype.577 is not entailed by the source universe graph, nor is mathcomp.boot.eqtype.577 \u2264 mathcomp.boot.eqtype.695 (with offset 0)]",
     "location": null
@@ -1181,8 +1153,8 @@
   },
   {
    "affected_protected_interface": {
-    "classic": 810,
-    "combined": 1365,
+    "classic": 829,
+    "combined": 1384,
     "modern": 555
    },
    "affected_root_ids": [
@@ -1389,23 +1361,23 @@
    ],
    "affected_root_ids_truncated": true,
    "affected_roots": {
-    "classic": 822,
-    "combined": 1441,
+    "classic": 841,
+    "combined": 1460,
     "modern": 619
    },
    "category": "universe_instance",
    "co_blocking_mechanisms": [
     [
      "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     1192
+     1211
     ],
     [
      "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
-     1073
+     1092
     ],
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-     535
+     550
     ],
     [
      "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
@@ -1413,7 +1385,7 @@
     ],
     [
      "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-     279
+     294
     ],
     [
      "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
@@ -1434,7 +1406,7 @@
     "mathcomp.boot.choice.PCanHasChoice"
    ],
    "direct_roots": 0,
-   "downstream_roots": 1441,
+   "downstream_roots": 1460,
    "evidence": [
     "translation:m6h-holdout_completion_prosa"
    ],
@@ -1455,7 +1427,7 @@
    ],
    "mechanism": "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
    "reproducer": {
-    "affected_roots_through_it": 1441,
+    "affected_roots_through_it": 1460,
     "declaration": "mathcomp.boot.choice.PCanHasChoice",
     "detail": "proof-local level Corelib.ssr.ssrfun.52 solved as (some 0): native fact Set lt Corelib.ssr.ssrfun.52 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level Corelib.ssr.ssrfun.52 solved as (some 0): native fact mathcomp.boot.choice.484 le Corelib.ssr.ssrfun.52 does not hold for the solution]",
     "location": null
@@ -1469,8 +1441,8 @@
   },
   {
    "affected_protected_interface": {
-    "classic": 811,
-    "combined": 1038,
+    "classic": 830,
+    "combined": 1057,
     "modern": 227
    },
    "affected_root_ids": [
@@ -1677,27 +1649,27 @@
    ],
    "affected_root_ids_truncated": true,
    "affected_roots": {
-    "classic": 823,
-    "combined": 1079,
+    "classic": 842,
+    "combined": 1098,
     "modern": 256
    },
    "category": "missing_rule",
    "co_blocking_mechanisms": [
     [
      "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     1079
+     1098
     ],
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-     1073
+     1092
     ],
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-     529
+     544
     ],
     [
      "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-     279
+     294
     ],
     [
      "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
@@ -1718,7 +1690,7 @@
     "mathcomp.boot.eqtype.insub_spec"
    ],
    "direct_roots": 0,
-   "downstream_roots": 1079,
+   "downstream_roots": 1098,
    "evidence": [
     "translation:inv-confirm-cd30284cddfc"
    ],
@@ -1739,7 +1711,7 @@
    ],
    "mechanism": "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
    "reproducer": {
-    "affected_roots_through_it": 1079,
+    "affected_roots_through_it": 1098,
     "declaration": "mathcomp.boot.eqtype.insub_spec",
     "detail": "default cast annotation is not convertible in Lean",
     "location": null
@@ -1753,8 +1725,8 @@
   },
   {
    "affected_protected_interface": {
-    "classic": 536,
-    "combined": 709,
+    "classic": 574,
+    "combined": 747,
     "modern": 173
    },
    "affected_root_ids": [
@@ -1961,27 +1933,27 @@
    ],
    "affected_root_ids_truncated": true,
    "affected_roots": {
-    "classic": 536,
-    "combined": 716,
+    "classic": 574,
+    "combined": 754,
     "modern": 180
    },
    "category": "missing_rule",
    "co_blocking_mechanisms": [
     [
      "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     307
+     322
     ],
     [
      "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
-     279
+     294
     ],
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-     279
+     294
     ],
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-     213
+     225
     ],
     [
      "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
@@ -2007,7 +1979,7 @@
     "mathcomp.boot.div.modn_rec"
    ],
    "direct_roots": 0,
-   "downstream_roots": 716,
+   "downstream_roots": 754,
    "evidence": [
     "translation:m6h-holdout_completion_prosa"
    ],
@@ -2022,22 +1994,22 @@
    ],
    "mechanism": "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
    "reproducer": {
-    "affected_roots_through_it": 700,
+    "affected_roots_through_it": 738,
     "declaration": "mathcomp.boot.div.edivn_rec",
     "detail": "recursive call on a term that is not a direct recursive constructor field",
     "location": null
    },
    "sole_blocker_roots": {
-    "classic": 257,
-    "combined": 366,
+    "classic": 280,
+    "combined": 389,
     "modern": 109,
-    "protected": 363
+    "protected": 386
    }
   },
   {
    "affected_protected_interface": {
-    "classic": 427,
-    "combined": 624,
+    "classic": 442,
+    "combined": 639,
     "modern": 197
    },
    "affected_root_ids": [
@@ -2244,27 +2216,27 @@
    ],
    "affected_root_ids_truncated": true,
    "affected_roots": {
-    "classic": 427,
-    "combined": 649,
+    "classic": 442,
+    "combined": 664,
     "modern": 222
    },
    "category": "universe_instance",
    "co_blocking_mechanisms": [
     [
      "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     562
+     577
     ],
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-     535
+     550
     ],
     [
      "TRANSLATION_FAILED: default cast annotation is not convertible in Lean",
-     529
+     544
     ],
     [
      "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-     213
+     225
     ],
     [
      "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
@@ -2285,7 +2257,7 @@
     "mathcomp.boot.bigop.big_const_seq"
    ],
    "direct_roots": 0,
-   "downstream_roots": 649,
+   "downstream_roots": 664,
    "evidence": [
     "translation:m6p-holdout20_prosa"
    ],
@@ -2300,7 +2272,7 @@
    ],
    "mechanism": "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
    "reproducer": {
-    "affected_roots_through_it": 649,
+    "affected_roots_through_it": 664,
     "declaration": "mathcomp.boot.bigop.big_const_seq",
     "detail": "proof-local level mathcomp.boot.bigop.1120 solved as (some u_mathcomp_boot_bigop_2719): native fact mathcomp.boot.bigop.2716 le mathcomp.boot.bigop.1120 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level mathcomp.boot.bigop.1120 solved as (some u_mathcomp_boot_bigop_2719): native fact mathcomp.boot.bigop.2716 le mathcomp.boot.bigop.1120 does not hold for the solution]",
     "location": null
@@ -3913,7 +3885,7 @@
     "a type depends on an argument that recursive calls change"
    ],
    "roots_reaching": {
-    "classic": 268,
+    "classic": 287,
     "modern": 754
    },
    "translated_in": [
@@ -4019,17 +3991,17 @@
     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
    "roots_without_known_blocker_after_task": {
-    "classic": 257,
+    "classic": 280,
     "modern": 109,
-    "protected": 363
+    "protected": 386
    },
    "roots_without_known_blocker_after_tasks_up_to_here": {
-    "classic": 309,
+    "classic": 332,
     "modern": 697,
-    "protected": 946
+    "protected": 969
    },
    "sole_blocker_roots": {
-    "classic": 257,
+    "classic": 280,
     "modern": 109
    },
    "task": "T2 Recursion through subn in MathComp div (edivn_rec, modn_rec)",
@@ -4066,9 +4038,9 @@
     "protected": 0
    },
    "roots_without_known_blocker_after_tasks_up_to_here": {
-    "classic": 1100,
+    "classic": 1142,
     "modern": 737,
-    "protected": 1758
+    "protected": 1800
    },
    "sole_blocker_roots": {
     "classic": 0,
@@ -4106,9 +4078,9 @@
     "protected": 54
    },
    "roots_without_known_blocker_after_tasks_up_to_here": {
-    "classic": 1100,
+    "classic": 1142,
     "modern": 980,
-    "protected": 1987
+    "protected": 2029
    },
    "sole_blocker_roots": {
     "classic": 0,

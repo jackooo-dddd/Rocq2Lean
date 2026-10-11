@@ -1,0 +1,1 @@
+{"name": "p0-isfinite-fintype-only", "load_paths": [["-R", "../../.work/prosa-0.6-rocq93", "prosa"]], "files": [], "requires": ["mathcomp.boot.fintype"]}

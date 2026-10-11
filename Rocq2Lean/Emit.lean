@@ -92,6 +92,8 @@ structure DeclResult where
   deltaInlined : Array String := #[]
   /-- R3↓: accepted with references instantiated below shared levels (cumulativity tier). -/
   universeLowered : Bool := false
+  /-- P0: the declaration belongs to the protected public interface bound in the contract. -/
+  protectedIface : Bool := false
   /-- M6: a non-template inductive with plain universe parameters (`u_l` for each level, no R2F
   fact interpretation; tried first, the more general translation). -/
   plainLevels : Bool := false
@@ -239,6 +241,10 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
         let all := inTy ++ (← argsFor valI)
         let mut picks : Array String := #[]
         let mut done : Array Level := #[]
+        -- (P0) a template level in the class constrains nothing: Rocq instantiates a template
+        -- parameter afresh at each use (R5, as in `checkUniverseObligations`), so no fact `l ≤ l'`
+        -- is required for it. Requiring one made the choice depend on unrelated loaded libraries
+        -- (a global constraint some other library happened to add), i.e. on the request.
         for (_, σ) in inTy do
           unless σ.isMVar && !done.contains σ do continue
           done := done.push σ
@@ -246,7 +252,7 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
           let tyCls := (inTy.filter (·.2 == σ)).map (·.1)
           let pick := tyCls.toList.eraseDups.find? fun l =>
             !own.contains l && !picks.contains l && !genv.templateLevels.contains l &&
-            cls.all (fun l' => entails genv.facts l l' 0) && (all.filter (·.1 == l)).all (·.2.hasMVar)
+            cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) && (all.filter (·.1 == l)).all (·.2.hasMVar)
           if let some l := pick then picks := picks.push l
         implicitRef.set picks
         return
@@ -294,7 +300,7 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
         let mut cur : Array (String × Level) := #[]
         for (l', σ') in all do cur := cur.push (l', ← instantiateLevelMVars σ')
         let pick := tyCls.toList.eraseDups.find? fun l =>
-          !own.contains l && !genv.templateLevels.contains l && cls.all (fun l' => entails genv.facts l l' 0) &&
+          !own.contains l && !genv.templateLevels.contains l && cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) &&
           (cur.filter (·.1 == l)).all (·.2.isMVar)
         if let some l := pick then
           let mut ms : Array LMVarId := #[]
@@ -369,6 +375,14 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
             -- specialized at the checked instance (R2B-P with `in_type`; never on a requested root)
             if tyGlobals.contains m && onlyInResultSort c.type m then sortLv := sortLv.push (m, σ)
             else r2bp := r2bp.push (m, σ)
+    -- P0 interface protection: a protected public declaration keeps its source statement. A
+    -- statement specialization (R2B-S lowers the result sort; R2B-P fixes a level of the type) is
+    -- refused for it, as root or as dependency; there is no approved representation change.
+    if genv.protectedNames.contains c.name then
+      let stmt := (r2bp.map (·.1)).filter (globalsOf c.type).contains
+      unless sortLv.isEmpty && stmt.isEmpty do
+        return { base with status := "INTERFACE_REJECTED",
+                           message := s!"protected public declaration: statement specialization refused (R2B-S result-sort levels {sortLv.map (·.1)}, R2B-P statement levels {stmt})" }
     let nchecks ← match checkUniverseObligations genv globals ty solι admitLv cumul lower,
                          checkUniverseObligations genv globals val solι admitLv cumul lower with
       | .ok a, .ok b => pure (a + b)
@@ -582,7 +596,7 @@ where
         let cls := (occ.filter (·.2 == σ)).map (·.1)
         let pick := cls.toList.eraseDups.find? fun l =>
           !globals.contains l && !picks.contains l && !genv.templateLevels.contains l &&
-          cls.all (fun l' => entails genv.facts l l' 0) && (occ.filter (·.1 == l)).all (·.2.hasMVar)
+          cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) && (occ.filter (·.1 == l)).all (·.2.hasMVar)
         if let some l := pick then picks := picks.push l
       return ({ base with status := "DISCOVERED", implicitLevels := picks.qsort (· < ·) }, none)
     -- R3″: references inside the block (to generalized constants / level-parameter inductives) carry
@@ -634,7 +648,7 @@ where
     | .rejected msg => return ({ base with status := "KERNEL_REJECTED", message := msg }, none)
 
 /-- Translate all declarations of an export, in order. -/
-def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
+def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}) : MetaM (Array DeclResult) := do
   let irBodies := src.decls.foldl (init := ({} : Std.HashMap String IR.Term)) fun m d => match d with
     | .constant c => match c.body, c.universes with
       | some b, .monomorphic => if c.bodyState == "transparent" then m.insert c.name b else m
@@ -643,7 +657,7 @@ def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
   let setMotive := src.decls.foldl (init := ({} : Std.HashSet String)) fun m d => match d with
     | .constant c => if irBodies.contains c.name && c.type.hasSetMotive then m.insert c.name else m
     | _ => m
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive }
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, protectedNames }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   for d in src.decls do
@@ -663,6 +677,7 @@ def translateSource (src : IR.Source) : MetaM (Array DeclResult) := do
         pure { source := d.name, kind := match d with | .constant _ => "constant" | _ => "inductive",
                status := if rt then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
                message := if rt then s!"resource limit per declaration: {msg.take 300}" else s!"internal error: {msg.take 600}" }
+    let r := { r with protectedIface := protectedNames.contains r.source }
     results := results.insert r.source r
     out := out.push r
   return out
@@ -683,6 +698,8 @@ where
         let mut r : DeclResult := default
         let mut first : Option DeclResult := none
         let mut lastTier : Option DeclResult := none
+        -- P0: a tier that would only succeed by specializing a protected statement
+        let mut iface : Option DeclResult := none
         for eo in exts do
           let r0 ← if (motiveLevels c.type).isEmpty then processConstant genv results c (extraOwn := eo) else do
               let a ← processConstant genv results c (admit := true) (extraOwn := eo)
@@ -703,6 +720,7 @@ where
                                      (false, true, true, true), (true, true, true, true)] do
               let r' ← processConstant genv results c (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo)
               lastTier := some r'
+              if r'.status == "INTERFACE_REJECTED" then iface := some r'
               if r'.ok then
                 r := r'
                 break
@@ -712,6 +730,7 @@ where
                 let r' ← processConstant genv results c (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo)
                   (lower := lo) (delta := true)
                 if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                if r'.status == "INTERFACE_REJECTED" then iface := some r'
                 if r'.ok then
                   r := r'
                   break
@@ -725,6 +744,9 @@ where
           if let some lt := lastTier then
             let slog := lt.levelDiagnostics.filter (·.startsWith "solver:")
             r := { r with message := s!"{r.message} [last tier: {lt.status}: {lt.message.take 600}{if slog.isEmpty then "" else s!" {slog}"}]" }
+          -- the refusal is the reason when a tier was refused only for interface protection
+          if let some i := iface then
+            r := { i with message := s!"{i.message} [plain attempt: {r.status}: {r.message.take 400}]" }
         if r.ok then if let some n := r.target then
           genv := { genv with consts := genv.consts.insert c.name n,
                               constLevels := genv.constLevels.insert c.name r.levelParams.length,
@@ -805,7 +827,8 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("delta_inlined", Json.arr (r.deltaInlined.map Json.str)),
     ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>
       Json.mkObj [("level", m), ("sigma", levelJson l), ("in_type", Json.bool (r.r2bpInType.contains m))])),
-    ("sort_lowered_levels", Json.arr (r.sortLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)]))]
+    ("sort_lowered_levels", Json.arr (r.sortLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
+    ("protected", Json.bool r.protectedIface)]
   let rest : List (String × Json) := [
     ("source", r.source), ("kind", r.kind), ("status", r.status), ("rule", r.rule),
     ("target", match r.target with | some n => Json.str n.toString | none => .null),

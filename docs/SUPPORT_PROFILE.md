@@ -52,6 +52,7 @@ inductive, kernel universe failures) are detected by the translator alone.
 | `cofix`, primitive int/float/string/array, symbols, primitive projections | `UNSUPPORTED_FEATURE` |
 | `SProp`, irrelevant binders | `UNSUPPORTED_FEATURE` |
 | Universe-polymorphic inductives; universe instances on inductives; sort-polymorphic declarations (Rocq 9.3 `ssr_have_upoly` and its users, except through the prepared lowering) | `UNSUPPORTED_FEATURE` |
+| P0: a statement specialization (R2B-S result-sort lowering, R2B-P on a statement level) of a protected public Prosa/Classic declaration, as root or dependency | `INTERFACE_REJECTED` (dependents `BLOCKED_DEPENDENCY`; docs/TRUST.md) |
 | Uses of Rocq's `Prop ≤ Type` cumulativity at a type parameter that is not a motive level (e.g. `False_rect (P := a Prop)`, MathComp `leqif` instantiating `prod` at Prop), and cumulativity a reference cannot express (`plift`, `simpl_pred` in `manifest_simpl_pred`) | `KERNEL_REJECTED` / `UNIVERSE_REJECTED` (reported, not patched) |
 | Template inductives whose template levels are not each bound by one parameter of sort `Type@{l}`; a template inductive instantiated at quality Prop | `UNSUPPORTED_FEATURE` |
 | Section variables, existential variables | `UNSUPPORTED_FEATURE` |

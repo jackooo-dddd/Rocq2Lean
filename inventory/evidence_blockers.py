@@ -53,7 +53,7 @@ def main():
     impl = rocq2lean.impl_tree_sha256()
     merged = {f: json.loads((W / f"merge-{f}.json").read_text()) for f in ("modern", "classic")}
     inv = {**merged["classic"]["digests"], **merged["modern"]["digests"]}
-    out, translated = {}, {}
+    out, translated, inst_ok = {}, {}, {}
     runs = []
     for run in RUNS:
         d = ROOT / "runs" / run
@@ -80,20 +80,45 @@ def main():
                                "source": f"translation:{run}", "detail": msg[:600]})
         si = d / "source_instances.json"
         if si.exists():
+            # the checked instance of each row: declaration and substitution (SourceInstances.v)
+            subst = dict(re.findall(r'^Rocq2Lean CheckInstance "([^"]+)" "([^"]*)"\.', (d / "SourceInstances.v").read_text(), re.M)) \
+                if (d / "SourceInstances.v").exists() else {}
             for n, v in json.loads(si.read_text()).get("checked", {}).items():
                 e = ev.get(n, {})
-                if v != "INSTANCE_OK" and e.get("current_impl") and e.get("identical_source"):
-                    reason = f"{v}: R2B-P statement specialization rejected by Rocq's kernel"
-                    out.setdefault(n, [])
-                    if not any(x["reason"] == reason for x in out[n]):
-                        out[n].append({"reason": reason, "category": "universe_instance", "status": v,
-                                       "source": f"source_instances:{run}", "detail": f"{n}: {v}"})
+                if not (e.get("current_impl") and e.get("identical_source")):
+                    continue
+                key = (n, subst.get(n))
+                if v == "INSTANCE_OK":
+                    inst_ok.setdefault(key, []).append(run)
+                    continue
+                reason = f"{v.split(' ')[0]}: R2B-P source instance rejected by Rocq's kernel (verify stage)"
+                out.setdefault(n, [])
+                if not any(x["reason"] == reason for x in out[n]):
+                    out[n].append({"reason": reason, "category": "universe_instance", "status": v,
+                                   "source": f"source_instances:{run}", "detail": f"{n} at {key[1]}: {v}",
+                                   "instance": key[1]})
     # a failure of a declaration that another current run translated (same elaborated record) depends
     # on the request (levels, specializations): reported as context-dependent, not as a blocker
+    # context-dependent: a translation failure of a declaration another current run translated, or a
+    # rejected source instance that another run checked OK at the same substitution. A translation
+    # success does not contradict a verify-stage instance rejection (a later stage).
     context = {}
     for n in list(out):
-        if n in translated:
-            context[n] = [dict(x, translated_in=sorted(translated[n])) for x in out.pop(n)]
+        keep, moved = [], []
+        for x in out[n]:
+            if "instance" in x:
+                ok_runs = inst_ok.get((n, x["instance"]), [])
+                (moved if ok_runs else keep).append(dict(x, instance_ok_in=sorted(ok_runs)) if ok_runs else x)
+            elif n in translated:
+                moved.append(dict(x, translated_in=sorted(translated[n])))
+            else:
+                keep.append(x)
+        if moved:
+            context[n] = moved
+        if keep:
+            out[n] = keep
+        else:
+            out.pop(n)
     export = {f: {"unquotable": merged[f]["unquotable"], "failed": merged[f]["failed"],
                   "stack_overflow_default": merged[f].get("stack_overflow_default", [])} for f in merged}
     (W / "extra_blockers.json").write_text(json.dumps({"implementation": impl, "declarations": out, "context_dependent": context, "export": export,
@@ -102,7 +127,7 @@ def main():
     for n, v in sorted(out.items()):
         print("blocker", n, [x["reason"] for x in v])
     for n, v in sorted(context.items()):
-        print("context-dependent", n, [x["reason"] for x in v], v[0]["translated_in"])
+        print("context-dependent", n, [x["reason"] for x in v], v[0].get("translated_in") or v[0].get("instance_ok_in"))
 
 
 if __name__ == "__main__":

@@ -13,6 +13,8 @@ original request. Neither the translator nor the report is consulted. Fields:
   required_closure  roots plus everything reachable through dependencies recomputed from the
                     terms (types, bodies, contexts, constructors, projections, case/proj metadata)
   extra_exported    exported but not required (classified, never counted as accepted)
+  protection        P0: the pinned protected public interface bound to this export (manifest digest,
+                    policy, protected declarations present in the export; tools/protection.py)
 """
 import hashlib
 import json
@@ -53,7 +55,7 @@ def decl_refs(d):
     return acc
 
 
-def build(ir_path, request):
+def build(ir_path, request, protection=None):
     if not request:
         raise ContractError("empty root request")
     if len(set(request)) != len(request):
@@ -96,6 +98,7 @@ def build(ir_path, request):
         "exported": sorted(decls),
         "required_closure": sorted(closure),
         "extra_exported": sorted(set(decls) - closure),
+        "protection": protection,
     }
 
 

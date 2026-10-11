@@ -129,7 +129,8 @@ def translate(fam):
 
 def confirm_one(n, status, exp):
     import rocq2lean
-    lib = n.split("/")[0].rsplit(".", 1)[0] if "/" in n else n.rsplit(".", 1)[0]
+    # the library (file) of a kernel name: before the first "/" (module path) or the last "."
+    lib = n.split("/")[0] if "/" in n else n.rsplit(".", 1)[0]
     d = ROOT / "runs" / f"inv-confirm-{hashlib.sha256(n.encode()).hexdigest()[:12]}"
     man = d.with_suffix(".manifest.json")
     man.write_text(json.dumps({"name": f"inv-confirm {n}", "load_paths": [exp[i:i + 3] for i in range(0, len(exp), 3)],
@@ -160,7 +161,7 @@ def confirm(fam, workers=3):
     translated = json.loads((W / "extra_blockers.json").read_text()).get("translated_in_current_runs", {})
     exp = json.loads((W / f"export-{fam}" / "summary.json").read_text())["exporter"]["load_paths"]
     out = run / "confirmations.jsonl"
-    done = {json.loads(l)["declaration"] for l in open(out)} if out.exists() else set()
+    done = {r["declaration"] for r in map(json.loads, open(out)) if not str(r.get("export", 0)).startswith(("Rejected", "Exception"))} if out.exists() else set()
     todo = []
     for n in sorted(fails):
         if n in done:

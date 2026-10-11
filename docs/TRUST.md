@@ -177,6 +177,32 @@ theorem is ever mapped.
 Translating the original source proofs is the purpose of the project; the Prosa correspondence
 rule `source_theorem_dependency = false` does not apply.
 
+## Public-interface protection (P0)
+
+The protected public interface is every public Prosa v0.6 / Classic declaration and record/class
+projection of the pinned inventory (`reports/prosa_inventory/protected_interface.json`, 4,474
+declarations; its SHA-256 is pinned in `tools/protected_interface.pin.json`, part of the
+implementation tree). Policy: a protected declaration keeps its full source statement whether it is a
+requested root or a dependency — no R2B-S result-sort lowering and no R2B-P specialization of a
+statement level (there is no approved representation change). Non-protected dependencies keep the
+existing checked policy (R2B-P instances re-checked by Rocq at verify).
+
+Enforcement, end to end:
+
+* `export` binds the protected names present in the export (with the manifest digest and policy) into
+  the coverage contract, and refuses a missing, altered (digest ≠ pin) or stale (inventory changed)
+  manifest;
+* the translator (`#rocq2lean_import … contract sha`) reads the binding from the contract and refuses
+  a specialization of a protected declaration (`INTERFACE_REJECTED`; dependents are
+  `BLOCKED_DEPENDENCY`); each result row records `protected`;
+* the fresh-process consumer (`interface` detector) and the independent audit recompute the binding
+  from the contract / the pinned manifest and reject any accepted protected row with a specialized
+  statement or a protection flag that differs from the binding;
+* `verify` recomputes the binding from the pinned manifest and refuses a run whose contract binding is
+  missing, tampered or stale, or whose translation did not run under that binding.
+
+Translate-only runs (no contract) carry `protection: null` and cannot be verified.
+
 ## Threat boundary
 
 Digests detect change relative to an anchored request within one workspace; they do not
