@@ -43,33 +43,34 @@
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution"
    ],
-   "roots": 622
+   "roots": 677
   },
   {
    "mechanisms": [
     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
-   "roots": 304
-  },
-  {
-   "mechanisms": [
-    "a type depends on an argument that recursive calls change"
-   ],
-   "roots": 278
+   "roots": 414
   },
   {
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution"
    ],
-   "roots": 133
+   "roots": 151
   },
   {
    "mechanisms": [
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-    "a type depends on an argument that recursive calls change"
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
-   "roots": 110
+   "roots": 112
+  },
+  {
+   "mechanisms": [
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 111
   },
   {
    "mechanisms": [
@@ -78,7 +79,6 @@
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change",
     "coinductive type"
    ],
    "roots": 86
@@ -86,63 +86,37 @@
   {
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-    "a type depends on an argument that recursive calls change"
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
    "roots": 79
   },
   {
    "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
-   "roots": 65
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change"
-   ],
-   "roots": 61
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
-   ],
-   "roots": 58
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "a type depends on an argument that recursive calls change"
-   ],
-   "roots": 55
+   "roots": 78
   },
   {
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-    "a type depends on an argument that recursive calls change"
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
-   "roots": 49
+   "roots": 70
   },
   {
    "mechanisms": [
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change"
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution"
    ],
-   "roots": 46
+   "roots": 55
   },
   {
    "mechanisms": [
     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change",
     "coinductive type"
    ],
    "roots": 41
@@ -151,26 +125,18 @@
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
-   "roots": 33
+   "roots": 32
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution"
+    "coinductive type"
    ],
-   "roots": 29
+   "roots": 24
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "a type depends on an argument that recursive calls change"
-   ],
-   "roots": 26
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
@@ -178,26 +144,13 @@
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-    "a type depends on an argument that recursive calls change"
-   ],
-   "roots": 21
-  },
-  {
-   "mechanisms": [
+    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
-   ],
-   "roots": 21
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "a type depends on an argument that recursive calls change"
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+    "coinductive type"
    ],
    "roots": 18
   },
@@ -206,26 +159,18 @@
     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change",
-    "coinductive type"
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
    "roots": 18
   },
   {
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
-   ],
-   "roots": 17
-  },
-  {
-   "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
     "coinductive type"
    ],
-   "roots": 14
+   "roots": 15
   },
   {
    "mechanisms": [
@@ -237,18 +182,7 @@
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "a type depends on an argument that recursive calls change"
-   ],
-   "roots": 14
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "a type depends on an argument that recursive calls change",
     "coinductive type"
    ],
    "roots": 12
@@ -257,25 +191,9 @@
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change"
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
    "roots": 12
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
-   ],
-   "roots": 12
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "a type depends on an argument that recursive calls change"
-   ],
-   "roots": 11
   },
   {
    "mechanisms": [
@@ -286,43 +204,23 @@
   },
   {
    "mechanisms": [
-    "a type depends on an argument that recursive calls change",
-    "coinductive type"
-   ],
-   "roots": 10
-  },
-  {
-   "mechanisms": [
+    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change",
-    "coinductive type"
-   ],
-   "roots": 10
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "a type depends on an argument that recursive calls change"
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
    "roots": 9
   },
   {
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-    "a type depends on an argument that recursive calls change"
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
    ],
-   "roots": 8
+   "roots": 9
   },
   {
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change",
     "coinductive type"
    ],
    "roots": 7
@@ -330,60 +228,52 @@
   {
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change"
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
    "roots": 7
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
+   "roots": 7
+  },
+  {
+   "mechanisms": [
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+    "coinductive type"
+   ],
    "roots": 6
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "a type depends on an argument that recursive calls change"
-   ],
-   "roots": 6
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change",
-    "coinductive type"
-   ],
-   "roots": 5
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "coinductive type"
-   ],
-   "roots": 5
-  },
-  {
-   "mechanisms": [
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change",
-    "coinductive type"
-   ],
-   "roots": 5
   },
   {
    "mechanisms": [
     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
     "coinductive type"
    ],
+   "roots": 6
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
+    "coinductive type"
+   ],
    "roots": 5
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots": 4
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)"
+   ],
+   "roots": 4
   },
   {
    "mechanisms": [
@@ -397,35 +287,8 @@
     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
-   ],
-   "roots": 4
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change"
-   ],
-   "roots": 3
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change",
     "coinductive type"
-   ],
-   "roots": 3
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change"
    ],
    "roots": 3
   },
@@ -433,14 +296,7 @@
    "mechanisms": [
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-    "a type depends on an argument that recursive calls change",
     "coinductive type"
-   ],
-   "roots": 3
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)"
    ],
    "roots": 3
   },
@@ -450,7 +306,15 @@
     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "a type depends on an argument that recursive calls change",
+    "coinductive type"
+   ],
+   "roots": 2
+  },
+  {
+   "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "coinductive type"
    ],
    "roots": 2
@@ -464,53 +328,12 @@
   },
   {
    "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "a type depends on an argument that recursive calls change",
-    "coinductive type"
-   ],
-   "roots": 1
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
-   ],
-   "roots": 1
-  },
-  {
-   "mechanisms": [
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-    "coinductive type"
-   ],
-   "roots": 1
-  },
-  {
-   "mechanisms": [
-    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-    "a type depends on an argument that recursive calls change",
-    "coinductive type"
-   ],
-   "roots": 1
-  },
-  {
-   "mechanisms": [
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)"
    ],
    "roots": 1
   },
   {
    "mechanisms": [
-    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-    "coinductive type"
-   ],
-   "roots": 1
-  },
-  {
-   "mechanisms": [
     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
    ],
@@ -518,12 +341,63 @@
   },
   {
    "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
+   ],
+   "roots": 1
+  },
+  {
+   "mechanisms": [
     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-    "a type depends on an argument that recursive calls change"
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution"
    ],
    "roots": 1
   }
  ],
+ "context_dependent": {
+  "Corelib.ssr.ssreflect_rw.nary_congruence": {
+   "category": "universe_instance",
+   "detail": "Corelib.ssr.ssreflect_rw.nary_congruence: INSTANCE_REJECTED Type_errors.TypeError(_, _)",
+   "failures": [
+    {
+     "reason": "INSTANCE_REJECTED Type_errors.TypeError(_, _): R2B-P statement specialization rejected by Rocq's kernel",
+     "source": "source_instances:m6h-translated9",
+     "translated_in": [
+      "m6h-holdout_completion_mathcomp",
+      "m6h-holdout_completion_prosa",
+      "m6h-translated9",
+      "m6p-holdout20_prosa"
+     ]
+    }
+   ],
+   "roots_reaching": {
+    "classic": 1021,
+    "modern": 995
+   }
+  },
+  "mathcomp.boot.fintype/isFinite.axioms_": {
+   "category": "incorrect_implementation",
+   "detail": "(kernel) application type mismatch\n  @Rocq.mathcomp.boot.fintype.finite_axiom\n    (@Rocq.mathcomp.boot.eqtype.Equality.type.Pack T\n      (@Rocq.mathcomp.boot.eqtype.Equality.axioms_.Class T local_mixin_eqtype_hasDecEq))\nargument has type\n  Rocq.mathcomp.boot.eqtype.Equality.type\nbut function has type\n  (T : Rocq.mathcomp.boot.eqtype.Equality.type) \u2192\n    @Rocq.Corelib.Init.Datatypes.list (@Rocq.mat",
+   "failures": [
+    {
+     "reason": "KERNEL_REJECTED: (kernel) application type mismatch",
+     "source": "translation:m6h-holdout_completion_prosa",
+     "translated_in": [
+      "m6-gate-finishtime5",
+      "m6p-behavior61",
+      "m6p-finishtime4",
+      "m6p-holdout13_prosa",
+      "m6p-holdout20_prosa"
+     ]
+    }
+   ],
+   "roots_reaching": {
+    "classic": 774,
+    "modern": 1248
+   }
+  }
+ },
  "export": {
   "failed": {
    "classic": {},
@@ -846,8 +720,8 @@
   {
    "affected_protected_interface": {
     "classic": 810,
-    "combined": 1367,
-    "modern": 557
+    "combined": 1365,
+    "modern": 555
    },
    "affected_root_ids": [
     "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
@@ -1064,10 +938,6 @@
      535
     ],
     [
-     "a type depends on an argument that recursive calls change",
-     500
-    ],
-    [
      "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
      279
     ],
@@ -1121,294 +991,10 @@
     "location": null
    },
    "sole_blocker_roots": {
-    "classic": 367,
-    "combined": 622,
-    "modern": 255,
-    "protected": 580
-   }
-  },
-  {
-   "affected_protected_interface": {
-    "classic": 268,
-    "combined": 972,
-    "modern": 704
-   },
-   "affected_root_ids": [
-    "prosa.analysis.abstract.IBF.task.cumul_interference_plus_sched_le_serv_of_task_plus_cumul_task_interference",
-    "prosa.analysis.abstract.IBF.task.cumulative_job_interference_bound",
-    "prosa.analysis.abstract.IBF.task.cumulative_job_interference_le_task_interference_bound",
-    "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference",
-    "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference_j",
-    "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference_task",
-    "prosa.analysis.abstract.IBF.task.task_IBF_implies_job_IBF",
-    "prosa.analysis.abstract.abstract_rta.job_is_completed_by_arrival_plus_R",
-    "prosa.analysis.abstract.abstract_rta.job_receives_enough_service_1",
-    "prosa.analysis.abstract.abstract_rta.job_receives_enough_service_2",
-    "prosa.analysis.abstract.abstract_rta.job_receives_enough_service_3",
-    "prosa.analysis.abstract.abstract_rta.uniprocessor_response_time_bound",
-    "prosa.analysis.abstract.busy_interval.busy_interval_has_uninterrupted_service",
-    "prosa.analysis.abstract.busy_interval.busy_interval_is_bounded",
-    "prosa.analysis.abstract.busy_interval.busy_interval_too_much_workload",
-    "prosa.analysis.abstract.busy_interval.cumul_iw_bounded_by_cumul_i",
-    "prosa.analysis.abstract.busy_interval.no_service_before_busy_interval",
-    "prosa.analysis.abstract.busy_interval.service_and_interference_bound",
-    "prosa.analysis.abstract.busy_interval.service_within_busy_interval_ge_job_cost",
-    "prosa.analysis.abstract.busy_interval.t1\u03b4_is_quiet",
-    "prosa.analysis.abstract.busy_interval.t1\u03b4_is_quiet_contra",
-    "prosa.analysis.abstract.busy_interval.terminating_busy_prefix_is_busy_interval",
-    "prosa.analysis.abstract.ideal.abstract_rta.nonpreemptive_interference_is_bounded",
-    "prosa.analysis.abstract.ideal.abstract_rta.uniprocessor_response_time_bound_ideal",
-    "prosa.analysis.abstract.ideal.abstract_seq_rta.uniprocessor_response_time_bound_seq",
-    "prosa.analysis.abstract.ideal.cumulative_bounds.cumulative_interference_is_bounded_by_total_service",
-    "prosa.analysis.abstract.ideal.cumulative_bounds.cumulative_priority_inversion_is_bounded",
-    "prosa.analysis.abstract.ideal.iw_instantiation.abstract_busy_interval_classic_busy_interval_prefix",
-    "prosa.analysis.abstract.ideal.iw_instantiation.abstract_busy_interval_classic_quiet_time",
-    "prosa.analysis.abstract.ideal.iw_instantiation.cumulative_task_interference_split",
-    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_busy_interval_equivalent_busy_interval",
-    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_busy_interval_prefix_equivalent_busy_interval_prefix",
-    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_busy_intervals_are_bounded",
-    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_i_and_w_are_coherent_with_schedule",
-    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_interference_and_workload_consistent_with_sequential_tasks",
-    "prosa.analysis.abstract.ideal.iw_instantiation.instantiated_quiet_time_equivalent_quiet_time",
-    "prosa.analysis.abstract.ideal.iw_instantiation.not_interference_implies_scheduled",
-    "prosa.analysis.abstract.ideal.iw_instantiation.quiet_time_ab_implies_quiet_time_cl",
-    "prosa.analysis.abstract.ideal.iw_instantiation.quiet_time_cl_implies_quiet_time_ab",
-    "prosa.analysis.abstract.iw_auxiliary.cumulative_interference_sub",
-    "prosa.analysis.abstract.lower_bound_on_service.interference_is_complement_to_schedule",
-    "prosa.analysis.abstract.lower_bound_on_service.j_receives_enough_service",
-    "prosa.analysis.abstract.lower_bound_on_service.service_and_interference_bounded",
-    "prosa.analysis.abstract.restricted_supply.abstract_rta.IBF_NP_bounds_interference",
-    "prosa.analysis.abstract.restricted_supply.abstract_rta.IBF_P_bounds_interference",
-    "prosa.analysis.abstract.restricted_supply.abstract_rta.IBF_P_sol_le_IBF_NP",
-    "prosa.analysis.abstract.restricted_supply.abstract_rta.blackout_impl_interference",
-    "prosa.analysis.abstract.restricted_supply.abstract_rta.blackout_plus_local_is_interference",
-    "prosa.analysis.abstract.restricted_supply.abstract_rta.blackout_plus_local_is_interference_cumul",
-    "prosa.analysis.abstract.restricted_supply.abstract_rta.cumulative_job_interference_bound",
-    "prosa.analysis.abstract.restricted_supply.abstract_rta.max_in_rs_hypothesis_impl_max_in_arta_hypothesis",
-    "prosa.analysis.abstract.restricted_supply.abstract_rta.no_intra_interference_after_F",
-    "prosa.analysis.abstract.restricted_supply.abstract_rta.uniprocessor_response_time_bound_restricted_supply",
-    "prosa.analysis.abstract.restricted_supply.abstract_seq_rta.IBF_P_bounds_interference",
-    "prosa.analysis.abstract.restricted_supply.abstract_seq_rta.uniprocessor_response_time_bound_restricted_supply_seq",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.busy_interval_prefix_exists",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.service_lt_workload_in_busy",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.aux.workload_exceeds_interval",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_intervals_are_bounded_rs_edf",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_prefix_is_bounded_case1",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.busy_prefix_is_bounded_case2",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.job_arrival_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.longest_bi_with_pi_bound_is_valid",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.edf.workload_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_intervals_are_bounded_rs_elf",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_prefix_is_bounded_case1",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_prefix_is_bounded_case2",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.job_arrival_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.workload_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_intervals_are_bounded_rs_fp",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_prefix_is_bounded_case1",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.busy_prefix_is_bounded_case2",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.job_arrival_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.fp.workload_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_intervals_are_bounded_rs_jlfp",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_prefix_is_bounded_case1",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.busy_prefix_is_bounded_case2",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.job_arrival_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.jlfp.workload_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.abstract_busy_interval_classic_busy_interval_prefix",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.abstract_busy_interval_classic_quiet_time",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.busy_implies_not_idle",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.cumulative_task_interference_split",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_busy_interval_equivalent_busy_interval",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_busy_interval_prefix_equivalent_busy_interval_prefix",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_i_and_w_are_coherent_with_schedule",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_i_and_w_no_speculative_execution",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_interference_and_workload_consistent_with_sequential_tasks",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.instantiated_quiet_time_equivalent_quiet_time",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.not_interference_implies_scheduled",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.quiet_time_ab_implies_quiet_time_cl",
-    "prosa.analysis.abstract.restricted_supply.iw_instantiation.quiet_time_cl_implies_quiet_time_ab",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.abstract_busy_interval_classic_busy_interval_prefix",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.abstract_busy_interval_classic_quiet_time",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.cumulative_interference_split",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.cumulative_task_interference_split",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_busy_interval_equivalent_busy_interval",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_busy_interval_prefix_equivalent_busy_interval_prefix",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_i_and_w_no_speculative_execution",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_interference_and_workload_consistent_with_sequential_tasks",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.instantiated_quiet_time_equivalent_quiet_time",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.pending_hep_job_exists_inside_busy_interval",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.quiet_time_ab_implies_quiet_time_cl",
-    "prosa.analysis.abstract.restricted_supply.iw_readiness.quiet_time_cl_implies_quiet_time_ab",
-    "prosa.analysis.abstract.restricted_supply.search_space.edf.search_space_sub",
-    "prosa.analysis.abstract.restricted_supply.search_space.fifo_fixpoint.soln_abstract_response_time_recurrence",
-    "prosa.analysis.abstract.restricted_supply.search_space.fp.search_space_sub",
-    "prosa.analysis.abstract.restricted_supply.task_ibf_readiness.instantiated_task_intra_interference_is_bounded",
-    "prosa.analysis.abstract.restricted_supply.task_intra_interference_bound.instantiated_task_intra_interference_is_bounded",
-    "prosa.analysis.abstract.search_space.search_space_switch_IBF",
-    "prosa.analysis.definitions.finish_time.completes_at_finish_time",
-    "prosa.analysis.definitions.sbf.plain.sbf_respected_simplified",
-    "prosa.analysis.facts.SBF.blackout_during_bound_SBF",
-    "prosa.analysis.facts.SBF.complement_SBF_monotone",
-    "prosa.analysis.facts.behavior.arrivals.arrivals_between_filter",
-    "prosa.analysis.facts.behavior.arrivals.arrivals_between_sorted",
-    "prosa.analysis.facts.behavior.arrivals.arrivals_up_to_scheduled_at",
-    "prosa.analysis.facts.behavior.service.exists_intermediate_service",
-    "prosa.analysis.facts.behavior.service.exists_intermediate_service_during",
-    "prosa.analysis.facts.behavior.service.incremental_service_during",
-    "prosa.analysis.facts.behavior.service.kth_scheduling_time",
-    "prosa.analysis.facts.behavior.service.service_during_is_unit_growth_function",
-    "prosa.analysis.facts.behavior.service.service_during_scheduled_at_earliest",
-    "prosa.analysis.facts.behavior.service.service_during_service_at_earliest",
-    "prosa.analysis.facts.behavior.service.service_is_unit_growth_function",
-    "prosa.analysis.facts.behavior.supply.blackout_during_cat",
-    "prosa.analysis.facts.behavior.supply.blackout_during_complement",
-    "prosa.analysis.facts.behavior.supply.supply_during_complement",
-    "prosa.analysis.facts.behavior.supply.unit_supply_proc_service_case",
-    "prosa.analysis.facts.blocking_bound.edf.nonpreemptive_segments_bounded_by_blocking",
-    "prosa.analysis.facts.blocking_bound.elf.nonpreemptive_segments_bounded_by_blocking",
-    "prosa.analysis.facts.busy_interval.arrival.busy_prefix_starts_when_hep_job_arrives",
-    "prosa.analysis.facts.busy_interval.carry_in.busy_interval_from_total_workload_bound",
-    "prosa.analysis.facts.busy_interval.carry_in.low_total_service_implies_existence_of_time_with_no_carry_in",
-    "prosa.analysis.facts.busy_interval.carry_in.processor_is_not_too_busy",
-    "prosa.analysis.facts.busy_interval.existence.busy_interval_bounds_response_time",
-    "prosa.analysis.facts.busy_interval.existence.busy_interval_has_uninterrupted_service",
-    "prosa.analysis.facts.busy_interval.existence.busy_interval_is_bounded",
-    "prosa.analysis.facts.busy_interval.existence.busy_interval_workload_larger_than_interval",
-    "prosa.analysis.facts.busy_interval.existence.exists_busy_interval",
-    "prosa.analysis.facts.busy_interval.existence.exists_busy_interval_prefix",
-    "prosa.analysis.facts.busy_interval.hep_at_pt.not_quiet_implies_exists_scheduled_hp_job",
-    "prosa.analysis.facts.busy_interval.hep_at_pt.not_quiet_implies_exists_scheduled_hp_job_after_preemption_point",
-    "prosa.analysis.facts.busy_interval.hep_at_pt.not_quiet_implies_exists_scheduled_hp_job_at_preemption_point",
-    "prosa.analysis.facts.busy_interval.hep_at_pt.scheduled_at_preemption_time_implies_arrived_between_within_busy_interval",
-    "prosa.analysis.facts.busy_interval.hep_at_pt.scheduled_at_preemption_time_implies_higher_or_equal_priority",
-    "prosa.analysis.facts.busy_interval.pi.busy_interval_pi_cases",
-    "prosa.analysis.facts.busy_interval.pi.low_priority_job_arrives_before_busy_interval_prefix",
-    "prosa.analysis.facts.busy_interval.pi.low_priority_job_scheduled_before_busy_interval_prefix",
-    "prosa.analysis.facts.busy_interval.pi.lower_priority_job_continuously_scheduled",
-    "prosa.analysis.facts.busy_interval.pi.lower_priority_job_scheduled_implies_no_preemption_time",
-    "prosa.analysis.facts.busy_interval.pi.lower_priority_jobs_never_scheduled_if_no_inversion",
-    "prosa.analysis.facts.busy_interval.pi.lp_job_should_arrive_early_for_pi",
-    "prosa.analysis.facts.busy_interval.pi.no_preemption_time_before_pi",
-    "prosa.analysis.facts.busy_interval.pi.no_priority_inversion_after_preemption_point",
-    "prosa.analysis.facts.busy_interval.pi.only_one_pi_job",
-    "prosa.analysis.facts.busy_interval.pi.pi_continuous",
-    "prosa.analysis.facts.busy_interval.pi.pi_job_remains_scheduled",
-    "prosa.analysis.facts.busy_interval.pi.preemption_time_exists",
-    "prosa.analysis.facts.busy_interval.pi.preemption_time_exists_case3",
-    "prosa.analysis.facts.busy_interval.pi.preemption_time_le_max_len_of_np_segment",
-    "prosa.analysis.facts.busy_interval.pi.priority_inversion_occurs_only_till_preemption_point",
-    "prosa.analysis.facts.busy_interval.pi_bound.priority_inversion_is_bounded",
-    "prosa.analysis.facts.busy_interval.pi_cond.cum_task_pi_eq",
-    "prosa.analysis.facts.busy_interval.service_inversion.big_service_implies_bounded_service",
-    "prosa.analysis.facts.busy_interval.service_inversion.cumulative_service_inversion_from_one_job",
-    "prosa.analysis.facts.busy_interval.service_inversion.lp_job_bounded_service",
-    "prosa.analysis.facts.busy_interval.service_inversion.lp_job_bounded_service_aux",
-    "prosa.analysis.facts.busy_interval.service_inversion.lp_job_bounded_service_max",
-    "prosa.analysis.facts.busy_interval.service_inversion.no_preemption_impl_service_inv_bounded",
-    "prosa.analysis.facts.busy_interval.service_inversion.service_inversion_is_bounded",
-    "prosa.analysis.facts.busy_interval.service_inversion.service_inversion_widen",
-    "prosa.analysis.facts.busy_interval.service_inversion.small_service_implies_bounded_service",
-    "prosa.analysis.facts.completes_at.completetion_time_is_preemption_time",
-    "prosa.analysis.facts.completes_at.job_completes_at_most_once",
-    "prosa.analysis.facts.completes_at.no_early_hep_job_completes_during_busy_prefix",
-    "prosa.analysis.facts.completes_at.only_one_job_completes_at_a_time",
-    "prosa.analysis.facts.completes_at.scheduled_at_precedes_completes_at",
-    "prosa.analysis.facts.delay_propagation.arrives_in_propagated_if",
-    "prosa.analysis.facts.delay_propagation.propagated_arrival_curve_respected",
-    "prosa.analysis.facts.delay_propagation.propagated_arrival_curve_valid",
-    "prosa.analysis.facts.delay_propagation.subset_trigger_jobs",
-    "prosa.analysis.facts.delay_propagation.trigger_job_arrival_bounded",
-    "prosa.analysis.facts.delay_propagation.trigger_job_size",
-    "prosa.analysis.facts.hyperperiod.corr_job_in_task_arrivals_up_to",
-    "prosa.analysis.facts.hyperperiod.corresponding_job_arrives",
-    "prosa.analysis.facts.hyperperiod.corresponding_jobs_have_same_task",
-    "prosa.analysis.facts.hyperperiod.eq_size_hyp_lt",
-    "prosa.analysis.facts.hyperperiod.eq_size_of_arrivals_in_hyperperiod",
-    "prosa.analysis.facts.hyperperiod.job_in_hp_arrives_in_task_arrivals_up_to",
-    "prosa.analysis.facts.hyperperiod.job_in_own_hp",
-    "prosa.analysis.facts.interference.cumulative_i_ohep_eq_service_of_ohep",
-    "prosa.analysis.facts.interference.cumulative_i_thep_eq_service_of_othep",
-    "prosa.analysis.facts.interference.interference_athep_def",
-    "prosa.analysis.facts.jitter.jitter_FP_compliance",
-    "prosa.analysis.facts.jitter.jitter_arrives_in_iff",
-    "prosa.analysis.facts.jitter.jitter_prop_same_jobs",
-    "prosa.analysis.facts.jitter.jitter_prop_same_jobs'",
-    "prosa.analysis.facts.jitter.jitter_prop_valid_costs",
-    "prosa.analysis.facts.jitter.jitter_response_time_bound"
-   ],
-   "affected_root_ids_truncated": true,
-   "affected_roots": {
-    "classic": 268,
-    "combined": 1022,
-    "modern": 754
-   },
-   "category": "missing_rule",
-   "co_blocking_mechanisms": [
-    [
-     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
-     500
-    ],
-    [
-     "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution",
-     372
-    ],
-    [
-     "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
-     309
-    ],
-    [
-     "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field",
-     290
-    ],
-    [
-     "coinductive type",
-     204
-    ],
-    [
-     "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
-     204
-    ],
-    [
-     "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
-     166
-    ]
-   ],
-   "defining_nodes": 1,
-   "defining_nodes_in_scope": 0,
-   "defining_nodes_sample": [
-    "Corelib.Init.Wf.Acc_rect"
-   ],
-   "direct_roots": 0,
-   "downstream_roots": 1022,
-   "evidence": [
-    "preflight"
-   ],
-   "example_path": [
-    "prosa.analysis.abstract.IBF.task.cumul_interference_plus_sched_le_serv_of_task_plus_cumul_task_interference",
-    "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference",
-    "prosa.analysis.abstract.IBF.task.interference_plus_sched_le_serv_of_task_plus_task_interference_j",
-    "Stdlib.ZArith.Znat/Nat2Z.inj_sub_max",
-    "Stdlib.NArith.Nnat/Nat2N.inj_sub",
-    "Stdlib.NArith.Nnat/N2Nat.inj_sub",
-    "Stdlib.Arith.PeanoNat/Nat.sub_diag",
-    "Stdlib.Arith.PeanoNat/Nat.induction",
-    "Stdlib.Arith.PeanoNat/Nat.right_induction",
-    "Stdlib.Arith.PeanoNat/Nat.strong_right_induction",
-    "Corelib.Init.Wf.well_founded_induction",
-    "Corelib.Init.Wf.well_founded_induction_type",
-    "Corelib.Init.Wf.Acc_rect"
-   ],
-   "mechanism": "a type depends on an argument that recursive calls change",
-   "reproducer": {
-    "affected_roots_through_it": 1022,
-    "declaration": "Corelib.Init.Wf.Acc_rect",
-    "detail": null,
-    "location": "body/b/b/b/b"
-   },
-   "sole_blocker_roots": {
-    "classic": 19,
-    "combined": 278,
-    "modern": 259,
-    "protected": 270
+    "classic": 368,
+    "combined": 677,
+    "modern": 309,
+    "protected": 630
    }
   },
   {
@@ -1628,10 +1214,6 @@
    "category": "missing_rule",
    "co_blocking_mechanisms": [
     [
-     "a type depends on an argument that recursive calls change",
-     290
-    ],
-    [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
      279
     ],
@@ -1688,10 +1270,10 @@
     "location": null
    },
    "sole_blocker_roots": {
-    "classic": 213,
-    "combined": 304,
-    "modern": 91,
-    "protected": 304
+    "classic": 257,
+    "combined": 414,
+    "modern": 157,
+    "protected": 408
    }
   },
   {
@@ -1915,10 +1497,6 @@
      535
     ],
     [
-     "a type depends on an argument that recursive calls change",
-     372
-    ],
-    [
      "UNIVERSE_REJECTED: reference to \u2026: argument \u2026: \u2026 + 0 \u2264 \u2026 is not entailed by the source universe graph, nor is \u2026 \u2264 \u2026 (with offset 0)",
      252
     ],
@@ -1966,10 +1544,10 @@
     "location": null
    },
    "sole_blocker_roots": {
-    "classic": 21,
-    "combined": 29,
-    "modern": 8,
-    "protected": 29
+    "classic": 41,
+    "combined": 55,
+    "modern": 14,
+    "protected": 55
    }
   },
   {
@@ -2189,10 +1767,6 @@
    "category": "universe_instance",
    "co_blocking_mechanisms": [
     [
-     "a type depends on an argument that recursive calls change",
-     309
-    ],
-    [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
      276
     ],
@@ -2247,9 +1821,9 @@
    },
    "sole_blocker_roots": {
     "classic": 0,
-    "combined": 65,
-    "modern": 65,
-    "protected": 64
+    "combined": 111,
+    "modern": 111,
+    "protected": 107
    }
   },
   {
@@ -2475,10 +2049,6 @@
     [
      "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
      242
-    ],
-    [
-     "a type depends on an argument that recursive calls change",
-     204
     ],
     [
      "UNIVERSE_REJECTED: defaulted universe level(s) [\u2026] not justified: the declaration is not valid for every value (kernel rejection)",
@@ -2747,10 +2317,6 @@
    "category": "missing_rule",
    "co_blocking_mechanisms": [
     [
-     "a type depends on an argument that recursive calls change",
-     204
-    ],
-    [
      "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
      183
     ],
@@ -2799,9 +2365,9 @@
    },
    "sole_blocker_roots": {
     "classic": 8,
-    "combined": 14,
-    "modern": 6,
-    "protected": 14
+    "combined": 24,
+    "modern": 16,
+    "protected": 23
    }
   },
   {
@@ -3019,10 +2585,6 @@
      190
     ],
     [
-     "a type depends on an argument that recursive calls change",
-     166
-    ],
-    [
      "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift",
      157
     ],
@@ -3074,9 +2636,9 @@
    },
    "sole_blocker_roots": {
     "classic": 0,
-    "combined": 3,
-    "modern": 3,
-    "protected": 3
+    "combined": 4,
+    "modern": 4,
+    "protected": 4
    }
   },
   {
@@ -3278,5 +2840,194 @@
   "A root's blockers are all known-blocked declarations its closure reaches; a mechanism's sole_blocker_roots are the roots that no other known mechanism blocks.",
   "Preflight is static: CANDIDATE_SUPPORTED is not a translation result. Translation-only failures are known only where a current run reached the declaration."
  ],
+ "preflight_contradicted_by_evidence": {
+  "Corelib.Init.Wf.Acc_rect": {
+   "category": "incorrect_implementation",
+   "note": "preflight's static rule rejects a declaration that a current run translated (stale preflight metadata)",
+   "reasons": [
+    "a type depends on an argument that recursive calls change"
+   ],
+   "roots_reaching": {
+    "classic": 268,
+    "modern": 754
+   },
+   "translated_in": [
+    "m6-gate-finishtime5",
+    "m6h-holdout_completion_prosa",
+    "m6h-translated9",
+    "m6h-verified8",
+    "m6p-holdout20_prosa"
+   ]
+  }
+ },
+ "recommended_tasks": [
+  {
+   "defining_nodes": [
+    "mathcomp.boot.choice.PCanHasChoice",
+    "mathcomp.boot.bigop.big_const_seq"
+   ],
+   "example_paths": [
+    [
+     "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
+     "prosa.analysis.abstract.IBF.task.completed_before_beginning_of_busy_interval",
+     "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_equiv_workload_eq_service",
+     "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_impl_workload_eq_service",
+     "mathcomp.boot.bigop.exchange_big",
+     "mathcomp.boot.bigop.exchange_big_idem",
+     "mathcomp.boot.bigop.exchange_big_dep_idem",
+     "mathcomp.boot.fintype.Datatypes_prod__canonical__fintype_Finite",
+     "mathcomp.boot.choice.HB_unnamed_mixin_172",
+     "mathcomp.boot.choice.HB_unnamed_factory_165",
+     "mathcomp.boot.choice.eqtype_can_type__canonical__choice_Countable",
+     "mathcomp.boot.choice.HB_unnamed_factory_9",
+     "mathcomp.boot.choice.PCanHasChoice"
+    ],
+    [
+     "prosa.analysis.abstract.IBF.task.cumulative_job_interference_bound",
+     "prosa.analysis.facts.model.rbf.task_rbf_without_job_under_analysis",
+     "prosa.analysis.facts.model.rbf.task_rbf_without_job_under_analysis_from_arrival",
+     "prosa.util.sum.sum_majorant_constant",
+     "mathcomp.boot.bigop.sum1_size",
+     "mathcomp.boot.bigop.sum1_count",
+     "mathcomp.boot.bigop.big_const_seq"
+    ]
+   ],
+   "kind": "universe solver (R2F-c / proof-local levels)",
+   "mechanisms": [
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact Set lt \u2026 does not hold for the solution",
+    "UNIVERSE_REJECTED: proof-local level \u2026 solved as \u2026: native fact \u2026 le \u2026 does not hold for the solution"
+   ],
+   "roots_without_known_blocker_after_task": {
+    "classic": 553,
+    "modern": 330,
+    "protected": 834
+   },
+   "sole_blocker_roots": {
+    "classic": 409,
+    "modern": 323
+   },
+   "task": "T1 MathComp proof-local universe levels (PCanHasChoice, big_const_seq)",
+   "why": "Largest sole-blocker group; the two failures co-block a further 151 roots, so they are one task: solve proof-local levels so that native strict facts (Set < u) and le facts hold."
+  },
+  {
+   "defining_nodes": [
+    "mathcomp.boot.div.edivn_rec",
+    "mathcomp.boot.div.modn_rec"
+   ],
+   "example_paths": [
+    [
+     "prosa.analysis.definitions.hyperperiod.corresponding_job_in_hyperperiod",
+     "prosa.analysis.definitions.hyperperiod.hyperperiod",
+     "prosa.util.lcmseq.lcml",
+     "mathcomp.boot.div.lcmn",
+     "mathcomp.boot.div.divn",
+     "mathcomp.boot.div.edivn",
+     "mathcomp.boot.div.edivn_rec"
+    ]
+   ],
+   "kind": "missing translation rule (non-structural recursive call)",
+   "mechanisms": [
+    "UNSUPPORTED_FEATURE: recursive call on a term that is not a direct recursive constructor field"
+   ],
+   "roots_without_known_blocker_after_task": {
+    "classic": 257,
+    "modern": 157,
+    "protected": 408
+   },
+   "sole_blocker_roots": {
+    "classic": 257,
+    "modern": 157
+   },
+   "task": "T2 Recursion through subn in MathComp div (edivn_rec, modn_rec)",
+   "why": "divn/modn underlie hyperperiods and the Classic arithmetic; second-largest sole-blocker group, mostly Classic."
+  },
+  {
+   "defining_nodes": [
+    "mathcomp.boot.ssrnat.leqif"
+   ],
+   "example_paths": [
+    [
+     "prosa.analysis.abstract.IBF.task.arrives_after_beginning_of_busy_interval",
+     "prosa.analysis.abstract.IBF.task.completed_before_beginning_of_busy_interval",
+     "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_equiv_workload_eq_service",
+     "prosa.analysis.facts.model.service_of_jobs.all_jobs_have_completed_impl_workload_eq_service",
+     "prosa.analysis.facts.behavior.completion.service_at_most_cost",
+     "prosa.analysis.facts.behavior.service.not_scheduled_implies_no_service",
+     "prosa.analysis.facts.behavior.service.service_in_implies_scheduled_in",
+     "mathcomp.boot.bigop.sum_nat_eq0",
+     "mathcomp.boot.ssrnat.leqif"
+    ]
+   ],
+   "kind": "universe/instance (template inductive at quality Prop)",
+   "mechanisms": [
+    "UNSUPPORTED_FEATURE: template inductive \u2026 instantiated at quality Prop: parameter N receives a proposition (a Prop instance, or Rocq's Prop \u2264 Type cumulativity), which Lean cannot express without a lift"
+   ],
+   "roots_without_known_blocker_after_task": {
+    "classic": 0,
+    "modern": 111,
+    "protected": 107
+   },
+   "sole_blocker_roots": {
+    "classic": 0,
+    "modern": 111
+   },
+   "task": "T3 Template prod at Prop (leqif)",
+   "why": "Sole blocker of 111 modern roots through bigop sum lemmas (sum_nat_eq0)."
+  },
+  {
+   "declarations": [
+    "mathcomp.boot.fintype/isFinite.axioms_",
+    "Corelib.ssr.ssreflect_rw.nary_congruence"
+   ],
+   "example_paths": [],
+   "kind": "incorrect implementation / instance metadata",
+   "roots_without_known_blocker_after_task": null,
+   "sole_blocker_roots": null,
+   "task": "T4 Correctness: context-dependent kernel rejection of fintype isFinite.axioms_ and the nary_congruence R2B-P instance",
+   "why": "Both translate in some current runs and fail in others; more than 2000 in-scope roots reach each, so a request that combines them can fail after the other blockers are gone."
+  },
+  {
+   "declarations": [
+    "Corelib.Init.Wf.Acc_rect"
+   ],
+   "example_paths": [],
+   "kind": "incorrect metadata / resource limits",
+   "roots_without_known_blocker_after_task": null,
+   "sole_blocker_roots": null,
+   "task": "T5 Tooling limits on the Prosa closure: stale preflight rule (Acc_rect), exporter stack at the CLI default, preflight recursion",
+   "why": "Preflight rejects Acc_rect although M6 translates it (1022 roots reach it); the CLI exporter overflows its default stack on ELF/GEL results; preflight hits Python's recursion limit on one Classic example. No new translation rule."
+  }
+ ],
+ "resource_limits": {
+  "exporter_stack_at_cli_default": {
+   "category": "resource_limit",
+   "minimal_reproducers": [
+    {
+     "default_stack": "Stack overflow",
+     "root": "prosa.results.rta.ideal.gel.bounded_pi.total_workload_shorten_range"
+    },
+    {
+     "default_stack": "Stack overflow",
+     "root": "prosa.results.rta.ideal.elf.bounded_pi.bound_on_ep_workload"
+    }
+   ],
+   "note": "Rocq2Lean Export fails with `Stack overflow` at the default 8 MB stack; the census re-ran these parts with a 4 GB stack. Single large proofs export fine; the culprit inside the closure is not isolated. The roots of overflowing parts are an upper bound.",
+   "parts": {
+    "classic": 0,
+    "modern": 21
+   },
+   "roots_in_overflowing_parts": {
+    "classic": 0,
+    "modern": 87
+   }
+  },
+  "preflight_python_recursion": {
+   "category": "resource_limit",
+   "declarations": [
+    "prosa.classic.implementation.apa.bertogna_edf_example/ResponseTimeAnalysisEDF.schedulability_test_succeeds"
+   ],
+   "note": "tools/preflight.py exceeds Python's default recursion limit on these terms; the census classified them with a raised limit"
+  }
+ },
  "schema": "rocq2lean-prosa-inventory-blockers/1"
 }

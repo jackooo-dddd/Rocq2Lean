@@ -97,6 +97,7 @@ def main():
     export = {f: {"unquotable": merged[f]["unquotable"], "failed": merged[f]["failed"],
                   "stack_overflow_default": merged[f].get("stack_overflow_default", [])} for f in merged}
     (W / "extra_blockers.json").write_text(json.dumps({"implementation": impl, "declarations": out, "context_dependent": context, "export": export,
+                                                       "translated_in_current_runs": {n: sorted(v) for n, v in sorted(translated.items())},
                                                        "runs": runs}, indent=1, sort_keys=True) + "\n")
     for n, v in sorted(out.items()):
         print("blocker", n, [x["reason"] for x in v])

@@ -164,16 +164,22 @@ def main(build_graph=True):
     # known reasons: preflight's own, plus direct translation failures / instance rejections from
     # current runs (inventory/evidence_blockers.py), each with its category and evidence source
     extra = json.loads((W / "extra_blockers.json").read_text()) if (W / "extra_blockers.json").exists() else {"declarations": {}}
-    known = {}
+    known, contradicted = {}, {}
+    translated = extra.get("translated_in_current_runs", {})
     for n in names:
         ks = [(mechanism(r), category(r), "preflight") for r in status[n][1]] if status[n][0] != "CANDIDATE_SUPPORTED" else []
+        if ks and n in translated:
+            # preflight's static rule is contradicted by a current run that translated this very record
+            contradicted[n] = {"reasons": sorted(status[n][1]), "translated_in": translated[n]}
+            ks = []
         ks += [(x["reason"], x["category"], x["source"]) for x in extra["declarations"].get(n, [])]
         if ks:
             known[n] = ks
     # blocked-set reachability over SCCs (iterative Tarjan), as bitsets over known-blocked nodes
     ctx = {n: v for n, v in extra.get("context_dependent", {}).items() if n in idx}
-    blocked = [i for i, n in enumerate(names) if n in known or n in ctx]
+    blocked = [i for i, n in enumerate(names) if n in known or n in ctx or n in contradicted]
     ctx_mask = sum(1 << k for k, i in enumerate(blocked) if names[i] in ctx and names[i] not in known)
+    contra_mask = sum(1 << k for k, i in enumerate(blocked) if names[i] in contradicted and names[i] not in known)
     pf_mask = sum(1 << k for k, i in enumerate(blocked) if status[names[i]][0] != "CANDIDATE_SUPPORTED")
     bit = {i: 1 << k for k, i in enumerate(blocked)}
     N = len(names)
@@ -235,7 +241,7 @@ def main(build_graph=True):
         if mask is not None:
             r &= mask
         else:
-            r &= ~ctx_mask
+            r &= ~(ctx_mask | contra_mask)
         return [names[blocked[k]] for k in range(len(blocked)) if r >> k & 1]
 
     def path_to(src, targets):
@@ -264,7 +270,7 @@ def main(build_graph=True):
     for d in roots:
         n = d["id"]
         bs = blockers_of(n)
-        pf_reach = reach[comp[idx[n]]] & pf_mask
+        pf_reach = reach[comp[idx[n]]] & (pf_mask | contra_mask)
         pf_direct = status[n][0] != "CANDIDATE_SUPPORTED"
         root_rows[n] = {"preflight": "UNSUPPORTED_FEATURE" if pf_direct else "BLOCKED_DEPENDENCY" if pf_reach else "CANDIDATE_SUPPORTED",
                         "known": "KNOWN_BLOCKER_DIRECT" if n in known else "KNOWN_BLOCKER_DOWNSTREAM" if bs else "NO_KNOWN_BLOCKER",
@@ -330,7 +336,10 @@ def main(build_graph=True):
                                  for n, v in ctx.items()},
            "roots": root_rows, "groups": groups,
            "co_blocking_combinations": [{"mechanisms": list(k), "roots": v} for k, v in combos.most_common()],
-           "cross_family_conflicts": conflicts, "preflight_recursion_limited": recursion_limited, "missing_edge_targets": dict(missing),
+           "cross_family_conflicts": conflicts, "preflight_recursion_limited": recursion_limited,
+           "preflight_contradicted_by_evidence": {n: dict(v, roots_reaching={
+               f: sum(1 for r in root_rows if fam_of[r] == f and n in blockers_of(r, contra_mask)) for f in ("modern", "classic")})
+               for n, v in contradicted.items()}, "missing_edge_targets": dict(missing),
            "nodes": N, "edges": sum(map(len, adj)), "blocked_nodes": len(blocked), "sccs": c,
            "nontrivial_sccs": [sorted(names[v] for v in m) for m in order if len(m) > 1]}
     (W / "graph.json").write_text(json.dumps(res, sort_keys=True) + "\n")

@@ -83,6 +83,45 @@ def rts_reconciliation(decls):
     }
 
 
+PROBES = {"stack": [
+    {"root": "prosa.results.rta.ideal.gel.bounded_pi.total_workload_shorten_range", "default_stack": "Stack overflow"},
+    {"root": "prosa.results.rta.ideal.elf.bounded_pi.bound_on_ep_workload", "default_stack": "Stack overflow"}]}
+
+
+def recommendations(g, groups, fam_of, prot_of):
+    """The curated next tasks (inventory/recommendations.json), each checked against the blocker map:
+    every task names mechanisms or declarations with a real dependency path from an in-scope root."""
+    recs = json.loads((ROOT / "inventory" / "recommendations.json").read_text())
+    by_mech = {x["mechanism"]: x for x in groups}
+    ctx = g.get("context_dependent", {})
+    contra = g.get("preflight_contradicted_by_evidence", {})
+    out = []
+    for r in recs:
+        paths, roots = [], {"modern": 0, "classic": 0}
+        for m in r.get("mechanisms", []):
+            x = by_mech[m]                                   # KeyError: a task without a blocker
+            if not x["example_path"] or x["example_path"][0].split(".")[0] != "prosa":
+                raise SystemExit(f"recommendation {r['task']}: no in-scope path for {m}")
+            paths.append(x["example_path"])
+            for f in roots:
+                roots[f] += x["sole_blocker_roots"][f]
+        for n in r.get("declarations", []):
+            if n not in ctx and n not in contra:
+                raise SystemExit(f"recommendation {r['task']}: {n} is not a recorded issue")
+            reach = (ctx.get(n) or contra.get(n))["roots_reaching"]
+            if not sum(reach.values()):
+                raise SystemExit(f"recommendation {r['task']}: no in-scope root reaches {n}")
+        ms = set(r.get("mechanisms", []))
+        unlocked = {"modern": 0, "classic": 0, "protected": 0}
+        for rid, rr in g["roots"].items():
+            if rr["mechanisms"] and set(rr["mechanisms"]) <= ms:
+                unlocked[fam_of[rid]] += 1
+                unlocked["protected"] += prot_of[rid]
+        out.append(dict(r, example_paths=paths, sole_blocker_roots=roots if ms else None,
+                        roots_without_known_blocker_after_task=unlocked if ms else None))
+    return out
+
+
 def main():
     lock = json.loads((OUT / "scope.lock.json").read_text())
     files = list(csv.DictReader(open(OUT / "files.csv")))
@@ -125,7 +164,7 @@ def main():
     reach = Counter(f for d in decls for f in d.get("reached_by", []))
     both = [d for d in decls if len(d.get("reached_by", [])) == 2]
     closure = {"modern": merged["modern"]["declarations"], "classic": merged["classic"]["declarations"],
-               "combined_distinct": sum(1 for d in decls if d.get("reached_by")),
+               "combined_distinct": sum(1 for d in decls if d.get("reached_by") and d["role"] != "alias_reexport"),
                "shared_by_both": len(both),
                "classic_uses_modern_owned": sum(1 for d in decls if d["family"] == "modern" and "classic" in d.get("reached_by", [])),
                "external_by_library": count(ext, lambda d: d.get("library")),
@@ -197,6 +236,23 @@ def main():
                            "failed": {f: merged[f]["failed"] for f in FAMS},
                            "stack_overflow_at_default_stack": {f: merged[f].get("stack_overflow_default", []) for f in FAMS}},
                 "interface_conflicts": esum["interface_conflicts"],
+                "context_dependent": {n: {"category": v["failures"][0]["category"], "failures": [{k: f[k] for k in ("reason", "source", "translated_in")} for f in v["failures"]],
+                                          "detail": v["failures"][0]["detail"][:400], "roots_reaching": v["roots_reaching"]}
+                                      for n, v in g.get("context_dependent", {}).items()},
+                "preflight_contradicted_by_evidence": {n: dict(v, category="incorrect_implementation",
+                                                              note="preflight's static rule rejects a declaration that a current run translated (stale preflight metadata)")
+                                                       for n, v in g.get("preflight_contradicted_by_evidence", {}).items()},
+                "resource_limits": {
+                    "exporter_stack_at_cli_default": {
+                        "category": "resource_limit",
+                        "parts": {f: len(merged[f].get("stack_overflow_default", [])) for f in FAMS},
+                        "roots_in_overflowing_parts": {f: len({r for x in merged[f].get("stack_overflow_default", []) for r in x["roots"]}) for f in FAMS},
+                        "minimal_reproducers": PROBES.get("stack", []),
+                        "note": "Rocq2Lean Export fails with `Stack overflow` at the default 8 MB stack; the census re-ran these parts with a 4 GB stack. Single large proofs export fine; the culprit inside the closure is not isolated. The roots of overflowing parts are an upper bound."},
+                    "preflight_python_recursion": {"category": "resource_limit", "declarations": g.get("preflight_recursion_limited", []),
+                                                   "note": "tools/preflight.py exceeds Python's default recursion limit on these terms; the census classified them with a raised limit"}},
+                "recommended_tasks": recommendations(g, groups, {d["id"]: d["family"] for d in owned},
+                                                     {d["id"]: bool(d["protected_interface"]) for d in owned}),
                 "notes": ["A root's blockers are all known-blocked declarations its closure reaches; a mechanism's "
                           "sole_blocker_roots are the roots that no other known mechanism blocks.",
                           "Preflight is static: CANDIDATE_SUPPORTED is not a translation result. Translation-only "

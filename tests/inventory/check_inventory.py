@@ -160,6 +160,15 @@ def main():
         check(g["roots"]["prosa.a.c1"]["preflight"] == "CANDIDATE_SUPPORTED" and g["roots"]["prosa.a.c1"]["known"] == "KNOWN_BLOCKER_DOWNSTREAM",
               "graph: a known translation failure blocks its cycle partner without changing the preflight verdict")
         check(g["roots"]["prosa.a.c2"]["known"] == "KNOWN_BLOCKER_DIRECT", "graph: the failing declaration is a direct known blocker")
+        # a preflight reason contradicted by a current translation of the same record is not a known blocker
+        x = json.loads((w / "extra_blockers.json").read_text())
+        x["translated_in_current_runs"] = {"prosa.a.ax": ["synthetic"]}
+        (w / "extra_blockers.json").write_text(json.dumps(x))
+        graph.main(build_graph=False)
+        g = json.loads((w / "graph.json").read_text())
+        check(g["roots"]["prosa.a.thm"]["preflight"] == "BLOCKED_DEPENDENCY" and g["roots"]["prosa.a.thm"]["known"] == "NO_KNOWN_BLOCKER"
+              and "prosa.a.ax" in g["preflight_contradicted_by_evidence"],
+              "graph: a preflight blocker contradicted by translation evidence keeps the preflight verdict but is not a known blocker")
 
         # evidence grading: no promotion
         e = {"current_impl": True, "identical_source": True, "status": "TRANSLATED_AND_CHECKED", "as_root": False}

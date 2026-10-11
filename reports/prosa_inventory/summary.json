@@ -2,7 +2,7 @@
  "closure": {
   "classic": 5268,
   "classic_uses_modern_owned": 60,
-  "combined_distinct": 11101,
+  "combined_distinct": 10539,
   "cross_family_conflicts": 0,
   "external_by_library": {
    "coqeal": 98,
@@ -38,8 +38,8 @@
  },
  "combined": {
   "declarations": 4692,
-  "protected_interface": 4421,
-  "public_source": 4305
+  "protected_interface": 4426,
+  "public_source": 4310
  },
  "declarations": {
   "classic": {
@@ -60,30 +60,29 @@
     "unknown_opaque": 2
    },
    "by_role": {
-    "generated_hb": 33,
+    "generated_hb": 22,
     "generated_obligation": 26,
     "generated_projection": 52,
-    "generated_scheme": 10,
-    "public_source": 1859,
-    "source_local_helper": 1,
-    "unattributed": 4
+    "generated_scheme": 14,
+    "public_source": 1870,
+    "source_local_helper": 1
    },
    "declarations": 1985,
    "enumerated_entries": 2547,
    "export": {
     "exported": 1985
    },
-   "protected_interface": 1911,
+   "protected_interface": 1922,
    "public_by_nature": {
     "assumption": 4,
     "data_definition": 396,
-    "data_opaque": 19,
+    "data_opaque": 20,
     "inductive": 15,
-    "proof_opaque": 1226,
+    "proof_opaque": 1236,
     "type_former": 197,
     "unknown_opaque": 2
    },
-   "public_source": 1859,
+   "public_source": 1870,
    "relaxed_checking": 0,
    "universe_polymorphic": 0,
    "unknown_in_failed_files": "UNKNOWN"
@@ -104,30 +103,30 @@
     "type_former": 338
    },
    "by_role": {
+    "generated_anonymous_goal": 6,
     "generated_hb": 15,
     "generated_instance": 9,
     "generated_obligation": 19,
     "generated_projection": 64,
     "generated_scheme": 32,
-    "public_source": 2446,
-    "source_local_helper": 115,
-    "unattributed": 7
+    "public_source": 2440,
+    "source_local_helper": 122
    },
    "declarations": 2707,
    "enumerated_entries": 2707,
    "export": {
     "exported": 2707
    },
-   "protected_interface": 2510,
+   "protected_interface": 2504,
    "public_by_nature": {
-    "data_definition": 528,
+    "data_definition": 522,
     "data_opaque": 82,
     "inductive": 19,
     "proof_opaque": 1479,
     "proof_transparent": 1,
     "type_former": 337
    },
-   "public_source": 2446,
+   "public_source": 2440,
    "relaxed_checking": 0,
    "universe_polymorphic": 0,
    "unknown_in_failed_files": 0
@@ -157,12 +156,12 @@
   },
   "protected": {
    "classic": {
-    "NOT_ATTEMPTED": 1911
+    "NOT_ATTEMPTED": 1922
    },
    "modern": {
     "ATTEMPTED_NOT_TRANSLATED": 19,
     "KERNEL_CHECKED_UNVERIFIED": 11,
-    "NOT_ATTEMPTED": 2321,
+    "NOT_ATTEMPTED": 2315,
     "VERIFIED_AS_DEPENDENCY": 72,
     "VERIFIED_AS_ROOT": 87
    }
@@ -360,7 +359,7 @@
    },
    "files": 190,
    "import_only": 3,
-   "unattributed_declarations": 4,
+   "unattributed_declarations": 0,
    "unknown_counts": [
     "classic/analysis/global/jitter/bertogna_edf_comp.v",
     "classic/analysis/global/jitter/bertogna_edf_theory.v",
@@ -377,7 +376,7 @@
     "compiled": 14,
     "files": 14
    },
-   "unattributed_declarations": 7,
+   "unattributed_declarations": 0,
    "unknown_counts": []
   }
  },
@@ -403,13 +402,13 @@
    "known": {
     "classic": {
      "KNOWN_BLOCKER_DIRECT": 8,
-     "KNOWN_BLOCKER_DOWNSTREAM": 1162,
-     "NO_KNOWN_BLOCKER": 815
+     "KNOWN_BLOCKER_DOWNSTREAM": 1143,
+     "NO_KNOWN_BLOCKER": 834
     },
     "modern": {
      "KNOWN_BLOCKER_DIRECT": 8,
-     "KNOWN_BLOCKER_DOWNSTREAM": 1237,
-     "NO_KNOWN_BLOCKER": 1462
+     "KNOWN_BLOCKER_DOWNSTREAM": 978,
+     "NO_KNOWN_BLOCKER": 1721
     }
    },
    "preflight": {
@@ -433,23 +432,23 @@
    "known": {
     "classic": {
      "KNOWN_BLOCKER_DIRECT": 5,
-     "KNOWN_BLOCKER_DOWNSTREAM": 1150,
-     "NO_KNOWN_BLOCKER": 756
+     "KNOWN_BLOCKER_DOWNSTREAM": 1131,
+     "NO_KNOWN_BLOCKER": 786
     },
     "modern": {
-     "KNOWN_BLOCKER_DOWNSTREAM": 1154,
-     "NO_KNOWN_BLOCKER": 1356
+     "KNOWN_BLOCKER_DOWNSTREAM": 901,
+     "NO_KNOWN_BLOCKER": 1603
     }
    },
    "preflight": {
     "classic": {
      "BLOCKED_DEPENDENCY": 280,
-     "CANDIDATE_SUPPORTED": 1626,
+     "CANDIDATE_SUPPORTED": 1637,
      "UNSUPPORTED_FEATURE": 5
     },
     "modern": {
      "BLOCKED_DEPENDENCY": 719,
-     "CANDIDATE_SUPPORTED": 1791
+     "CANDIDATE_SUPPORTED": 1785
     }
    }
   }
@@ -458,7 +457,7 @@
   "classic_plan": {
    "files": 49,
    "files_compiled": 49,
-   "inventory_public_source": 514,
+   "inventory_public_source": 525,
    "rows": [
     {
      "build": "COMPILED",
@@ -499,7 +498,7 @@
      "build": "COMPILED",
      "enumerated": "13",
      "file": "classic/util/tactics.v",
-     "public_source": "2",
+     "public_source": "13",
      "rts_decls": 13
     },
     {
@@ -807,18 +806,12 @@
    "rts_declarations": 525
   },
   "modern": {
-   "inventory_public_not_in_rts": 7,
+   "inventory_public_not_in_rts": 1,
    "inventory_public_not_in_rts_by_keyword": {
-    "keyword Instance": 7
+    "keyword Canonical": 1
    },
    "inventory_public_not_in_rts_sample": [
-    "prosa.analysis.abstract.ideal.iw_instantiation.ideal_jlfp_interference",
-    "prosa.analysis.abstract.ideal.iw_instantiation.ideal_jlfp_interfering_workload",
-    "prosa.model.readiness.basic.basic_ready_instance",
-    "prosa.model.readiness.jitter.jitter_ready_instance",
-    "prosa.model.readiness.sequential.sequential_ready_instance",
-    "prosa.model.readiness.suspension.suspension_ready_instance",
-    "prosa.results.transfer_schedulability.paper_model.delayed_precedence_ready_instance"
+    "prosa.util.seqset.mem_set_predType"
    ],
    "missing_from_compiled_environment": [],
    "present_in_compiled_environment": 2439,

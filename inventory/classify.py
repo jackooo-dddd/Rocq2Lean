@@ -27,7 +27,7 @@ DECL_KW = ("Definition|Lemma|Theorem|Corollary|Fact|Remark|Proposition|Example|P
            "Equations|Hypothesis|Hypotheses|Axiom|Parameter|Conjecture|Variable|Variables")
 IDENT = r"[^\W\d][\w']*"                     # Rocq identifiers (Unicode letters, digits, _, ')
 SENT = re.compile(r"(?:#\[[^\]]*\]\s*)*(?:(Local|Global|Polymorphic|Monomorphic|Program|Private|Existing)\s+)*"
-                  rf"({DECL_KW})\s+({IDENT})")
+                  rf"({DECL_KW})\s+(?:Structure\s+)?({IDENT})")
 SCHEME = re.compile(r"^(.*)_(rect|ind|rec|sind)$")
 
 
@@ -115,7 +115,7 @@ def source_attribution(path):
     for m in re.finditer(r"(?m)^\s*" + SENT.pattern, txt):
         attrs = m.group(0)
         kw, name = m.group(2), m.group(3)
-        local = bool(re.search(r"#\[\s*local\s*\]|\bLocal\b", attrs)) or kw in ("Let", "Hypothesis", "Hypotheses", "Variable", "Variables")
+        local = bool(re.search(r"#\[[^\]]*\blocal\b[^\]]*\]|\bLocal\b", attrs)) or kw in ("Let", "Hypothesis", "Hypotheses", "Variable", "Variables")
         att.setdefault(name, (kw, local, line_of(m.start(3))))
         if kw in ("Record", "Structure", "Class"):
             sent = txt[m.end():sentence_end(txt, m.end())]
@@ -178,6 +178,8 @@ class Sorts:
 
 
 ROLE_PATTERNS = [
+    ("generated_anonymous_goal", re.compile(r"^Unnamed_thm\d*$")),
+    ("generated_scheme", re.compile(r"_beq$|^internal_\w+_dec_(bl|lb)$|_eq_dec$")),
     ("generated_obligation", re.compile(r"_obligation_\d+$|_obligations$|_equation(_\d+)?$|_graph(_\w+)?$")),
     ("generated_instance", re.compile(r"_instance_\d+$")),
 ]
@@ -189,10 +191,11 @@ def role_of(kind, q, mod, short, a, inds):
         return "generated_scheme"
     if a and a[0] == "field":
         return "generated_projection"
-    hb = "__" in short or short.startswith("HB_") or short == "axioms_" or ".Exports." in q or "/Exports." in q
-    if a and not hb:
+    # a name introduced by a source sentence is a source declaration (HB commands are not matched as
+    # sentences, so their output is never attributed); otherwise HB naming patterns
+    if a:
         return "source_local_helper" if a[1] else "public_source"
-    if hb:
+    if "__" in short or short.startswith("HB_") or short == "axioms_" or ".Exports." in q or "/Exports." in q:
         return "generated_hb"
     for role, pat in ROLE_PATTERNS:
         if pat.search(short):

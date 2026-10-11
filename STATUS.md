@@ -1,6 +1,25 @@
 # Status
 
-**Current milestone: M6 completion — `M6_FINISHTIME_COMPLETE`** (`reports/m6/M6_COMPLETION_REPORT.md`).
+**Current phase: Prosa-only scope locked; full inventory `INVENTORY_PARTIAL`**
+(`reports/prosa_inventory/FULL_INVENTORY_REPORT.md`, scope in `docs/SCOPE.md`).
+- Scope: Prosa v0.6 (`414e6676`, 357 files incl. 14 CoqEAL refinements) + Classic (ProsaBuddy
+  `f692cb74`, all 190 files), with the dependencies their declarations reach.
+- Census from the compiled environment: P 2,707 declarations (2,440 public; all 2,439 RTS names
+  present), C 1,985 declarations (1,870 public; the 49-file plan matches RTS's 525) + 562 module
+  aliases. Combined closure 10,539 declarations (5,847 external).
+- Gap: 3 Classic files do not compile without RTS's proof-script patch (not applied); their
+  declarations are `UNKNOWN`.
+- Coverage: 163 P declarations VERIFIED (87 as roots); 2,555 in-scope declarations have no known
+  blocker; 2,137 are blocked by 9 mechanisms, chiefly MathComp proof-local universe levels
+  (`PCanHasChoice`, `big_const_seq`) and recursion through `subn` (`edivn_rec`).
+- Next tasks T1–T5 in `reports/prosa_inventory/blockers.json` (`recommended_tasks`).
+
+Regenerate: `scripts/inventory-prosa`; tests: `scripts/test-inventory`. The translator is unchanged
+(implementation tree `819383b9…`).
+
+## M6 completion (summary)
+
+**Milestone: M6 completion — `M6_FINISHTIME_COMPLETE`** (`reports/m6/M6_COMPLETION_REPORT.md`).
 - All five FinishTime roots, including `completes_at_finish_time` (proved by `lia` in Prosa), are
   VERIFIED in one fresh run of the strict gate `scripts/m6-finishtime-gate`: closure 1717 (642
   definitions, 1005 theorems/opaque, 70 inductives), original proof terms, empty axiom sets,
