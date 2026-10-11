@@ -11,6 +11,22 @@ VERNAC COMMAND EXTEND Rocq2LeanExport CLASSIFIED AS QUERY STATE opaque_access
   }
 END
 
+(* Rocq2Lean ExportStatements "out.ndjson" root1 ...: statement-only export (proof bodies omitted, proof
+   subterms of kept terms extracted as obligations; docs/STATEMENT_ONLY_DESIGN.md). *)
+VERNAC COMMAND EXTEND Rocq2LeanExportStatements CLASSIFIED AS QUERY STATE opaque_access
+| [ "Rocq2Lean" "ExportStatements" string(file) ne_global_list(roots) ] -> {
+    fun ~opaque_access -> R2l_export.export_statements ~opaque_access file roots
+  }
+END
+
+(* Rocq2Lean CheckStatementPrepared "key": fresh-process re-derivation of one constant's statement
+   preparation (rewritten type and body, obligations), for the round trip. *)
+VERNAC COMMAND EXTEND Rocq2LeanCheckStatementPrepared CLASSIFIED AS QUERY STATE opaque_access
+| [ "Rocq2Lean" "CheckStatementPrepared" string(key) ] -> {
+    fun ~opaque_access -> R2l_export.check_statement_prepared ~opaque_access key
+  }
+END
+
 (* Rocq2Lean CheckRelation "a" "b" "lt|le|none|eq": native re-check of one universe fact. *)
 VERNAC COMMAND EXTEND Rocq2LeanCheckRelation CLASSIFIED AS QUERY
 | [ "Rocq2Lean" "CheckRelation" string(a) string(b) string(r) ] -> {

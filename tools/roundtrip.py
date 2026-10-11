@@ -275,6 +275,57 @@ def check_prepared(decls, out, loadpaths, requires):
     return {"results": results, "problems": problems}
 
 
+STATEMENT_STATES = ("statement_only", "obligation", "obligation_extraction_failed", "opaque_interface")
+
+
+def check_statement(decls, out, loadpaths, requires):
+    """Statement mode: a fresh Rocq process re-runs the statement preparation of each rewritten
+    constant alone (`Rocq2Lean CheckStatementPrepared`) and prints its rewritten type and body, its
+    state and its obligations; they must equal the IR. Obligation constants (they exist only in the
+    prepared environment) are checked through their parent definition."""
+    if not decls:
+        return {"results": {}, "problems": []}
+    plugin = Path(__file__).resolve().parent.parent / "rocq" / "exporter"
+    parents = [d for d in decls if d["body_state"] != "obligation"]
+    v = ["From Rocq2LeanExport Require Import Loader.", *[f"Require {r}." for r in requires]]
+    v += [f'Rocq2Lean CheckStatementPrepared "{d["name"]}".' for d in parents]
+    vfile = out / "RoundTripStatement.v"
+    vfile.write_text("\n".join(v) + "\n")
+    p = subprocess.run(["rocq", "compile", "-I", str(plugin / "src"), "-Q", str(plugin / "theories"), "Rocq2LeanExport",
+                        *loadpaths, str(vfile)], capture_output=True, text=True)
+    (out / "logs").mkdir(exist_ok=True)
+    (out / "logs" / "roundtrip_statement.log").write_text(p.stdout + p.stderr)
+    got = {}
+    for line in (p.stdout + p.stderr).splitlines():
+        if line.startswith("STATEMENT "):
+            _, key, js = line.split(" ", 2)
+            got[key] = json.loads(js)
+    by_name = {d["name"]: d for d in decls}
+    results, problems, confirmed = {}, [], set()
+    want_state = {"statement_only": "statement_only", "obligation_extraction_failed": "obligation_extraction_failed",
+                  "opaque_interface": "opaque_interface"}
+    for d in parents:
+        g = got.get(d["name"])
+        if g is None:
+            results[d["name"]] = "RT_STATEMENT_NOT_RECOMPUTED"
+            continue
+        ok = g["type"] == d["type"] and g["body"] == d["body"] and g["state"] == want_state.get(d["body_state"], "kept") \
+            and [o["name"] for o in g["obligations"]] == (d.get("obligations") or [])
+        for o in g["obligations"]:
+            od = by_name.get(o["name"])
+            if od is None or od["body_state"] != "obligation" or od["type"] != o["type"] or od["body"] is not None:
+                ok = False
+            else:
+                confirmed.add(o["name"])
+        results[d["name"]] = "RT_OK" if ok else "RT_STATEMENT_MISMATCH"
+    for d in decls:
+        if d["body_state"] == "obligation":
+            results[d["name"]] = "RT_OK" if d["name"] in confirmed else "RT_OBLIGATION_UNCONFIRMED"
+    if p.returncode != 0:
+        problems.append(f"statement-preparation process exited with {p.returncode}")
+    return {"results": results, "problems": problems}
+
+
 def check_universes(lines, out, loadpaths, requires):
     """Native re-check of the universe facts, and consistency of MetaRocq's universe record."""
     facts = lines[4]
@@ -344,10 +395,14 @@ def main(argv):
          "From Rocq2LeanRoundTrip Require Import RtEq.",
          *[f"Require {r}." for r in requires],
          "Import MonadNotation.", "Open Scope bs_scope.", ""]
-    prepared = [d for d in decls if d["kind"] == "constant"
+    # statement mode: declarations rewritten by the statement preparation (proof bodies omitted, proof
+    # subterms extracted as obligations) are re-derived natively by check_statement below
+    statement = [d for d in decls if d["kind"] == "constant" and
+                 (d["body_state"] in STATEMENT_STATES or d.get("obligations"))]
+    prepared = [d for d in decls if d["kind"] == "constant" and d not in statement
                 and any(((d.get("native") or {}).get("prepared") or {}).values())]
     for i, d in enumerate(decls):
-        if d in prepared:
+        if d in prepared or d in statement:
             continue       # sealed implementation / lowered body: checked by check_prepared below
         try:
             if d["kind"] == "constant":
@@ -387,13 +442,16 @@ def main(argv):
     pr = check_prepared(prepared, out, loadpaths, requires)
     results.update(pr["results"])
     problems += pr["problems"]
+    sr = check_statement(statement, out, loadpaths, requires)
+    results.update(sr["results"])
+    problems += sr["problems"]
     for d in decls:
         st = results.get(d["name"], "NOT_CHECKED")
         if st != "RT_OK":
             problems.append(f"{d['name']}: {st}")
     if p.returncode != 0:
         problems.append(f"round-trip Rocq process exited with {p.returncode}")
-    meta = check_native_meta(decls, out, loadpaths, requires)
+    meta = check_native_meta([d for d in decls if d.get("body_state") != "obligation"], out, loadpaths, requires)
     problems += meta["problems"]
     results["__native_metadata__"] = meta["status"]
     universe = check_universes(lines, out, loadpaths, requires)

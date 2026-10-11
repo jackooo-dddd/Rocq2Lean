@@ -92,6 +92,9 @@ structure DeclResult where
   deltaInlined : Array String := #[]
   /-- R3↓: accepted with references instantiated below shared levels (cumulativity tier). -/
   universeLowered : Bool := false
+  /-- Statement mode, pending validation: the leaf key of each hypothesis binder of the pending
+  artifact (`RocqPending.*`), in order. -/
+  pendingHyps : Array String := #[]
   /-- P0: the declaration belongs to the protected public interface bound in the contract. -/
   protectedIface : Bool := false
   /-- M6: a non-template inductive with plain universe parameters (`u_l` for each level, no R2F
@@ -101,6 +104,10 @@ structure DeclResult where
 
 def DeclResult.ok (r : DeclResult) : Bool :=
   r.status == "TRANSLATED_AND_CHECKED" || r.status == "BOOTSTRAP_RESOLVED"
+
+/-- An attempt that added its declaration: translated, or (statement mode) kernel-checked as a pending
+validation artifact; the retry ladders stop there. -/
+def DeclResult.accepted (r : DeclResult) : Bool := r.ok || r.status == "PENDING_KERNEL_CHECKED"
 
 /-- Source checking flags that the pilot accepts: everything checked, no impredicative Set, no UIP. -/
 def relaxedFlags (native : Json) : Array String := Id.run do
@@ -116,13 +123,21 @@ def relaxedFlags (native : Json) : Array String := Id.run do
 private def fromTransError (base : DeclResult) (e : TransError) : DeclResult :=
   { base with status := e.status, message := e.msg, path := e.path.reverse }
 
-/-- Dependencies that are missing or failed. -/
+/-- Statement mode: a declaration that exists only as a statement (its proof is a task for the Lean
+proving agent) or that needs such a proof. It is not available as a Lean term yet; whatever needs it
+is pending, not failed. -/
+def pendingStatus (s : String) : Bool :=
+  s == "STATEMENT_KERNEL_CHECKED" || s == "STATEMENT_PENDING_KERNEL_CHECKED" || s == "PENDING_KERNEL_CHECKED" ||
+  s == "OBLIGATIONS_PENDING"
+
+/-- Dependencies that are missing, failed, or pending on proofs (statement mode). -/
 private def blockedDeps (results : Std.HashMap String DeclResult) (deps : Array String) :
-    Array String × Array String :=
-  deps.foldl (init := (#[], #[])) fun (missing, failed) d =>
+    Array String × Array String × Array String :=
+  deps.foldl (init := (#[], #[], #[])) fun (missing, failed, pending) d =>
     match results[d]? with
-    | none => (missing.push d, failed)
-    | some r => if r.ok then (missing, failed) else (missing, failed.push d)
+    | none => (missing.push d, failed, pending)
+    | some r => if r.ok then (missing, failed, pending)
+      else if pendingStatus r.status then (missing, failed, pending.push d) else (missing, failed.push d, pending)
 
 /-- Global levels of an inductive block (single body): arity and constructor types, sorted. -/
 def globalsOfInd (i : IR.InductiveDecl) : Array String :=
@@ -154,16 +169,25 @@ def justifyResiduals (name : Name) (kind : String) (lps resid : List Name) (gty 
 
 def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
-    (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false) :
+    (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
+    (stmt : Bool := false) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
-  let (missing, failed) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
+  let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
   unless missing.isEmpty do
     return { base with status := "EXPORT_VALIDATION_FAILED",
                        message := s!"dependencies absent from the export: {missing}", blockedBy := missing }
   unless failed.isEmpty do
     return { base with status := "BLOCKED_DEPENDENCY", message := s!"failed dependencies: {failed}",
                        blockedBy := failed }
+  -- statement mode, pending validation: a declaration needing unproved prerequisites is translated with
+  -- them as hypotheses and kernel-checked as `RocqPending.<name>` (a validation artifact, never part of
+  -- the accepted library); a prerequisite that is itself not validated leaves it unvalidated
+  let unavailable := pending.filter fun d => !(genv.leafStmt.contains d || genv.pendingDefs.contains d || genv.inds.contains d)
+  unless unavailable.isEmpty do
+    return { base with status := "OBLIGATIONS_PENDING",
+                       message := s!"needs pending declarations not validated: {unavailable}", blockedBy := pending }
+  let hypsRef? : Option (IO.Ref (Array (MVarId × String))) ← if pending.isEmpty then pure none else some <$> IO.mkRef #[]
   let bad := relaxedFlags c.native
   unless bad.isEmpty do
     return { base with status := "AUDIT_REJECTED", message := s!"source declared with relaxed checking: {bad}" }
@@ -191,7 +215,7 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let inlinedA := inlined.toArray.qsort (· < ·)
     unless st == "transparent" || st == "opaque_present" || st == "sealed_implementation" do
       return { base with status := "EXPORT_VALIDATION_FAILED", message := s!"unknown body state '{st}'" }
-    let name := targetName c.name
+    let name := if hypsRef?.isSome then pendingTargetName c.name else targetName c.name
     if (← getEnv).contains name then
       return { base with status := "TRANSLATION_FAILED", message := s!"target name {name} already in use" }
     -- R2S: every own global level (type and body) starts as a level metavariable; references to a
@@ -212,10 +236,10 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
       let v ← mkFreshLevelMVar
       gl := gl.insert m v
       ownMVars := ownMVars.push (m, v)
-    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower with
+    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower with
+    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? with
       | .ok e => pure e
       | .error e => return fromTransError base e
     -- after unification: every own level still free that occurs in the (solved) type becomes a
@@ -378,6 +402,13 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     -- P0 interface protection: a protected public declaration keeps its source statement. A
     -- statement specialization (R2B-S lowers the result sort; R2B-P fixes a level of the type) is
     -- refused for it, as root or as dependency; there is no approved representation change.
+    -- statement mode: every level of a statement definition is a level of the statement (its value);
+    -- no relaxation may specialize it (R2B-P / R2B-S would narrow the theorem statement)
+    -- (the declared sort of an opaque-data interface type `Rocq.<name>.type` is not a statement: its
+    -- result sort may follow the external definitions' R2B-S lowering, as any non-protected definition)
+    if stmt && !(r2bp.isEmpty && (sortLv.isEmpty || c.name.endsWith ".type")) then
+      return { base with status := "INTERFACE_REJECTED",
+                         message := s!"statement specialization refused (R2B-P levels {r2bp.map (·.1)}, R2B-S levels {sortLv.map (·.1)})" }
     if genv.protectedNames.contains c.name then
       let stmt := (r2bp.map (·.1)).filter (globalsOf c.type).contains
       unless sortLv.isEmpty && stmt.isEmpty do
@@ -394,6 +425,11 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     -- a sealed-module implementation (e.g. HB.lock) is translated as a transparent definition: its
     -- implementation's unlock lemma is `erefl` and needs the δ-rule (the target gains a definitional
     -- unfolding that the sealed source hides; every source proof still checks)
+    -- pending validation: the hypotheses become the artifact's leading binders
+    let hyps ← match hypsRef? with | some ref => ref.get | none => pure #[]
+    let (ty, val, gty, gval) ← if hyps.isEmpty then pure (ty, val, gty, gval) else
+      pure (← abstractHyps hyps ty false, ← abstractHyps hyps val true,
+            ← abstractHyps hyps gty false, ← abstractHyps hyps gval true)
     let kind ← if c.bodyState == "transparent" || c.bodyState == "sealed_implementation" then pure "def"
       else if ← isProp ty then pure "theorem" else pure "opaque"
     let base := { base with target := some name, targetKind := kind, rule := s!"constant/{c.bodyState}" }
@@ -402,7 +438,8 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let base := if resid.isEmpty then base
       else { base with residualParams := resid, residualDefaults := rdefaults, residualType := gty, residualValue := gval }
     match ← addChecked (← mkConstDecl name kind lparams ty val) with
-    | .accepted => return { base with status := "TRANSLATED_AND_CHECKED", targetType := ty, targetValue := val,
+    | .accepted => return { base with status := if hypsRef?.isSome then "PENDING_KERNEL_CHECKED" else "TRANSLATED_AND_CHECKED",
+                                      pendingHyps := hyps.map (·.2), targetType := ty, targetValue := val,
                                       levelParams := lparams, paramLevels := globals, polyParams := polyNames.length,
                                       factReduced := factReduce, implicitLevels, levelInterp,
                                       admittingLevels := admitLv, cumulativity := cumul, r2bpLevels := r2bp, sortLevels := sortLv,
@@ -456,11 +493,18 @@ def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i 
     (plain : Bool := false) :
     MetaM (DeclResult × Option IndTarget) := do
   let base : DeclResult := { source := i.name, kind := "inductive", status := "" }
-  let (missing, failed) := blockedDeps results (i.typeDeps.filter (· != i.name))
+  let (missing, failed, pending) := blockedDeps results (i.typeDeps.filter (· != i.name))
   unless missing.isEmpty && failed.isEmpty do
     return ({ base with status := if missing.isEmpty then "BLOCKED_DEPENDENCY" else "EXPORT_VALIDATION_FAILED",
                         message := s!"dependencies missing {missing} / failed {failed}",
                         blockedBy := missing ++ failed }, none)
+  -- statement mode, pending validation (as for constants): the block is translated with its unproved
+  -- prerequisites as leading hypothesis parameters, as `RocqPending.<name>`
+  let unavailable := pending.filter fun d => !(genv.leafStmt.contains d || genv.pendingDefs.contains d || genv.inds.contains d)
+  unless unavailable.isEmpty do
+    return ({ base with status := "OBLIGATIONS_PENDING",
+                        message := s!"needs pending declarations not validated: {unavailable}", blockedBy := pending }, none)
+  let hypsRef? : Option (IO.Ref (Array (MVarId × String))) ← if pending.isEmpty then pure none else some <$> IO.mkRef #[]
   let bad := relaxedFlags i.native
   unless bad.isEmpty do
     return ({ base with status := "AUDIT_REJECTED", message := s!"source declared with relaxed checking: {bad}" }, none)
@@ -471,11 +515,12 @@ def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i 
       return ({ base with status := "BOOTSTRAP_RESOLVED", rule := rule.id, target := rule.target.types[0]?,
                           targetKind := "inductive (bootstrap)" }, some rule.target)
     | .error msg => return ({ base with status := "AUDIT_REJECTED", rule := rule.id, message := msg }, none)
-  | none => generateInductive base i
+  | none => generateInductive base i hypsRef?
 
 where
   /-- M3a: emit a fresh Lean inductive for a single-body, monomorphic, non-coinductive block. -/
-  generateInductive (base : DeclResult) (i : IR.InductiveDecl) : MetaM (DeclResult × Option IndTarget) := do
+  generateInductive (base : DeclResult) (i : IR.InductiveDecl) (hypsRef? : Option (IO.Ref (Array (MVarId × String)))) :
+      MetaM (DeclResult × Option IndTarget) := do
     let unsupported (msg : String) := ({ base with status := "UNSUPPORTED_FEATURE", message := msg }, none)
     if let .polymorphic .. := i.universes then return unsupported "universe-polymorphic inductive"
     if i.finite == "CoFinite" then return unsupported "coinductive type"
@@ -490,6 +535,8 @@ where
     if (← getEnv).contains (inductiveNames i.name body.name #[]).1 then
       return ({ base with status := "TRANSLATION_FAILED", message := "target name already in use" }, none)
     let (tname, cnames) := inductiveNames i.name body.name (body.ctors.map (·.name))
+    let pend (n : Name) : Name := if hypsRef?.isSome then n.replacePrefix `Rocq `RocqPending else n
+    let (tname, cnames) := (pend tname, cnames.map pend)
     -- Source global levels of the declaration become universe parameters (R2T); for a template
     -- inductive they must be exactly its template levels, each bound by one parameter sort (R5).
     let isTemplate := (i.native.getObjValAs? Bool "template").toOption == some true
@@ -519,7 +566,7 @@ where
       let v ← mkFreshLevelMVar
       gl := gl.insert m v
       extraMVars := extraMVars.push (m, v)
-    let ty ← match ← runTrans genv (withPath "arity" (transClosed body.type)) gl (lowerShared := lower) with
+    let ty ← match ← runTrans genv (withPath "arity" (transClosed body.type)) gl (lowerShared := lower) (hyps := hypsRef?) with
       | .ok e => pure e
       | .error e => return (fromTransError base e, none)
     -- constructor types are translated and type-checked against a local `self` of the arity type
@@ -528,7 +575,7 @@ where
       let mut out : Array Constructor := #[]
       for c in body.ctors, cn in cnames do
         let r ← (withReader (fun ctx => { ctx with locals := #[sv] })
-                   (withPath s!"ctor {c.name}" (do return eraseBinderScopes (← instLevelMVars (← trans c.type))))).run { genv, globalLevels := gl, lowerShared := lower } |>.run
+                   (withPath s!"ctor {c.name}" (do return eraseBinderScopes (← instLevelMVars (← trans c.type))))).run { genv, globalLevels := gl, lowerShared := lower, hyps := hypsRef? } |>.run
         match r with
         | .ok cty =>
           -- R3″/R5S: unify level metavariables of the block by type-checking the constructor type
@@ -556,11 +603,16 @@ where
       unless freeExtra.contains m do sol := sol.insert m s.normalize
     let globals := (globals ++ freeExtra).qsort (· < ·)
     let lparams := globals.toList.map levelParamName
-    let self := mkConst tname (lparams.map Level.param)
+    -- pending validation: the hypotheses created so far are the block's leading parameters; the
+    -- block refers to itself applied to them
+    let hyps ← match hypsRef? with | some ref => ref.get | none => pure #[]
+    let self := mkAppN (mkConst tname (lparams.map Level.param)) (hyps.map fun (m, _) => mkMVar m)
     let mut ctors : Array Constructor := #[]
     for c in rawCtors do
       let cty ← instLevelMVars (c.type.replaceFVar (mkFVar selfId) self)
-      if cty.hasFVar || cty.hasExprMVar then
+      let onlyHyps ← if hyps.isEmpty then pure false else
+        pure ((← getMVars cty).all fun m => hyps.any (·.1 == m))
+      if cty.hasFVar || (cty.hasExprMVar && !onlyHyps) then
         return ({ base with status := "TRANSLATION_FAILED", message := s!"constructor {c.name} has escaping free or meta variables" }, none)
       ctors := ctors.push { c with type := cty }
     let ty ← instLevelMVars ty
@@ -628,6 +680,13 @@ where
     if nparamsRec < i.npars && (isRecord || isTemplate) then
       return ({ base with status := "UNSUPPORTED_FEATURE",
                           message := "non-uniform parameters of a primitive record or template inductive" }, none)
+    -- pending validation: the hypotheses become the first parameters (the leaves used after the arity
+    -- and constructors were translated must all be among them)
+    let hyps ← match hypsRef? with | some ref => ref.get | none => pure #[]
+    let ty ← if hyps.isEmpty then pure ty else abstractHyps hyps ty false
+    unless hyps.isEmpty do
+      ctors ← ctors.mapM fun c => do return { c with type := ← abstractHyps hyps c.type false }
+    let nparamsRec := nparamsRec + hyps.size
     let decl := Declaration.inductDecl lparams nparamsRec [{ name := tname, type := ty, ctors := ctors.toList }] false
     let base := { base with target := some tname, targetKind := "inductive",
                             rule := if isTemplate then "inductive/generated-template"
@@ -639,8 +698,9 @@ where
                                templateParamPos := templateParams.map (·.2), isStructure := isRecord,
                                templateLevelIdx := (List.range globals.size).toArray.filter
                                  (fun k => templateParams.any (·.1 == globals[k]!)),
-                               nonUniform := i.npars - nparamsRec }
-      return ({ base with status := "TRANSLATED_AND_CHECKED", targetType := ty, numParams := nparamsRec, primitiveRecord := isRecord,
+                               nonUniform := i.npars - (nparamsRec - hyps.size), pendingHyps := hyps.map (·.2) }
+      return ({ base with status := if hyps.isEmpty then "TRANSLATED_AND_CHECKED" else "PENDING_KERNEL_CHECKED",
+                          pendingHyps := hyps.map (·.2), targetType := ty, numParams := nparamsRec, primitiveRecord := isRecord,
                           universeLowered := lower, plainLevels := plain,
                           levelParams := lparams, paramLevels := globals, isTemplate, templateParams,
                           implicitLevels := extraOwn.filter (!(globalsOfInd i).contains ·),
@@ -686,7 +746,32 @@ where
   translateDecl (genv0 : GEnv) (results : Std.HashMap String DeclResult) (d : IR.Decl) : MetaM (DeclResult × GEnv) := do
     let mut genv := genv0
     let r ← match d with
-      | .constant c =>
+      | .constant c0 =>
+        -- Statement mode (docs/STATEMENT_ONLY_DESIGN.md): a proof-valued constant or an extracted
+        -- obligation is translated as its statement, `def Rocq.<name>.statement : Prop := ⟦T⟧`, by the
+        -- same path as any definition, with every universe level of the statement an own type level
+        -- (a parameter: a statement is never specialized by defaulting a level). The constant itself
+        -- gets no Lean term: what needs it is pending (its proof is a task for the proving agent).
+        if c0.bodyState == "obligation_extraction_failed" then
+          return ({ source := c0.name, kind := "constant", status := "OBLIGATION_EXTRACTION_REFUSED",
+                    message := "Rocq's kernel did not accept the definition with its proof subterms extracted (e.g. computation that eliminates a proof); exported without body" }, genv)
+        let isStmt := c0.bodyState == "statement_only" || c0.bodyState == "obligation" || c0.bodyState == "opaque_interface"
+        -- opaque data (Qed, type not a proposition): Rocq never unfolds it; its type is kernel-checked as
+        -- `def Rocq.<name>.type : Sort u := ⟦T⟧` (the exporter's native sort of `T`) and providing a value
+        -- is the task
+        let sortT? : Option IR.Term := if c0.bodyState == "opaque_interface" then
+            match (src.rawDecls[c0.name]?).bind (fun j => (j.getObjVal? "type_sort").toOption) with
+            | some j => (IR.parseTerm j).toOption
+            | none => none
+          else none
+        if c0.bodyState == "opaque_interface" && sortT?.isNone then
+          return ({ source := c0.name, kind := "constant", status := "EXPORT_VALIDATION_FAILED",
+                    message := "opaque data without its native sort" }, genv)
+        let c : IR.ConstantDecl := if isStmt then
+            { c0 with name := c0.name ++ (if c0.bodyState == "opaque_interface" then ".type" else ".statement"),
+                      type := sortT?.getD (.sort .prop), body := some c0.type,
+                      bodyState := "transparent", typeDeps := #[], bodyDeps := c0.typeDeps }
+          else c0
         -- R8 first when the type has motive levels: the sort-level form is strictly more general
         -- (u := v+1 gives the R2 form), so it is kept whenever the kernel accepts it
         -- R3G discovery pass (adds nothing): implicit levels of the type, then every attempt below with
@@ -694,19 +779,19 @@ where
         -- (The discovery pass for constants, `discover := true`, is not used yet: implicit levels
         -- relate to other references only through `max` arguments that Lean's level unifier cannot
         -- invert, which made more general constants break their own dependants. In-place R3G below.)
-        let exts : List (Array String) := [#[]]
+        let exts : List (Array String) := [if isStmt then (globalsOf c0.type).toArray.qsort (· < ·) else #[]]
         let mut r : DeclResult := default
         let mut first : Option DeclResult := none
         let mut lastTier : Option DeclResult := none
         -- P0: a tier that would only succeed by specializing a protected statement
         let mut iface : Option DeclResult := none
         for eo in exts do
-          let r0 ← if (motiveLevels c.type).isEmpty then processConstant genv results c (extraOwn := eo) else do
-              let a ← processConstant genv results c (admit := true) (extraOwn := eo)
-              if a.ok then pure a else processConstant genv results c (extraOwn := eo)
+          let r0 ← if (motiveLevels c.type).isEmpty then processConstant genv results c (stmt := isStmt) (extraOwn := eo) else do
+              let a ← processConstant genv results c (stmt := isStmt) (admit := true) (extraOwn := eo)
+              if a.accepted then pure a else processConstant genv results c (stmt := isStmt) (extraOwn := eo)
           first := some r0          -- the diagnosis kept is that of the last (earlier-behaviour) attempt
           r := r0
-          if r.ok then break
+          if r.accepted then break
           -- Universe retry ladder (docs/UNIVERSE_TRANSLATION.md): a kernel or universe rejection under
           -- R2 is retried with fact-reduced universes (R2⁺), then with the fact interpretation of the
           -- own levels (R2F-c), then both; the first accepted translation is kept.
@@ -718,23 +803,23 @@ where
                                      (false, false, true, false), (true, false, true, false), (false, true, true, false),
                                      (true, true, true, false), (false, false, true, true), (true, false, true, true),
                                      (false, true, true, true), (true, true, true, true)] do
-              let r' ← processConstant genv results c (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo)
+              let r' ← processConstant genv results c (stmt := isStmt) (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo)
               lastTier := some r'
               if r'.status == "INTERFACE_REJECTED" then iface := some r'
-              if r'.ok then
+              if r'.accepted then
                 r := r'
                 break
             -- M6 last: δ-inline Set-motive constants (Prop ≤ Set at a family argument), then retry
             if !r.ok then
               for (fr, it, cu, lo) in [(false, false, false, false), (true, true, true, true)] do
-                let r' ← processConstant genv results c (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo)
+                let r' ← processConstant genv results c (stmt := isStmt) (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo)
                   (lower := lo) (delta := true)
                 if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
                 if r'.status == "INTERFACE_REJECTED" then iface := some r'
-                if r'.ok then
+                if r'.accepted then
                   r := r'
                   break
-          if r.ok then break
+          if r.accepted then break
         -- a declaration that no attempt accepts keeps the diagnosis of the plain attempt without
         -- implicit levels (the earlier behaviour)
         if !r.ok then
@@ -747,6 +832,20 @@ where
           -- the refusal is the reason when a tier was refused only for interface protection
           if let some i := iface then
             r := { i with message := s!"{i.message} [plain attempt: {r.status}: {r.message.take 400}]" }
+        if isStmt then
+          let st := if r.status == "TRANSLATED_AND_CHECKED" then "STATEMENT_KERNEL_CHECKED"
+            else if r.status == "PENDING_KERNEL_CHECKED" then "STATEMENT_PENDING_KERNEL_CHECKED" else r.status
+          r := { r with source := c0.name, status := st,
+                        targetKind := if st != r.status then "statement" else r.targetKind }
+        -- statement mode: register proof tasks (statements) and pending artifacts for later references
+        if r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" || r.status == "PENDING_KERNEL_CHECKED" then
+          if let some n := r.target then
+            if r.status == "PENDING_KERNEL_CHECKED" then
+              genv := { genv with pendingDefs := genv.pendingDefs.insert c0.name (n, r.pendingHyps) }
+            else
+              genv := { genv with leafStmt := genv.leafStmt.insert c0.name (n, r.pendingHyps) }
+            unless r.levelParams.isEmpty do
+              genv := { genv with constGlobals := genv.constGlobals.insert n r.paramLevels }
         if r.ok then if let some n := r.target then
           genv := { genv with consts := genv.consts.insert c.name n,
                               constLevels := genv.constLevels.insert c.name r.levelParams.length,
@@ -767,22 +866,22 @@ where
         -- C ≥ R from IDmorph), then with the R2F interpretation
         let run1 (eo : Array String) (lower : Bool) : MetaM (DeclResult × Option IndTarget) := do
           let (a, ta) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (plain := true)
-          if a.ok then return (a, ta)
+          if a.accepted then return (a, ta)
           processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower)
         let (r, t?) ← do
           let (d, _) ← processInductive genv results i src.rawDecls[i.name]! (discover := true)
           if d.status == "DISCOVERED" && !d.implicitLevels.isEmpty then
             let (r1, t1) ← run1 d.implicitLevels false
-            if r1.ok then pure (r1, t1) else run1 #[] false
+            if r1.accepted then pure (r1, t1) else run1 #[] false
           else run1 #[] false
         -- R3↓ last (reported): references in the block instantiated below its shared levels
-        let (r, t?) ← if r.ok || !(r.status == "KERNEL_REJECTED" || r.status == "UNIVERSE_REJECTED") then pure (r, t?) else do
+        let (r, t?) ← if r.accepted || !(r.status == "KERNEL_REJECTED" || r.status == "UNIVERSE_REJECTED") then pure (r, t?) else do
           let (r2, t2) ← run1 #[] true
-          if r2.ok then pure (r2, t2) else pure ({ r with message := s!"{r.message} [R3↓ attempt: {r2.status}: {r2.message}]" }, t?)
+          if r2.accepted then pure (r2, t2) else pure ({ r with message := s!"{r.message} [R3↓ attempt: {r2.status}: {r2.message}]" }, t?)
         if let some t := t? then genv := { genv with inds := genv.inds.insert i.name t }
         -- Non-template inductives with generalized global levels: references obey R3 like
         -- generalized constants (the type and its constructors carry the same parameters).
-        if r.ok && !r.levelParams.isEmpty then
+        if (r.ok || r.status == "PENDING_KERNEL_CHECKED") && !r.levelParams.isEmpty then
           if let some tn := r.target then
             for n in #[tn] ++ r.targetCtors.map (·.1) do
               genv := { genv with constGlobals := genv.constGlobals.insert n r.paramLevels }
@@ -828,7 +927,8 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>
       Json.mkObj [("level", m), ("sigma", levelJson l), ("in_type", Json.bool (r.r2bpInType.contains m))])),
     ("sort_lowered_levels", Json.arr (r.sortLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
-    ("protected", Json.bool r.protectedIface)]
+    ("protected", Json.bool r.protectedIface),
+    ("pending_hypotheses", Json.arr (r.pendingHyps.map Json.str))]
   let rest : List (String × Json) := [
     ("source", r.source), ("kind", r.kind), ("status", r.status), ("rule", r.rule),
     ("target", match r.target with | some n => Json.str n.toString | none => .null),

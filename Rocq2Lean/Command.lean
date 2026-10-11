@@ -111,10 +111,14 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
     ("bootstrap_resolved", count (·.status == "BOOTSTRAP_RESOLVED")),
     ("generated_helpers", 0),
     ("not_ok", count (!·.ok))]
-  let bad := roots.filter (·.2.2 != "TRANSLATED_AND_CHECKED")
+  -- statement mode: a root translated as its statement, or pending on proofs, is not a failure
+  let pendingSt (s : String) := s == "OBLIGATIONS_PENDING" || s == "PENDING_KERNEL_CHECKED" ||
+    s == "STATEMENT_PENDING_KERNEL_CHECKED"
+  let bad := roots.filter fun r => !(r.2.2 == "TRANSLATED_AND_CHECKED" || r.2.2 == "STATEMENT_KERNEL_CHECKED" || pendingSt r.2.2)
+  let pendingRoots := roots.filter (pendingSt ·.2.2)
   let report := Json.mkObj [
     ("report", "rocq2lean-translation/0.3"),
-    ("status", if bad.isEmpty then "OK" else "ROOTS_NOT_TRANSLATED"),
+    ("status", if !bad.isEmpty then "ROOTS_NOT_TRANSLATED" else if pendingRoots.isEmpty then "OK" else "OK_OBLIGATIONS_PENDING"),
     ("lean_version", Lean.versionString),
     ("source", srcPath),
     ("input_sha256", gotSha),

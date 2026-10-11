@@ -311,16 +311,16 @@ def check_request(raw):
     return roots
 
 
-def export(manifest, raw_roots, out, log_name="export.log"):
+def export(manifest, raw_roots, out, log_name="export.log", mode="proof"):
     roots = check_request(raw_roots)
     out = Path(out).resolve()
     with RunLock(out):
         invalidate(out, "export")          # before anything else: no earlier result survives
         doctor(write_report=False, quiet=True)
-        return _export(manifest, roots, list(raw_roots), out, log_name)
+        return _export(manifest, roots, list(raw_roots), out, log_name, mode)
 
 
-def _export(manifest, roots, raw_roots, out, log_name):
+def _export(manifest, roots, raw_roots, out, log_name, mode="proof"):
     sys.path.insert(0, str(ROOT / "tools"))
     import contract as contract_mod
     m, mpath, lp, files = load_manifest(manifest)
@@ -336,7 +336,10 @@ def _export(manifest, roots, raw_roots, out, log_name):
     ir = out / "source.ndjson"
     lines = ["From Rocq2LeanExport Require Import Loader."]
     lines += [f"Require {r}." for r in m.get("requires", [])]
-    lines.append(f'Rocq2Lean Export "{ir}" {" ".join(roots)}.')
+    # statement mode (docs/STATEMENT_ONLY_DESIGN.md): proof bodies omitted, proof subterms of kept terms
+    # extracted as obligations by Rocq's kernel; the proof-preserving export is unchanged
+    cmd = {"proof": "Export", "statement": "ExportStatements"}[mode]
+    lines.append(f'Rocq2Lean {cmd} "{ir}" {" ".join(roots)}.')
     export_v.write_text("\n".join(lines) + "\n")
     p = run(["rocq", "compile", "-I", str(EXPORTER / "src"), "-Q", str(EXPORTER / "theories"), "Rocq2LeanExport",
              *lp, str(export_v)], log, env=oenv, check=False)
@@ -381,6 +384,7 @@ def _export(manifest, roots, raw_roots, out, log_name):
     atomic_write_json(out / "contract.json", con)
     snapshot = {
         "schema": "rocq2lean-source-snapshot/3",
+        "mode": mode,
         "run_id": con["run_id"],
         "manifest": str(mpath), "manifest_sha256": sha256_file(mpath),
         "request": roots,
@@ -776,6 +780,7 @@ def main(argv=None):
         s.add_argument("--roots", required=True)
         if name == "export":
             s.add_argument("--out", required=True)
+            s.add_argument("--mode", choices=["proof", "statement"], default="proof")
     s = sub.add_parser("translate")
     s.add_argument("--input", required=True)
     s.add_argument("--out", required=True)
@@ -790,7 +795,7 @@ def main(argv=None):
         elif a.cmd == "inspect":
             inspect(a.manifest, a.roots.split(","))
         elif a.cmd == "export":
-            print(export(a.manifest, a.roots.split(","), a.out))
+            print(export(a.manifest, a.roots.split(","), a.out, mode=a.mode))
         elif a.cmd == "translate":
             translate(a.input, a.out)
         elif a.cmd == "verify":

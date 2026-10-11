@@ -56,6 +56,9 @@ structure IndTarget where
   /-- M6: number of non-uniform source parameters (after the uniform ones); in Lean they are the
   first indices of the inductive (Rocq's case binds them as parameters: convoy lowering). -/
   nonUniform : Nat := 0
+  /-- Statement mode: a pending validation artifact (`RocqPending.*`) whose first parameters are
+  hypotheses for these unproved leaves (in order). -/
+  pendingHyps : Array String := #[]
   deriving Inhabited, Repr
 
 structure GEnv where
@@ -88,6 +91,13 @@ structure GEnv where
   these declarations keep their full source statement — no R2B-S result-sort lowering and no R2B-P
   specialization of a statement level — whether they are requested roots or dependencies. -/
   protectedNames : Std.HashSet String := {}
+  /-- Statement mode: constants available only as statements (theorems, extracted obligations, opaque
+  data: their proof or value is a task for the Lean proving agent): source key ↦ (statement constant,
+  the hypotheses of that constant when it is itself a pending artifact, as leaf keys). -/
+  leafStmt : Std.HashMap String (Name × Array String) := {}
+  /-- Statement mode: definitions validated as pending artifacts (`RocqPending.*`, abstracted over the
+  unproved prerequisites they need): source key ↦ (artifact, its hypotheses as leaf keys, in order). -/
+  pendingDefs : Std.HashMap String (Name × Array String) := {}
   deriving Inhabited
 
 /-- M6 accessibility lowering (`transFixAcc`): the recursive calls of the fixpoint being lowered.
@@ -159,6 +169,10 @@ structure TCtx where
   source `rel i` denotes `locals[locals.size - 1 - i]`. -/
   locals : Array Expr := #[]
   path : List String := []
+  /-- Statement mode, pending validation: the hypothesis metavariables created for unproved
+  prerequisites (synthetic opaque, never assigned by unification), with the leaf key each stands for;
+  abstracted into binders before the kernel check. `none` outside pending validation. -/
+  hyps : Option (IO.Ref (Array (MVarId × String))) := none
 
 abbrev TransM := ReaderT TCtx (ExceptT TransError MetaM)
 
@@ -180,6 +194,12 @@ identifier (see `docs/IR_SPEC.md`, "Keys"). -/
 def targetName (key : String) : Name :=
   let comps := (key.splitOn "/").flatMap (·.splitOn ".")
   comps.foldl Name.str `Rocq
+
+/-- Statement mode: the pending validation artifact of a declaration (never part of the accepted
+library `Rocq.*`). -/
+def pendingTargetName (key : String) : Name :=
+  let comps := (key.splitOn "/").flatMap (·.splitOn ".")
+  comps.foldl Name.str `RocqPending
 
 /-- Module part of a key (everything before the final `.ident`). -/
 def keyModule (key : String) : String :=
@@ -298,6 +318,50 @@ def sharedOrFreshLevels (globals : Array String) : TransM (List Level) := do
   globals.toList.mapM fun l => match own[l]? with
     | some v => pure v
     | none => liftMeta mkFreshLevelMVar
+
+/-- Universe arguments of a reference to an accepted or pending target `n` (its source levels shared
+with the referring declaration, otherwise fresh). -/
+def levelsOf (n : Name) : TransM (List Level) := do
+  match (← read).genv.constGlobals[n]? with
+  | some gs => sharedOrFreshLevels gs
+  | none => pure []
+
+/-- Pending validation: the hypothesis standing for leaf `l` in the declaration being translated —
+one shared hypothesis per leaf (a data leaf such as an opaque interface must be the same term
+everywhere it occurs), created at its first use with type `d`. -/
+def hypFor (ref : IO.Ref (Array (MVarId × String))) (l : String) (d : Expr) : TransM Expr := do
+  match (← ref.get).find? (·.2 == l) with
+  | some (m, _) =>
+    unless ← liftMeta (isDefEq (← m.getType) d) do
+      failT "TRANSLATION_FAILED" s!"pending prerequisite {l} is needed at two different types"
+    pure (mkMVar m)
+  | none =>
+    let m ← liftMeta (mkFreshExprMVar (some d) .syntheticOpaque)
+    ref.modify (·.push (m.mvarId!, l))
+    pure m
+
+/-- Pending validation: apply a pending artifact `e` to the hypotheses of the leaves of its telescope
+(shared per leaf; registered in `ref` with their leaf keys). -/
+def applyHyps (ref : IO.Ref (Array (MVarId × String))) (e : Expr) (leaves : Array String) : TransM Expr := do
+  let mut e := e
+  let mut t ← liftMeta (inferType e)
+  for l in leaves do
+    t ← liftMeta (whnfD t)
+    match t with
+    | .forallE _ d b _ =>
+      let m ← hypFor ref l d
+      e := mkApp e m
+      t := b.instantiate1 m
+    | _ => failT "TRANSLATION_FAILED" "pending artifact has fewer hypotheses than recorded"
+  return e
+
+/-- Statement mode: a reference to (a type or constructor of) a pending inductive applied to its
+leading hypothesis parameters (the shared hypotheses of the declaration being translated). -/
+def pendingIndArgs (t : IndTarget) (e : Expr) : TransM Expr := do
+  if t.pendingHyps.isEmpty then return e
+  match (← read).hyps with
+  | some ref => applyHyps ref e t.pendingHyps
+  | none => failT "TRANSLATION_FAILED" "reference to a pending inductive outside pending validation"
 
 def univArgs (mind : String) (t : IndTarget) (u : Array IR.Level) (args : Array Expr) (target : Name := .anonymous) :
     TransM (List Level) := do
@@ -1161,17 +1225,28 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
     TransM Expr := do
   let tgt ← lookupInd ind
   if tgt.nonUniform > 0 then
+    unless tgt.pendingHyps.isEmpty do failT "UNSUPPORTED_FEATURE" "non-uniform match on a pending inductive (pending validation)"
     return ← transCaseNU tgt ind npar puinst pparams pctx pret scrut brs
   let iname := tgt.types[ind.idx]!
   let rv ← recursorOf iname (nested := true)
   let nmain ← mainMinors iname
-  unless rv.numParams == npar && pparams.size == npar do
+  -- statement mode: a pending inductive's recursor takes its hypotheses first
+  let nh := tgt.pendingHyps.size
+  unless rv.numParams == npar + nh && pparams.size == npar do
     failT "EXPORT_VALIDATION_FAILED" s!"case has {pparams.size} parameters, {iname}.rec expects {rv.numParams}"
   unless pctx.size == rv.numIndices + 1 do
     failT "EXPORT_VALIDATION_FAILED" s!"case return context has {pctx.size} binders, expected {rv.numIndices + 1}"
   unless brs.size == nmain do
     failT "EXPORT_VALIDATION_FAILED" s!"case has {brs.size} branches, {iname} has {nmain} constructors"
   let params ← pparams.mapIdxM fun k a => withPath s!"param{k}" (trans a)
+  let params ← if nh == 0 then pure params else do
+    let some ref := (← read).hyps | failT "TRANSLATION_FAILED" "match on a pending inductive outside pending validation"
+    let hs ← tgt.pendingHyps.mapM fun l => do
+      match (← ref.get).find? (·.2 == l) with
+      | some (m, _) => pure (mkMVar m)
+      | none => failT "TRANSLATION_FAILED" s!"match on a pending inductive before its hypothesis {l} is in scope"
+    pure (hs ++ params)
+  let npar := npar + nh
   let scrut' ← withPath "scrutinee" (trans scrut)
   -- M6 ι-generalized fix lowering: a match on the decreasing argument, which is the constructor
   -- application C_k fields in this minor premise, is its branch k (Rocq's and Lean's ι-rule)
@@ -1862,36 +1937,62 @@ partial def transHead (f : IR.Term) (args : Array Expr) : TransM Expr := do
         | some gs => if gs.size == k then sharedOrFreshLevels gs else liftMeta do (List.range k).mapM fun _ => mkFreshLevelMVar
         | none => liftMeta do (List.range k).mapM fun _ => mkFreshLevelMVar
       pure (mkConst n (poly ++ lvls))
-    | none => failT "TRANSLATION_FAILED" s!"reference to constant {c}, which has no accepted translation"
+    | none =>
+      -- statement mode, pending validation: an unproved prerequisite is a hypothesis of its statement,
+      -- a pending definition its artifact applied to fresh hypotheses
+      match (← read).hyps, genv.leafStmt[c]?, genv.pendingDefs[c]? with
+      | some ref, some (sname, sh), _ =>
+        unless kp == 0 do failT "UNSUPPORTED_FEATURE" s!"universe-polymorphic proof task {c} referenced in a pending declaration"
+        let stmtE ← applyHyps ref (mkConst sname (← levelsOf sname)) sh
+        hypFor ref c stmtE
+      | some ref, none, some (pname, ph) =>
+        unless kp == 0 do failT "UNSUPPORTED_FEATURE" s!"universe-polymorphic pending definition {c}"
+        applyHyps ref (mkConst pname (← levelsOf pname)) ph
+      | _, _, _ => failT "TRANSLATION_FAILED" s!"reference to constant {c}, which has no accepted translation"
   | .ind i u =>
     let t ← lookupInd i
     checkTemplateArgs i.mind t args
-    return mkConst t.types[i.idx]! (← univArgs i.mind t u args t.types[i.idx]!)
+    let e := mkConst t.types[i.idx]! (← univArgs i.mind t u args t.types[i.idx]!)
+    pendingIndArgs t e
   | .construct i c u =>
     let t ← lookupInd i
     let cs := t.ctors[i.idx]!
     unless c < cs.size do
       failT "EXPORT_VALIDATION_FAILED" s!"constructor index {c} out of range for {i.mind}"
     checkTemplateArgs i.mind t args
-    return mkConst cs[c]! (← univArgs i.mind t u args cs[c]!)
+    pendingIndArgs t (mkConst cs[c]! (← univArgs i.mind t u args cs[c]!))
   | _ => trans f
 
 end
 
-/-- Translate a closed term and check that no free or meta variable escapes. -/
+/-- Translate a closed term and check that no free or meta variable escapes (in pending validation,
+only the registered hypothesis metavariables may remain). -/
 def transClosed (t : IR.Term) : TransM Expr := do
   -- binder names without macro scopes (hygienic names inherited from Lean's own declarations, e.g.
   -- the recursor types' `a✝`, do not survive the report's string round trip; names carry no meaning)
   let e := eraseBinderScopes (← instLevelMVars (← trans t))
   if e.hasFVar then failT "TRANSLATION_FAILED" "translated term has escaping free variables"
-  if e.hasExprMVar then failT "TRANSLATION_FAILED" "translated term has unresolved metavariables"
+  if e.hasExprMVar then
+    let allowed ← match (← read).hyps with
+      | some ref => pure ((← ref.get).map (·.1))
+      | none => pure #[]
+    let ms ← liftMeta (getMVars e)
+    unless ms.all allowed.contains do
+      failT "TRANSLATION_FAILED" "translated term has unresolved metavariables"
   return e
 
 def runTrans {α} (genv : GEnv) (x : TransM α) (globalLevels : Std.HashMap String Level := {})
     (polyLevels : Array Level := #[]) (factReduce : Bool := false) (admitLevels : Array String := #[])
-    (lowerShared : Bool := false) :
+    (lowerShared : Bool := false) (hyps : Option (IO.Ref (Array (MVarId × String))) := none) :
     MetaM (Except TransError α) :=
-  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared }).run
+  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps }).run
+
+/-- Pending validation: the hypothesis metavariables (in creation order) become binders of the
+declaration, `∀ hs, e` (`lam := false`) or `fun hs => e` (Lean's binding abstraction handles their
+mutual dependencies; nothing is assigned). -/
+def abstractHyps (hs : Array (MVarId × String)) (e : Expr) (lam : Bool) : MetaM Expr := do
+  let xs := hs.map fun (m, _) => mkMVar m
+  if lam then mkLambdaFVars xs e else mkForallFVars xs e
 
 /-! ## Universe generalization -/
 
