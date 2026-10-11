@@ -1,0 +1,398 @@
+{
+ "pipelines": {
+  "st-finishtime": {
+   "exit_codes": [
+    0,
+    0,
+    0
+   ],
+   "validation": "STATEMENT_VALIDATED",
+   "by_validation": {
+    "DEFINITION_AUDITED": 73,
+    "DEFINITION_AUDITED_PENDING": 18,
+    "STATEMENT_AUDITED": 2,
+    "STATEMENT_AUDITED_PENDING": 9
+   },
+   "roots": [
+    {
+     "requested": "prosa.analysis.definitions.finish_time.finish_time",
+     "name": "prosa.analysis.definitions.finish_time.finish_time",
+     "status": "PENDING_KERNEL_CHECKED",
+     "validation": "DEFINITION_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "mathcomp.boot.ssrnat.eqnP",
+      "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1",
+      "mathcomp.boot.ssrnat.ex_minn__rocq2lean_obligation_1",
+      "mathcomp.boot.ssrnat.find_ex_minn"
+     ]
+    },
+    {
+     "requested": "prosa.analysis.definitions.finish_time.finished_at_finish_time",
+     "name": "prosa.analysis.definitions.finish_time.finished_at_finish_time",
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "mathcomp.boot.ssrnat.eqnP",
+      "prosa.analysis.definitions.finish_time.finished_at_finish_time__rocq2lean_obligation_1",
+      "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1",
+      "mathcomp.boot.ssrnat.ex_minn__rocq2lean_obligation_1",
+      "mathcomp.boot.ssrnat.find_ex_minn"
+     ]
+    },
+    {
+     "requested": "prosa.analysis.definitions.finish_time.earliest_finish_time",
+     "name": "prosa.analysis.definitions.finish_time.earliest_finish_time",
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "mathcomp.boot.ssrnat.eqnP",
+      "prosa.analysis.definitions.finish_time.earliest_finish_time__rocq2lean_obligation_1",
+      "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1",
+      "mathcomp.boot.ssrnat.ex_minn__rocq2lean_obligation_1",
+      "mathcomp.boot.ssrnat.find_ex_minn"
+     ]
+    },
+    {
+     "requested": "prosa.analysis.definitions.finish_time.response_time",
+     "name": "prosa.analysis.definitions.finish_time.response_time",
+     "status": "PENDING_KERNEL_CHECKED",
+     "validation": "DEFINITION_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "mathcomp.boot.ssrnat.eqnP",
+      "prosa.analysis.definitions.finish_time.response_time__rocq2lean_obligation_1",
+      "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1",
+      "mathcomp.boot.ssrnat.ex_minn__rocq2lean_obligation_1",
+      "mathcomp.boot.ssrnat.find_ex_minn"
+     ]
+    },
+    {
+     "requested": "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+     "name": "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "mathcomp.boot.ssrnat.eqnP",
+      "prosa.analysis.definitions.finish_time.completes_at_finish_time__rocq2lean_obligation_1",
+      "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1",
+      "mathcomp.boot.ssrnat.ex_minn__rocq2lean_obligation_1",
+      "mathcomp.boot.ssrnat.find_ex_minn"
+     ]
+    }
+   ]
+  },
+  "st-fixture-a": {
+   "exit_codes": [
+    0,
+    0,
+    0
+   ],
+   "validation": "STATEMENT_VALIDATED",
+   "by_validation": {
+    "DEFINITION_AUDITED": 8,
+    "DEFINITION_AUDITED_PENDING": 2,
+    "STATEMENT_AUDITED": 4,
+    "STATEMENT_AUDITED_PENDING": 1
+   },
+   "roots": [
+    {
+     "requested": "SF.Stmt.double",
+     "name": "SF.Stmt.double",
+     "status": "TRANSLATED_AND_CHECKED",
+     "validation": "DEFINITION_AUDITED",
+     "pending_prerequisites": []
+    },
+    {
+     "requested": "SF.Stmt.double_succ",
+     "name": "SF.Stmt.double_succ",
+     "status": "STATEMENT_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED",
+     "pending_prerequisites": []
+    },
+    {
+     "requested": "SF.Stmt.double_even",
+     "name": "SF.Stmt.double_even",
+     "status": "STATEMENT_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED",
+     "pending_prerequisites": []
+    },
+    {
+     "requested": "SF.Stmt.half_sig",
+     "name": "SF.Stmt.half_sig",
+     "status": "PENDING_KERNEL_CHECKED",
+     "validation": "DEFINITION_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "SF.Stmt.half_sig__rocq2lean_obligation_1"
+     ]
+    },
+    {
+     "requested": "SF.Stmt.zero_of",
+     "name": "SF.Stmt.zero_of",
+     "status": "PENDING_KERNEL_CHECKED",
+     "validation": "DEFINITION_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "SF.Stmt.half_sig__rocq2lean_obligation_1"
+     ]
+    },
+    {
+     "requested": "SF.Stmt.zero_of_le",
+     "name": "SF.Stmt.zero_of_le",
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "SF.Stmt.half_sig__rocq2lean_obligation_1"
+     ]
+    },
+    {
+     "requested": "SF.Stmt.le_trans_alt",
+     "name": "SF.Stmt.le_trans_alt",
+     "status": "STATEMENT_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED",
+     "pending_prerequisites": []
+    }
+   ]
+  },
+  "st-fixture-b": {
+   "exit_codes": [
+    0,
+    0,
+    0
+   ],
+   "validation": "STATEMENT_VALIDATED",
+   "by_validation": {
+    "DEFINITION_AUDITED": 8,
+    "DEFINITION_AUDITED_PENDING": 2,
+    "STATEMENT_AUDITED": 4,
+    "STATEMENT_AUDITED_PENDING": 1
+   },
+   "roots": [
+    {
+     "requested": "SF.Stmt.double",
+     "name": "SF.Stmt.double",
+     "status": "TRANSLATED_AND_CHECKED",
+     "validation": "DEFINITION_AUDITED",
+     "pending_prerequisites": []
+    },
+    {
+     "requested": "SF.Stmt.double_succ",
+     "name": "SF.Stmt.double_succ",
+     "status": "STATEMENT_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED",
+     "pending_prerequisites": []
+    },
+    {
+     "requested": "SF.Stmt.double_even",
+     "name": "SF.Stmt.double_even",
+     "status": "STATEMENT_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED",
+     "pending_prerequisites": []
+    },
+    {
+     "requested": "SF.Stmt.half_sig",
+     "name": "SF.Stmt.half_sig",
+     "status": "PENDING_KERNEL_CHECKED",
+     "validation": "DEFINITION_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "SF.Stmt.half_sig__rocq2lean_obligation_1"
+     ]
+    },
+    {
+     "requested": "SF.Stmt.zero_of",
+     "name": "SF.Stmt.zero_of",
+     "status": "PENDING_KERNEL_CHECKED",
+     "validation": "DEFINITION_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "SF.Stmt.half_sig__rocq2lean_obligation_1"
+     ]
+    },
+    {
+     "requested": "SF.Stmt.zero_of_le",
+     "name": "SF.Stmt.zero_of_le",
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED_PENDING",
+     "pending_prerequisites": [
+      "SF.Stmt.half_sig__rocq2lean_obligation_1"
+     ]
+    },
+    {
+     "requested": "SF.Stmt.le_trans_alt",
+     "name": "SF.Stmt.le_trans_alt",
+     "status": "STATEMENT_KERNEL_CHECKED",
+     "validation": "STATEMENT_AUDITED",
+     "pending_prerequisites": []
+    }
+   ]
+  }
+ },
+ "mutations": [
+  {
+   "mutation": "swap-hyps",
+   "declaration": "prosa.analysis.definitions.finish_time.finished_at_finish_time",
+   "applicable": true,
+   "kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "detectors": [
+    "structure"
+   ],
+   "consumer": "OK"
+  },
+  {
+   "mutation": "negate",
+   "declaration": "prosa.analysis.definitions.finish_time.completes_at_finish_time",
+   "applicable": true,
+   "kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "detectors": [
+    "structure"
+   ],
+   "consumer": "OK"
+  },
+  {
+   "mutation": "fx-negate",
+   "declaration": "SF.Stmt.double_succ",
+   "applicable": true,
+   "kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "detectors": [
+    "structure"
+   ],
+   "consumer": "OK"
+  },
+  {
+   "mutation": "fx-drop-hyp",
+   "declaration": "SF.Stmt.le_trans_alt",
+   "applicable": true,
+   "kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "detectors": [
+    "structure"
+   ],
+   "consumer": "OK"
+  },
+  {
+   "mutation": "fx-swap-args",
+   "declaration": "SF.Stmt.le_trans_alt",
+   "applicable": true,
+   "kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "detectors": [
+    "structure"
+   ],
+   "consumer": "OK"
+  },
+  {
+   "mutation": "fx-exists",
+   "declaration": "SF.Stmt.double_even",
+   "applicable": true,
+   "kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "detectors": [
+    "structure"
+   ],
+   "consumer": "OK"
+  }
+ ],
+ "irrelevant_proof_change": {
+  "records": 15,
+  "differing_records": [],
+  "differing_targets": []
+ },
+ "tasks_fixture": {
+  "count": 5,
+  "example": {
+   "allowed_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+   ],
+   "kind": "theorem_statement",
+   "lean": {
+    "declaration_kind": "theorem",
+    "level_params": [],
+    "output_file": "RocqProofs/SF/Stmt/double_succ.lean",
+    "output_module": "RocqProofs.SF.Stmt.double_succ",
+    "required_modules": [
+     "Rocq2LeanOut"
+    ],
+    "reserved_name": "Rocq.SF.Stmt.double_succ",
+    "statement": "\u2200 (n : Nat), Rocq.SF.Stmt.double n.succ = (Rocq.SF.Stmt.double n).succ.succ",
+    "statement_constant": "Rocq.SF.Stmt.double_succ.statement",
+    "task_statement": "Rocq.SF.Stmt.double_succ.statement",
+    "task_statement_sha256": "3a1c4f809abd943cc4bf3b769c995ca7eff7dd7a8f29f94baf06ce0e313252c7"
+   },
+   "prerequisites": {
+    "note": "the task statement is generalized over its prerequisites; they bind only the assembly",
+    "pending": [],
+    "proved": []
+   },
+   "priority": {
+    "in_scope_needing_it": 0,
+    "pending_declarations_needing_it": 0,
+    "sole_prerequisite_of": 0
+   },
+   "schema": "rocq2lean-proof-task/1",
+   "source": {
+    "counted_as_proved": null,
+    "family": "external",
+    "file": null,
+    "kernel_name": "SF.Stmt.double_succ",
+    "keyword": null,
+    "line": null,
+    "module": "SF.Stmt",
+    "obligation_of": null
+   },
+   "status": "PROOF_PENDING",
+   "task_id": "43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093",
+   "validation": {
+    "audit_verdict": "MATCH",
+    "row_status": "STATEMENT_KERNEL_CHECKED",
+    "run_id": "d24b504a-b86a-42ca-a535-0eee8106eb22",
+    "validate_sha256": "4cdb6fcf38177e36c0d5ccb33eeab04a7b8ddeb6de500ca3941ccac01c126442"
+   }
+  }
+ },
+ "check_proof_negatives": {
+  "sorry": {
+   "exit": 2,
+   "status": "PROOF_REJECTED",
+   "problems": [
+    "Rocq.SF.Stmt.double_succ depends on sorryAx"
+   ]
+  },
+  "wrong-statement": {
+   "exit": 2,
+   "status": "PROOF_REJECTED",
+   "problems": [
+    "Rocq.SF.Stmt.double_succ: its type is not syntactically the task statement"
+   ]
+  },
+  "custom-axiom": {
+   "exit": 2,
+   "status": "PROOF_REJECTED",
+   "problems": [
+    "Rocq.SF.Stmt.double_succ depends on the axiom cheat, outside the allowance #[propext, Quot.sound, Classical.choice]"
+   ]
+  },
+  "declared-axiom": {
+   "exit": 2,
+   "status": "PROOF_REJECTED",
+   "problems": [
+    "Rocq.SF.Stmt.double_succ is an axiom",
+    "Rocq.SF.Stmt.double_succ depends on the axiom Rocq.SF.Stmt.double_succ, outside the allowance #[propext, Quot.sound, Classical.choice]"
+   ]
+  },
+  "missing": {
+   "exit": 2,
+   "status": "PROOF_REJECTED",
+   "problems": [
+    "Rocq.SF.Stmt.double_succ is not declared by the submitted module"
+   ]
+  },
+  "not-compiling": {
+   "exit": 2,
+   "status": "PROOF_REJECTED",
+   "problems": [
+    "the submitted module does not compile; see check.log"
+   ]
+  }
+ }
+}

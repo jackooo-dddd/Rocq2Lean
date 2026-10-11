@@ -816,22 +816,56 @@ let refusal_reason e =
   | e -> Printexc.to_string e
 
 (* Replace the maximal proof subterms of [t] (closed in [env0]) by applications of fresh obligations;
-   [mk stmt] returns the obligation constant for the closed statement [stmt]. *)
+   [mk stmt] returns the obligation constant for the closed statement [stmt].
+   The statement of an obligation is the type its position *expects* — the domain of the applied
+   function at that argument (after the preceding, already rewritten, arguments), or the declared
+   type of a let — not the type inferred from the proof: the inferred type depends on how the proof
+   was written (a convertible variant, e.g. a beta-redex left by a tactic), the expected type only on
+   the surrounding definition. Statements are beta-normalized. Elsewhere (no expected type at hand)
+   the inferred type is used. *)
 let extract_proofs env0 sigma mk t =
+  let canon env ty = Reductionops.nf_beta env sigma ty in
+  let is_proof env t = try is_proof_type env sigma (Retyping.get_type_of env sigma t) with _ -> false in
+  let extract env ty t =
+    match EConstr.kind sigma t with
+    | Constr.Const (c, _) when proof_valued env c -> t
+    | _ ->
+      let ctx = EConstr.rel_context env in
+      let o = mk (EConstr.it_mkProd_or_LetIn (canon env ty) ctx) in
+      EConstr.mkApp (o, Context.Rel.instance EConstr.mkRel 0 ctx)
+  in
   let rec go env t =
     match EConstr.kind sigma t with
     | Constr.Rel _ | Constr.Var _ | Constr.Sort _ | Constr.Meta _ | Constr.Evar _ -> t
-    | _ ->
-      let proof = try is_proof_type env sigma (Retyping.get_type_of env sigma t) with _ -> false in
-      if not proof then Termops.map_constr_with_full_binders env sigma EConstr.push_rel go env t
-      else
-        match EConstr.kind sigma t with
-        | Constr.Const (c, _) when proof_valued env c -> t
-        | _ ->
-          let ctx = EConstr.rel_context env in
-          let ty = Retyping.get_type_of env sigma t in
-          let o = mk (EConstr.it_mkProd_or_LetIn ty ctx) in
-          EConstr.mkApp (o, Context.Rel.instance EConstr.mkRel 0 ctx)
+    | _ when is_proof env t -> extract env (Retyping.get_type_of env sigma t) t
+    | Constr.App (f, args) ->
+      let f' = go env f in
+      let fty = ref (try Some (Retyping.get_type_of env sigma f') with _ -> None) in
+      let args' =
+        Array.map
+          (fun a ->
+            let dom_cod =
+              match !fty with
+              | None -> None
+              | Some ty -> (
+                let ty = match EConstr.kind sigma ty with Constr.Prod _ -> ty | _ -> Reductionops.whd_all env sigma ty in
+                match EConstr.kind sigma ty with Constr.Prod (_, d, b) -> Some (d, b) | _ -> None)
+            in
+            let a' =
+              match dom_cod with
+              | Some (d, _) when is_proof env a -> extract env d a
+              | _ -> go env a
+            in
+            fty := (match dom_cod with Some (_, b) -> Some (EConstr.Vars.subst1 a' b) | None -> None);
+            a')
+          args
+      in
+      EConstr.mkApp (f', args')
+    | Constr.LetIn (na, v, ty, b) ->
+      let ty' = go env ty in
+      let v' = if is_proof env v then extract env ty' v else go env v in
+      EConstr.mkLetIn (na, v', ty', go (EConstr.push_rel (Context.Rel.Declaration.LocalDef (na, v', ty')) env) b)
+    | _ -> Termops.map_constr_with_full_binders env sigma EConstr.push_rel go env t
   in
   go env0 t
 

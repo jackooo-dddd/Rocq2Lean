@@ -63,9 +63,14 @@ inductive included). Lean generates its own eliminators. Rocq schemes (`_rect`, 
 translated like any constant when something needs them (for example, a definition that computes with
 `_rect`).
 
-An opaque constant that is not proof-valued (`Definition d : T. … Qed.` with `T` not a proposition)
-is data. Its body is translated (it is not a proof), and it becomes a Lean `opaque` constant, which
-keeps Rocq's opacity.
+An opaque constant that is not proof-valued (`Definition d : T. … Qed.` with `T` not a proposition,
+e.g. MathComp's `eqnP : Equality.axiom eqn`, whose `reflect` lives in `Set`, or `find_ex_minn`) is
+**opaque data**. Rocq's kernel never unfolds it, so no Rocq statement or definition depends on its
+body: its body is not exported, its type is kernel-checked as `def Rocq.d.type : Sort s := ⟦T⟧`
+(`s` the exporter's native sort of `T`, state `opaque_interface`), and providing *a* value of that type
+is a task. Opacity is read from the native environment, not from the P0-prepared one (the
+preparation's lowering of SSReflect `have` turns some opaque bodies into transparent working copies;
+they stay opaque data).
 
 ## 5. Statement closure and obligations
 
@@ -86,8 +91,12 @@ its local context `Γ` is `Prop`/`SProp`):
 * `t` is a reference to a proof-valued constant `c`: `c`'s statement is required, and proving `c`
   becomes a prerequisite of the definition;
 * otherwise `t` is replaced by `o Γ` for a new **obligation constant**
-  `o := <def>.rocq2lean_obligation_<k> : ∀ Γ, T`, a closed statement over exactly the context `t`
-  uses.
+  `o := <def>__rocq2lean_obligation_<k> : ∀ Γ, T`, closed over the local context `Γ` of `t`.
+  `T` is the type the position **expects** — the domain of the applied function at that argument
+  (after the preceding, already rewritten arguments), or a `let`'s declared type — beta-normalized;
+  only where no expected type is at hand is the inferred type used. The inferred type of a proof
+  depends on how the proof was written (a tactic can leave a convertible variant, e.g. a beta-redex);
+  the expected type depends only on the surrounding definition (negative control in `test-statement`).
 
 The rewritten body `b'` must type-check against the original type in Rocq's kernel, with the
 obligations as parameters (the exporter re-checks this, and the round trip re-derives it). `b'` and
@@ -96,9 +105,16 @@ are not. A proof-valued constant referenced from a *statement* (for example SSRe
 witnesses) is handled the same way: the statement waits for that proof.
 
 **Definitional effect.** Replacing a proof by an obligation constant changes what reduces only when
-computation inspects the proof itself, for example structural recursion on an `Acc` proof. Such
-definitions are detected (their bodies eliminate a proof) and reported as needing an explicit rule.
-They are never translated silently.
+computation inspects the proof itself, for example structural recursion on an accessibility proof.
+The exporter re-checks every rewritten declaration with Rocq's kernel under the constant's own
+typing flags (a polymorphic constant under its abstract universe context). If the only failure is
+the guard (a recursive call whose structural argument was a proof subterm, now an obligation), the
+declaration is re-checked with everything but the guard, kept with `"termination": "deferred"` (in the
+record and the header, re-derived by the round trip), and termination is never assumed: the Lean
+translator has no rule for it yet, so such a declaration is refused by the translator
+(`UNSUPPORTED_FEATURE`) instead of being translated with an unchecked recursion. Any other
+failure leaves the definition without body (`obligation_extraction_failed`), reported. (The
+motivating case, `find_ex_minn`, turned out to be opaque data, see §4.)
 
 ## 6. Lean representation
 
@@ -118,12 +134,26 @@ supplies those proofs.
 Statement definitions have no proof-local universe levels: their only levels are those of the
 statement. This removes the proof-body universe rules (R2B-P on proofs) from the statement path.
 
+### Pending artifacts in Lean
+
+A declaration that needs unproved prerequisites (proof tasks, directly or through other pending
+declarations) is kernel-checked as `RocqPending.<name>` with one hypothesis per prerequisite leaf
+(`h_<leaf>`, shared by every use, in order of first use; a prerequisite whose own statement is pending
+is applied to the earlier hypotheses it needs). Pending inductives take the hypotheses as leading
+parameters (references, constructors and recursor applications pass them first). Statements can be
+pending too: any statement that mentions `leq` on `nat` waits for `eqnP`, because `nat`'s `eqType`
+instance packs it. The accepted library `Rocq.*` never references `RocqPending.*`.
+
 ## 7. Statuses
 
 `SOURCE_EXTRACTED` → `STATEMENT_TRANSLATED` → `STATEMENT_KERNEL_CHECKED` → `STATEMENT_AUDITED` →
 `PROOF_PENDING` → (agent) `LEAN_PROOF_COMPLETED` → `LEAN_PROOF_KERNEL_VERIFIED`.
 
-Definitions: `DEFINITION_AUDITED`, or `OBLIGATIONS_PENDING` (pending module checked) until assembled.
+Definitions: `DEFINITION_AUDITED`, or `DEFINITION_AUDITED_PENDING` (pending artifact kernel-checked
+and audited) until assembled. Statements: `STATEMENT_AUDITED` or `STATEMENT_AUDITED_PENDING`.
+Translator row statuses: `TRANSLATED_AND_CHECKED`, `STATEMENT_KERNEL_CHECKED`,
+`PENDING_KERNEL_CHECKED`, `STATEMENT_PENDING_KERNEL_CHECKED`; `rocq2lean validate` turns them into the
+audited statuses above (run verdict `STATEMENT_VALIDATED`).
 Translation failures keep the existing reasons (`UNSUPPORTED_FEATURE`, `UNIVERSE_REJECTED`,
 `KERNEL_REJECTED`, `INTERFACE_REJECTED`, `RESOURCE_LIMIT`), and dependents are `BLOCKED_DEPENDENCY`.
 
@@ -143,6 +173,15 @@ Translation failures keep the existing reasons (`UNSUPPORTED_FEATURE`, `UNIVERSE
 5. No axiom, `sorry`, `theorem` or opaque proof in the accepted library: `collectAxioms` is empty,
    and statement definitions are `def … : Prop`.
 
+**How the audit checks a statement.** `tools/audit.py` (statement mode, selected by the IR header)
+restates, from the source record alone, the declaration the translator builds: a leaf `c : T` is
+`def c.statement : Prop := T` (`c.type : s := T` for opaque data), anything else is itself. The
+existing structural and universe audit then applies unchanged. It also recomputes each claimed
+row's prerequisites (leaves reached directly or through pending declarations), checks the reported
+hypotheses and status against them, checks the hypothesis telescope binder by binder, and maps every
+source reference to a leaf to its hypothesis (to a pending definition: its artifact applied to its
+hypotheses). A claimed row may depend only on claimed rows.
+
 **Negative controls.**
 * Type-correct mutations of a statement (swapped arguments, a weakened hypothesis, a changed
   quantifier) must be rejected by the correspondence audit.
@@ -151,7 +190,8 @@ Translation failures keep the existing reasons (`UNSUPPORTED_FEATURE`, `UNIVERSE
 
 ## 9. Proof-task interface
 
-`reports/statement_only/PROOF_TASKS.jsonl`, one object per statement or obligation:
+`rocq2lean tasks --run RUN` writes `RUN/PROOF_TASKS.jsonl`, one object per proof task (theorem
+statement, extracted obligation, opaque data value, source assumption):
 
 * source identity: kernel name, file, line;
 * Lean statement constant and its rendered statement;
@@ -159,12 +199,20 @@ Translation failures keep the existing reasons (`UNSUPPORTED_FEATURE`, `UNIVERSE
 * the required Lean modules;
 * parameters, instances and universe levels;
 * prerequisites already proved, and prerequisites still pending;
+* a priority: how many pending declarations need it (assembly unblocked);
 * validation evidence (audit record digests);
 * a stable task id (sha256 of the kernel name and the statement digest).
 
+**Task statement.** Without prerequisites, the task is `Rocq.c.statement` (or `Rocq.c.type`). With
+prerequisites `h₁ … hₖ` it is `∀ h₁ … hₖ, RocqPending.c.statement h₁ … hₖ`: a proof hypothesis is
+irrelevant, and Rocq never unfolds opaque data, so this generalization is exactly what Rocq's proof
+establishes, and every task can be proved without waiting for its prerequisites. Prerequisites order
+only the *assembly* of pending definitions.
+
 `rocq2lean check-proof` checks a proof file submitted by the agent:
 * it is compiled in a fresh Lean process against the statement library;
-* the theorem's type must be exactly the statement constant;
+* the reserved constant's type must be syntactically the task statement (a `theorem` for proof
+  tasks; a definition or theorem for opaque data; never an axiom, unsafe or partial);
 * `collectAxioms` is recorded; anything beyond the declared allowance is refused, and `sorry`
   (`sorryAx`) is always refused.
 
@@ -176,15 +224,16 @@ Rocq2Lean itself never proves anything.
 rocq2lean export   --mode statement --manifest M --roots R --out RUN
 rocq2lean translate --input RUN/source.ndjson --out RUN
 rocq2lean validate --run RUN                 # consumer + audit + protection; STATEMENT_AUDITED
-rocq2lean tasks    --run RUN --out FILE      # proof tasks
-rocq2lean check-proof --run RUN --task ID --file PROOF.lean
+rocq2lean tasks    --run RUN [--out FILE]    # proof tasks
+rocq2lean check-proof --run RUN --task ID --file PROOF.lean [--allow-axioms A,B]
 ```
 
 ## 11. Open points (tracked in `reports/statement_only/BLOCKER_REASSESSMENT.md`)
 
 * Opaque data constants (`data_opaque`) built by tactics: their bodies are definitions, but they can
   contain proof subterms (obligations).
-* Definitions whose computation eliminates a proof (`Acc`): an explicit rule or an honest blocker.
+* Definitions whose computation eliminates a proof (structural recursion on a proof): exported with
+  deferred termination, refused by the translator until a rule with a termination task exists.
 * Universe rules for statements: R3 references and template `prod` at `Prop` in statements (as
   opposed to proofs).
 * Coinductive data (Classic `extraction_tdma.Task_T`).

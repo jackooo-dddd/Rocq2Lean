@@ -336,7 +336,9 @@ def hypFor (ref : IO.Ref (Array (MVarId × String))) (l : String) (d : Expr) : T
       failT "TRANSLATION_FAILED" s!"pending prerequisite {l} is needed at two different types"
     pure (mkMVar m)
   | none =>
-    let m ← liftMeta (mkFreshExprMVar (some d) .syntheticOpaque)
+    -- a deterministic binder name (the artifact's hypothesis binders are abstracted from these
+    -- metavariables; a hygienic name would differ between the declaration and its residual record)
+    let m ← liftMeta (mkFreshExprMVar (some d) .syntheticOpaque (Name.mkSimple ("h_" ++ l.map fun ch => if ch == '.' || ch == '/' then '_' else ch)))
     ref.modify (·.push (m.mvarId!, l))
     pure m
 

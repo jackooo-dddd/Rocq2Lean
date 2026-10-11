@@ -5,14 +5,17 @@ unchanged `rocq2lean translate`, and summarize.
 The merged IR keeps every distinct declaration once (all copies of a kernel name must be
 byte-identical: the statement preparation does not depend on the request), in dependency order; the
 universe lines are the union of the chunks' (each declaration's closure lies in the chunk that
-exported it). This is a translate-only measurement (no contract, so no protection binding and no
-validation verdict); validated runs go through the full CLI (`export --mode statement`, `translate`,
-`validate`).
+exported it). A contract is built for the merged IR (tools/contract.py, with the pinned protection
+binding), so the translation runs under interface protection, and the fresh-process consumer and the
+independent audit check every claimed row (`check`). What the corpus run does not have, unlike a CLI
+run, is a per-run source snapshot and round trip: the chunk exports were made by the inventory driver
+(their statement preparation is re-derived by the CLI round trip on the tested runs, not here).
 
-    python3 -I inventory/statement_run.py merge|translate|summary
+    python3 -I inventory/statement_run.py merge|translate|check|summary
 """
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from collections import Counter, defaultdict
@@ -118,47 +121,135 @@ def merge():
 
 
 def translate():
+    sys.path.insert(0, str(ROOT / "tools"))
+    import contract
+    import protection
+    con = contract.build(str(RUN / "source.ndjson"), [r["requested"] for r in json.loads(open(RUN / "source.ndjson").readlines()[1])["roots"]])
+    con["protection"] = protection.binding(con["exported"])
+    (RUN / "contract.json").write_text(json.dumps(con, indent=1) + "\n")
     p = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "rocq2lean.py"), "translate",
                         "--input", str(RUN / "source.ndjson"), "--out", str(RUN)], capture_output=True, text=True)
     (RUN / "translate.out").write_text(p.stdout + p.stderr)
     print("translate exit", p.returncode)
 
 
+def check():
+    """Fresh-process consumer and independent audit of every claimed row (as `validate` runs them)."""
+    lean = RUN / "lean"
+    (lean / "Rocq2LeanConsumer.lean").write_text(
+        f'import Rocq2LeanOut\nimport Rocq2Lean.Verify\n#rocq2lean_verify "{RUN / "contract.json"}" '
+        f'"{RUN / "translation_report.json"}" "{RUN / "consumer_result.json"}"\n')
+    env = dict(os.environ, PATH=f"{Path.home()}/.elan/bin:" + os.environ["PATH"])
+    lp = subprocess.run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], capture_output=True, text=True, env=env).stdout.strip()
+    env["LEAN_PATH"] = f"{lp}:{lean}"
+    p = subprocess.run(["lean", "Rocq2LeanConsumer.lean"], cwd=lean, capture_output=True, text=True, env=env)
+    (RUN / "consumer.out").write_text(p.stdout + p.stderr)
+    p2 = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), str(RUN / "source.ndjson"), str(RUN / "contract.json"),
+                         str(RUN / "translation_report.json"), str(RUN / "audit.json"), str(RUN / "consumer_result.json")],
+                        capture_output=True, text=True)
+    (RUN / "audit.out").write_text(p2.stdout + p2.stderr)
+    c = json.loads((RUN / "consumer_result.json").read_text()) if (RUN / "consumer_result.json").exists() else {}
+    a = json.loads((RUN / "audit.json").read_text()) if (RUN / "audit.json").exists() else {}
+    print("consumer", p.returncode, c.get("status"), {k: v for k, v in (c.get("detectors") or {}).items() if v != "OK"})
+    print("audit", p2.returncode, a.get("status"), a.get("coverage"))
+
+
 def summary():
+    """reports/statement_only/TRANSLATION_RESULTS.json: outcomes by family and for the protected
+    interface, audited (consumer + audit) where they ran; failure mechanisms; prerequisites ranked by
+    how many pending declarations need them."""
     rep = json.loads((RUN / "translation_report.json").read_text())
+    audit = json.loads((RUN / "audit.json").read_text()) if (RUN / "audit.json").exists() else {}
+    cons = json.loads((RUN / "consumer_result.json").read_text()) if (RUN / "consumer_result.json").exists() else {}
+    verdict = {v["source"]: v["verdict"] for v in audit.get("verdicts", [])}
     decls = {}
     for l in open(ROOT / "reports/prosa_inventory/declarations.jsonl"):
         d = json.loads(l)
         decls[d["name"]] = d
+    ir = {}
+    with open(RUN / "source.ndjson") as fh:
+        for line in fh:
+            d = json.loads(line)
+            if d.get("kind") in ("constant", "inductive"):
+                ir[d["name"]] = {"body_state": d.get("body_state"), "kind": d["kind"]}
     fam = lambda n: decls.get(n, {}).get("family", "external")
+    lib = lambda n: fam(n) if fam(n) != "external" else n.split(".")[0]
     res = rep["results"]
+    leaf = lambda n: ir.get(n, {}).get("body_state") in ("statement_only", "obligation", "opaque_interface")
+
+    def outcome(r):
+        st = r["status"]
+        v = verdict.get(r["source"])
+        if st in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED", "STATEMENT_KERNEL_CHECKED"):
+            base = "STATEMENT" if leaf(r["source"]) else "DEFINITION"
+            return f"{base}_AUDITED" if v == "MATCH" else f"{base}_KERNEL_CHECKED_AUDIT_{v}"
+        if st in ("PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED"):
+            base = "STATEMENT" if leaf(r["source"]) else "DEFINITION"
+            return f"{base}_AUDITED_PENDING" if v == "MATCH" else f"{base}_PENDING_AUDIT_{v}"
+        return st
     by = defaultdict(Counter)
     for r in res:
-        by[fam(r["source"])][r["status"]] += 1
+        by[lib(r["source"])][outcome(r)] += 1
     prot = set(json.loads((ROOT / "reports/prosa_inventory/protected_interface.json").read_text())["protected"])
     pby = defaultdict(Counter)
     for r in res:
         if r["source"] in prot:
-            pby[fam(r["source"])][r["status"]] += 1
-    direct = [r for r in res if r["status"] not in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED", "STATEMENT_KERNEL_CHECKED",
-                                                     "STATEMENT_PENDING_KERNEL_CHECKED", "PENDING_KERNEL_CHECKED",
-                                                     "BLOCKED_DEPENDENCY", "OBLIGATIONS_PENDING")]
-    mech = Counter((r["status"], (r.get("message") or "").split("[")[0][:110]) for r in direct)
-    hyps = Counter(h for r in res for h in r.get("pending_hypotheses") or [])
+            pby[fam(r["source"])][outcome(r)] += 1
+    missing_prot = sorted(prot - {r["source"] for r in res})
+    ok = ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED", "STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED",
+          "PENDING_KERNEL_CHECKED", "BLOCKED_DEPENDENCY", "OBLIGATIONS_PENDING")
+    direct = [r for r in res if r["status"] not in ok]
+    mech = Counter((r["status"], (r.get("message") or "").split("[")[0].split(":")[0][:90]) for r in direct)
+    # prerequisites ranked by the pending declarations (assembly) needing them
+    need = defaultdict(set)
+    for r in res:
+        for h in r.get("pending_hypotheses") or []:
+            need[h].add(r["source"])
+    # blocked declarations: transitive count of what each direct failure blocks
+    rdeps = defaultdict(set)
+    for r in res:
+        for b in r.get("blocked_by") or []:
+            rdeps[b].add(r["source"])
+    def blocked_by_failure(n):
+        seen, st = set(), [n]
+        while st:
+            x = st.pop()
+            for y in rdeps.get(x, ()):
+                if y not in seen:
+                    seen.add(y)
+                    st.append(y)
+        return seen
+    fails = []
+    for r in direct:
+        b = blocked_by_failure(r["source"])
+        fails.append({"declaration": r["source"], "family": fam(r["source"]), "status": r["status"],
+                      "message": (r.get("message") or "")[:400],
+                      "blocks": len(b), "blocks_protected": sum(1 for x in b if x in prot)})
+    fails.sort(key=lambda x: (-x["blocks_protected"], -x["blocks"], x["declaration"]))
     out = {"schema": "rocq2lean-statement-results/1", "run": str(RUN.relative_to(ROOT)), "report_status": rep.get("status"),
-           "declarations": len(res), "by_family": {k: dict(v) for k, v in by.items()},
-           "protected_by_family": {k: dict(v) for k, v in pby.items()},
-           "direct_failures": [{"declaration": r["source"], "family": fam(r["source"]), "status": r["status"],
-                                "message": (r.get("message") or "")[:400]} for r in direct],
-           "failure_mechanisms": [{"status": s, "message": m, "count": c} for (s, m), c in mech.most_common()],
-           "most_needed_prerequisites": [{"leaf": h, "pending_declarations_using_it": c} for h, c in hyps.most_common(40)]}
+           "checks": {"consumer": cons.get("status"), "consumer_failed_detectors": {k: v for k, v in (cons.get("detectors") or {}).items() if v != "OK"},
+                      "audit": audit.get("status"), "audit_problems": len(audit.get("problems", [])),
+                      "audit_problem_examples": audit.get("problems", [])[:20],
+                      "note": "no per-run source snapshot/round trip for the merged corpus IR (see inventory/statement_run.py)"},
+           "declarations": len(res), "by_library": {k: dict(v) for k, v in sorted(by.items())},
+           "protected_interface": {"total": len(prot), "absent_from_export": len(missing_prot),
+                                   "by_family": {k: dict(v) for k, v in sorted(pby.items())}},
+           "failure_mechanisms": [{"status": s_, "message": m, "count": c} for (s_, m), c in mech.most_common()],
+           "direct_failures": fails,
+           "prerequisites_by_need": [{"prerequisite": h, "kind": ir.get(h, {}).get("body_state"), "family": fam(h),
+                                      "pending_declarations_needing_it": len(xs),
+                                      "protected_needing_it": sum(1 for x in xs if x in prot)}
+                                     for h, xs in sorted(need.items(), key=lambda kv: (-len(kv[1]), kv[0]))[:100]]}
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "TRANSLATION_RESULTS.json").write_text(json.dumps(out, indent=1) + "\n")
-    print(json.dumps({k: out[k] for k in ("declarations", "by_family", "protected_by_family")}, indent=1))
-    for m in out["failure_mechanisms"][:25]:
+    print(json.dumps({k: out[k] for k in ("declarations", "checks", "protected_interface")}, indent=1)[:3000])
+    for m in out["failure_mechanisms"][:30]:
         print(m)
-    print(out["most_needed_prerequisites"][:15])
+    for f in fails[:15]:
+        print(f["declaration"], f["status"], f["blocks"], f["blocks_protected"], f["message"][:150])
+    for x in out["prerequisites_by_need"][:15]:
+        print(x)
 
 
 if __name__ == "__main__":
-    {"merge": merge, "translate": translate, "summary": summary}[sys.argv[1]]()
+    {"merge": merge, "translate": translate, "check": check, "summary": summary}[sys.argv[1]]()

@@ -8,3 +8,4 @@ import Rocq2Lean.Command
 import Rocq2Lean.Verify
 import Rocq2Lean.Eval
 import Rocq2Lean.Replay
+import Rocq2Lean.Tasks

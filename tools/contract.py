@@ -89,7 +89,7 @@ def build(ir_path, request, protection=None):
             raise ContractError(f"required declaration {n} is absent from the export")
         closure.add(n)
         todo.extend(decl_refs(decls[n]) - closure)
-    return {
+    out = {
         "schema": "rocq2lean-contract/1",
         "run_id": str(uuid.uuid4()),
         "ir_sha256": hashlib.sha256(raw).hexdigest(),
@@ -100,6 +100,13 @@ def build(ir_path, request, protection=None):
         "extra_exported": sorted(set(decls) - closure),
         "protection": protection,
     }
+    # statement mode (docs/STATEMENT_ONLY_DESIGN.md): the mode is bound in the contract (proof-mode
+    # contracts are unchanged); the closure above is already the statement closure, since the exporter
+    # dropped the bodies of proofs
+    m = lines[0].get("mode")
+    if isinstance(m, dict) and m.get("name") == "statement":
+        out["mode"] = "statement"
+    return out
 
 
 if __name__ == "__main__":

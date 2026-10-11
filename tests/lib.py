@@ -57,7 +57,7 @@ def structurally_rejected(run, rep, name, decl):
     return rc == 1 and any(x["detector"] == "structure" and x["message"].startswith(decl + ":") for x in probs)
 
 
-def forge_run(base, name, rep, prelude=""):
+def forge_run(base, name, rep, prelude="", check_cmd="verify"):
     """A copy of run `base` whose report is `rep` and whose generated module is rebuilt from that
     report by kernel replay (`#rocq2lean_replay`, every declaration through addChecked), with the
     translation manifest re-synchronized: it simulates a translator that produced exactly `rep`.
@@ -68,7 +68,7 @@ def forge_run(base, name, rep, prelude=""):
     base = Path(base)
     d = base.parent / f"{base.name}-forged-{name}"
     shutil.rmtree(d, ignore_errors=True)
-    shutil.copytree(base, d, ignore=shutil.ignore_patterns(".rocq2lean.lock", "verify.json", "audit.json",
+    shutil.copytree(base, d, ignore=shutil.ignore_patterns(".rocq2lean.lock", "verify.json", "validate.json", "audit.json",
                                                            "consumer_result.json", "*-forged-*", "mut-*"))
     (d / "translation_report.json").write_text(json.dumps(rep))
     lean = d / "lean"
@@ -85,6 +85,6 @@ def forge_run(base, name, rep, prelude=""):
     tm.update(report_sha256=sha(d / "translation_report.json"), module_lean_sha256=sha(lean / "Rocq2LeanOut.lean"),
               module_olean_sha256=sha(lean / "Rocq2LeanOut.olean"), module_ilean_sha256=sha(lean / "Rocq2LeanOut.ilean"))
     (d / "translation_manifest.json").write_text(json.dumps(tm))
-    rc, _ = cli("verify", "--run", d)
+    rc, _ = cli(check_cmd, "--run", d)
     load = lambda f: json.loads((d / f).read_text()) if (d / f).exists() else {}
     return d, bool(replayed) and all(x["kernel"] == "ACCEPTED" for x in replayed), rc, load("consumer_result.json"), load("audit.json")

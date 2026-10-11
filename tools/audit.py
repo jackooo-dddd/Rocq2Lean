@@ -368,17 +368,26 @@ class Auditor:
         # recursor binder types modulo delta (a source binder type may be a definition, PolC Z := Pol Z)
         self.defs = {r["target"]: (r.get("level_params") or [], r["target_value"]) for r in self.ok.values()
                      if r.get("target_kind") == "def" and r.get("target_value") is not None}
+        # statement mode: unproved prerequisites (leaf -> its row) and pending definitions
+        # (source -> (pending target, its hypotheses in order)); a reference to a leaf is its hypothesis
+        # (env entry ("hyp", leaf, bvar)), a reference to a pending definition its artifact applied to
+        # the hypotheses of its own telescope
+        self.leaves = {}
+        self.pending = {}
+        self.pending_inds = {}      # mind -> its pending row (hypotheses as leading parameters)
 
     def ind_target(self, ref):
         mind, idx = ref["mind"], ref["i"]
         if mind in BOOTSTRAP:
             b = BOOTSTRAP[mind]
             return b["types"][idx], b["ctors"][idx], b["univ"]
-        r = self.ok.get(mind)
-        if r is not None and r["status"] == "TRANSLATED_AND_CHECKED" and self.decls[mind]["kind"] == "inductive":
+        r = self.ok.get(mind) or self.pending_inds.get(mind)
+        if r is not None and r["status"] in ("TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED") and self.decls[mind]["kind"] == "inductive":
             body = self.decls[mind]["bodies"][idx]
             t, cs = generated_names(mind, body["name"], [c["name"] for c in body["ctors"]])
             n = len(ind_params(self.decls[mind], r)[0])
+            if mind in self.pending_inds:
+                t, cs = pending_target_name(t[len("Rocq."):]), [pending_target_name(c[len("Rocq."):]) for c in cs]
             return t, cs, ("mono" if n == 0 else ("params", n))
         raise Mismatch(f"inductive {mind} has no audited realisation")
 
@@ -420,6 +429,8 @@ class Auditor:
                 out.append(("expect", x[1], Auditor.shift(x[2], n), *x[3:]))
             elif x[0] == "accrec":           # the induction hypothesis' position moves with the binders
                 out.append(("accrec", dict(x[1], ih=x[1]["ih"] + n)))
+            elif x[0] == "hyp":              # statement mode: a pending prerequisite's hypothesis
+                out.append(("hyp", x[1], x[2] + n))
             else:
                 out.append(x)
         return out
@@ -460,6 +471,11 @@ class Auditor:
             if want[0] == "tgt":          # a target expression forced by typing (constructor parameters)
                 if e != want[1]:
                     raise Mismatch(f"{path}: expected the parameter {want[1]}, found {e}")
+                return
+            if want[0] == "selfp":        # a pending block's self reference: applied to its hypotheses
+                head = self.strip_hyp_args(e, want[3], env, path)
+                if head != {"k": "const", "n": want[1], "u": want[2]}:
+                    raise Mismatch(f"{path}: source rel {s['i']} should be {want[1]} applied to its hypotheses")
                 return
             if want[0] not in ("bvar", "const"):
                 raise Mismatch(f"{path}: source rel {s['i']} refers to {want[0]} binder outside a supported call")
@@ -543,11 +559,54 @@ class Auditor:
                 raise Mismatch(f"{path}: cast repair minor {k} does not end in the transported source proof")
         return e["a"]
 
+    @staticmethod
+    def hyp_index(env, name, path):
+        for x in env:
+            if x[0] == "hyp" and x[1] == name:
+                return x[2]
+        raise Mismatch(f"{path}: reference to the unproved prerequisite {name} outside a pending declaration "
+                       f"that has it as a hypothesis")
+
+    def strip_hyp_args(self, e, hs, env, path):
+        """A pending inductive (type or constructor) is applied to the hypotheses of its own telescope
+        first: returns the head after checking them."""
+        for h in reversed(hs):
+            j = self.hyp_index(env, h, path)
+            if e.get("k") != "app" or e["a"] != {"k": "bvar", "i": j}:
+                raise Mismatch(f"{path}: pending inductive not applied to the hypothesis of {h}")
+            e = e["f"]
+        return e
+
+    def check_prereq_ref(self, s, e, path, env):
+        """Statement mode: a source reference to a leaf (proof task) is its hypothesis; a reference to a
+        pending definition is its artifact applied to the hypotheses of its telescope, in order."""
+        c = s["c"]
+        if s.get("u"):
+            raise Mismatch(f"{path}: universe-polymorphic prerequisite {c}")
+        if c in self.leaves:
+            j = self.hyp_index(env, c, path)
+            if e != {"k": "bvar", "i": j}:
+                raise Mismatch(f"{path}: {c} must be its hypothesis (bvar {j}), found {e.get('k')}")
+            return
+        tgt, hs = self.pending[c]
+        cur = e
+        for h in reversed(hs):
+            j = self.hyp_index(env, h, path)
+            if cur.get("k") != "app" or cur["a"] != {"k": "bvar", "i": j}:
+                raise Mismatch(f"{path}: pending {c} must be applied to the hypothesis of {h}")
+            cur = cur["f"]
+        if cur.get("k") != "const" or cur["n"] != tgt:
+            raise Mismatch(f"{path}: expected the pending artifact {tgt}, found {cur.get('n', cur.get('k'))}")
+
     def check_head(self, s, e, path, env=()):
+        if s["k"] == "const" and (s["c"] in self.leaves or s["c"] in self.pending):
+            return self.check_prereq_ref(s, e, path, env)
         h = self.head(s) if s["k"] in ("const", "ind", "construct") else None
         if h is None:
             return self.check(s, e, path, env)
         name, univ = h
+        if s["k"] in ("ind", "construct") and s["ind"]["mind"] in self.pending_inds:
+            e = self.strip_hyp_args(e, self.pending_inds[s["ind"]["mind"]].get("pending_hypotheses") or [], env, path)
         if e["k"] != "const" or e["n"] != name:
             raise Mismatch(f"{path}: expected constant {name}, found {e.get('n', e['k'])}")
         if univ == "mono" and e["u"]:
@@ -659,12 +718,17 @@ class Auditor:
         if cur["k"] != "const" or cur["n"] != tname + ".rec":
             raise Mismatch(f"{path}: match must lower to {tname}.rec, found {cur.get('n', cur['k'])}")
         p, brs = s["p"], s["brs"]
-        npar, nidx = len(p["params"]), len(p["ctx"]) - 1
+        # statement mode: a pending inductive's recursor takes its hypotheses as first parameters
+        hs = (self.pending_inds.get(ref["mind"]) or {}).get("pending_hypotheses") or []
+        for i, h in enumerate(hs):
+            if i >= len(spine) or spine[i] != {"k": "bvar", "i": self.hyp_index(env, h, path)}:
+                raise Mismatch(f"{path}: {tname}.rec parameter {i} is not the hypothesis of {h}")
+        npar, nidx = len(p["params"]) + len(hs), len(p["ctx"]) - 1
         spine, aux, nested = self.split_nested(cur, spine, npar, len(brs), path)
         if len(spine) != npar + 1 + len(brs) + nidx + 1:
             raise Mismatch(f"{path}: {tname}.rec applied to {len(spine)} arguments")
         for i, a in enumerate(p["params"]):
-            self.check(a, spine[i], path + [f"param{i}"], env)
+            self.check(a, spine[len(hs) + i], path + [f"param{i}"], env)
         motive = self.strip_lams(spine[npar], len(p["ctx"]), path + ["motive"])
         self.check(p["ret"], motive, path + ["motive"], self.push(env, len(p["ctx"])))
         self.check_rec_binders(cur, spine, npar, len(brs), nidx, path,
@@ -2237,117 +2301,10 @@ def sha256_path(p):
     return hashlib.sha256(open(p, "rb").read()).hexdigest()
 
 
-def main(src_path, contract_path, report_path, out_path, metadata_path=None):
-    from collections import Counter
-    lines = [json.loads(l) for l in open(src_path)]
-    decls = {d["name"]: d for d in lines if d["kind"] in ("constant", "inductive")}
-    con = json.load(open(contract_path))
-    report = json.load(open(report_path))
-    results = report.get("results", [])
-    problems, verdicts = [], []
-
-    def problem(det, msg):
-        problems.append({"detector": det, "message": msg})
-
-    # Binding.
-    ir_sha = sha256_path(src_path)
-    if con.get("ir_sha256") != ir_sha:
-        problem("binding", "contract IR digest differs from the audited source")
-    if report.get("input_sha256") != ir_sha:
-        problem("binding", "report input digest differs from the audited source")
-    if report.get("run_id") != con.get("run_id"):
-        problem("binding", "report run id differs from the contract")
-    # P0 interface protection, recomputed independently (not via tools/protection.py): the pinned
-    # manifest's digest, the protected names present in the audited source, the contract's binding,
-    # and every accepted protected row keeping its full statement (no R2B-S, no R2B-P statement level).
-    # Whether those relaxations happened is itself checked independently by the universe checks below
-    # (a row that hides a relaxation fails its strict level check).
-    import hashlib
-    root_dir = Path(__file__).resolve().parent.parent
-    iface_checked = 0
-    try:
-        pin = json.load(open(root_dir / "tools" / "protected_interface.pin.json"))
-        mbytes = (root_dir / pin["manifest"]).read_bytes()
-        msha = hashlib.sha256(mbytes).hexdigest()
-        if msha != pin["sha256"]:
-            problem("interface", "protected-interface manifest differs from its pin")
-        prot = set(json.loads(mbytes)["protected"]) & set(decls)
-        cp = con.get("protection") or {}
-        if cp.get("manifest_sha256") != msha or cp.get("protected") != sorted(prot):
-            problem("interface", "contract protection binding differs from the pinned manifest for this source")
-        rp = report.get("protection") or {}
-        if rp.get("protected_in_export") != len(prot) or rp.get("manifest_sha256") != msha:
-            problem("interface", "the translation was not run under this protection binding")
-        for r_ in results:
-            if bool(r_.get("protected")) != (r_.get("source") in prot):
-                problem("interface", f"{r_.get('source')}: protection flag differs from the pinned manifest")
-            if r_.get("source") in prot and r_.get("status") == "TRANSLATED_AND_CHECKED":
-                iface_checked += 1
-                if r_.get("sort_lowered_levels") or any(x.get("in_type") for x in r_.get("r2bp_levels") or []):
-                    problem("interface", f"{r_.get('source')}: protected public declaration translated with a specialized statement")
-    except (OSError, KeyError, ValueError) as e:
-        problem("interface", f"protection data unreadable: {e}")
-    # Requested roots, re-derived from the source root records.
-    request = con.get("request") or []
-    if not request:
-        problem("coverage", "empty request")
-    src_roots = lines[1]["roots"]
-    if [r["requested"] for r in src_roots] != request:
-        problem("coverage", "source root records differ from the contract request")
-    canon = [r["name"] for r in src_roots]
-    if len(set(canon)) != len(canon):
-        problem("coverage", "two requested roots resolve to the same declaration")
-    for r in src_roots:
-        if r["term"]["k"] not in ("const", "ind"):
-            problem("coverage", f"unsupported root form {r['term']['k']} for {r['requested']}")
-    if [c["canonical"] for c in con.get("roots", [])] != canon:
-        problem("coverage", "contract roots differ from the source root records")
-    # Required closure, recomputed here.
-    try:
-        closure = required_closure(decls, canon)
-    except Mismatch as e:
-        closure = set()
-        problem("coverage", str(e))
-    if sorted(closure) != con.get("required_closure"):
-        problem("coverage", "contract closure differs from the closure recomputed from the source")
-    if sorted(decls) != con.get("exported"):
-        problem("coverage", "contract export list differs from the source")
-    # Result rows: exactly one per exported declaration.
-    counts = Counter(r.get("source") for r in results)
-    for s, n in counts.items():
-        if n != 1:
-            problem("coverage", f"{s}: {n} result rows")
-        if s not in decls:
-            problem("coverage", f"{s}: result for a declaration that was not exported")
-    for s in decls:
-        if counts[s] == 0:
-            problem("coverage", f"{s}: exported declaration has no result")
-    rows = {r["source"]: r for r in results if counts[r.get("source")] == 1}
-    ok_status = lambda s: rows.get(s, {}).get("status")
-    for s in sorted(closure):
-        st = ok_status(s)
-        if not (st == "TRANSLATED_AND_CHECKED" or (st == "BOOTSTRAP_RESOLVED" and s in BOOTSTRAP)):
-            problem("coverage", f"required declaration {s} has status {st}")
-    for c in canon:
-        if ok_status(c) != "TRANSLATED_AND_CHECKED":
-            problem("coverage", f"requested root {c} has status {ok_status(c)}")
-    rep_roots = report.get("roots", [])
-    if [(r.get("requested"), r.get("name")) for r in rep_roots] != [(r["requested"], r["name"]) for r in src_roots] \
-            or any(r.get("status") != ok_status(r.get("name")) for r in rep_roots):
-        problem("coverage", "report root records disagree with the contract or with the result rows")
-    if report.get("status") != "OK":
-        problem("coverage", f"report status is {report.get('status')!r}, not 'OK'")
-    # Summary counts, recomputed.
-    accepted = [s for s in closure if ok_status(s) == "TRANSLATED_AND_CHECKED"]
-    want_summary = {"roots": len(canon),
-                    "translated_dependencies": len([s for s in accepted if s not in canon]),
-                    "bootstrap_resolved": len([s for s in decls if ok_status(s) == "BOOTSTRAP_RESOLVED"]),
-                    "generated_helpers": 0,
-                    "not_ok": len([s for s in decls if ok_status(s) not in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED")])}
-    if report.get("summary") != want_summary:
-        problem("coverage", f"report summary {report.get('summary')} differs from recomputed {want_summary}")
-    if not accepted:
-        problem("coverage", "no accepted declaration")
+def universe_and_instance_checks(lines, decls, rows, metadata_path, problem):
+    """Universe interpretation (R3), body levels (R2S/R2B), residuals and typing-determined instance
+    levels of every accepted row (`rows`: source name -> result row with status
+    TRANSLATED_AND_CHECKED for the rows to check). Returns (universe arguments checked, recursors)."""
     # Universe interpretation (rule R3), checked independently of the translator.
     facts = Facts(lines[4]) if lines[4].get("kind") == "universe_facts" else None
     global FACTS
@@ -2483,6 +2440,123 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
             inst.visit(c["type"], [], ips, "ctor " + c["name"])
         for m in ips:
             problem("instance_levels", f"{s_}: {m}")
+    return univ_checked, recursors, inst
+
+
+def main(src_path, contract_path, report_path, out_path, metadata_path=None):
+    from collections import Counter
+    lines = [json.loads(l) for l in open(src_path)]
+    if statement_mode(lines[0]):
+        return main_statement(lines, src_path, contract_path, report_path, out_path, metadata_path)
+    decls = {d["name"]: d for d in lines if d["kind"] in ("constant", "inductive")}
+    con = json.load(open(contract_path))
+    report = json.load(open(report_path))
+    results = report.get("results", [])
+    problems, verdicts = [], []
+
+    def problem(det, msg):
+        problems.append({"detector": det, "message": msg})
+
+    # Binding.
+    ir_sha = sha256_path(src_path)
+    if con.get("ir_sha256") != ir_sha:
+        problem("binding", "contract IR digest differs from the audited source")
+    if report.get("input_sha256") != ir_sha:
+        problem("binding", "report input digest differs from the audited source")
+    if report.get("run_id") != con.get("run_id"):
+        problem("binding", "report run id differs from the contract")
+    # P0 interface protection, recomputed independently (not via tools/protection.py): the pinned
+    # manifest's digest, the protected names present in the audited source, the contract's binding,
+    # and every accepted protected row keeping its full statement (no R2B-S, no R2B-P statement level).
+    # Whether those relaxations happened is itself checked independently by the universe checks below
+    # (a row that hides a relaxation fails its strict level check).
+    import hashlib
+    root_dir = Path(__file__).resolve().parent.parent
+    iface_checked = 0
+    try:
+        pin = json.load(open(root_dir / "tools" / "protected_interface.pin.json"))
+        mbytes = (root_dir / pin["manifest"]).read_bytes()
+        msha = hashlib.sha256(mbytes).hexdigest()
+        if msha != pin["sha256"]:
+            problem("interface", "protected-interface manifest differs from its pin")
+        prot = set(json.loads(mbytes)["protected"]) & set(decls)
+        cp = con.get("protection") or {}
+        if cp.get("manifest_sha256") != msha or cp.get("protected") != sorted(prot):
+            problem("interface", "contract protection binding differs from the pinned manifest for this source")
+        rp = report.get("protection") or {}
+        if rp.get("protected_in_export") != len(prot) or rp.get("manifest_sha256") != msha:
+            problem("interface", "the translation was not run under this protection binding")
+        for r_ in results:
+            if bool(r_.get("protected")) != (r_.get("source") in prot):
+                problem("interface", f"{r_.get('source')}: protection flag differs from the pinned manifest")
+            if r_.get("source") in prot and r_.get("status") == "TRANSLATED_AND_CHECKED":
+                iface_checked += 1
+                if r_.get("sort_lowered_levels") or any(x.get("in_type") for x in r_.get("r2bp_levels") or []):
+                    problem("interface", f"{r_.get('source')}: protected public declaration translated with a specialized statement")
+    except (OSError, KeyError, ValueError) as e:
+        problem("interface", f"protection data unreadable: {e}")
+    # Requested roots, re-derived from the source root records.
+    request = con.get("request") or []
+    if not request:
+        problem("coverage", "empty request")
+    src_roots = lines[1]["roots"]
+    if [r["requested"] for r in src_roots] != request:
+        problem("coverage", "source root records differ from the contract request")
+    canon = [r["name"] for r in src_roots]
+    if len(set(canon)) != len(canon):
+        problem("coverage", "two requested roots resolve to the same declaration")
+    for r in src_roots:
+        if r["term"]["k"] not in ("const", "ind"):
+            problem("coverage", f"unsupported root form {r['term']['k']} for {r['requested']}")
+    if [c["canonical"] for c in con.get("roots", [])] != canon:
+        problem("coverage", "contract roots differ from the source root records")
+    # Required closure, recomputed here.
+    try:
+        closure = required_closure(decls, canon)
+    except Mismatch as e:
+        closure = set()
+        problem("coverage", str(e))
+    if sorted(closure) != con.get("required_closure"):
+        problem("coverage", "contract closure differs from the closure recomputed from the source")
+    if sorted(decls) != con.get("exported"):
+        problem("coverage", "contract export list differs from the source")
+    # Result rows: exactly one per exported declaration.
+    counts = Counter(r.get("source") for r in results)
+    for s, n in counts.items():
+        if n != 1:
+            problem("coverage", f"{s}: {n} result rows")
+        if s not in decls:
+            problem("coverage", f"{s}: result for a declaration that was not exported")
+    for s in decls:
+        if counts[s] == 0:
+            problem("coverage", f"{s}: exported declaration has no result")
+    rows = {r["source"]: r for r in results if counts[r.get("source")] == 1}
+    ok_status = lambda s: rows.get(s, {}).get("status")
+    for s in sorted(closure):
+        st = ok_status(s)
+        if not (st == "TRANSLATED_AND_CHECKED" or (st == "BOOTSTRAP_RESOLVED" and s in BOOTSTRAP)):
+            problem("coverage", f"required declaration {s} has status {st}")
+    for c in canon:
+        if ok_status(c) != "TRANSLATED_AND_CHECKED":
+            problem("coverage", f"requested root {c} has status {ok_status(c)}")
+    rep_roots = report.get("roots", [])
+    if [(r.get("requested"), r.get("name")) for r in rep_roots] != [(r["requested"], r["name"]) for r in src_roots] \
+            or any(r.get("status") != ok_status(r.get("name")) for r in rep_roots):
+        problem("coverage", "report root records disagree with the contract or with the result rows")
+    if report.get("status") != "OK":
+        problem("coverage", f"report status is {report.get('status')!r}, not 'OK'")
+    # Summary counts, recomputed.
+    accepted = [s for s in closure if ok_status(s) == "TRANSLATED_AND_CHECKED"]
+    want_summary = {"roots": len(canon),
+                    "translated_dependencies": len([s for s in accepted if s not in canon]),
+                    "bootstrap_resolved": len([s for s in decls if ok_status(s) == "BOOTSTRAP_RESOLVED"]),
+                    "generated_helpers": 0,
+                    "not_ok": len([s for s in decls if ok_status(s) not in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED")])}
+    if report.get("summary") != want_summary:
+        problem("coverage", f"report summary {report.get('summary')} differs from recomputed {want_summary}")
+    if not accepted:
+        problem("coverage", "no accepted declaration")
+    univ_checked, recursors, inst = universe_and_instance_checks(lines, decls, rows, metadata_path, problem)
     aud = Auditor(decls, list(rows.values()), recursors)
     for s in sorted(decls):
         r, d = rows.get(s), decls[s]
@@ -2582,6 +2656,336 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
            "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
            "coverage": {"requested_roots": len(canon), "required_closure": len(closure), "accepted": len(accepted),
                         "extra_exported": sorted(set(decls) - closure)},
+           "problems": problems, "verdicts": verdicts}
+    json.dump(out, open(out_path, "w"), indent=2)
+    print(out["status"], f"({len(problems)} problem(s))")
+    return 0 if not problems else 1
+
+
+# ---------- statement mode (docs/STATEMENT_ONLY_DESIGN.md) ----------
+
+LEAF_STATES = ("statement_only", "obligation", "opaque_interface")
+ACCEPTED_ST = ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED", "STATEMENT_KERNEL_CHECKED")
+PENDING_ST = ("PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
+_PROP = {"k": "sort", "s": {"k": "prop"}}
+
+
+def statement_mode(header):
+    m = header.get("mode")
+    return isinstance(m, dict) and m.get("name") == "statement"
+
+
+def is_leaf(d):
+    """A proof task: a proof-valued constant, an extracted obligation or opaque data (from the source
+    record alone: its body state, set by the exporter's statement preparation)."""
+    return d["kind"] == "constant" and d.get("body_state") in LEAF_STATES
+
+
+def statement_view(d):
+    """The declaration the translator builds for a source declaration (independently restated): a
+    leaf `c : T` becomes `def c.statement : Prop := T` (`c.type : s := T` for opaque data of native
+    sort s); every other declaration is itself."""
+    if not is_leaf(d):
+        return d, ""
+    if d["body_state"] == "opaque_interface":
+        if d.get("type_sort") is None:
+            raise Mismatch("opaque data without its native sort")
+        return dict(d, type=d["type_sort"], body=d["type"], body_state="transparent"), ".type"
+    if d.get("body") is not None:
+        raise Mismatch("a proof task exported with a body")
+    return dict(d, type=_PROP, body=d["type"], body_state="transparent"), ".statement"
+
+
+def check_hyp_telescope(rows, leaves, hs, hyp_t):
+    """The hypothesis telescope of a pending artifact: one binder per prerequisite, in the reported
+    order, each the prerequisite's statement (its own pending artifact applied to its own hypotheses,
+    which must come earlier)."""
+    for i, (l, t) in enumerate(zip(hs, hyp_t)):
+        lr = rows.get(l)
+        if lr is None or l not in leaves or lr["status"] not in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED"):
+            raise Mismatch(f"hypothesis {l} is not a translated proof task")
+        cur, earlier = t, hs[:i]
+        for h in reversed(lr.get("pending_hypotheses") or []):
+            if h not in earlier or cur.get("k") != "app" or cur["a"] != {"k": "bvar", "i": i - 1 - earlier.index(h)}:
+                raise Mismatch(f"hypothesis {l}: its statement is not applied to the hypothesis of {h}")
+            cur = cur["f"]
+        if cur.get("k") != "const" or cur["n"] != lr["target"]:
+            raise Mismatch(f"hypothesis {l}: type is not its statement {lr['target']}")
+
+
+def pending_target_name(key):
+    return "RocqPending." + target_name(key)[len("Rocq."):]
+
+
+def main_statement(lines, src_path, contract_path, report_path, out_path, metadata_path=None):
+    """Statement-mode audit. Every row the translator claims (accepted: TRANSLATED_AND_CHECKED,
+    BOOTSTRAP_RESOLVED, STATEMENT_KERNEL_CHECKED; pending: PENDING_KERNEL_CHECKED,
+    STATEMENT_PENDING_KERNEL_CHECKED) is audited against the source: its statement view (above), its
+    prerequisites (recomputed: the leaves it reaches directly or through pending definitions), its
+    hypothesis telescope, and its type and value term by term with every leaf reference a hypothesis.
+    Rows the translator did not claim are reported, not accepted. No original proof body exists in the
+    source (the exporter dropped them); a body on a proof task is refused."""
+    from collections import Counter
+    import hashlib
+    decls = {d["name"]: d for d in lines if d["kind"] in ("constant", "inductive")}
+    con = json.load(open(contract_path))
+    report = json.load(open(report_path))
+    results = report.get("results", [])
+    problems, verdicts = [], []
+
+    def problem(det, msg):
+        problems.append({"detector": det, "message": msg})
+
+    ir_sha = sha256_path(src_path)
+    if con.get("ir_sha256") != ir_sha:
+        problem("binding", "contract IR digest differs from the audited source")
+    if report.get("input_sha256") != ir_sha:
+        problem("binding", "report input digest differs from the audited source")
+    if report.get("run_id") != con.get("run_id"):
+        problem("binding", "report run id differs from the contract")
+    if con.get("mode") != "statement":
+        problem("binding", "the contract is not a statement-mode contract")
+    # coverage: one row per exported declaration, roots and closure recomputed
+    request = con.get("request") or []
+    src_roots = lines[1]["roots"]
+    if not request or [r["requested"] for r in src_roots] != request:
+        problem("coverage", "source root records differ from the contract request")
+    canon = [r["name"] for r in src_roots]
+    if [c["canonical"] for c in con.get("roots", [])] != canon:
+        problem("coverage", "contract roots differ from the source root records")
+    try:
+        closure = required_closure(decls, canon)
+    except Mismatch as e:
+        closure = set()
+        problem("coverage", str(e))
+    if sorted(closure) != con.get("required_closure"):
+        problem("coverage", "contract closure differs from the closure recomputed from the source")
+    if sorted(decls) != con.get("exported"):
+        problem("coverage", "contract export list differs from the source")
+    counts = Counter(r.get("source") for r in results)
+    for s_, n in counts.items():
+        if n != 1 or s_ not in decls:
+            problem("coverage", f"{s_}: {n} result rows / not exported")
+    for s_ in decls:
+        if counts[s_] == 0:
+            problem("coverage", f"{s_}: exported declaration has no result")
+    rows = {r["source"]: r for r in results if counts[r.get("source")] == 1 and r.get("source") in decls}
+    st = lambda x: rows.get(x, {}).get("status")
+    rep_roots = report.get("roots", [])
+    if [(r.get("requested"), r.get("name")) for r in rep_roots] != [(r["requested"], r["name"]) for r in src_roots] \
+            or any(r.get("status") != st(r.get("name")) for r in rep_roots):
+        problem("coverage", "report root records disagree with the contract or with the result rows")
+    # interface protection (as in proof mode, for every claimed row)
+    root_dir = Path(__file__).resolve().parent.parent
+    iface_checked = 0
+    try:
+        pin = json.load(open(root_dir / "tools" / "protected_interface.pin.json"))
+        mbytes = (root_dir / pin["manifest"]).read_bytes()
+        msha = hashlib.sha256(mbytes).hexdigest()
+        if msha != pin["sha256"]:
+            problem("interface", "protected-interface manifest differs from its pin")
+        prot = set(json.loads(mbytes)["protected"]) & set(decls)
+        cp = con.get("protection") or {}
+        if cp.get("manifest_sha256") != msha or cp.get("protected") != sorted(prot):
+            problem("interface", "contract protection binding differs from the pinned manifest for this source")
+        rp = report.get("protection") or {}
+        if rp.get("protected_in_export") != len(prot) or rp.get("manifest_sha256") != msha:
+            problem("interface", "the translation was not run under this protection binding")
+        for r_ in results:
+            if bool(r_.get("protected")) != (r_.get("source") in prot):
+                problem("interface", f"{r_.get('source')}: protection flag differs from the pinned manifest")
+            if r_.get("source") in prot and r_.get("status") in ACCEPTED_ST + PENDING_ST:
+                iface_checked += 1
+                if r_.get("sort_lowered_levels") or any(x.get("in_type") for x in r_.get("r2bp_levels") or []):
+                    problem("interface", f"{r_.get('source')}: protected public declaration translated with a specialized statement")
+    except (OSError, KeyError, ValueError) as e:
+        problem("interface", f"protection data unreadable: {e}")
+    # statement views and prerequisites, from the source alone
+    views, suffix = {}, {}
+    for n, d in decls.items():
+        try:
+            views[n], suffix[n] = statement_view(d)
+        except Mismatch as e:
+            problem("structure", f"{n}: {e}")
+            views[n], suffix[n] = d, ""
+    claimed = {n for n in decls if st(n) in ACCEPTED_ST + PENDING_ST}
+    leaves = {n for n in decls if is_leaf(decls[n])}
+    pend_defs = {n for n in claimed if st(n) == "PENDING_KERNEL_CHECKED"}
+    refs = {}
+    for n, v in views.items():
+        refs[n] = closure_refs([v["type"], v["body"]] if v["kind"] == "constant" else [v["params"], v["bodies"]], set()) - {n}
+    need_memo = {}
+
+    def need(n, stack=()):
+        if n in need_memo:
+            return need_memo[n]
+        if n in stack:
+            raise Mismatch(f"cyclic prerequisites through {n}")
+        out = set()
+        for x in refs.get(n, ()):
+            if x in leaves:
+                out |= {x} | need(x, stack + (n,))
+            elif x in pend_defs or (x in decls and decls[x]["kind"] == "inductive" and st(x) == "PENDING_KERNEL_CHECKED"):
+                out |= need(x, stack + (n,))
+        need_memo[n] = out
+        return out
+
+    for n in sorted(claimed):
+        r = rows[n]
+        try:
+            for x in refs[n]:
+                if x not in claimed:
+                    raise Mismatch(f"claimed with a dependency that is not claimed: {x} ({st(x)})")
+            nd = need(n)
+            hs = r.get("pending_hypotheses") or []
+            if len(set(hs)) != len(hs) or set(hs) != nd:
+                raise Mismatch(f"hypotheses {hs} differ from the recomputed prerequisites {sorted(nd)}")
+            want = ("STATEMENT_" if n in leaves else "") + ("PENDING_KERNEL_CHECKED" if nd else
+                                                            ("KERNEL_CHECKED" if n in leaves else "TRANSLATED_AND_CHECKED"))
+            if r["status"] != want and not (r["status"] == "BOOTSTRAP_RESOLVED" and n in BOOTSTRAP and not nd):
+                raise Mismatch(f"status {r['status']}, the source and the prerequisites give {want}")
+        except Mismatch as e:
+            problem("prerequisites", f"{n}: {e}")
+    # normalized rows (statement views, hypotheses peeled) for the universe and instance checks
+    norm_decls, norm_rows, peeled = dict(decls), {}, {}
+    for n, r in rows.items():
+        if n not in claimed or r["status"] == "BOOTSTRAP_RESOLVED":
+            norm_rows[n] = r
+            continue
+        norm_decls[n] = views[n]
+        norm_rows[n] = dict(r, status="TRANSLATED_AND_CHECKED")
+    univ_checked, recursors, inst = universe_and_instance_checks(lines, norm_decls, norm_rows, metadata_path, problem)
+    # structural fidelity
+    acc_rows = [r for n, r in rows.items() if r["status"] in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED")]
+    aud = Auditor(decls, acc_rows, recursors)
+    aud.leaves = {n: rows[n] for n in leaves if n in claimed}
+    aud.pending = {n: (rows[n]["target"], rows[n].get("pending_hypotheses") or []) for n in pend_defs
+                   if decls[n]["kind"] == "constant"}
+    aud.pending_inds = {n: rows[n] for n in pend_defs if decls[n]["kind"] == "inductive"}
+    for s_ in sorted(decls):
+        r, d = rows.get(s_), views[s_]
+        v = {"source": s_, "status": r.get("status") if r else None, "leaf": s_ in leaves,
+             "role": "root" if s_ in canon else ("required" if s_ in closure else "extra_not_required")}
+        try:
+            if r is None:
+                raise Mismatch("no unique result row")
+            if s_ not in claimed:
+                v["verdict"] = "NOT_ACCEPTED"
+                verdicts.append(v)
+                continue
+            if r["status"] == "BOOTSTRAP_RESOLVED":
+                b = BOOTSTRAP.get(s_)
+                if b is None or r["target"] != b["types"][0]:
+                    raise Mismatch("bootstrap resolution not in the audited table")
+                v["verdict"] = "MATCH"
+                verdicts.append(v)
+                continue
+            hs = r.get("pending_hypotheses") or []
+            pending = r["status"] in PENDING_ST
+            if d["kind"] == "inductive":
+                b = d["bodies"][0]
+                if len(d["bodies"]) != 1:
+                    raise Mismatch("UNAUDITABLE: mutual block")
+                t, cs = generated_names(d["name"], b["name"], [c["name"] for c in b["ctors"]])
+                if pending:
+                    t, cs = pending_target_name(t[len("Rocq."):]), [pending_target_name(c[len("Rocq."):]) for c in cs]
+                if r["target"] != t or [c["name"] for c in r["target_ctors"]] != cs:
+                    raise Mismatch(f"target names {r['target']} are not the images of the source")
+                nrec = (d.get("native") or {}).get("nparams_rec", d["npars"])
+                if r.get("num_params") != nrec + len(hs) or nrec > d["npars"]:
+                    raise Mismatch("parameter count differs from the source's uniform parameters")
+                params0, sol0, _ = ind_params(d, r)
+                want_lp = [level_param(g) for g in params0]
+                if r.get("level_params", []) != want_lp:
+                    raise Mismatch(f"universe parameters {r.get('level_params')} are not the generalized globals {want_lp}")
+                tb = template_binding(d)
+                if bool(r.get("template")) != (tb is not None):
+                    raise Mismatch("template status differs from the source kernel record")
+                if tb is None and r.get("plain_levels"):
+                    aud.body = None
+                elif tb is None:
+                    aud.body = own_level_interp(FACTS, params0) if FACTS is not None else None
+                else:
+                    aud.body = sol0
+                try:
+                    # hypotheses: the leading parameters of the type and of every constructor
+                    hyp_t = []
+                    ty_t = r["target_type"]
+                    for i in range(len(hs)):
+                        if ty_t.get("k") != "forall":
+                            raise Mismatch(f"missing hypothesis parameter {i}")
+                        hyp_t.append(ty_t["t"])
+                        ty_t = ty_t["b"]
+                    check_hyp_telescope(rows, leaves, hs, hyp_t)
+                    henv = [("hyp", l, len(hs) - 1 - i) for i, l in enumerate(hs)][::-1]
+                    aud.check(b["type"], ty_t, ["arity"], henv)
+                    self_ref = ("selfp", t, [{"k": "param", "n": l} for l in want_lp], hs) if hs else \
+                        ("const", t, [{"k": "param", "n": l} for l in want_lp])
+                    for c, tc in zip(b["ctors"], r["target_ctors"]):
+                        ct = tc["type"]
+                        for i in range(len(hs)):
+                            if ct.get("k") != "forall" or ct["t"] != hyp_t[i]:
+                                raise Mismatch(f"constructor {c['name']}: hypothesis parameter {i} differs")
+                            ct = ct["b"]
+                        aud.check(c["type"], ct, ["ctor " + c["name"]], [self_ref] + aud.shift(henv, 0))
+                finally:
+                    aud.body = None
+                v["verdict"] = "MATCH"
+                verdicts.append(v)
+                continue
+            want_t = (pending_target_name if pending else target_name)(s_ + suffix[s_])
+            if r["target"] != want_t:
+                raise Mismatch(f"target name {r['target']} is not {want_t}")
+            if r["target_kind"] not in (("statement",) if s_ in leaves else ("def",)):
+                raise Mismatch(f"{'proof task' if s_ in leaves else 'definition'} emitted as {r['target_kind']}")
+            if d.get("body_state") != "transparent" and d.get("body_state") != "sealed_implementation":
+                raise Mismatch(f"body state {d.get('body_state')} is not a definition in statement mode")
+            ty, val = r.get("target_type"), r.get("target_value")
+            if ty is None or val is None:
+                raise Mismatch("success claimed without target type/value")
+            # the hypothesis telescope: one binder per prerequisite, in the reported order, each the
+            # prerequisite's statement (its own pending artifact applied to its own hypotheses)
+            hyp_t = []
+            for i, l in enumerate(hs):
+                if ty.get("k") != "forall" or val.get("k") != "lam" or ty["t"] != val["t"]:
+                    raise Mismatch(f"hypothesis {i} ({l}) missing or differing between type and value")
+                hyp_t.append(ty["t"])
+                ty, val = ty["b"], val["b"]
+            check_hyp_telescope(rows, leaves, hs, hyp_t)
+            env = [("hyp", l, len(hs) - 1 - i) for i, l in enumerate(hs)][::-1]
+            params, sol = own_partition(d, r)
+            aud.body = sol
+            REDUCE[0] = bool(r.get("sort_fact_reduced"))
+            ADMIT[0] = set(r.get("admitting_levels") or [])
+            try:
+                aud.check(d["type"], ty, ["type"], env)
+                body_s = d["body"]
+                if r.get("delta_inlined"):
+                    for n_ in r["delta_inlined"]:
+                        if n_ not in aud.ir_bodies or not has_set_motive(decls[n_]["type"]):
+                            raise Mismatch(f"inlined {n_} is not a transparent constant with a Set-motive binder")
+                    body_s = inline_consts(body_s, set(r["delta_inlined"]), aud.ir_bodies)
+                aud.check(body_s, val, ["body"], env)
+            finally:
+                aud.body = None
+                REDUCE[0] = False
+                ADMIT[0] = set()
+            v["verdict"] = "MATCH"
+        except Mismatch as e:
+            v["verdict"] = "MISMATCH"
+            v["reason"] = str(e)
+            problem("structure", f"{s_}: {e}")
+        verdicts.append(v)
+    by = Counter((v["status"], v["verdict"]) for v in verdicts)
+    out = {"schema": "rocq2lean-audit-statement/1", "mode": "statement",
+           "status": "OK" if not problems else "AUDIT_REJECTED",
+           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked,
+           "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
+           "coverage": {"requested_roots": len(canon), "required_closure": len(closure), "claimed": len(claimed),
+                        "accepted": sum(1 for n in claimed if st(n) in ACCEPTED_ST),
+                        "pending": sum(1 for n in claimed if st(n) in PENDING_ST),
+                        "not_accepted": len(decls) - len(claimed),
+                        "by_status_and_verdict": {f"{a}/{b}": c for (a, b), c in sorted(by.items(), key=str)}},
            "problems": problems, "verdicts": verdicts}
     json.dump(out, open(out_path, "w"), indent=2)
     print(out["status"], f"({len(problems)} problem(s))")

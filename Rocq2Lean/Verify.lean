@@ -35,6 +35,19 @@ Detectors (each recorded separately in `result.json`):
   a specialized statement (R2B-S result-sort lowering or R2B-P on a statement level), whether it is a
   requested root or a dependency.
 
+Statement mode (the contract's `mode` is `statement`, docs/STATEMENT_ONLY_DESIGN.md): the rows
+checked are the rows the translator *claims* — accepted (`TRANSLATED_AND_CHECKED`,
+`BOOTSTRAP_RESOLVED`, `STATEMENT_KERNEL_CHECKED`) or pending (`PENDING_KERNEL_CHECKED`,
+`STATEMENT_PENDING_KERNEL_CHECKED`) — among all exported declarations; the others are reported, never
+accepted, and roots need not all be translated. Additional detectors:
+
+* `namespaces` — accepted targets are `Rocq.*`, pending artifacts `RocqPending.*`;
+* `target_deps` — an accepted target references only accepted targets (never a pending artifact);
+  a pending artifact also references pending artifacts and proof-task statements;
+* `statements` — a proof task is a definition whose type is `Prop` (`….statement`) or a sort
+  (`….type`, opaque data), after its hypotheses; an accepted definition is not a proof (its type is
+  not a proposition), and nothing accepted is a `theorem`, `opaque` or `axiom`.
+
 Any failure fails the module (non-zero exit of the consumer process).
 -/
 
@@ -153,6 +166,9 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
   let mut problems : Array (String × String) := #[]
   let mut detectors : Std.HashMap String Nat := {}
   let note (det msg : String) (ps : Array (String × String)) := ps.push (det, msg)
+  let stmtMode := getStr contract "mode" == "statement"
+  let acceptedSt := ["TRANSLATED_AND_CHECKED", "STATEMENT_KERNEL_CHECKED"]
+  let pendingSt := ["PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED"]
   -- binding
   if getStr report "run_id" != getStr contract "run_id" then
     problems := note "binding" "report run_id differs from the contract" problems
@@ -171,20 +187,23 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
   let status (s : String) : String := match rows[s]? with
     | some #[r] => getStr r "status"
     | _ => "MISSING"
-  for s in required do
-    let st := status s
-    let okBootstrap := st == "BOOTSTRAP_RESOLVED" && (findBootstrap? s).isSome
-    unless st == "TRANSLATED_AND_CHECKED" || okBootstrap do
-      problems := note "coverage" s!"required declaration {s} has status {st}" problems
-  for r in reqRoots do
-    let c := getStr r "canonical"
-    if status c != "TRANSLATED_AND_CHECKED" then
-      problems := note "coverage" s!"requested root {getStr r "requested"} ({c}) has status {status c}" problems
+  unless stmtMode do
+    for s in required do
+      let st := status s
+      let okBootstrap := st == "BOOTSTRAP_RESOLVED" && (findBootstrap? s).isSome
+      unless st == "TRANSLATED_AND_CHECKED" || okBootstrap do
+        problems := note "coverage" s!"required declaration {s} has status {st}" problems
+    for r in reqRoots do
+      let c := getStr r "canonical"
+      if status c != "TRANSLATED_AND_CHECKED" then
+        problems := note "coverage" s!"requested root {getStr r "requested"} ({c}) has status {status c}" problems
   -- roots: the report's own root records are exactly the contract's roots (requested spelling
   -- and resolution, in order), each with the status of its result row; the report status is OK.
   let repRoots := (report.getObjValAs? (Array Json) "roots").toOption.getD #[]
-  if getStr report "status" != "OK" then
+  if !stmtMode && getStr report "status" != "OK" then
     problems := note "roots" s!"report status is '{getStr report "status"}', not OK" problems
+  if stmtMode && !["OK", "OK_OBLIGATIONS_PENDING", "ROOTS_NOT_TRANSLATED"].contains (getStr report "status") then
+    problems := note "roots" s!"report status is '{getStr report "status"}'" problems
   if repRoots.size != reqRoots.size then
     problems := note "roots" s!"report has {repRoots.size} root record(s), the contract requests {reqRoots.size}" problems
   for rr in repRoots, cr in reqRoots do
@@ -197,18 +216,23 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
         s!"its result row says {status (getStr rr "name")}") problems
   -- allowed target constants
   let mut allowed : Std.HashSet Name := {}
+  -- statement mode: targets a pending artifact may also reference (pending artifacts, proof tasks)
+  let mut allowedPending : Std.HashSet Name := {}
   let mut accepted : Array (String × Json) := #[]
-  for s in required do
+  for s in (if stmtMode then exported else required) do
     match rows[s]? with
     | some #[r] =>
       let st := getStr r "status"
-      if st == "TRANSLATED_AND_CHECKED" then
+      if st == "TRANSLATED_AND_CHECKED" || (stmtMode && (acceptedSt ++ pendingSt).contains st) then
         let t := (getStr r "target").toName
-        allowed := allowed.insert t
+        let isPending := pendingSt.contains st
+        if isPending then allowedPending := allowedPending.insert t else allowed := allowed.insert t
         if getStr r "target_kind" == "inductive" then
-          allowed := allowed.insert (t.str "rec")
+          let ins (a : Std.HashSet Name) (n : Name) := a.insert n
+          if isPending then allowedPending := ins allowedPending (t.str "rec") else allowed := ins allowed (t.str "rec")
           for c in (r.getObjValAs? (Array Json) "target_ctors").toOption.getD #[] do
-            allowed := allowed.insert (getStr c "name").toName
+            if isPending then allowedPending := allowedPending.insert (getStr c "name").toName
+            else allowed := allowed.insert (getStr c "name").toName
         accepted := accepted.push (s, r)
       else if st == "BOOTSTRAP_RESOLVED" then
         if let some rule := findBootstrap? s then
@@ -247,8 +271,31 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
     let tgt := getStr r "target"
     let some ci := env.find? tgt.toName
       | problems := note "presence" s!"{tgt} ({s}): not in the imported environment" problems; continue
-    let kind := getStr r "target_kind"
+    let st := getStr r "status"
+    let isPending := pendingSt.contains st
+    -- statement mode: a proof task's statement is a definition
+    let kind := if stmtMode && getStr r "target_kind" == "statement" then "def" else getStr r "target_kind"
     if kindOf ci != kind then problems := note "kind" s!"{tgt}: imported {kindOf ci}, report says {kind}" problems
+    if stmtMode then
+      let ns := if isPending then `RocqPending else `Rocq
+      unless ns.isPrefixOf tgt.toName do
+        problems := note "namespaces" s!"{tgt}: {st} target outside {ns}" problems
+      if ["theorem", "opaque", "axiom"].contains (kindOf ci) then
+        problems := note "statements" s!"{tgt}: {kindOf ci} in a statement-mode library" problems
+      let nh := ((r.getObjValAs? (Array Json) "pending_hypotheses").toOption.getD #[]).size
+      if isPending == (nh == 0) then
+        problems := note "statements" s!"{tgt}: status {st} with {nh} hypotheses" problems
+      if kind == "def" then
+        let isStmt := st.startsWith "STATEMENT_"
+        let bad ← liftTermElabM <| forallBoundedTelescope ci.type (some nh) fun _ body => do
+          if isStmt then
+            match ← whnf body with
+            | .sort l => pure (tgt.endsWith ".statement" && !l.isZero || !(tgt.endsWith ".statement" || tgt.endsWith ".type"))
+            | _ => pure true
+          else pure (← isProp body)
+        if bad then
+          problems := note "statements" (if isStmt then s!"{tgt}: a proof task's statement is not `Prop` (or a sort for opaque data)"
+            else s!"{tgt}: an accepted definition is a proof") problems
     if ci.isUnsafe || ci.isPartial then problems := note "safety" s!"{tgt}: unsafe or partial" problems
     let lps := ((r.getObjValAs? (Array String) "level_params").toOption.getD #[]).toList.map String.toName
     if ci.levelParams != lps then problems := note "levels" s!"{tgt}: universe parameters differ" problems
@@ -274,7 +321,7 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
         used := used ++ v.getUsedConstants
       | none => problems := note "value" s!"{tgt}: imported declaration has no value" problems
     for c in used do
-      unless allowed.contains c do
+      unless allowed.contains c || (isPending && allowedPending.contains c) do
         problems := note "target_deps" s!"{tgt}: references {c}, which is not part of this run's accepted closure" problems
       if let some (.recInfo rv) := env.find? c then recs := recs.insert c rv
     if let some v := ci.value? (allowOpaque := true) then
@@ -340,7 +387,9 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
   for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)
   let dets := ["binding", "coverage", "roots", "presence", "kind", "safety", "levels", "type", "value", "ctors",
                "target_deps", "axioms", "rec_indices", "residual_levels", "instance_levels", "interface"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
-  let res := Json.mkObj [
+  let dets := if stmtMode then dets ++ ["namespaces", "statements"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL")) else dets
+  let modeField : List (String × Json) := if stmtMode then [("mode", Json.str "statement")] else []
+  let fields : List (String × Json) := [
     ("schema", "rocq2lean-consumer/1"), ("status", if problems.isEmpty then "OK" else "AUDIT_REJECTED"),
     ("run_id", getStr contract "run_id"), ("accepted_checked", accepted.size),
     ("recursor_applications_checked", recApps),
@@ -350,6 +399,7 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
     ("recursors", Json.arr (recs.toArray.map (recursorJson ·.2))),
     ("detectors", Json.mkObj dets),
     ("problems", Json.arr (problems.map fun (d, m) => Json.mkObj [("detector", d), ("message", m)]))]
+  let res := Json.mkObj (modeField ++ fields)
   IO.FS.writeFile outPath (res.pretty ++ "\n")
   unless problems.isEmpty do
     throwError "AUDIT_REJECTED (consumer):\n{String.intercalate "\n" (problems.map fun (d, m) => s!"[{d}] {m}").toList}"

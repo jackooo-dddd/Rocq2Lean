@@ -6,6 +6,9 @@
     rocq2lean export    --manifest SOURCE_MANIFEST --roots ROOTS --out RUN_DIR
     rocq2lean translate --input SOURCE_IR --out RUN_DIR
     rocq2lean verify    --run RUN_DIR
+    rocq2lean validate  --run RUN_DIR      (statement mode: validate the statement library)
+    rocq2lean tasks     --run RUN_DIR [--out FILE]          (statement mode: proof tasks)
+    rocq2lean check-proof --run RUN_DIR --task ID --file PROOF.lean [--allow-axioms A,B]
     rocq2lean status    --run RUN_DIR      (is the VERIFIED result still current? read-only)
 
 ROOTS is a comma-separated list of fully qualified Rocq names. A SOURCE_MANIFEST is JSON:
@@ -261,11 +264,14 @@ class RunLock:
 # Artifacts a phase invalidates when it starts (anything downstream of it).
 DOWNSTREAM = {
     "export": ["source.ndjson", "source_snapshot.json", "contract.json", "roundtrip.json", "translation_report.json",
-               "translation_manifest.json", "audit.json", "consumer_result.json", "verify.json", "lean"],
+               "translation_manifest.json", "audit.json", "consumer_result.json", "verify.json", "validate.json",
+               "lean"],
     "translate": ["translation_report.json", "translation_manifest.json", "audit.json", "consumer_result.json",
-                  "verify.json", "lean"],
+                  "verify.json", "validate.json", "lean"],
     "verify": ["audit.json", "consumer_result.json", "verify.json", "lean/Rocq2LeanConsumer.lean",
                "lean/Rocq2LeanConsumer.olean", "lean/Rocq2LeanConsumer.ilean"],
+    "validate": ["audit.json", "consumer_result.json", "validate.json", "lean/Rocq2LeanConsumer.lean",
+                 "lean/Rocq2LeanConsumer.olean", "lean/Rocq2LeanConsumer.ilean"],
 }
 
 
@@ -511,9 +517,20 @@ def _translate(inp, out):
 
 # ---------------------------------------------------------------- verify
 
+def _mode_guard(run_dir, mode):
+    """Refuse a run of the other mode before anything is invalidated."""
+    cp = run_dir / "contract.json"
+    if cp.exists():
+        got = json.loads(cp.read_text()).get("mode", "proof")
+        if got != mode:
+            raise Rejected("AUDIT_REJECTED", f"a {got}-mode run cannot be checked by {'validate' if mode == 'statement' else 'verify'} "
+                           f"(use {'verify' if got == 'proof' else 'validate'})")
+
+
 def verify(run_dir):
     run_dir = Path(run_dir).resolve()
     with RunLock(run_dir):
+        _mode_guard(run_dir, "proof")
         invalidate(run_dir, "verify")
         try:
             doctor(write_report=False, quiet=True)
@@ -608,8 +625,8 @@ def check_source_instances(run_dir, snap, rep, log):
     return len(rows)
 
 
-def _verify(run_dir):
-    log = run_dir / "logs" / "verify.log"
+def _verify(run_dir, mode="proof"):
+    log = run_dir / "logs" / ("validate.log" if mode == "statement" else "verify.log")
     (run_dir / "logs").mkdir(exist_ok=True)
     if log.exists():
         log.unlink()
@@ -644,6 +661,9 @@ def _verify(run_dir):
         if h0["src:" + s["file"]] != s["sha256"]:
             problems.append(f"source file {s['file']} changed since export")
     con = json.loads(con_p.read_text())
+    if (con.get("mode") == "statement") != (mode == "statement"):
+        raise Rejected("AUDIT_REJECTED", f"a {con.get('mode', 'proof')}-mode run cannot be checked by "
+                       f"{'validate' if mode == 'statement' else 'verify'} (use {'verify' if mode == 'statement' else 'validate'})")
     if con["run_id"] != snap["run_id"] or con["ir_sha256"] != snap["ir_sha256"] or con["request"] != snap["request"]:
         problems.append("contract is not bound to this export (run id / IR digest / request)")
     # P0: the protection binding is present and equals the one recomputed now from the pinned manifest
@@ -694,6 +714,8 @@ def _verify(run_dir):
     audit = json.loads((run_dir / "audit.json").read_text()) if (run_dir / "audit.json").exists() else {}
     if p.returncode != 0 or audit.get("status") != "OK":
         raise Rejected("AUDIT_REJECTED", f"structural audit failed (exit {p.returncode}); see {run_dir / 'audit.json'}")
+    if mode == "statement":
+        return _validate_finish(run_dir, snap, tm, con, rep, consumer, audit, h0, log)
     # P0 interface protection (after the consumer and the audit, which check it independently): the
     # translation ran under this very contract's binding, and no protected row is specialized
     prot = rep.get("protection") or {}
@@ -737,6 +759,275 @@ def _verify(run_dir):
     atomic_write_json(run_dir / "verify.json", result)
     print("VERIFIED", run_dir)
     return result
+
+
+# ---------------------------------------------------------------- validate (statement mode)
+
+ACCEPTED_ST = ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED", "STATEMENT_KERNEL_CHECKED")
+PENDING_ST = ("PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
+
+
+def validate(run_dir):
+    """Statement mode (docs/STATEMENT_ONLY_DESIGN.md): the gates of `verify` (source anchoring,
+    artifact freshness, fresh-process consumer, independent audit, interface protection) applied to
+    the rows the translator claims — accepted definitions and statements, and pending artifacts —
+    and a per-declaration verdict. Rows not claimed are reported (with their reasons), never
+    accepted."""
+    run_dir = Path(run_dir).resolve()
+    with RunLock(run_dir):
+        _mode_guard(run_dir, "statement")
+        invalidate(run_dir, "validate")
+        try:
+            doctor(write_report=False, quiet=True)
+            return _verify(run_dir, mode="statement")
+        except Rejected as e:
+            atomic_write_json(run_dir / "validate.json", {"schema": "rocq2lean-validate/1", "status": e.status,
+                                                          "reason": e.msg, "impl_tree_sha256": impl_tree_sha256()})
+            raise
+
+
+def _validate_finish(run_dir, snap, tm, con, rep, consumer, audit, h0, log):
+    prot = rep.get("protection") or {}
+    if prot.get("contract_sha256") != sha256_file(run_dir / "contract.json") or \
+            prot.get("protected_in_export") != len(con["protection"]["protected"]):
+        raise Rejected("AUDIT_REJECTED", "translation was not run under this contract's protection binding")
+    pset = set(con["protection"]["protected"])
+    narrowed = [r["source"] for r in rep["results"] if r["source"] in pset and r.get("status") in ACCEPTED_ST + PENDING_ST
+                and (r.get("sort_lowered_levels") or any(x.get("in_type") for x in r.get("r2bp_levels") or []))]
+    if narrowed:
+        raise Rejected("AUDIT_REJECTED", f"protected public declarations translated with a specialized statement: {narrowed}")
+    # R2B-P source instances: checked for accepted definitions (as in verify); a pending artifact
+    # with an R2B-P level is not validated (its instance would need the statement preparation)
+    pend_r2bp = [r["source"] for r in rep["results"] if r.get("status") in PENDING_ST and r.get("r2bp_levels")]
+    if pend_r2bp:
+        raise Rejected("AUDIT_REJECTED", f"pending artifacts with R2B-P levels (source instance not checkable): {pend_r2bp}")
+    n_inst = check_source_instances(run_dir, snap, rep, log)
+    h1 = bound_hashes(run_dir, snap, tm)
+    if h1 != h0:
+        changed = sorted(k for k in h0 if h0[k] != h1.get(k))
+        raise Rejected("AUDIT_REJECTED", f"artifacts changed during validation: {changed}")
+    verdict = {}
+    for v in audit.get("verdicts", []):
+        st = v.get("status")
+        if v.get("verdict") != "MATCH":
+            verdict[v["source"]] = {"NOT_ACCEPTED": "NOT_TRANSLATED"}.get(v.get("verdict"), "AUDIT_REJECTED")
+        elif v.get("leaf"):
+            verdict[v["source"]] = "STATEMENT_AUDITED" if st == "STATEMENT_KERNEL_CHECKED" else "STATEMENT_AUDITED_PENDING"
+        elif st in PENDING_ST:
+            verdict[v["source"]] = "DEFINITION_AUDITED_PENDING"
+        else:
+            verdict[v["source"]] = "DEFINITION_AUDITED"
+    rows = {r["source"]: r for r in rep["results"]}
+    roots = [{"requested": r["requested"], "name": r["canonical"], "status": rows[r["canonical"]]["status"],
+              "validation": verdict.get(r["canonical"]),
+              "pending_prerequisites": rows[r["canonical"]].get("pending_hypotheses") or []} for r in con["roots"]]
+    from collections import Counter
+    result = {
+        "schema": "rocq2lean-validate/1", "status": "STATEMENT_VALIDATED", "mode": "statement",
+        "run_id": con["run_id"], "request": con["request"], "roots": roots,
+        "declarations": len(rows), "by_validation": dict(sorted(Counter(verdict.values()).items())),
+        "not_translated": {s: {"status": rows[s]["status"], "message": (rows[s].get("message") or "")[:300]}
+                           for s, v in sorted(verdict.items()) if v == "NOT_TRANSLATED"},
+        "gates": {
+            "source_anchoring": "OK (snapshot hashes, round trip incl. statement preparation, contract binding)",
+            "kernel_insertion": "OK (every claimed declaration was added through addDeclCore doCheck=true at translation)",
+            "fresh_readback": "OK (separate Lean process re-read every claimed declaration against the report)",
+            "assumptions": "OK (collectAxioms empty for every claimed declaration; no theorem, opaque or axiom)",
+            "structural_audit": "OK (statements against the source types, definitions against the prepared bodies, "
+                                "hypothesis telescopes against the recomputed prerequisites)",
+            "interface": "OK (no protected declaration specialized)",
+            "source_instances": f"OK ({n_inst} R2B-P definition(s) re-checked by Rocq's kernel at their instances)",
+            "artifact_freshness": "OK (all bound hashes equal before and after validation)",
+        },
+        "consumer_detectors": consumer.get("detectors"),
+        "audit_summary": audit.get("coverage"),
+        "bound_sha256": h1,
+        "toolchain_fingerprint": snap["toolchain_fingerprint"],
+        "git": git_identity(),
+        "note": "STATEMENT_VALIDATED certifies the claimed rows; proofs of the statements are tasks (PROOF_PENDING) "
+                "for a separate proving agent and are never produced by Rocq2Lean",
+    }
+    atomic_write_json(run_dir / "validate.json", result)
+    print("STATEMENT_VALIDATED", run_dir, json.dumps(result["by_validation"]))
+    return result
+
+
+# ---------------------------------------------------------------- proof tasks (statement mode)
+
+DEFAULT_ALLOWED_AXIOMS = ["propext", "Quot.sound", "Classical.choice"]
+
+
+def _current_validation(run_dir):
+    """The run's STATEMENT_VALIDATED result, refused unless every artifact it is bound to is unchanged."""
+    vp = run_dir / "validate.json"
+    if not vp.exists():
+        raise Rejected("NOT_VALIDATED", f"no statement validation in {run_dir} (run `rocq2lean validate`)")
+    v = json.loads(vp.read_text())
+    if v.get("status") != "STATEMENT_VALIDATED":
+        raise Rejected("NOT_VALIDATED", f"last validation ended with {v.get('status')}: {v.get('reason', '')}")
+    snap = json.loads((run_dir / "source_snapshot.json").read_text())
+    tm = json.loads((run_dir / "translation_manifest.json").read_text())
+    h = bound_hashes(run_dir, snap, tm)
+    changed = sorted(k for k in set(h) | set(v["bound_sha256"]) if h.get(k) != v["bound_sha256"].get(k))
+    if changed:
+        raise Rejected("STALE", f"artifacts changed since validation: {changed}")
+    return v
+
+
+def _lean_in_run(run_dir, module_text, name, log, extra_path=()):
+    lean_dir = run_dir / "lean"
+    f = Path(extra_path[0]) / f"{name}.lean" if extra_path else lean_dir / f"{name}.lean"
+    f.write_text(module_text)
+    lp = run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], log, env=lean_env()).stdout.strip()
+    env = dict(lean_env(), LEAN_PATH=":".join([lp, str(lean_dir), *map(str, extra_path)]))
+    return run([f"{HOME}/.elan/bin/lean", str(f), "-o", str(f.with_suffix(".olean"))], log, cwd=f.parent, env=env, check=False)
+
+
+def tasks(run_dir, out=None):
+    """PROOF_TASKS.jsonl of a validated statement run: one task per proof-task statement (theorem
+    statement, extracted obligation, opaque data value), with its source identity, the Lean statement to
+    prove, the reserved name, prerequisites, validation evidence, a stable id and a priority (how many
+    pending definitions need it). Rocq2Lean states tasks; it never proves them."""
+    run_dir = Path(run_dir).resolve()
+    with RunLock(run_dir):
+        v = _current_validation(run_dir)
+        log = run_dir / "logs" / "tasks.log"
+        rep = json.loads((run_dir / "translation_report.json").read_text())
+        rows = {r["source"]: r for r in rep["results"]}
+        ir = {}
+        with open(json.loads((run_dir / "source_snapshot.json").read_text())["ir"]) as fh:
+            for line in fh:
+                d = json.loads(line)
+                if d.get("kind") in ("constant", "inductive"):
+                    ir[d["name"]] = d
+        audit = json.loads((run_dir / "audit.json").read_text())
+        verdict = {x["source"]: x for x in audit["verdicts"]}
+        inv = {}
+        invp = ROOT / "reports" / "prosa_inventory" / "declarations.jsonl"
+        if invp.exists():
+            for line in open(invp):
+                d = json.loads(line)
+                inv[d["name"]] = d
+        leaves = [n for n, r in rows.items() if r["status"] in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
+                  and verdict.get(n, {}).get("verdict") == "MATCH"]
+        lean_dir = run_dir / "lean"
+        tin = lean_dir / "tasks_in.json"
+        tout = lean_dir / "tasks_out.json"
+        tin.write_text(json.dumps([{"statement_constant": rows[n]["target"], "hypotheses": len(rows[n].get("pending_hypotheses") or [])}
+                                   for n in leaves]))
+        p = _lean_in_run(run_dir, f'import Rocq2LeanOut\nimport Rocq2Lean.Tasks\n#rocq2lean_render_tasks "{tin}" "{tout}"\n',
+                         "Rocq2LeanTasks", log)
+        if p.returncode != 0 or not tout.exists():
+            raise Rejected("TOOL_FAILURE", f"task rendering failed; see {log}")
+        rendered = {x["statement_constant"]: x for x in json.loads(tout.read_text())}
+        need = {}
+        sole = {}
+        for n, r in rows.items():
+            if r["status"] in ("PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED"):
+                hs = r.get("pending_hypotheses") or []
+                for h in hs:
+                    need.setdefault(h, set()).add(n)
+                if len(hs) == 1:
+                    sole.setdefault(hs[0], set()).add(n)
+        fam = lambda n: inv.get(n, {}).get("family", "external")
+        vsha = sha256_file(run_dir / "validate.json")
+        recs = []
+        for n in leaves:
+            r, d = rows[n], ir[n]
+            rd = rendered[r["target"]]
+            st = d.get("body_state")
+            if st == "obligation":
+                kind = "obligation"
+            elif st == "opaque_interface":
+                kind = "opaque_value"
+            elif inv.get(n, {}).get("nature") == "assumption":
+                kind = "source_assumption"
+            else:
+                kind = "theorem_statement"
+            ty_sha = hashlib.sha256(json.dumps(rd["task_type"], sort_keys=True).encode()).hexdigest()
+            tid = hashlib.sha256(f"{n}\n{ty_sha}".encode()).hexdigest()
+            comps = [c for part in n.split("/") for c in part.split(".")]
+            src = inv.get(n, {})
+            recs.append({
+                "schema": "rocq2lean-proof-task/1", "task_id": tid, "status": "PROOF_PENDING", "kind": kind,
+                "source": {"kernel_name": n, "family": fam(n), "module": src.get("module") or d.get("name").rsplit(".", 1)[0],
+                           "file": src.get("file"), "line": (src.get("source") or {}).get("line"),
+                           "keyword": (src.get("source") or {}).get("keyword"),
+                           "obligation_of": (d.get("native") or {}).get("obligation", {}).get("of") if kind == "obligation" else None,
+                           "counted_as_proved": False if kind == "source_assumption" else None},
+                "lean": {"statement_constant": r["target"], "level_params": rd["level_params"],
+                         "statement": rd["statement_pp"], "task_statement": rd["task_type_pp"],
+                         "task_statement_sha256": ty_sha,
+                         "reserved_name": "Rocq." + ".".join(comps),
+                         "declaration_kind": "def or theorem (a value of the type)" if kind == "opaque_value" else "theorem",
+                         "required_modules": ["Rocq2LeanOut"],
+                         "output_module": "RocqProofs." + ".".join(comps), "output_file": "RocqProofs/" + "/".join(comps) + ".lean"},
+                "prerequisites": {"pending": r.get("pending_hypotheses") or [], "proved": [],
+                                  "note": "the task statement is generalized over its prerequisites; they bind only the assembly"},
+                "priority": {"pending_declarations_needing_it": len(need.get(n, ())),
+                             "sole_prerequisite_of": len(sole.get(n, ())),
+                             "in_scope_needing_it": sum(1 for x in need.get(n, ()) if fam(x) in ("modern", "classic"))},
+                "validation": {"row_status": r["status"], "audit_verdict": "MATCH", "validate_sha256": vsha,
+                               "run_id": v["run_id"]},
+                "allowed_axioms": DEFAULT_ALLOWED_AXIOMS,
+            })
+        recs.sort(key=lambda x: (-x["priority"]["pending_declarations_needing_it"], x["source"]["kernel_name"]))
+        text = "".join(json.dumps(x, sort_keys=True) + "\n" for x in recs)
+        (run_dir / "PROOF_TASKS.jsonl").write_text(text)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            Path(out).write_text(text)
+        from collections import Counter
+        print(f"{len(recs)} proof task(s): {dict(Counter(x['kind'] for x in recs))}")
+        return recs
+
+
+def check_proof(run_dir, task_id, file, allow_axioms=None):
+    """Check a proof submitted for one task: compiled in a fresh Lean process against the validated
+    statement library, then checked in another fresh process (`#rocq2lean_check_proof`). Rocq2Lean
+    never writes proofs; this only verifies one."""
+    run_dir = Path(run_dir).resolve()
+    with RunLock(run_dir):
+        _current_validation(run_dir)
+        tp = run_dir / "PROOF_TASKS.jsonl"
+        if not tp.exists():
+            raise Rejected("NOT_VALIDATED", "no proof tasks in this run (run `rocq2lean tasks`)")
+        task = next((json.loads(l) for l in open(tp) if json.loads(l)["task_id"] == task_id), None)
+        if task is None:
+            raise Rejected("PROOF_REJECTED", f"no task {task_id} in this run")
+        d = run_dir / "proofs" / task_id
+        if d.exists():
+            import shutil
+            shutil.rmtree(d)
+        d.mkdir(parents=True)
+        log = d / "check.log"
+        (d / "Proof.lean").write_text(Path(file).read_text())
+        allowed = DEFAULT_ALLOWED_AXIOMS if allow_axioms is None else [a for a in allow_axioms.split(",") if a]
+        tj = {"task_id": task_id, "reserved_name": task["lean"]["reserved_name"],
+              "statement_constant": task["lean"]["statement_constant"],
+              "hypotheses": len(task["prerequisites"]["pending"]), "kind": task["kind"], "allowed_axioms": allowed}
+        (d / "task.json").write_text(json.dumps(tj))
+        res = {"schema": "rocq2lean-check-proof/1", "task_id": task_id, "file_sha256": sha256_file(d / "Proof.lean")}
+        lean_dir = run_dir / "lean"
+        lp = run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], log, env=lean_env()).stdout.strip()
+        env = dict(lean_env(), LEAN_PATH=":".join([lp, str(lean_dir), str(d)]))
+        p = run([f"{HOME}/.elan/bin/lean", "Proof.lean", "-o", "Proof.olean"], log, cwd=d, env=env, check=False)
+        if p.returncode != 0:
+            res.update(status="PROOF_REJECTED", stage="compile", problems=["the submitted module does not compile; see check.log"])
+        else:
+            (d / "Check.lean").write_text(f'import Rocq2LeanOut\nimport Proof\nimport Rocq2Lean.Tasks\n'
+                                          f'#rocq2lean_check_proof "{d / "task.json"}" "{d / "checker.json"}"\n')
+            p = run([f"{HOME}/.elan/bin/lean", "Check.lean"], log, cwd=d, env=env, check=False)
+            ck = json.loads((d / "checker.json").read_text()) if (d / "checker.json").exists() else {}
+            res.update(status=ck.get("status", "PROOF_REJECTED") if p.returncode == 0 or ck.get("status") == "PROOF_REJECTED" else "PROOF_REJECTED",
+                       stage="check", axioms=ck.get("axioms"), problems=ck.get("problems", ["checker did not run"]))
+            if p.returncode != 0 and ck.get("status") == "LEAN_PROOF_KERNEL_VERIFIED":
+                res.update(status="PROOF_REJECTED", problems=["checker process failed"])
+        atomic_write_json(d / "result.json", res)
+        print(res["status"], task_id, "; ".join(res.get("problems") or []))
+        if res["status"] != "LEAN_PROOF_KERNEL_VERIFIED":
+            raise Rejected("PROOF_REJECTED", "; ".join(res.get("problems") or []))
+        return res
 
 
 # ---------------------------------------------------------------- status
@@ -788,6 +1079,16 @@ def main(argv=None):
     s.add_argument("--run", required=True)
     s = sub.add_parser("status")
     s.add_argument("--run", required=True)
+    s = sub.add_parser("validate")
+    s.add_argument("--run", required=True)
+    s = sub.add_parser("tasks")
+    s.add_argument("--run", required=True)
+    s.add_argument("--out")
+    s = sub.add_parser("check-proof")
+    s.add_argument("--run", required=True)
+    s.add_argument("--task", required=True)
+    s.add_argument("--file", required=True)
+    s.add_argument("--allow-axioms")
     a = ap.parse_args(argv)
     try:
         if a.cmd == "doctor":
@@ -802,6 +1103,12 @@ def main(argv=None):
             verify(a.run)
         elif a.cmd == "status":
             status(a.run)
+        elif a.cmd == "validate":
+            validate(a.run)
+        elif a.cmd == "tasks":
+            tasks(a.run, a.out)
+        elif a.cmd == "check-proof":
+            check_proof(a.run, a.task, a.file, a.allow_axioms)
     except Rejected as e:
         print(f"{e.status}: {e.msg}", file=sys.stderr)
         return 2

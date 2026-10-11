@@ -5,7 +5,8 @@ import Rocq2Lean.Emit
 /-!
 # `#rocq2lean_replay "report.json" "result.json"`
 
-Rebuilds every `TRANSLATED_AND_CHECKED` declaration of a report **from its JSON alone**
+Rebuilds every `TRANSLATED_AND_CHECKED` declaration of a report (statement mode: every claimed row,
+statements and pending artifacts included) **from its JSON alone**
 (`exprOfJson`, the inverse of `exprJson`) and submits it to the Lean kernel through
 `addChecked`, in a fresh module that does not import the generated one. Used to
 
@@ -57,7 +58,8 @@ syntax (name := rocqReplay) "#rocq2lean_replay " str str : command
   let out ← liftTermElabM do
     let mut out : Array Json := #[]
     for r in results do
-      unless (r.getObjValAs? String "status").toOption == some "TRANSLATED_AND_CHECKED" do continue
+      unless ["TRANSLATED_AND_CHECKED", "STATEMENT_KERNEL_CHECKED", "PENDING_KERNEL_CHECKED",
+              "STATEMENT_PENDING_KERNEL_CHECKED"].contains ((r.getObjValAs? String "status").toOption.getD "") do continue
       let src := (r.getObjValAs? String "source").toOption.getD "?"
       let decl : Except String Declaration := do
         let n := (← r.getObjValAs? String "target").toName
@@ -68,7 +70,7 @@ syntax (name := rocqReplay) "#rocq2lean_replay " str str : command
           let ctors ← (← r.getObjValAs? (Array Json) "target_ctors").mapM fun c => do
             return ({ name := (← c.getObjValAs? String "name").toName, type := ← exprOfJson (← c.getObjVal? "type") } : Constructor)
           return .inductDecl lps (← r.getObjValAs? Nat "num_params") [{ name := n, type := ty, ctors := ctors.toList }] false
-        | "def" =>
+        | "def" | "statement" =>
           return .defnDecl { name := n, levelParams := lps, type := ty, value := ← exprOfJson (← r.getObjVal? "target_value"),
                              hints := .regular 0, safety := .safe, all := [n] }
         | "theorem" =>

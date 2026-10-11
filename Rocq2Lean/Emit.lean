@@ -752,6 +752,12 @@ where
         -- same path as any definition, with every universe level of the statement an own type level
         -- (a parameter: a statement is never specialized by defaulting a level). The constant itself
         -- gets no Lean term: what needs it is pending (its proof is a task for the proving agent).
+        -- a definition whose termination Rocq's guard established on a proof subterm that is now an
+        -- obligation (exporter: "termination": deferred): no Lean rule yet; never translated with an
+        -- unchecked recursion
+        if ((src.rawDecls[c0.name]?).bind (fun j => (j.getObjVal? "termination").toOption)).isSome then
+          return ({ source := c0.name, kind := "constant", status := "UNSUPPORTED_FEATURE",
+                    message := "termination deferred (recursion on a proof subterm that became an obligation): no translation rule" }, genv)
         if c0.bodyState == "obligation_extraction_failed" then
           return ({ source := c0.name, kind := "constant", status := "OBLIGATION_EXTRACTION_REFUSED",
                     message := "Rocq's kernel did not accept the definition with its proof subterms extracted (e.g. computation that eliminates a proof); exported without body" }, genv)
