@@ -1,0 +1,183 @@
+{
+ "schema": "rocq2lean-prosa-scope/1",
+ "scope": "complete Prosa v0.6 + complete Classic Prosa (ProsaBuddy port), with the dependencies their declarations reach",
+ "rts": {
+  "repository": "https://github.com/jackooo-dddd/RTS",
+  "commit": "f23ca67247e55cd7bd11ca02baff7cc1db3a924a",
+  "snapshot": "git archive of the pinned commit (read-only)",
+  "authority_files": {
+   "Prosa-Shunqi/README.md": "60bd190f7a99092de7a20e0f1d31c2ba820b9f578e38acf18e00c4f3221d6372",
+   "Prosa-Shunqi/v06_file_translation_order.md": "9d3b731f8cb1ece91ede4678db4524670ffd9ee144cfeadac4402f68d6f2dcd7",
+   "Prosa-Shunqi/Validation/planning/v06_dependency/scope_manifest.json": "672685f25135a4c5e33f9f045ea72b97f2ccbdb1a75e506c9ec968fbb7f3efbf",
+   "Prosa-Shunqi/Validation/planning/v06_dependency/file_inventory.csv": "e4d933c37b9fd892d4e56cb6154670ea2d5614b0d0af2a8da42bff58bbeb3119",
+   "Prosa-Shunqi/Validation/planning/v06_dependency/declaration_inventory.csv": "607b67083c0c86234583fadf49b5acb4441a7ca9fb8da2478c459249a5cc682b",
+   "Prosa-Shunqi/Validation/planning/v06_dependency/external_dependencies.csv": "d801b7e9d2fd98b743bae2a55c143d76a3573b10d28833b5c2f87a9a2b2a33ea",
+   "Prosa-Shunqi/classic-prosa/casestudy-translation/README.md": "7d861ad14fbec939975fecc0d7bab3adc4c2195af5a1047d8eba7deb6de8bd7d",
+   "Prosa-Shunqi/classic-prosa/casestudy-translation/file_order.csv": "13bbf3897543d2632d9e778a4618497d99545fc0108e05244214bf18276c4ac3",
+   "Prosa-Shunqi/classic-prosa/rocq93-port/Rocq90Compat.v": "73e13a9d7a7ced129501db8e511329194ea084c7d362c97f94c4ad32b3ab6ad2",
+   "Prosa-Shunqi/classic-prosa/rocq93-port/build_classic_rocq93.sh": "4b24eaab31bcc7c8ec95cbd6f3f112315a374d0c0eb67f19f997830137c32868",
+   "Prosa-Shunqi/classic-prosa/rocq93-port/prosabuddy-classic-rocq93.patch": "04106a3145a3b9a222788bbb6b751d5eea8f645d2f40179eb3256c5c7a383ae8",
+   "Prosa-Shunqi/classic-prosa/rocq93-port/scope_files.txt": "63b9efc6133e294f67927ccc3c6612ba71976eaf1e98e235440afc625e558c5c"
+  }
+ },
+ "rocq2lean": {
+  "commit": "703bacff79b92d9f3cec5d2a3abc8c89ecf122dc",
+  "toolchains_lock_sha256": "9fd40a1d021c990e7062abc958e5ebb4719d21ebb556a35ecb3fedf715b9d573"
+ },
+ "toolchain": {
+  "schema": "rocq2lean-toolchains/1",
+  "lean": {
+   "toolchain": "leanprover/lean4:v4.33.1",
+   "version_line": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+   "commit": "819816b2e0a3bf405af45ae5c7af2491d8f5bee6"
+  },
+  "rocq": {
+   "opam_switch": "rocq930-mc",
+   "version_line": "The Rocq Prover, version 9.3.0",
+   "ocaml": "4.14.2",
+   "tag": "V9.3.0",
+   "commit": "c8e202eb0d6cc08b848ba27dcf2cc35804df7d96",
+   "opam_packages": {
+    "rocq-core": "9.3.0",
+    "rocq-runtime": "9.3.0",
+    "rocq-stdlib": "9.2.0",
+    "ocaml-base-compiler": "4.14.2",
+    "coq-ext-lib": "0.13.2",
+    "dune": "3.23.1",
+    "elpi": "3.7.3",
+    "rocq-elpi": "3.5.1",
+    "rocq-hierarchy-builder": "1.10.3",
+    "rocq-mathcomp-boot": "2.6.0",
+    "rocq-mathcomp-order": "2.6.0",
+    "rocq-mathcomp-ssreflect": "2.6.0",
+    "rocq-mathcomp-algebra": "2.6.0",
+    "rocq-mathcomp-finite-group": "2.6.0",
+    "rocq-mathcomp-zify": "1.7.0+2.4+9.0",
+    "rocq-micromega-plugin": "1.1.1"
+   },
+   "opam_git_pins": {
+    "rocq-equations": "d56dfc2c38feb5054d75ef43540ee89a6beb1a7e",
+    "rocq-metarocq-utils": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81",
+    "rocq-metarocq-common": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81",
+    "rocq-metarocq-template": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81"
+   },
+   "note": "switch rocq930-mc (docs/ENVIRONMENT_M5.md): same pinned Rocq/MetaRocq/Equations/stdlib as rocq930, dune 3.23.1, MathComp 2.6.0 (+ algebra, finite-group, zify, micromega plugin for Prosa, M6)"
+  },
+  "frontend": {
+   "name": "metarocq-template",
+   "metarocq_commit": "c18395ad772a40d59b6d04a5fcd1a4e0e5073d81",
+   "metarocq_patch": null,
+   "status": "METAROCQ_TEMPLATE_RUNNING"
+  }
+ },
+ "modern": {
+  "project": "Prosa",
+  "version": "v0.6",
+  "commit": "414e66760333eaa4ef78c685bcf53291c527a548",
+  "git_tree": "7d7e94c731f7eefde4ca738310d4cafdd7bebdf0",
+  "logical_root": "prosa",
+  "release_archive": {
+   "path": ".work/rt-proofs-v0.6.tar.gz",
+   "sha512": "128dd213e687653a6ad5a55f33e76d39f4301f4fb22ff2c58379bb9d727ada00da776beee213e89b6be117f4db7c7bd73e467e28f57dfbee017891a4121e6228",
+   "url": "https://gitlab.mpi-sws.org/RT-PROOFS/rt-proofs/-/archive/v0.6/rt-proofs-v0.6.tar.gz"
+  },
+  "reference_snapshot": ".work/prosa-0.6-src",
+  "working_snapshot": ".work/prosa-0.6-rocq93",
+  "reconciliation_with_rts": {
+   "rts_files": 357,
+   "release_files": 357,
+   "identical": 357,
+   "differing": [],
+   "missing_in_release": [],
+   "extra_in_release": []
+  },
+  "build_groups": {
+   "main": 343,
+   "refinements": 14
+  },
+  "compatibility_patches": [
+   {
+    "file": "compat/prosa-0.6/patches/0001-ssreflect-done-moved.patch",
+    "sha256": "a8912888f7f0e900a6db78d87e4a7a07ff7eb38da8d26699185ed18040aa28e6"
+   },
+   {
+    "file": "compat/prosa-0.6/patches/0002-hb-instance-stray-identifier.patch",
+    "sha256": "8c61453904d24758b23303ccd6803f7dadccf6271f3c3a58d37e193298080973"
+   },
+   {
+    "file": "compat/prosa-0.6/patches/0003-of-binder-removed.patch",
+    "sha256": "d4bbfac901e2765c41ac9b5ecef71774fabec94b91588e7d834d9ad899220aa6"
+   },
+   {
+    "file": "compat/prosa-0.6/patches/0004-ssr-old-rewrite-goals-order.patch",
+    "sha256": "2fd71f5440845c697c738055352e278ddd596ee50fa8943602d57cecb754155d"
+   },
+   {
+    "file": "compat/prosa-0.6/patches/0005-sum-notation-level.patch",
+    "sha256": "28caa21686d0ff1e0dcd52d4fb269f43af1f538fd6d55d20e81e41240942bfa5"
+   }
+  ],
+  "working_files_changed_by_patches": [
+   "results/transfer_schedulability/criterion.v",
+   "util/bigop.v",
+   "util/int.v",
+   "util/notation.v",
+   "util/rel.v",
+   "util/seqset.v",
+   "util/setoid.v",
+   "util/subadditivity.v",
+   "util/supremum.v",
+   "util/tactics.v"
+  ]
+ },
+ "classic": {
+  "repository": "https://github.com/liujunyixmu/prosabuddy",
+  "commit": "f692cb7479780cf6009493f373a309e13165201c",
+  "git_tree": "24727b135eda27b7234119bf8d931d962d7c3593",
+  "directory": "prosaworkspace/classic",
+  "logical_root": "prosa.classic",
+  "files": 190,
+  "reference_snapshot": ".work/classic-f692cb7",
+  "case_study_plan_cross_check": {
+   "plan_files": 49,
+   "hash_identical": 49,
+   "not_in_tree": []
+  },
+  "v06_bundle_vs_official": {
+   "files": 357,
+   "identical": 356,
+   "differing": [
+    "results/transfer_schedulability/criterion.v"
+   ]
+  },
+  "v06_util_imported": [],
+  "v06_util_imported_identical": true,
+  "build_configuration": {
+   "load_paths": "classic/ as prosa.classic; v0.6 util from the modern working snapshot (identical sources)",
+   "prelude": {
+    "file": "Prosa-Shunqi/classic-prosa/rocq93-port/Rocq90Compat.v",
+    "sha256": "73e13a9d7a7ced129501db8e511329194ea084c7d362c97f94c4ad32b3ab6ad2",
+    "role": "restores two Rocq 9.0 defaults (ssreflect rewrite goal order, intuition solver); no source edit"
+   },
+   "not_applied": {
+    "file": "Prosa-Shunqi/classic-prosa/rocq93-port/prosabuddy-classic-rocq93.patch",
+    "sha256": "04106a3145a3b9a222788bbb6b751d5eea8f645d2f40179eb3256c5c7a383ae8",
+    "reason": "edits a proof script; recorded as a proposed minimal change for any file that needs it"
+   }
+  },
+  "excluded_copies": [
+   {
+    "path": "prosabuddy prosaworkspace/rt-proofs-v0.6/classic/",
+    "reason": "second ProsaBuddy copy, not used by its case-study build (RTS README: differs in proof scripts of ranks 36 and 47)"
+   },
+   {
+    "path": "RTS Prosa-Shunqi/classic-prosa/classic/",
+    "reason": "2022 classic-prosa branch head, kept by RTS for reference only"
+   },
+   {
+    "path": "RTS_Papers case studies, Prosa v0.4 release",
+    "reason": "out of scope by instruction"
+   }
+  ]
+ }
+}
