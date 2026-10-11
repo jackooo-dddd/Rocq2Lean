@@ -170,7 +170,7 @@ def justifyResiduals (name : Name) (kind : String) (lps resid : List Name) (gty 
 def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
-    (stmt : Bool := false) :
+    (stmt : Bool := false) (inferSort : Bool := false) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
@@ -242,6 +242,16 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? with
       | .ok e => pure e
       | .error e => return fromTransError base e
+    -- pending validation: the hypotheses become the artifact's leading binders *before* universe
+    -- solving, so that the levels of their types (references to prerequisite statements) are
+    -- unified, defaulted, recorded and checked (R3) like every other level of the declaration
+    let hyps ← match hypsRef? with | some ref => ref.get | none => pure #[]
+    let (ty, val) ← if hyps.isEmpty then pure (ty, val) else
+      pure (← abstractHyps hyps ty false, ← abstractHyps hyps val true)
+    -- an opaque-data interface `Rocq.<name>.type := ⟦T⟧` is declared at the sort Lean infers for ⟦T⟧:
+    -- Rocq's native sort of T is an upper bound that cumulativity absorbs and Lean cannot; the
+    -- interface is T itself, not its sort (the audit checks the type is a sort, the value is T)
+    let ty ← if inferSort then instantiateMVars (← inferType val) else pure ty
     -- after unification: every own level still free that occurs in the (solved) type becomes a
     -- parameter — a type level, or a body level that a type level's solution now mentions
     let implicitRef ← IO.mkRef (#[] : Array String)
@@ -323,9 +333,12 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
         -- every argument for `l` anywhere must still be free: they all become `u_l` (coherence)
         let mut cur : Array (String × Level) := #[]
         for (l', σ') in all do cur := cur.push (l', ← instantiateLevelMVars σ')
+        -- (statement mode: an argument for `l` that unification already fixed to an expression, e.g. a
+        -- referenced declaration's R2F reading of its own parameter, is left as is; R3 coherence, the
+        -- kernel and the audit check it like every argument)
         let pick := tyCls.toList.eraseDups.find? fun l =>
           !own.contains l && !genv.templateLevels.contains l && cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) &&
-          (cur.filter (·.1 == l)).all (·.2.isMVar)
+          (if genv.stmtMode then (cur.filter (·.1 == l)).any (·.2 == σ) else (cur.filter (·.1 == l)).all (·.2.isMVar))
         if let some l := pick then
           let mut ms : Array LMVarId := #[]
           for (l', σ') in cur do
@@ -425,11 +438,6 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     -- a sealed-module implementation (e.g. HB.lock) is translated as a transparent definition: its
     -- implementation's unlock lemma is `erefl` and needs the δ-rule (the target gains a definitional
     -- unfolding that the sealed source hides; every source proof still checks)
-    -- pending validation: the hypotheses become the artifact's leading binders
-    let hyps ← match hypsRef? with | some ref => ref.get | none => pure #[]
-    let (ty, val, gty, gval) ← if hyps.isEmpty then pure (ty, val, gty, gval) else
-      pure (← abstractHyps hyps ty false, ← abstractHyps hyps val true,
-            ← abstractHyps hyps gty false, ← abstractHyps hyps gval true)
     let kind ← if c.bodyState == "transparent" || c.bodyState == "sealed_implementation" then pure "def"
       else if ← isProp ty then pure "theorem" else pure "opaque"
     let base := { base with target := some name, targetKind := kind, rule := s!"constant/{c.bodyState}" }
@@ -683,9 +691,12 @@ where
     -- pending validation: the hypotheses become the first parameters (the leaves used after the arity
     -- and constructors were translated must all be among them)
     let hyps ← match hypsRef? with | some ref => ref.get | none => pure #[]
-    let ty ← if hyps.isEmpty then pure ty else abstractHyps hyps ty false
+    let ty ← if hyps.isEmpty then pure ty else instLevelMVars (← abstractHyps hyps ty false)
     unless hyps.isEmpty do
-      ctors ← ctors.mapM fun c => do return { c with type := ← abstractHyps hyps c.type false }
+      ctors ← ctors.mapM fun c => do return { c with type := ← instLevelMVars (← abstractHyps hyps c.type false) }
+      if ty.hasLevelMVar || ctors.any (·.type.hasLevelMVar) then
+        return ({ base with status := "UNSUPPORTED_FEATURE",
+                            message := "pending inductive: universe levels of its hypothesis parameters left unsolved" }, none)
     let nparamsRec := nparamsRec + hyps.size
     let decl := Declaration.inductDecl lparams nparamsRec [{ name := tname, type := ty, ctors := ctors.toList }] false
     let base := { base with target := some tname, targetKind := "inductive",
@@ -717,7 +728,8 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
   let setMotive := src.decls.foldl (init := ({} : Std.HashSet String)) fun m d => match d with
     | .constant c => if irBodies.contains c.name && c.type.hasSetMotive then m.insert c.name else m
     | _ => m
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, protectedNames }
+  let stmtMode := ((src.header.getObjVal? "mode").toOption.bind (fun m => (m.getObjValAs? String "name").toOption)) == some "statement"
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, protectedNames, stmtMode }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   for d in src.decls do
@@ -795,9 +807,9 @@ where
         -- P0: a tier that would only succeed by specializing a protected statement
         let mut iface : Option DeclResult := none
         for eo in exts do
-          let r0 ← if (motiveLevels c.type).isEmpty then processConstant genv results c (stmt := isStmt) (extraOwn := eo) else do
-              let a ← processConstant genv results c (stmt := isStmt) (admit := true) (extraOwn := eo)
-              if a.accepted then pure a else processConstant genv results c (stmt := isStmt) (extraOwn := eo)
+          let r0 ← if (motiveLevels c.type).isEmpty then processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (extraOwn := eo) else do
+              let a ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (admit := true) (extraOwn := eo)
+              if a.accepted then pure a else processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (extraOwn := eo)
           first := some r0          -- the diagnosis kept is that of the last (earlier-behaviour) attempt
           r := r0
           if r.accepted then break
@@ -812,7 +824,7 @@ where
                                      (false, false, true, false), (true, false, true, false), (false, true, true, false),
                                      (true, true, true, false), (false, false, true, true), (true, false, true, true),
                                      (false, true, true, true), (true, true, true, true)] do
-              let r' ← processConstant genv results c (stmt := isStmt) (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo)
+              let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo)
               lastTier := some r'
               if r'.status == "INTERFACE_REJECTED" then iface := some r'
               if r'.accepted then
@@ -821,7 +833,7 @@ where
             -- M6 last: δ-inline Set-motive constants (Prop ≤ Set at a family argument), then retry
             if !r.accepted then
               for (fr, it, cu, lo) in [(false, false, false, false), (true, true, true, true)] do
-                let r' ← processConstant genv results c (stmt := isStmt) (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo)
+                let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo)
                   (lower := lo) (delta := true)
                 if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
                 if r'.status == "INTERFACE_REJECTED" then iface := some r'

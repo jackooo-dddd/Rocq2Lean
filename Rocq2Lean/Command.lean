@@ -129,10 +129,17 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
     ("summary", summary),
     ("results", Json.arr (results.map (·.toJson)))]
   IO.FS.writeFile repPath (report.pretty ++ "\n")
+  -- statement mode: the module of the claimed rows is still produced (validated row by row); the
+  -- report's status records the untranslated roots and the CLI exits non-zero
+  let stmtMode := (source.header.getObjValAs? String "mode").toOption.isNone &&
+    ((source.header.getObjVal? "mode").toOption.bind (fun m => (m.getObjValAs? String "name").toOption)) == some "statement"
   unless bad.isEmpty do
     let details := results.filter (!·.ok) |>.map fun r =>
       s!"  {r.source}: {r.status} {r.message} {if r.path.isEmpty then "" else s!"at {r.path}"}"
-    throwError "rocq2lean: requested roots not translated: {bad}\n{String.intercalate "\n" details.toList}"
+    if stmtMode then
+      logWarning m!"rocq2lean: {bad.size} requested root(s) not translated (statement mode: module kept for the claimed rows)"
+    else
+      throwError "rocq2lean: requested roots not translated: {bad}\n{String.intercalate "\n" details.toList}"
   logInfo m!"rocq2lean: {roots.size} root(s) TRANSLATED_AND_CHECKED; summary {summary.compress}"
 
 end Rocq2Lean

@@ -2958,7 +2958,13 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             REDUCE[0] = bool(r.get("sort_fact_reduced"))
             ADMIT[0] = set(r.get("admitting_levels") or [])
             try:
-                aud.check(d["type"], ty, ["type"], env)
+                if decls[s_].get("body_state") == "opaque_interface":
+                    # declared at the sort Lean infers for the translated type (the native sort is an
+                    # upper bound cumulativity absorbs); the interface itself is the value, audited below
+                    if ty.get("k") != "sort":
+                        raise Mismatch("opaque-data interface not declared at a sort")
+                else:
+                    aud.check(d["type"], ty, ["type"], env)
                 body_s = d["body"]
                 if r.get("delta_inlined"):
                     for n_ in r["delta_inlined"]:

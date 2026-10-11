@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 W = ROOT / ".work" / "inventory"
-RUN = ROOT / "runs" / "st-corpus"
+RUN = Path(os.environ["STATEMENT_RUN"]).resolve() if os.environ.get("STATEMENT_RUN") else ROOT / "runs" / "st-corpus"
 OUT = ROOT / "reports" / "statement_only"
 
 
@@ -251,5 +251,39 @@ def summary():
         print(x)
 
 
+def subset(roots, out):
+    """Debugging aid: the closure of `roots` cut out of the merged corpus IR (all universe lines
+    kept), as a translate-only input."""
+    lines = open(RUN / "source.ndjson").readlines()
+    recs = {}
+    for l in lines[5:-1]:
+        d = json.loads(l)
+        recs[d["name"]] = (l, sorted(set(d["deps"].get("type", [])) | set(d["deps"].get("body", []))))
+    keep, st = set(), list(roots)
+    while st:
+        n = st.pop()
+        if n in keep or n not in recs:
+            continue
+        keep.add(n)
+        st += recs[n][1]
+    rl = [r for r in json.loads(lines[1])["roots"] if r["name"] in roots]
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w") as fh:
+        fh.write(lines[0])
+        fh.write(json.dumps({"kind": "roots", "roots": rl}, separators=(",", ":")) + "\n")
+        fh.writelines(lines[2:5])
+        n = 0
+        for l in lines[5:-1]:
+            if json.loads(l)["name"] in keep:
+                fh.write(l)
+                n += 1
+        fh.write(json.dumps({"kind": "footer", "declarations": n}, separators=(",", ":")) + "\n")
+    print(f"{n} declarations for {len(rl)} roots -> {out}")
+
+
 if __name__ == "__main__":
+    if sys.argv[1] == "subset":
+        subset(sys.argv[2].split(","), sys.argv[3])
+        sys.exit(0)
     {"merge": merge, "translate": translate, "check": check, "summary": summary}[sys.argv[1]]()

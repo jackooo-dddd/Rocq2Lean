@@ -98,6 +98,9 @@ structure GEnv where
   /-- Statement mode: definitions validated as pending artifacts (`RocqPending.*`, abstracted over the
   unproved prerequisites they need): source key ↦ (artifact, its hypotheses as leaf keys, in order). -/
   pendingDefs : Std.HashMap String (Name × Array String) := {}
+  /-- Statement mode (the IR header's mode): enables the statement-mode-only rules (R3G pick on a
+  level some of whose arguments are already determined expressions). -/
+  stmtMode : Bool := false
   deriving Inhabited
 
 /-- M6 accessibility lowering (`transFixAcc`): the recursive calls of the fixpoint being lowered.

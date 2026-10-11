@@ -512,6 +512,12 @@ def _translate(inp, out):
         "toolchain_sha256": toolchain_fingerprint()["digest"],
         "lean_exit": p.returncode,
     })
+    # statement mode: the module of the claimed rows exists and can be validated; untranslated roots
+    # still make translate fail
+    if rep.get("status") == "ROOTS_NOT_TRANSLATED":
+        n = sum(1 for st in rep_roots.values() if st not in ("TRANSLATED_AND_CHECKED", "STATEMENT_KERNEL_CHECKED",
+                                                             "PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED"))
+        raise Rejected("ROOTS_NOT_TRANSLATED", f"{n} requested root(s) not translated; the claimed rows can be validated")
     return rep
 
 
