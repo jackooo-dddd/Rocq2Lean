@@ -2276,8 +2276,8 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None):
         if cp.get("manifest_sha256") != msha or cp.get("protected") != sorted(prot):
             problem("interface", "contract protection binding differs from the pinned manifest for this source")
         rp = report.get("protection") or {}
-        if rp.get("protected_in_export") != len(prot) or rp.get("contract_sha256") != sha256_path(contract_path):
-            problem("interface", "the translation was not run under this contract's protection binding")
+        if rp.get("protected_in_export") != len(prot) or rp.get("manifest_sha256") != msha:
+            problem("interface", "the translation was not run under this protection binding")
         for r_ in results:
             if bool(r_.get("protected")) != (r_.get("source") in prot):
                 problem("interface", f"{r_.get('source')}: protection flag differs from the pinned manifest")

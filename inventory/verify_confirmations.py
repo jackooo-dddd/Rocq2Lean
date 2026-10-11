@@ -12,6 +12,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+import os
+TAG = os.environ.get("INVENTORY_PROBE_TAG", "")
 CLI = [sys.executable, "-I", str(ROOT / "tools" / "rocq2lean.py")]
 
 
@@ -29,11 +31,12 @@ def one(c):
 
 
 def main(fam):
-    out = ROOT / "runs" / f"inv-probe-{fam}" / "verifications.jsonl"
+    out = ROOT / "runs" / f"inv-probe{TAG}-{fam}" / "verifications.jsonl"
     done = {json.loads(l)["run"] for l in open(out)} if out.exists() else set()
-    rows = [json.loads(l) for l in open(ROOT / "runs" / f"inv-probe-{fam}" / "confirmations.jsonl")]
+    rows = [json.loads(l) for l in open(ROOT / "runs" / f"inv-probe{TAG}-{fam}" / "confirmations.jsonl")]
     todo = [c for c in rows if c.get("translate") == 0 and c.get("status") == "TRANSLATED_AND_CHECKED" and c["run"] not in done]
-    with ThreadPoolExecutor(3) as ex:
+    # sequential: three concurrent verifies in one tree once ended with a tool failure (exit 3)
+    with ThreadPoolExecutor(1) as ex:
         for r in ex.map(one, todo):
             print(json.dumps(r)[:300], flush=True)
             with open(out, "a") as fh:

@@ -21,6 +21,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# run-directory tag (environment INVENTORY_PROBE_TAG, e.g. "-p0"): probes and confirmations of a later
+# implementation get their own directories, so earlier ones stay as historical records
+import os
+TAG = os.environ.get("INVENTORY_PROBE_TAG", "")
 W = ROOT / ".work" / "inventory"
 OUT = ROOT / "reports" / "prosa_inventory"
 sys.path.insert(0, str(ROOT / "tools"))
@@ -94,7 +98,7 @@ def build(fam):
         else:
             continue                                  # a polymorphic root needs its exported instance
         rl.append({"requested": dec[r]["requested"], "name": r, "term": t})
-    run = ROOT / "runs" / f"inv-probe-{fam}"
+    run = ROOT / "runs" / f"inv-probe{TAG}-{fam}"
     run.mkdir(parents=True, exist_ok=True)
     with open(run / "source.ndjson", "w") as fh:
         fh.write(json.dumps(header, separators=(",", ":")) + "\n")
@@ -113,7 +117,7 @@ def build(fam):
 
 
 def translate(fam):
-    run = ROOT / "runs" / f"inv-probe-{fam}"
+    run = ROOT / "runs" / f"inv-probe{TAG}-{fam}"
     p = subprocess.run(["systemd-run", "--user", "--scope", "-q", "-p", "MemoryMax=24G", "-p", "MemorySwapMax=0",
                         sys.executable, "-I", str(ROOT / "tools" / "rocq2lean.py"), "translate",
                         "--input", str(run / "source.ndjson"), "--out", str(run)], capture_output=True, text=True)
@@ -131,7 +135,7 @@ def confirm_one(n, status, exp):
     import rocq2lean
     # the library (file) of a kernel name: before the first "/" (module path) or the last "."
     lib = n.split("/")[0] if "/" in n else n.rsplit(".", 1)[0]
-    d = ROOT / "runs" / f"inv-confirm-{hashlib.sha256(n.encode()).hexdigest()[:12]}"
+    d = ROOT / "runs" / f"inv-confirm{TAG}-{hashlib.sha256(n.encode()).hexdigest()[:12]}"
     man = d.with_suffix(".manifest.json")
     man.write_text(json.dumps({"name": f"inv-confirm {n}", "load_paths": [exp[i:i + 3] for i in range(0, len(exp), 3)],
                                "files": [], "requires": [lib]}, indent=1) + "\n")
@@ -156,7 +160,7 @@ def confirm(fam, workers=3):
     """Confirm each new direct probe failure as its own root through the full CLI. Failures of
     declarations that a current run already translated are recorded as probe artifacts instead."""
     from concurrent.futures import ThreadPoolExecutor
-    run = ROOT / "runs" / f"inv-probe-{fam}"
+    run = ROOT / "runs" / f"inv-probe{TAG}-{fam}"
     fails = json.loads((run / "direct_failures.json").read_text())
     translated = json.loads((W / "extra_blockers.json").read_text()).get("translated_in_current_runs", {})
     exp = json.loads((W / f"export-{fam}" / "summary.json").read_text())["exporter"]["load_paths"]

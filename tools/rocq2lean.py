@@ -661,14 +661,6 @@ def _verify(run_dir):
         problems.append("translation belongs to a different run")
     if tm["input_sha256"] != con["ir_sha256"] or rep.get("input_sha256") != con["ir_sha256"]:
         problems.append("translation input digest differs from the contract")
-    prot = rep.get("protection") or {}
-    if prot.get("contract_sha256") != sha256_file(con_p) or prot.get("protected_in_export") != len(con["protection"]["protected"]):
-        problems.append("translation was not run under this contract's protection binding")
-    pset = set(con["protection"]["protected"])
-    narrowed = [r["source"] for r in rep["results"] if r["source"] in pset and r.get("status") == "TRANSLATED_AND_CHECKED"
-                and (r.get("sort_lowered_levels") or any(x.get("in_type") for x in r.get("r2bp_levels") or []))]
-    if narrowed:
-        problems.append(f"protected public declarations translated with a specialized statement: {narrowed}")
     for k, hk in (("report_sha256", "translation_report"), ("module_lean_sha256", "module_lean"),
                   ("module_olean_sha256", "module_olean"), ("module_ilean_sha256", "module_ilean"),
                   ("impl_tree_sha256", "impl_tree"), ("translator_build_sha256", "translator_build"),
@@ -698,6 +690,16 @@ def _verify(run_dir):
     audit = json.loads((run_dir / "audit.json").read_text()) if (run_dir / "audit.json").exists() else {}
     if p.returncode != 0 or audit.get("status") != "OK":
         raise Rejected("AUDIT_REJECTED", f"structural audit failed (exit {p.returncode}); see {run_dir / 'audit.json'}")
+    # P0 interface protection (after the consumer and the audit, which check it independently): the
+    # translation ran under this very contract's binding, and no protected row is specialized
+    prot = rep.get("protection") or {}
+    if prot.get("contract_sha256") != sha256_file(con_p) or prot.get("protected_in_export") != len(con["protection"]["protected"]):
+        raise Rejected("AUDIT_REJECTED", "translation was not run under this contract's protection binding")
+    pset = set(con["protection"]["protected"])
+    narrowed = [r["source"] for r in rep["results"] if r["source"] in pset and r.get("status") == "TRANSLATED_AND_CHECKED"
+                and (r.get("sort_lowered_levels") or any(x.get("in_type") for x in r.get("r2bp_levels") or []))]
+    if narrowed:
+        raise Rejected("AUDIT_REJECTED", f"protected public declarations translated with a specialized statement: {narrowed}")
     # Source-side obligations of the cumulativity tier (R2B-P): each relaxed proof-local level's
     # solution must denote a Rocq level at which Rocq's kernel accepts the source declaration.
     n_inst = check_source_instances(run_dir, snap, rep, log)
