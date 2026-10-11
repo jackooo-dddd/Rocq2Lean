@@ -100,7 +100,7 @@ def main():
             ev[n].append(e)
     rows = []
     for d in decls:
-        n = d["id"]
+        n = d.get("canonical") or d["id"]          # an alias is covered exactly as its canonical declaration
         pf = g["preflight_declarations"].get(n)
         rr = g["roots"].get(n)
         es = ev.get(n, [])
@@ -108,11 +108,14 @@ def main():
         spec_runs = sorted({e["run"] for e in es if e.get("statement_specialized") and grade(e) != "STALE_EVIDENCE_ONLY"})
         full_runs = sorted({e["run"] for e in es if grade(e) in RANK[:3] and not e.get("statement_specialized")})
         rows.append({
-            "id": n, "family": d["family"], "role": d["role"], "protected_interface": d["protected_interface"],
+            "id": d["id"], "canonical": d.get("canonical"), "family": d["family"], "role": d["role"], "protected_interface": d["protected_interface"],
             "availability": d.get("export", "exported" if d.get("elaborated") else "not_exported"),
             "preflight_declaration": pf["status"] if pf else "UNEXAMINED",
             "preflight_root": rr["preflight"] if rr else ("UNEXAMINED" if d["family"] != "external" else None),
+            "known_blocker": rr["known"] if rr else ("UNEXAMINED" if d["family"] != "external" else
+                                                    "KNOWN_BLOCKER_DIRECT" if n in g["known_blockers"] else None),
             "reachable_blockers": len(rr["reachable_blockers"]) if rr else None,
+            "context_dependent_failures_reachable": rr["context_dependent_reachable"] if rr else None,
             "evidence": grades[0], "evidence_all": grades,
             "evidence_runs": sorted({e["run"] for e in es}),
             "verified_full_interface_runs": [r for r in full_runs if any(e["run"] == r and grade(e).startswith("VERIFIED") for e in es)],

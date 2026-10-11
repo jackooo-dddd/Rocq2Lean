@@ -1,0 +1,852 @@
+{
+ "closure": {
+  "classic": 5268,
+  "classic_uses_modern_owned": 60,
+  "combined_distinct": 11101,
+  "cross_family_conflicts": 0,
+  "external_by_library": {
+   "coqeal": 98,
+   "corelib": 594,
+   "hierarchy-builder": 5,
+   "mathcomp": 3647,
+   "stdlib": 1503
+  },
+  "external_by_nature": {
+   "data_definition": 2023,
+   "data_opaque": 186,
+   "inductive": 350,
+   "proof_opaque": 2380,
+   "proof_transparent": 555,
+   "type_former": 286,
+   "unknown_opaque": 27,
+   "unknown_transparent": 40
+  },
+  "graph": {
+   "edges": 314316,
+   "missing_edge_targets": 0,
+   "nodes": 10539,
+   "nontrivial_sccs": 0,
+   "sccs": 10539
+  },
+  "inconsistent_chunk_copies": {
+   "classic": 0,
+   "modern": 0
+  },
+  "modern": 8256,
+  "public_short_names_in_both_families_not_merged": 230,
+  "shared_by_both": 2985
+ },
+ "combined": {
+  "declarations": 4692,
+  "protected_interface": 4421,
+  "public_source": 4305
+ },
+ "declarations": {
+  "classic": {
+   "alias_reexport_entries": 562,
+   "aliases": 5,
+   "by_kind": {
+    "constant": 1970,
+    "inductive": 15
+   },
+   "by_nature": {
+    "assumption": 4,
+    "data_definition": 478,
+    "data_opaque": 20,
+    "inductive": 15,
+    "proof_opaque": 1261,
+    "proof_transparent": 8,
+    "type_former": 197,
+    "unknown_opaque": 2
+   },
+   "by_role": {
+    "generated_hb": 33,
+    "generated_obligation": 26,
+    "generated_projection": 52,
+    "generated_scheme": 10,
+    "public_source": 1859,
+    "source_local_helper": 1,
+    "unattributed": 4
+   },
+   "declarations": 1985,
+   "enumerated_entries": 2547,
+   "export": {
+    "exported": 1985
+   },
+   "protected_interface": 1911,
+   "public_by_nature": {
+    "assumption": 4,
+    "data_definition": 396,
+    "data_opaque": 19,
+    "inductive": 15,
+    "proof_opaque": 1226,
+    "type_former": 197,
+    "unknown_opaque": 2
+   },
+   "public_source": 1859,
+   "relaxed_checking": 0,
+   "universe_polymorphic": 0,
+   "unknown_in_failed_files": "UNKNOWN"
+  },
+  "modern": {
+   "alias_reexport_entries": 0,
+   "aliases": 9,
+   "by_kind": {
+    "constant": 2688,
+    "inductive": 19
+   },
+   "by_nature": {
+    "data_definition": 685,
+    "data_opaque": 96,
+    "inductive": 19,
+    "proof_opaque": 1549,
+    "proof_transparent": 20,
+    "type_former": 338
+   },
+   "by_role": {
+    "generated_hb": 15,
+    "generated_instance": 9,
+    "generated_obligation": 19,
+    "generated_projection": 64,
+    "generated_scheme": 32,
+    "public_source": 2446,
+    "source_local_helper": 115,
+    "unattributed": 7
+   },
+   "declarations": 2707,
+   "enumerated_entries": 2707,
+   "export": {
+    "exported": 2707
+   },
+   "protected_interface": 2510,
+   "public_by_nature": {
+    "data_definition": 528,
+    "data_opaque": 82,
+    "inductive": 19,
+    "proof_opaque": 1479,
+    "proof_transparent": 1,
+    "type_former": 337
+   },
+   "public_source": 2446,
+   "relaxed_checking": 0,
+   "universe_polymorphic": 0,
+   "unknown_in_failed_files": 0
+  }
+ },
+ "evidence": {
+  "external": {
+   "ATTEMPTED_NOT_TRANSLATED": 112,
+   "KERNEL_CHECKED_UNVERIFIED": 407,
+   "NOT_ATTEMPTED": 3332,
+   "VERIFIED_AS_DEPENDENCY": 1985,
+   "VERIFIED_AS_ROOT": 11
+  },
+  "implementation": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+  "interface_conflicts": [],
+  "owned": {
+   "classic": {
+    "NOT_ATTEMPTED": 1985
+   },
+   "modern": {
+    "ATTEMPTED_NOT_TRANSLATED": 19,
+    "KERNEL_CHECKED_UNVERIFIED": 11,
+    "NOT_ATTEMPTED": 2514,
+    "VERIFIED_AS_DEPENDENCY": 76,
+    "VERIFIED_AS_ROOT": 87
+   }
+  },
+  "protected": {
+   "classic": {
+    "NOT_ATTEMPTED": 1911
+   },
+   "modern": {
+    "ATTEMPTED_NOT_TRANSLATED": 19,
+    "KERNEL_CHECKED_UNVERIFIED": 11,
+    "NOT_ATTEMPTED": 2321,
+    "VERIFIED_AS_DEPENDENCY": 72,
+    "VERIFIED_AS_ROOT": 87
+   }
+  },
+  "runs": [
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 1717,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 1717,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "45c0e04b44c83a9eafd8a72d1885f8213807c4c4bc6fbf6804cc3134def2c425",
+    "results": 1717,
+    "run": "m6-gate-finishtime5",
+    "verify": "VERIFIED"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 426,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 426,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "4444b625e83b0ce5dc13e15a78fb41c1df95e36c6591f18595c71a17ac18d7c7",
+    "results": 426,
+    "run": "m6p-behavior61",
+    "verify": "VERIFIED"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 123,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 123,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "6799ebd43cddcb5d327921ff467d36ceddf92dfa9f837e7be9b7e4e651f1e19c",
+    "results": 123,
+    "run": "m6p-finishtime4",
+    "verify": "VERIFIED"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 411,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 411,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "569aea1f023f82507285add0be2a7d578a27225662ab972278ec1147188f56e8",
+    "results": 411,
+    "run": "m6p-holdout13_prosa",
+    "verify": "VERIFIED"
+   },
+   {
+    "absent_from_inventory": 4,
+    "current_impl": true,
+    "declarations": 132,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 128,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "7bd48a03f36e2a3b098f46f4957a48c6e0d55d70ac16d454415da6463a611498",
+    "results": 132,
+    "run": "m6p-holdout14_mathcomp",
+    "verify": "VERIFIED"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 2084,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 2084,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "ca446fdfbecd0103d21796f5ef9fdc16c45fff5f9c3c2eb4cbeba86254b58306",
+    "results": 2084,
+    "run": "m6p-holdout20_prosa",
+    "verify": "AUDIT_REJECTED"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 1895,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 1895,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "3ddffba3cbb1ff1ca66e693aa7b73c7f3ca7c42364ec8d6e0d2d26351bbf5110",
+    "results": 1895,
+    "run": "m6h-verified8",
+    "verify": "VERIFIED"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 1941,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 1941,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "b8a67ca57f5ed38143bd8beddf0d8c8fb665adc9e6e2f41d4c01817e0ff5827a",
+    "results": 1941,
+    "run": "m6h-translated9",
+    "verify": "AUDIT_REJECTED"
+   },
+   {
+    "absent_from_inventory": 0,
+    "current_impl": true,
+    "declarations": 2375,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 2375,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "aac85dcf64409f5e8d1acf9a2c3521ce4c15416c4a15e8c898d39ff8766d5f6c",
+    "results": 2375,
+    "run": "m6h-holdout_completion_prosa",
+    "verify": "AUDIT_REJECTED"
+   },
+   {
+    "absent_from_inventory": 43,
+    "current_impl": true,
+    "declarations": 302,
+    "differs_from_inventory": 0,
+    "identical_to_inventory": 259,
+    "impl_tree_sha256": "819383b9529c126d674de1c99f20f5f143cf724afe7275ca81caae842217efeb",
+    "ir_sha256": "02b9cc03a3ac6b5cd2aad0fe894c68b95f7085953a581b3af8ea086145afb7bb",
+    "results": 302,
+    "run": "m6h-holdout_completion_mathcomp",
+    "verify": "AUDIT_REJECTED"
+   }
+  ],
+  "specialized_dependency_instances": 172
+ },
+ "export": {
+  "classic": {
+   "big_memory": "24G",
+   "chunk_size": 24,
+   "chunks": 45,
+   "covered_by_closures": 1985,
+   "exporter": {
+    "load_paths": [
+     "-R",
+     "/home/shunqwang4/research/Rocq2Lean/.work/prosa-0.6-rocq93",
+     "prosa",
+     "-R",
+     "/home/shunqwang4/research/Rocq2Lean/.work/coqeal-ce3d1d6",
+     "CoqEAL",
+     "-R",
+     "/home/shunqwang4/research/Rocq2Lean/.work/classic-f692cb7-build/classic",
+     "prosa.classic",
+     "-Q",
+     "/home/shunqwang4/research/Rocq2Lean/.work/classic-f692cb7-build/compat",
+     "Compat"
+    ],
+    "plugin_sha256": "2e4c0dbb98e9a328c619df82d34b8e3cba2b8fa1e4ebecde1bd01f03e13baa00"
+   },
+   "failed": 0,
+   "family": "classic",
+   "memory_max": "12G",
+   "requested": 1006,
+   "roots": 2547,
+   "stack_overflow_parts_at_default_stack": 0,
+   "timeout_s": 1800,
+   "unquotable": 0,
+   "unquotable_roots": 0
+  },
+  "modern": {
+   "big_memory": "24G",
+   "chunk_size": 24,
+   "chunks": 39,
+   "covered_by_closures": 2707,
+   "exporter": {
+    "load_paths": [
+     "-R",
+     "/home/shunqwang4/research/Rocq2Lean/.work/prosa-0.6-rocq93",
+     "prosa",
+     "-R",
+     "/home/shunqwang4/research/Rocq2Lean/.work/coqeal-ce3d1d6",
+     "CoqEAL"
+    ],
+    "plugin_sha256": "2e4c0dbb98e9a328c619df82d34b8e3cba2b8fa1e4ebecde1bd01f03e13baa00"
+   },
+   "failed": 0,
+   "family": "modern",
+   "memory_max": "12G",
+   "requested": 734,
+   "roots": 2707,
+   "stack_overflow_parts_at_default_stack": 21,
+   "timeout_s": 1800,
+   "unquotable": 0,
+   "unquotable_roots": 0
+  }
+ },
+ "files": {
+  "classic": {
+   "build": {
+    "COMPILED": 187,
+    "COMPILE_ERROR": 1,
+    "NOT_BUILT_DEPENDENCY_FAILED": 2
+   },
+   "files": 190,
+   "import_only": 3,
+   "unattributed_declarations": 4,
+   "unknown_counts": [
+    "classic/analysis/global/jitter/bertogna_edf_comp.v",
+    "classic/analysis/global/jitter/bertogna_edf_theory.v",
+    "classic/implementation/global/jitter/bertogna_edf_example.v"
+   ]
+  },
+  "modern": {
+   "build": {
+    "COMPILED": 357
+   },
+   "files": 357,
+   "import_only": 7,
+   "refinements": {
+    "compiled": 14,
+    "files": 14
+   },
+   "unattributed_declarations": 7,
+   "unknown_counts": []
+  }
+ },
+ "gaps": [
+  {
+   "family": "classic",
+   "file": "classic/analysis/global/jitter/bertogna_edf_comp.v",
+   "gap": "not compiled under the fixed toolchain; declarations UNKNOWN"
+  },
+  {
+   "family": "classic",
+   "file": "classic/analysis/global/jitter/bertogna_edf_theory.v",
+   "gap": "not compiled under the fixed toolchain; declarations UNKNOWN"
+  },
+  {
+   "family": "classic",
+   "file": "classic/implementation/global/jitter/bertogna_edf_example.v",
+   "gap": "not compiled under the fixed toolchain; declarations UNKNOWN"
+  }
+ ],
+ "preflight": {
+  "all_owned": {
+   "known": {
+    "classic": {
+     "KNOWN_BLOCKER_DIRECT": 8,
+     "KNOWN_BLOCKER_DOWNSTREAM": 1162,
+     "NO_KNOWN_BLOCKER": 815
+    },
+    "modern": {
+     "KNOWN_BLOCKER_DIRECT": 8,
+     "KNOWN_BLOCKER_DOWNSTREAM": 1237,
+     "NO_KNOWN_BLOCKER": 1462
+    }
+   },
+   "preflight": {
+    "classic": {
+     "BLOCKED_DEPENDENCY": 280,
+     "CANDIDATE_SUPPORTED": 1697,
+     "UNSUPPORTED_FEATURE": 8
+    },
+    "modern": {
+     "BLOCKED_DEPENDENCY": 769,
+     "CANDIDATE_SUPPORTED": 1930,
+     "UNSUPPORTED_FEATURE": 8
+    }
+   }
+  },
+  "external_declarations": {
+   "CANDIDATE_SUPPORTED": 5845,
+   "UNSUPPORTED_FEATURE": 2
+  },
+  "protected": {
+   "known": {
+    "classic": {
+     "KNOWN_BLOCKER_DIRECT": 5,
+     "KNOWN_BLOCKER_DOWNSTREAM": 1150,
+     "NO_KNOWN_BLOCKER": 756
+    },
+    "modern": {
+     "KNOWN_BLOCKER_DOWNSTREAM": 1154,
+     "NO_KNOWN_BLOCKER": 1356
+    }
+   },
+   "preflight": {
+    "classic": {
+     "BLOCKED_DEPENDENCY": 280,
+     "CANDIDATE_SUPPORTED": 1626,
+     "UNSUPPORTED_FEATURE": 5
+    },
+    "modern": {
+     "BLOCKED_DEPENDENCY": 719,
+     "CANDIDATE_SUPPORTED": 1791
+    }
+   }
+  }
+ },
+ "rts_reconciliation": {
+  "classic_plan": {
+   "files": 49,
+   "files_compiled": 49,
+   "inventory_public_source": 514,
+   "rows": [
+    {
+     "build": "COMPILED",
+     "enumerated": "3",
+     "file": "classic/model/time.v",
+     "public_source": "3",
+     "rts_decls": 3
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "17",
+     "file": "classic/util/pick.v",
+     "public_source": "17",
+     "rts_decls": 17
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "0",
+     "file": "classic/util/ssromega.v",
+     "public_source": "0",
+     "rts_decls": 0
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "6",
+     "file": "classic/util/notation.v",
+     "public_source": "6",
+     "rts_decls": 6
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "2",
+     "file": "classic/util/seqset.v",
+     "public_source": "2",
+     "rts_decls": 2
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "13",
+     "file": "classic/util/tactics.v",
+     "public_source": "2",
+     "rts_decls": 13
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "4",
+     "file": "classic/util/bigord.v",
+     "public_source": "4",
+     "rts_decls": 4
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "2",
+     "file": "classic/util/induction.v",
+     "public_source": "2",
+     "rts_decls": 2
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "45",
+     "file": "classic/util/list.v",
+     "public_source": "44",
+     "rts_decls": 44
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "8",
+     "file": "classic/util/nat.v",
+     "public_source": "8",
+     "rts_decls": 8
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "4",
+     "file": "classic/util/ord_quantifier.v",
+     "public_source": "4",
+     "rts_decls": 4
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "2",
+     "file": "classic/util/powerset.v",
+     "public_source": "2",
+     "rts_decls": 2
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "6",
+     "file": "classic/util/bigcat.v",
+     "public_source": "6",
+     "rts_decls": 6
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "5",
+     "file": "classic/util/counting.v",
+     "public_source": "5",
+     "rts_decls": 5
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "17",
+     "file": "classic/util/div_mod.v",
+     "public_source": "17",
+     "rts_decls": 17
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "10",
+     "file": "classic/util/fixedpoint.v",
+     "public_source": "10",
+     "rts_decls": 10
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "6",
+     "file": "classic/util/sorting.v",
+     "public_source": "6",
+     "rts_decls": 6
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "0",
+     "file": "classic/util/step_function.v",
+     "public_source": "0",
+     "rts_decls": 0
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "44",
+     "file": "classic/util/minmax.v",
+     "public_source": "44",
+     "rts_decls": 44
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "9",
+     "file": "classic/util/sum.v",
+     "public_source": "9",
+     "rts_decls": 9
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "0",
+     "file": "classic/util/all.v",
+     "public_source": "0",
+     "rts_decls": 0
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "11",
+     "file": "classic/model/arrival/basic/task.v",
+     "public_source": "11",
+     "rts_decls": 11
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "20",
+     "file": "classic/model/arrival/basic/arrival_sequence.v",
+     "public_source": "20",
+     "rts_decls": 20
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "8",
+     "file": "classic/model/arrival/basic/job.v",
+     "public_source": "8",
+     "rts_decls": 8
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "11",
+     "file": "classic/model/arrival/basic/task_arrival.v",
+     "public_source": "11",
+     "rts_decls": 11
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "35",
+     "file": "classic/model/priority.v",
+     "public_source": "35",
+     "rts_decls": 35
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "39",
+     "file": "classic/model/schedule/global/basic/schedule.v",
+     "public_source": "39",
+     "rts_decls": 39
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "10",
+     "file": "classic/model/arrival/basic/arrival_bounds.v",
+     "public_source": "10",
+     "rts_decls": 10
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "7",
+     "file": "classic/model/schedule/apa/affinity.v",
+     "public_source": "7",
+     "rts_decls": 7
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "5",
+     "file": "classic/model/schedule/global/response_time.v",
+     "public_source": "5",
+     "rts_decls": 5
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "7",
+     "file": "classic/model/schedule/global/schedulability.v",
+     "public_source": "7",
+     "rts_decls": 7
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "4",
+     "file": "classic/model/schedule/global/workload.v",
+     "public_source": "4",
+     "rts_decls": 4
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "11",
+     "file": "classic/model/schedule/apa/interference.v",
+     "public_source": "11",
+     "rts_decls": 11
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "9",
+     "file": "classic/model/schedule/global/basic/interference.v",
+     "public_source": "9",
+     "rts_decls": 9
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "21",
+     "file": "classic/analysis/apa/workload_bound.v",
+     "public_source": "21",
+     "rts_decls": 21
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "21",
+     "file": "classic/analysis/global/basic/workload_bound.v",
+     "public_source": "21",
+     "rts_decls": 21
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "5",
+     "file": "classic/model/schedule/apa/platform.v",
+     "public_source": "5",
+     "rts_decls": 5
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "6",
+     "file": "classic/model/schedule/global/basic/platform.v",
+     "public_source": "6",
+     "rts_decls": 6
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "1",
+     "file": "classic/analysis/apa/interference_bound.v",
+     "public_source": "1",
+     "rts_decls": 1
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "1",
+     "file": "classic/analysis/global/basic/interference_bound.v",
+     "public_source": "1",
+     "rts_decls": 1
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "4",
+     "file": "classic/model/schedule/apa/constrained_deadlines.v",
+     "public_source": "4",
+     "rts_decls": 4
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "6",
+     "file": "classic/model/schedule/global/basic/constrained_deadlines.v",
+     "public_source": "6",
+     "rts_decls": 6
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "1",
+     "file": "classic/analysis/apa/interference_bound_fp.v",
+     "public_source": "1",
+     "rts_decls": 1
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "1",
+     "file": "classic/analysis/global/basic/interference_bound_fp.v",
+     "public_source": "1",
+     "rts_decls": 1
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "1",
+     "file": "classic/model/schedule/global/basic/interference_edf.v",
+     "public_source": "1",
+     "rts_decls": 1
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "13",
+     "file": "classic/analysis/apa/bertogna_fp_theory.v",
+     "public_source": "13",
+     "rts_decls": 13
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "10",
+     "file": "classic/analysis/global/basic/bertogna_fp_theory.v",
+     "public_source": "10",
+     "rts_decls": 10
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "41",
+     "file": "classic/analysis/global/basic/interference_bound_edf.v",
+     "public_source": "41",
+     "rts_decls": 41
+    },
+    {
+     "build": "COMPILED",
+     "enumerated": "14",
+     "file": "classic/analysis/global/basic/bertogna_edf_theory.v",
+     "public_source": "14",
+     "rts_decls": 14
+    }
+   ],
+   "rts_declarations": 525
+  },
+  "modern": {
+   "inventory_public_not_in_rts": 7,
+   "inventory_public_not_in_rts_by_keyword": {
+    "keyword Instance": 7
+   },
+   "inventory_public_not_in_rts_sample": [
+    "prosa.analysis.abstract.ideal.iw_instantiation.ideal_jlfp_interference",
+    "prosa.analysis.abstract.ideal.iw_instantiation.ideal_jlfp_interfering_workload",
+    "prosa.model.readiness.basic.basic_ready_instance",
+    "prosa.model.readiness.jitter.jitter_ready_instance",
+    "prosa.model.readiness.sequential.sequential_ready_instance",
+    "prosa.model.readiness.suspension.suspension_ready_instance",
+    "prosa.results.transfer_schedulability.paper_model.delayed_precedence_ready_instance"
+   ],
+   "missing_from_compiled_environment": [],
+   "present_in_compiled_environment": 2439,
+   "rts_declarations": 2439,
+   "rts_kinds": {
+    "Class": 40,
+    "Corollary": 149,
+    "Definition": 778,
+    "Fact": 49,
+    "Fixpoint": 8,
+    "Inductive": 8,
+    "Instance": 105,
+    "Lemma": 1158,
+    "Record": 2,
+    "Remark": 39,
+    "Structure": 2,
+    "Theorem": 101
+   },
+   "rts_names_by_inventory_role": {
+    "public_source": 2439
+   }
+  }
+ },
+ "schema": "rocq2lean-prosa-inventory-summary/1",
+ "scope": {
+  "classic": "f692cb7479780cf6009493f373a309e13165201c",
+  "modern": "414e66760333eaa4ef78c685bcf53291c527a548",
+  "rts": "f23ca67247e55cd7bd11ca02baff7cc1db3a924a"
+ },
+ "verdict": "INVENTORY_PARTIAL"
+}

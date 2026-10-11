@@ -7,6 +7,7 @@ authority. Every identity claim below is checked here, from the raw trees, on ev
 import csv
 import hashlib
 import json
+import re
 import os
 import subprocess
 import sys
@@ -91,9 +92,8 @@ def main():
     for p in (pr / "classic").rglob("*.v"):
         for line in p.read_text(errors="replace").splitlines():
             if "Require" in line:
-                for tok in line.replace(".", ". ").split():
-                    if tok.startswith("prosa.util."):
-                        util_imports.add(tok.rstrip("."))
+                for tok in re.findall(r"\bprosa\.util\.[A-Za-z0-9_.]*[A-Za-z0-9_]", line):
+                    util_imports.add(tok)
     prelude = rts / "Prosa-Shunqi/classic-prosa/rocq93-port/Rocq90Compat.v"
     rpatch = rts / "Prosa-Shunqi/classic-prosa/rocq93-port/prosabuddy-classic-rocq93.patch"
     classic = {"repository": c["repository"], "commit": c["commit"], "git_tree": c["git_tree"],
@@ -104,9 +104,12 @@ def main():
                                           "identical": sum(1 for f, h in bundle.items() if pristine.get(f) == h),
                                           "differing": sorted(f for f, h in bundle.items() if pristine.get(f) != h)},
                "v06_util_imported": sorted(util_imports),
-               "v06_util_imported_identical": all(bundle.get(m.replace("prosa.", "").replace(".", "/") + ".v") ==
+               "v06_util_imported_identical": bool(util_imports) and all(bundle.get(m.replace("prosa.", "").replace(".", "/") + ".v") ==
                                                   pristine.get(m.replace("prosa.", "").replace(".", "/") + ".v") for m in util_imports),
-               "build_configuration": {"load_paths": "classic/ as prosa.classic; v0.6 util from the modern working snapshot (identical sources)",
+               "v06_util_imported_patched_in_working_snapshot": sorted(
+                   m for m in util_imports if m.replace("prosa.", "").replace(".", "/") + ".v" in modern["working_files_changed_by_patches"]),
+               "build_configuration": {"load_paths": "classic/ as prosa.classic; prosa.util from the modern working snapshot (the M6 "
+                                                     "compatibility patches apply; see v06_util_imported_patched_in_working_snapshot)",
                                        "prelude": {"file": str(prelude.relative_to(rts)), "sha256": sha256(prelude.read_bytes()),
                                                    "role": "restores two Rocq 9.0 defaults (ssreflect rewrite goal order, intuition solver); no source edit"},
                                        "not_applied": {"file": str(rpatch.relative_to(rts)), "sha256": sha256(rpatch.read_bytes()),

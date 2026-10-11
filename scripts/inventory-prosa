@@ -8,11 +8,11 @@
 #   scripts/inventory-prosa                 all stages
 #   scripts/inventory-prosa graph coverage  only the named stages (in pipeline order)
 #
-# Stages: scope build enumerate export-modern export-classic merge classify graph coverage report
+# Stages: scope build enumerate export-modern export-classic merge classify evidence graph coverage report
 # Environment: INVENTORY_WORKERS (export processes, default 2).
 cd "$(dirname "$0")/.." || exit 2
 export PATH="$HOME/.local/bin:$HOME/.elan/bin:$PATH"
-ALL=(scope build enumerate export-modern export-classic merge classify graph coverage report)
+ALL=(scope build enumerate export-modern export-classic merge classify evidence graph coverage report)
 want=("$@"); [ ${#want[@]} -eq 0 ] && want=("${ALL[@]}")
 mkdir -p .work/inventory/logs reports/prosa_inventory
 LOGJ=reports/prosa_inventory/run_log.json
@@ -28,6 +28,7 @@ for s in "${ALL[@]}"; do
     export-classic) cmd=(python3 -I inventory/export.py classic "${INVENTORY_WORKERS:-2}") ;;
     merge)          cmd=(bash -c 'python3 -I inventory/merge.py modern && python3 -I inventory/merge.py classic') ;;
     classify)       cmd=(python3 -I inventory/classify.py) ;;
+    evidence)       cmd=(python3 -I inventory/evidence_blockers.py) ;;
     graph)          cmd=(python3 -I inventory/graph.py) ;;
     coverage)       cmd=(python3 -I inventory/coverage.py) ;;
     report)         cmd=(python3 -I inventory/report.py) ;;

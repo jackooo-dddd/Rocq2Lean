@@ -21,7 +21,7 @@
   }
  },
  "rocq2lean": {
-  "commit": "703bacff79b92d9f3cec5d2a3abc8c89ecf122dc",
+  "commit": "b031f9a59169b4e88ceb14a9137c6ae8eae9923b",
   "toolchains_lock_sha256": "9fd40a1d021c990e7062abc958e5ebb4719d21ebb556a35ecb3fedf715b9d573"
  },
  "toolchain": {
@@ -150,10 +150,28 @@
     "results/transfer_schedulability/criterion.v"
    ]
   },
-  "v06_util_imported": [],
+  "v06_util_imported": [
+   "prosa.util.bigcat",
+   "prosa.util.div_mod",
+   "prosa.util.epsilon",
+   "prosa.util.list",
+   "prosa.util.minmax",
+   "prosa.util.nat",
+   "prosa.util.nondecreasing",
+   "prosa.util.notation",
+   "prosa.util.seqset",
+   "prosa.util.sum",
+   "prosa.util.tactics",
+   "prosa.util.unit_growth"
+  ],
   "v06_util_imported_identical": true,
+  "v06_util_imported_patched_in_working_snapshot": [
+   "prosa.util.notation",
+   "prosa.util.seqset",
+   "prosa.util.tactics"
+  ],
   "build_configuration": {
-   "load_paths": "classic/ as prosa.classic; v0.6 util from the modern working snapshot (identical sources)",
+   "load_paths": "classic/ as prosa.classic; prosa.util from the modern working snapshot (the M6 compatibility patches apply; see v06_util_imported_patched_in_working_snapshot)",
    "prelude": {
     "file": "Prosa-Shunqi/classic-prosa/rocq93-port/Rocq90Compat.v",
     "sha256": "73e13a9d7a7ced129501db8e511329194ea084c7d362c97f94c4ad32b3ab6ad2",
