@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Regenerates the Prosa v0.6 + Classic inventory (reports/prosa_inventory/), stage by stage, in a
+# deterministic order. Every stage is resumable: build, enumeration and export reuse results whose
+# recorded inputs are unchanged (sources, roots, exporter digest); the later stages are cheap and are
+# always recomputed from the stored results. Inputs, completed and failed stages are recorded in
+# reports/prosa_inventory/run_log.json; stage logs are in .work/inventory/logs/.
+#
+#   scripts/inventory-prosa                 all stages
+#   scripts/inventory-prosa graph coverage  only the named stages (in pipeline order)
+#
+# Stages: scope build enumerate export-modern export-classic merge classify graph coverage report
+# Environment: INVENTORY_WORKERS (export processes, default 2).
+cd "$(dirname "$0")/.." || exit 2
+export PATH="$HOME/.local/bin:$HOME/.elan/bin:$PATH"
+ALL=(scope build enumerate export-modern export-classic merge classify graph coverage report)
+want=("$@"); [ ${#want[@]} -eq 0 ] && want=("${ALL[@]}")
+mkdir -p .work/inventory/logs reports/prosa_inventory
+LOGJ=reports/prosa_inventory/run_log.json
+entries=()
+status=0
+for s in "${ALL[@]}"; do
+  case " ${want[*]} " in *" $s "*) ;; *) continue ;; esac
+  case $s in
+    scope)          cmd=(python3 -I inventory/scope.py) ;;
+    build)          cmd=(python3 -I inventory/build.py) ;;
+    enumerate)      cmd=(python3 -I inventory/enumerate.py) ;;
+    export-modern)  cmd=(python3 -I inventory/export.py modern "${INVENTORY_WORKERS:-2}") ;;
+    export-classic) cmd=(python3 -I inventory/export.py classic "${INVENTORY_WORKERS:-2}") ;;
+    merge)          cmd=(bash -c 'python3 -I inventory/merge.py modern && python3 -I inventory/merge.py classic') ;;
+    classify)       cmd=(python3 -I inventory/classify.py) ;;
+    graph)          cmd=(python3 -I inventory/graph.py) ;;
+    coverage)       cmd=(python3 -I inventory/coverage.py) ;;
+    report)         cmd=(python3 -I inventory/report.py) ;;
+  esac
+  start=$(date +%s)
+  "${cmd[@]}" > ".work/inventory/logs/$s.log" 2>&1; rc=$?
+  secs=$(( $(date +%s) - start ))
+  if [ $rc -eq 0 ]; then r=COMPLETED; else r=FAILED; status=1; fi
+  echo "$r $s (${secs}s) — .work/inventory/logs/$s.log"
+  entries+=("{\"stage\":\"$s\",\"result\":\"$r\",\"exit\":$rc,\"seconds\":$secs,\"log\":\".work/inventory/logs/$s.log\"}")
+  [ $rc -ne 0 ] && break
+done
+inputs=$(sha256sum inventory/*.py inventory/config.json tools/preflight.py | awk '{printf "%s\"%s\":\"%s\"", (NR>1?",":""), $2, $1}')
+printf '{"schema":"rocq2lean-prosa-inventory-run/1","commit":"%s","dirty":%s,"inputs":{%s},"stages":[%s]}\n' \
+  "$(git rev-parse HEAD)" "$( [ -z "$(git status --porcelain -- inventory tools)" ] && echo false || echo true)" \
+  "$inputs" "$(IFS=,; echo "${entries[*]}")" > "$LOGJ"
+exit $status
