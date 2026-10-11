@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# P0: reproduce the focused tests from a clean checkout. Fresh `git clone` of COMMIT (default HEAD)
+# into ~/research/r2l-p0clean-<commit>; `lake build Rocq2Lean` from scratch (no .lake, no runs/, no
+# compiled exporter); Prosa v0.6 rebuilt from the checksum-verified release with the compatibility
+# patches (scripts/setup-prosa); then scripts/test-p0 and scripts/test-inventory. Results go to
+# reports/prosa_inventory/p0_clean_reproduction/. Not rebuilt: the toolchains (elan Lean v4.33.1,
+# opam switch rocq930-mc), checked by doctor against the lock and bound in every run snapshot.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+REPO=$(pwd); C=$(git rev-parse "${1:-HEAD}"); D=$HOME/research/r2l-p0clean-${C:0:12}
+OUT=$REPO/reports/prosa_inventory/p0_clean_reproduction
+rm -rf "$D" "$OUT"; mkdir -p "$OUT"
+T0=$(date -Is); S0=$(date +%s)
+git clone -q --no-local "$REPO" "$D" && git -C "$D" checkout -q "$C"
+cd "$D" || exit 2
+export PATH=$HOME/.elan/bin:$HOME/.local/bin:$PATH
+lake build Rocq2Lean > "$OUT/lake-build.log" 2>&1; RB=$?
+./scripts/setup-prosa --full -j${JOBS:-8} > "$OUT/setup-prosa.log" 2>&1; RP=$?
+./scripts/test-p0 > "$OUT/test-p0.log" 2>&1; RT=$?
+./scripts/test-inventory > "$OUT/test-inventory.log" 2>&1; RI=$?
+IMPL=$(python3 -c "import sys; sys.path.insert(0,'tools'); import rocq2lean; print(rocq2lean.impl_tree_sha256())")
+cat > "$OUT/clean_reproduction.json" <<JSON
+{"schema": "rocq2lean-p0-clean-reproduction/1", "commit": "$C", "fresh_clone": true, "clone_path": "$D",
+ "impl_tree_sha256": "$IMPL", "started": "$T0", "finished": "$(date -Is)", "seconds": $(( $(date +%s) - S0 )),
+ "lake_build_exit": $RB, "setup_prosa_exit": $RP, "test_p0_exit": $RT, "test_inventory_exit": $RI,
+ "test_p0_checks_passed": $(grep -c '^PASS' "$OUT/test-p0.log"), "test_p0_checks_failed": $(grep -c '^FAIL' "$OUT/test-p0.log"),
+ "rebuilt": ["Lean translator (lake build from an empty .lake)", "Rocq exporter plugin (built by export)",
+             "Prosa v0.6 from the verified release archive with the compatibility patches"],
+ "reused": ["elan toolchain Lean v4.33.1", "opam switch rocq930-mc (Rocq 9.3.0, MathComp 2.6.0, MetaRocq)",
+            "the opam download cache entry of the Prosa release (sha512-checked)"]}
+JSON
+tail -1 "$OUT/test-p0.log"; tail -1 "$OUT/test-inventory.log"
+echo "lake build $RB, setup-prosa $RP, test-p0 $RT, test-inventory $RI ($D)"
+[ $RB -eq 0 ] && [ $RP -eq 0 ] && [ $RT -eq 0 ] && [ $RI -eq 0 ]
