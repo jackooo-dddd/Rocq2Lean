@@ -7,9 +7,9 @@
   ],
   "validation": "STATEMENT_VALIDATED",
   "by_validation": {
-   "DEFINITION_AUDITED": 87,
-   "DEFINITION_AUDITED_PENDING": 38,
-   "NOT_TRANSLATED": 1,
+   "DEFINITION_AUDITED": 89,
+   "DEFINITION_AUDITED_PENDING": 37,
+   "NOT_TRANSLATED": 2,
    "STATEMENT_AUDITED": 15,
    "STATEMENT_AUDITED_PENDING": 3
   }
@@ -26,16 +26,68 @@
   ],
   "universe_level_defaults": 0
  },
+ "processor_state": {
+  "status": "UNIVERSE_REJECTED",
+  "message": "reference to Rocq.mathcomp.boot.eqtype.HB_unnamed_factory_16__rocq2lean_obligation_1.statement: coherence: source level mathcomp.boot.eqtype.58 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.58, not 1 [last tier: UNIVERSE_REJECTED: protected public declaration: universe specialization refused (a quantification range would be narrowed): Rocq.prosa.behavior."
+ },
  "JLFP_policy": {
   "status": "UNIVERSE_REJECTED",
   "message": "reference to Rocq.prosa.behavior.job.JobType: argument u_Corelib_ssr_ssrbool_1105: Corelib.ssr.ssrbool.1105 + 0 \u2264 mathcomp.boot.eqtype.51 is not entailed by the source universe graph, nor is mathcomp.boot.eqtype.51 \u2264 Corelib.ssr.ssrbool.1105 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.mathcomp.boot.eqtype.Equality.sort: argument max\n((max u_Corelib_ssr_ssrbool_1105 u_Corelib_ssr_ssrbool_1171) + 1)\n(max u_Corelib_ssr_ssrbool_1105 u_Corelib_ssr_ssrbool_1171)\nu_mathcomp_boot_eq"
  },
- "negative_defaulted_statement_level": {
+ "negative_narrowed_statement_0-0": {
   "kernel": true,
   "validate_exit": 2,
+  "blocked_dependents": 4,
   "audit_problems": [
-   "mathcomp.boot.eqtype.opt_eqP: statement specialized by 1 defaulted universe level(s)"
+   "mathcomp.boot.eqtype.opt_eqP: Rocq.mathcomp.boot.eqtype.Equality.type: source level mathcomp.boot.eqtype.51 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_mathcomp_boot_eqtype_51: the statement is specialized (R3G)"
   ],
-  "consumer": "OK"
+  "row_self_reports": {
+   "universe_level_defaults": 0,
+   "universe_residuals": null,
+   "implicit_levels": [],
+   "level_params": []
+  }
+ },
+ "negative_narrowed_statement_0-1": {
+  "kernel": true,
+  "validate_exit": 2,
+  "blocked_dependents": 4,
+  "audit_problems": [
+   "mathcomp.boot.eqtype.opt_eqP: Rocq.mathcomp.boot.eqtype.Equality.type: source level mathcomp.boot.eqtype.51 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_mathcomp_boot_eqtype_51: the statement is specialized (R3G)"
+  ],
+  "row_self_reports": {
+   "universe_level_defaults": 0,
+   "universe_residuals": null,
+   "implicit_levels": [],
+   "level_params": []
+  }
+ },
+ "negative_narrowed_statement_2-2": {
+  "kernel": true,
+  "validate_exit": 2,
+  "blocked_dependents": 4,
+  "audit_problems": [
+   "mathcomp.boot.eqtype.opt_eqP: Rocq.mathcomp.boot.eqtype.opt_eq: Set + 2 <= mathcomp.boot.eqtype.51 not entailed by the source universe graph"
+  ],
+  "row_self_reports": {
+   "universe_level_defaults": 0,
+   "universe_residuals": null,
+   "implicit_levels": [],
+   "level_params": []
+  }
+ },
+ "negative_narrowed_protected_definition": {
+  "kernel": true,
+  "validate_exit": 2,
+  "blocked_dependents": 0,
+  "audit_problems": [
+   "prosa.behavior.job.job_cost: protected public declaration with a narrowed quantification range: Rocq.prosa.behavior.job.JobType: source level mathcomp.boot.eqtype.51 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_mathcomp_boot_eqtype_51: the statement is specialized (R3G)"
+  ]
+ },
+ "positive_nonzero_universes": {
+  "generic_exit": 0,
+  "generic_output": "",
+  "narrowed_exit": 1,
+  "narrowed_output": "PositiveControl.lean:10:0: error: (kernel) incorrect number of universe levels parameters for 'Rocq.mathcomp.boot.eqtype.opt_eqP.type', #0 expected, #2 provided\nPositiveControl.lean:11:0: error(lean.unknownIdentifier): Unknown constant `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality`\nPositiveControl.lean:15:0: error: binder range Rocq.mathcomp.boot.eqtype.Equality.type\n"
  }
 }

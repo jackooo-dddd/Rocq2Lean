@@ -3,12 +3,17 @@
 on a small Prosa probe (fixtures/stmt/c: opt_eqP, ideal processor_state, JLFP_policy).
 
 1. C-1 (R3G for statements): MathComp's opaque-data interface opt_eqP keeps its reference levels as
-   parameters (eqtype.51, eqtype.58), so option's canonical eqType and Prosa's ideal processor_state
-   (generic jobs) translate; no statement row has a defaulted level.
-2. Negative control: a statement row claiming a defaulted level (the old behaviour) is
-   kernel-accepted and rejected by the audit.
-3. The policy family (JLFP_policy) stays refused: the only Lean representation lowers a protected
-   declaration's result sort (no approved representation change); the refusal is reported.
+   parameters (eqtype.51, eqtype.58), so option's canonical eqType is generic; no statement row has a
+   defaulted level. The ideal processor_state is refused (correction): its Lean translation would narrow Job to level 0.
+2. Negative controls, the target itself narrowed with every self-reported trace removed (no
+   `universe_level_defaults`, no residual record, no implicit level): opt_eqP at closed levels 0 and 2
+   and the protected ProcessorState at its Job binder are kernel-accepted and rejected by the audit's
+   source-derived generality obligation (`check_statement_generality`).
+3. Positive control at nonzero universes: the generic translations are kernel-checked at universes
+   2..5 and the statement is used at an `Equality.type.{3,4}`; the same file fails against the narrowed
+   module.
+4. The policy family (JLFP_policy) stays refused: unsupported by the current representation and rules
+   (no approved result-sort rule); the refusal is reported.
 
 Writes reports/statement_only/test_universe_c.json.
 """
@@ -24,7 +29,7 @@ from lib import ROOT, check, cli, finish, forge_run, results  # noqa: E402
 OUT = {}
 RUN = ROOT / "runs" / "st-c-probe"
 ROOTS = ["mathcomp.boot.eqtype.opt_eqP", "prosa.model.processor.ideal.processor_state",
-         "prosa.model.priority.definitions.JLFP_policy"]
+         "prosa.model.priority.definitions.JLFP_policy", "prosa.behavior.job.job_cost"]
 
 shutil.rmtree(RUN, ignore_errors=True)
 rcs = [cli("export", "--mode", "statement", "--manifest", ROOT / "fixtures/stmt/c/manifest.json",
@@ -44,30 +49,163 @@ oe = R["mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality"]
 check(oe.get("level_params") == ["u_mathcomp_boot_eqtype_51", "u_mathcomp_boot_eqtype_58"],
       "option's canonical eqType is generic in the eqType levels (no longer Set-level only)")
 ps = R["prosa.model.processor.ideal.processor_state"]
-check(ps["status"] == "PENDING_KERNEL_CHECKED" and all(R[f"prosa.model.processor.ideal.processor_state__rocq2lean_obligation_{k}"]["status"]
-                                                         == "STATEMENT_PENDING_KERNEL_CHECKED" for k in (1, 2)),
-      "ideal processor_state and its obligations translate (pending on proof tasks only)")
-stmt_rows = [r for r in rep["results"] if r["status"] in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")]
+OUT["processor_state"] = {"status": ps["status"], "message": ps.get("message", "")[:400]}
+# correction (2026-10-14): with opt_eqP generic, the ideal processor_state is still narrowed when
+# translated: Lean has no cumulativity and ProcessorState's core finType level is max(u101, u51) (R2F),
+# so `unit`'s finType (level 0) forces Job : JobType.{0, _} -- a protected definition whose
+# quantification range would shrink: refused, never claimed
+check(ps["status"] == "UNIVERSE_REJECTED" and "universe specialization refused" in ps.get("message", ""),
+      "ideal processor_state (protected) is refused: under the current representation its translation narrows Job to level 0")
+claimed = [r for r in rep["results"] if r["status"] in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED",
+                                                         "TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED")]
+stmt_rows = [r for r in claimed if r["status"].startswith("STATEMENT_")]
 check(all(not r.get("universe_level_defaults") for r in stmt_rows), f"no statement row has a defaulted level ({len(stmt_rows)} statements)")
+a0 = json.loads((RUN / "audit.json").read_text())
+check(a0.get("status") == "OK" and not [p for p in a0.get("problems", []) if "free in the statement" in p["message"]],
+      "the audit's source-derived generality check accepts every claimed row")
 jl = R["prosa.model.priority.definitions.JLFP_policy"]
 OUT["JLFP_policy"] = {"status": jl["status"], "message": jl.get("message", "")[:500]}
-check(jl["status"] == "UNIVERSE_REJECTED", "JLFP_policy stays refused (policy blocker: no approved result-sort lowering)")
+check(jl["status"] == "UNIVERSE_REJECTED", "JLFP_policy stays refused (unsupported by the current representation and rules)")
 
-# 2. negative control: a statement row claiming a defaulted level (the pre-C behaviour), with a
-# residual record the earlier audit accepted (generic declaration at its defaults = the reported one);
-# the declaration itself is unchanged, so the kernel replay accepts everything
-rep2 = copy.deepcopy(rep)
-row = next(r for r in rep2["results"] if r["source"] == "mathcomp.boot.eqtype.opt_eqP")
-row["universe_level_defaults"] = 1
-row["universe_residuals"] = {"params": ["u_residual_0"], "defaults": [{"k": "zero"}],
-                             "justification": "kernel accepted the declaration with these levels as fresh universe parameters",
-                             "generic_type": row["target_type"], "generic_value": row["target_value"]}
-_, kernel_ok, rc, cons, aud = forge_run(RUN, "defaulted-statement-level", rep2, check_cmd="validate")
-probs = [p["message"] for p in aud.get("problems", []) if p["message"].startswith("mathcomp.boot.eqtype.opt_eqP:")]
-OUT["negative_defaulted_statement_level"] = {"kernel": kernel_ok, "validate_exit": rc, "audit_problems": probs[:3],
-                                             "consumer": cons.get("status")}
-check(kernel_ok and rc == 2 and any("defaulted universe level" in p for p in probs),
-      "a statement row with a defaulted level is kernel-accepted and audit-rejected (specialization)")
+
+# 2. negative controls: the target itself is narrowed (not merely a flag). A declaration's universe
+# parameters are replaced by closed levels in its type and value (always kernel-correct: a universe
+# parameter can be instantiated at any level), it is re-emitted under its own name, every row that
+# references it is reported blocked, and every self-reported trace of the specialization is removed
+# (no `universe_level_defaults`, no residual record, no implicit level for the removed parameters)
+def subst_levels(j, m):
+    if isinstance(j, list):
+        return [subst_levels(x, m) for x in j]
+    if not isinstance(j, dict):
+        return j
+    if j.get("k") == "param" and j.get("n") in m:
+        return m[j["n"]]
+    return {k: subst_levels(v, m) for k, v in j.items()}
+
+
+def closed(n):
+    x = {"k": "zero"}
+    for _ in range(n):
+        x = {"k": "succ", "l": x}
+    return x
+
+
+def specialize(rep0, source, levels):
+    rep_ = copy.deepcopy(rep0)
+    rows = {r["source"]: r for r in rep_["results"]}
+    r = rows[source]
+    m = {p: closed(k) for p, k in levels.items()}
+    params = set(levels)
+    for k in ("target_type", "target_value"):
+        r[k] = subst_levels(r[k], m)
+    r["target_ctors"] = subst_levels(r.get("target_ctors") or [], m)
+    r["level_interp"] = [x for x in subst_levels(r.get("level_interp") or [], m)
+                         if "u_" + x["level"].replace(".", "_") not in params]
+    r["level_params"] = [p for p in r["level_params"] if p not in params]
+    r["implicit_levels"] = [l for l in r.get("implicit_levels") or [] if "u_" + l.replace(".", "_") not in params]
+    r["universe_level_defaults"], r["universe_residuals"] = 0, None
+    # every row referencing the narrowed declaration (transitively) is reported blocked
+    names, blocked = {r["target"]} | {c["name"] for c in r["target_ctors"]}, []
+    changed = True
+    while changed:
+        changed = False
+        for x in rep_["results"]:
+            if x is r or x["source"] in blocked or not x.get("target"):
+                continue
+            js = json.dumps([x.get("target_type"), x.get("target_value"), x.get("target_ctors")])
+            if any(f'"n": "{n}"' in js for n in names):
+                blocked.append(x["source"])
+                names |= {x["target"]} | {c["name"] for c in x.get("target_ctors") or []}
+                changed = True
+    for x in rep_["results"]:
+        if x["source"] in blocked:
+            for k in ("target", "target_type", "target_value", "target_ctors", "target_kind", "pending_hypotheses"):
+                x.pop(k, None)
+            x.update(status="BLOCKED_DEPENDENCY", message=f"failed dependencies: #[{source}]", blocked_by=[source])
+    return rep_, blocked
+
+
+OPT = "mathcomp.boot.eqtype.opt_eqP"
+E51, E58 = "u_mathcomp_boot_eqtype_51", "u_mathcomp_boot_eqtype_58"
+# (0,0): the pre-C translation; (0,1): a nonzero closed level that R3 (no raising) admits, so only the
+# generality obligation can reject it; (2,2): raising, rejected by R3 itself
+for l51, l58, want in ((0, 0, "free in the statement"), (0, 1, "free in the statement"),
+                       (2, 2, "not entailed by the source universe graph")):
+    tag = f"{l51}-{l58}"
+    rep2, blocked = specialize(rep, OPT, {E51: l51, E58: l58})
+    row = next(r for r in rep2["results"] if r["source"] == OPT)
+    _, kernel_ok, rc, cons, aud = forge_run(RUN, f"narrowed-statement-{tag}", rep2, check_cmd="validate")
+    probs = [p["message"] for p in aud.get("problems", []) if p["message"].startswith(OPT + ":")]
+    OUT[f"negative_narrowed_statement_{tag}"] = {
+        "kernel": kernel_ok, "validate_exit": rc, "blocked_dependents": len(blocked), "audit_problems": probs[:3],
+        "row_self_reports": {k: row.get(k) for k in ("universe_level_defaults", "universe_residuals", "implicit_levels", "level_params")}}
+    check(kernel_ok and rc == 2 and not row.get("universe_level_defaults") and row.get("universe_residuals") is None
+          and not row.get("implicit_levels") and any(want in p for p in probs) and not any("defaulted" in p for p in probs),
+          f"opt_eqP narrowed to Equality.type.{{{l51},{l58}}} (no self-reported trace): kernel-accepted, rejected by the "
+          f"audit from the source ({want!r})")
+
+# a protected definition narrowed at a quantification range: job_cost {Job : JobType.{0,_}}
+SCH = "prosa.behavior.job.job_cost"
+check(R[SCH]["status"] in ("TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED") and E51 in R[SCH]["level_params"],
+      "protected job_cost translates generically (Job : JobType.{u51,_})")
+rep3, blocked3 = specialize(rep, SCH, {E51: 0, E58: 0})
+_, kernel_ok, rc, cons, aud = forge_run(RUN, "narrowed-protected-definition", rep3, check_cmd="validate")
+probs = [p["message"] for p in aud.get("problems", []) if p["message"].startswith(SCH + ":")]
+OUT["negative_narrowed_protected_definition"] = {"kernel": kernel_ok, "validate_exit": rc,
+                                                 "blocked_dependents": len(blocked3), "audit_problems": probs[:3]}
+check(kernel_ok and rc == 2 and any("narrowed quantification range" in p for p in probs),
+      "protected job_cost narrowed at its Job binder (no self-reported trace): kernel-accepted, audit-rejected")
+
+# 3. positive control: the generic translations are usable at nonzero universes (kernel-checked
+# instantiations and a use of the statement at a universe-3 eqType); the same file fails against the
+# narrowed module (discrimination)
+POS = """import Rocq2LeanOut
+open Lean Meta Elab Command
+def lv (n : Nat) : Level := Level.ofNat n
+-- kernel-checked: each declaration instantiated at nonzero universes
+def posInst (n : Name) (us : List Nat) (tag : String) : MetaM Unit := do
+  let ci ← getConstInfo n
+  let us := us.map lv
+  addDecl (.defnDecl { name := Name.mkSimple ("posctrl_" ++ tag), levelParams := [], type := ← instantiateTypeLevelParams ci.toConstantVal us,
+                       value := mkConst n us, hints := .opaque, safety := .safe })
+run_meta posInst `Rocq.mathcomp.boot.eqtype.opt_eqP.type [3, 4] "opt_eqP"
+run_meta posInst `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality [3, 4] "option_eqType"
+run_meta posInst `RocqPending.prosa.behavior.schedule.ProcessorState [3, 4, 3, 5, 2] "ProcessorState"
+SCHED_LINE
+-- a use: the statement applies to an eqType at universe 3 (δ-unfolds the statement in the kernel)
+run_meta do
+  let ci ← getConstInfo `Rocq.mathcomp.boot.eqtype.opt_eqP.type
+  let v ← instantiateValueLevelParams ci [lv 3, lv 4]
+  let .forallE _ d _ _ := v | throwError "statement is not a quantification"
+  unless d == mkConst `Rocq.mathcomp.boot.eqtype.Equality.type [lv 3, lv 4] do throwError "binder range {d}"
+  let h := mkConst `Rocq.mathcomp.boot.eqtype.opt_eqP.type [lv 3, lv 4]
+  addDecl (.defnDecl { name := `posctrl_use, levelParams := [], type := mkForall `h .default h v,
+                       value := mkLambda `h .default h (.bvar 0), hints := .opaque, safety := .safe })
+"""
+
+# (schedule's target name and universe parameters come from its report row)
+POS = POS.replace("SCHED_LINE", f'run_meta posInst `{R[SCH]["target"]} {[2 + k for k in range(len(R[SCH]["level_params"]))]} "job_cost"')
+
+
+def run_pos(run_dir, name):
+    import os
+    import subprocess
+    lean = Path(run_dir) / "lean"
+    (lean / f"{name}.lean").write_text(POS)
+    env = dict(os.environ, PATH=f"{Path.home()}/.elan/bin:" + os.environ["PATH"])
+    lp = subprocess.run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], capture_output=True, text=True, env=env).stdout.strip()
+    env["LEAN_PATH"] = f"{lp}:{lean}"
+    p = subprocess.run(["lean", f"{name}.lean"], cwd=lean, capture_output=True, text=True, env=env)
+    return p.returncode, (p.stdout + p.stderr)[:600]
+
+
+rc_pos, out_pos = run_pos(RUN, "PositiveControl")
+rc_neg, out_neg = run_pos(RUN.parent / f"{RUN.name}-forged-narrowed-statement-0-0", "PositiveControl")
+OUT["positive_nonzero_universes"] = {"generic_exit": rc_pos, "generic_output": out_pos, "narrowed_exit": rc_neg,
+                                     "narrowed_output": out_neg}
+check(rc_pos == 0, "positive control: opt_eqP, option's eqType, ProcessorState and job_cost kernel-checked at universes 2..5; "
+                   "the statement applies to an Equality.type.{3,4}")
+check(rc_neg != 0, "the same positive control fails against the narrowed module (it discriminates)")
 
 (ROOT / "reports" / "statement_only" / "test_universe_c.json").write_text(json.dumps(OUT, indent=1) + "\n")
 finish("test-universe-c")

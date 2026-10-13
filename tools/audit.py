@@ -284,6 +284,17 @@ def ind_params(d, r):
 
 
 TEMPLATE_LEVELS = set()     # template levels of the export's template inductives (R5, not R3)
+DEF_TYPE_CANDIDATES = []    # definitions whose type has a free-looking closed level (diagnostic only)
+
+
+def PROTECTED_PIN():
+    """The pinned protected-interface names (independently of the report's flags)."""
+    try:
+        root_dir = Path(__file__).resolve().parent.parent
+        pin = json.load(open(root_dir / "tools" / "protected_interface.pin.json"))
+        return set(json.loads((root_dir / pin["manifest"]).read_bytes())["protected"])
+    except Exception:
+        return set()
 
 
 def template_binding(d):
@@ -2012,6 +2023,110 @@ def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None
     return n
 
 
+def has_bvar(e, i):
+    """Whether de Bruijn index i (relative to e's top) occurs in e."""
+    if isinstance(e, list):
+        return any(has_bvar(x, i) for x in e)
+    if not isinstance(e, dict):
+        return False
+    k = e.get("k")
+    if k == "bvar":
+        return e["i"] == i
+    if k in ("forall", "lam"):
+        return has_bvar(e["t"], i) or has_bvar(e["b"], i + 1)
+    if k == "let":
+        return has_bvar(e["t"], i) or has_bvar(e["v"], i) or has_bvar(e["b"], i + 1)
+    return any(has_bvar(v, i) for v in e.values() if isinstance(v, (dict, list)))
+
+
+def app_occurrences(e, acc, types=None):
+    """(name, universe arguments, number of applied arguments) of every constant occurrence, except
+    inside a type argument that sibling arguments determine (`@Eq.{u} A a b`: A is the type of a, so
+    kernel typing fixes it; given `types`: head name -> (type, ...))."""
+    stack = [e]
+    while stack:
+        x = stack.pop()
+        if isinstance(x, list):
+            stack.extend(x)
+            continue
+        if not isinstance(x, dict):
+            continue
+        if x.get("k") == "app":
+            h, args = x, []
+            while h.get("k") == "app":
+                args.append(h["a"])
+                h = h["f"]
+            args.reverse()
+            skip = set()
+            if h.get("k") == "const" and types and h["n"] in types:
+                bs, t = [], types[h["n"]][0]
+                while t is not None and t.get("k") == "forall" and len(bs) < len(args):
+                    bs.append(t["t"])
+                    t = t["b"]
+                for j, bt in enumerate(bs):
+                    if bt.get("k") == "sort" and any(has_bvar(bs[k], k - j - 1) for k in range(j + 1, len(bs))):
+                        skip.add(j)
+            stack.extend(a_ for j, a_ in enumerate(args) if j not in skip)
+            if h.get("k") == "const":
+                acc.append((h["n"], h["u"], len(args)))
+            else:
+                stack.append(h)
+            continue
+        if x.get("k") == "const":
+            acc.append((x["n"], x["u"], 0))
+            continue
+        stack.extend(v for v in x.values() if isinstance(v, (dict, list)))
+    return acc
+
+
+def mentions_param(j, p):
+    if isinstance(j, dict):
+        return (j.get("k") == "param" and j.get("n") == p) or any(mentions_param(v, p) for v in j.values())
+    return isinstance(j, list) and any(mentions_param(v, p) for v in j)
+
+
+def check_statement_generality(facts, own, gen, exprs, poly, types):
+    """Task C, independently of the translator's own reports (no `universe_level_defaults`/residual
+    record is consulted): a statement — or a definition's type — is never specialized at a universe
+    level that its source leaves free. For every reference `c.{σ…} a₁ … aₙ` in a statement (the
+    statement row's type and value, a definition row's type) and every source level l of c that is
+    not a level of the statement (R3, the `else` case: neither a parameter nor an implicit level), the
+    argument σ may differ from l's parameter only if
+      * the source forces it: l ≤ Set in the native graph (σ closed), or
+      * kernel typing determines it at this occurrence: c's Lean parameter for l occurs in the type of
+        one of the n applied binders (a cumulativity site: `rel.{0} Nat`, `Equality.sort.{…} T`).
+    Otherwise (an unapplied `Equality.type.{0,0}` under a binder, the pre-C translation of opt_eqP) the
+    statement ranges over a smaller universe than the source's: rejected (R3G requires u_l). Type
+    arguments fixed by sibling arguments (`@Eq A a b`) are not inspected (typing determines them)."""
+    for e in exprs:
+        for name, us, nargs in app_occurrences(e, [], types):
+            if name not in gen or name not in types:
+                continue
+            k0 = (poly or {}).get(name, 0)
+            ty, lps, nh = types[name]
+            us_, lps_ = us[k0:], lps[k0:]
+            if len(us_) != len(gen[name]) or len(lps_) != len(gen[name]):
+                continue                          # (arity mismatch: reported by check_universe_args)
+            # (a pending artifact's hypothesis binders do not count: their levels are the translator's
+            # choice, not determined by the source)
+            binders, t = [], ty
+            while t is not None and t.get("k") == "forall" and len(binders) < nargs:
+                binders.append(t["t"])
+                t = t["b"]
+            binders = binders[nh:]
+            for l, sigma, p in zip(gen[name], us_, lps_):
+                if l in own or l in TEMPLATE_LEVELS:
+                    continue                      # (own levels: their parameter, checked by R3; R5)
+                c, ps = level_nf(sigma)
+                if not ps and facts.entails(l, "Set", 0):
+                    continue
+                if any(mentions_param(b, p) for b in binders):
+                    continue
+                raise Mismatch(f"{name}: source level {l} is free in the statement (not determined by the reference's "
+                               f"arguments, not forced by the source graph) but its argument is {sigma}, not the "
+                               f"parameter {level_param(l)}: the statement is specialized (R3G)")
+
+
 # ---------- instance levels of template constants and recursors (independent recomputation) ----------
 
 _ZERO = {"k": "zero"}
@@ -2373,7 +2488,8 @@ def sha256_path(p):
     return hashlib.sha256(open(p, "rb").read()).hexdigest()
 
 
-def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, aliases=()):
+def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, aliases=(), statements=frozenset(), definitions=frozenset(),
+                                 protected=frozenset()):
     """Universe interpretation (R3), body levels (R2S/R2B), residuals and typing-determined instance
     levels of every accepted row (`rows`: source name -> result row with status
     TRANSLATED_AND_CHECKED for the rows to check). Returns (universe arguments checked, recursors)."""
@@ -2415,6 +2531,15 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
             poly[t_] = poly.get(st_, 0)
             gen_admit[t_] = gen_admit.get(st_, set())
     univ_checked = 0
+    # target types (for the statement-generality check: which universe parameters an applied argument
+    # determines)
+    types = {n_: (t_, ps_, 0) for n_, (t_, ps_) in BOOT_TYPES.items()}
+    for r_ in rows.values():
+        if r_.get("status") == "TRANSLATED_AND_CHECKED" and r_.get("target_type") is not None:
+            nh = len(r_.get("pending_hypotheses") or [])
+            types[r_["target"]] = (r_["target_type"], r_.get("level_params") or [], nh)
+            for c in r_.get("target_ctors") or []:
+                types[c["name"]] = (c["type"], r_.get("level_params") or [], nh)
     if facts is not None:
         for s_, r_ in rows.items():
             if r_.get("status") != "TRANSLATED_AND_CHECKED":
@@ -2478,6 +2603,52 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                 univ_checked += check_universe_args(facts, own, gen_, [x for x in exprs if x is not None], bl, poly,
                                                     gen_admit, own_admit, bool(r_.get("universe_cumulativity")),
                                                     bool(r_.get("universe_lowered")))
+                if d_["kind"] == "inductive" and s_ in definitions:
+                    # an inductive block: the binder domains of its arity and of its constructors
+                    # (parameters and fields: quantification ranges); its own references are at its own
+                    # parameters by construction
+                    nh, ind_exprs = len(r_.get("pending_hypotheses") or []), []
+                    for x in [r_.get("target_type")] + [c["type"] for c in r_.get("target_ctors") or []]:
+                        for _ in range(nh):
+                            if x is not None and x.get("k") == "forall":
+                                x = x["b"]
+                        while x is not None and x.get("k") == "forall":
+                            ind_exprs.append(x["t"])
+                            x = x["b"]
+                    try:
+                        check_statement_generality(facts, own, gen_, ind_exprs, poly, types)
+                    except Mismatch as e:
+                        if s_ in protected:
+                            raise Mismatch(f"protected public declaration with a narrowed quantification range: {e}")
+                        DEF_TYPE_CANDIDATES.append({"declaration": s_, "message": str(e)})
+                if s_ in statements or (d_["kind"] == "constant" and s_ in definitions):
+                    # a statement: all of it; a definition: the binder domains of its type (its
+                    # quantification ranges). The hypothesis telescope (prerequisite statements at the
+                    # levels the declaration uses them) is peeled.
+                    nh, stmt_exprs = len(r_.get("pending_hypotheses") or []), []
+                    for x in (r_.get("target_type"), r_.get("target_value") if s_ in statements else None):
+                        for _ in range(nh):
+                            if x is not None and x.get("k") in ("forall", "lam"):
+                                x = x["b"]
+                        if x is None:
+                            continue
+                        if s_ in statements:
+                            stmt_exprs.append(x)
+                        else:
+                            while x.get("k") == "forall":
+                                stmt_exprs.append(x["t"])
+                                x = x["b"]
+                    try:
+                        check_statement_generality(facts, own, gen_, stmt_exprs, poly, types)
+                    except Mismatch as e:
+                        if s_ in statements:
+                            raise
+                        if s_ in protected:
+                            raise Mismatch(f"protected public declaration with a narrowed quantification range: {e}")
+                        # a non-protected definition: diagnostic (as R3-down / residual defaults, library
+                        # definitions may be instantiated below the source; their effect on protected
+                        # declarations is checked there)
+                        DEF_TYPE_CANDIDATES.append({"declaration": s_, "message": str(e)})
             except Mismatch as e:
                 problem("universe", f"{s_}: {e}")
     # Structural fidelity of every accepted translation.
@@ -3103,7 +3274,10 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
         norm_decls[n] = views[n]
         norm_rows[n] = dict(r, status="TRANSLATED_AND_CHECKED")
     univ_checked, recursors, inst = universe_and_instance_checks(
-        lines, norm_decls, norm_rows, metadata_path, problem, aliases=[(target_name(n), n) for n in proved])
+        lines, norm_decls, norm_rows, metadata_path, problem, aliases=[(target_name(n), n) for n in proved],
+        statements=frozenset(n for n in leaves if n in claimed),
+        definitions=frozenset(n for n in claimed if n not in leaves and n not in syn),
+        protected=frozenset(claimed) & frozenset(PROTECTED_PIN()))
     # structural fidelity
     acc_rows = [r for n, r in rows.items() if r["status"] in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED")]
     aud = aud_main = Auditor(decls, acc_rows, recursors)
@@ -3325,6 +3499,11 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
            "status": "OK" if not problems else "AUDIT_REJECTED",
            "universe_arguments_checked": univ_checked, "interface_checked": iface_checked,
            "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
+           "definition_type_specialization_candidates": {
+               "note": "non-protected definitions only (protected ones are rejected): a binder-domain level of the "
+                       "type that no applied argument determines and that is not its parameter (it may be fixed by "
+                       "the definition's value); diagnostic, not a rejection",
+               "count": len(DEF_TYPE_CANDIDATES), "rows": DEF_TYPE_CANDIDATES},
            "coverage": {"requested_roots": len(canon), "required_closure": len(closure), "claimed": len(claimed),
                         "accepted": sum(1 for n in claimed if st(n) in ACCEPTED_ST),
                         "pending": sum(1 for n in claimed if st(n) in PENDING_ST),

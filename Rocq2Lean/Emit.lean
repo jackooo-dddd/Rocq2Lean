@@ -254,6 +254,100 @@ def setBinderTypeAt : Expr → Nat → Expr → Expr
   | .lam n d b bi, j + 1, t => .lam n d (setBinderTypeAt b j t) bi
   | e, _, _ => e
 
+/-! ### C: no specialization at a level the source leaves free
+
+Independent copy in `tools/audit.py` (`check_statement_generality`). A universe argument of a
+reference `c.{σ…} a₁ … aₙ` for a source level `l` of `c` that is not a level of the declaration is
+*free* when the source graph does not force `l ≤ Set` and no applied argument determines it (`c`'s
+parameter for `l` occurs in no applied binder's domain; a pending artifact's hypothesis binders do not
+count: their levels are the translator's choice). Fixing a free level (`∀ Job : Equality.type.{0,0}`)
+makes the declaration range over a smaller universe than the source's. Type arguments fixed by
+sibling arguments (`@Eq A a b`) are not inspected. -/
+
+private def binderDomains (t : Expr) (n : Nat) : Array Expr := Id.run do
+  let mut out := #[]
+  let mut t := t
+  while out.size < n do
+    match t with
+    | .forallE _ d b _ => out := out.push d; t := b
+    | _ => break
+  return out
+
+/-- Leading hypothesis binders (`h_<leaf>`) of a pending artifact. -/
+private def hypBinderCount (n : Name) (t : Expr) : Nat := Id.run do
+  unless n.toString.startsWith "RocqPending." do return 0
+  let mut k := 0
+  let mut t := t
+  repeat
+    match t with
+    | .forallE x _ b _ =>
+      if x.toString.startsWith "h_" then k := k + 1; t := b else break
+    | _ => break
+  return k
+
+private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (n : Name)
+    (us : List Level) (nargs : Nat) : Option String := Id.run do
+  let some ci := env.find? n | return none
+  let lps := ci.levelParams
+  if lps.length != us.length then return none
+  let doms := (binderDomains ci.type nargs).extract (hypBinderCount n ci.type) nargs
+  for (p, σ) in lps.zip us do
+    unless p.toString.startsWith "u_" do continue      -- (R6 universe variables, Lean's own constants)
+    if own.contains p then continue                     -- (a level of the declaration: R3)
+    if !σ.hasParam then
+      if let some l := facts.levels.find? (fun l => levelParamName l == p) then
+        if entails facts l "Set" 0 then continue
+    if doms.any (fun d => (collectLevelParams {} d).params.contains p) then continue
+    return some s!"{n}: the level of {p} is free in the source (no applied argument determines it, the source graph does not force it) but its argument is {σ}, not {p}"
+  return none
+
+private def siblingFixed (env : Environment) (n : Name) (nargs : Nat) : Array Nat := Id.run do
+  let some ci := env.find? n | return #[]
+  let doms := binderDomains ci.type nargs
+  let mut out := #[]
+  for j in [0:doms.size] do
+    if doms[j]!.isSort && ((List.range doms.size).any fun k => j < k && doms[k]!.hasLooseBVar (k - j - 1)) then
+      out := out.push j
+  return out
+
+partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr) : Option String :=
+  match e with
+  | .app .. =>
+    let f := e.getAppFn
+    let args := e.getAppArgs
+    let r := match f with
+      | .const n us => freeLevelRef env facts own n us args.size
+      | _ => freeLevelPin env facts own f
+    if r.isSome then r else
+    let skip := match f with
+      | .const n _ => siblingFixed env n args.size
+      | _ => #[]
+    Id.run do
+      for i in [0:args.size] do
+        if skip.contains i then continue
+        if let some m := freeLevelPin env facts own args[i]! then return some m
+      return none
+  | .const n us => freeLevelRef env facts own n us 0
+  | .forallE _ d b _ | .lam _ d b _ => freeLevelPin env facts own d <|> freeLevelPin env facts own b
+  | .letE _ t v b _ => freeLevelPin env facts own t <|> freeLevelPin env facts own v <|> freeLevelPin env facts own b
+  | .mdata _ b | .proj _ _ b => freeLevelPin env facts own b
+  | _ => none
+
+private def peelBinders (e : Expr) (k : Nat) : Expr :=
+  match k, e with
+  | k + 1, .forallE _ _ b _ | k + 1, .lam _ _ b _ => peelBinders b k
+  | _, e => e
+
+/-- The binder domains of a definition's type (its quantification ranges), after `k` hypotheses. -/
+private def typeDomains (t : Expr) : Array Expr := Id.run do
+  let mut out := #[]
+  let mut t := t
+  repeat
+    match t with
+    | .forallE _ d b _ => out := out.push d; t := b
+    | _ => break
+  return out
+
 partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
@@ -567,6 +661,20 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       | .error msg, _ | _, .error msg =>
         return { base with status := "UNIVERSE_REJECTED", message := msg }
     let base := { base with universeChecks := nchecks }
+    -- C: a statement (anywhere) and a protected definition (its quantification ranges) are never
+    -- specialized at a level the source leaves free (refused, as R2B-P/R2B-S are: no narrowing)
+    let env ← getEnv
+    let pinned : Option String :=
+      if stmt then
+        freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) <|>
+          freeLevelPin env genv.facts lparams (peelBinders val hyps.size)
+      else if genv.protectedNames.contains c.name then
+        (typeDomains (peelBinders ty hyps.size)).findSome? (freeLevelPin env genv.facts lparams)
+      else none
+    if let some m := pinned then
+      return { base with status := "UNIVERSE_REJECTED",
+                         message := if stmt then s!"statement specialization refused: {m}"
+                                    else s!"protected public declaration: universe specialization refused (a quantification range would be narrowed): {m}" }
     unless (← whnf (← inferType ty)).isSort do
       return { base with status := "TRANSLATION_FAILED", message := "translated type is not a type" }
     -- a sealed-module implementation (e.g. HB.lock) is translated as a transparent definition: its
@@ -887,6 +995,14 @@ where
       | .ok n => nchecks := nchecks + n
       | .error msg => return ({ base with status := "UNIVERSE_REJECTED", message := msg }, none)
     let base := { base with minimalLevels := ms.size, universeChecks := nchecks }
+    -- C: a protected inductive's quantification ranges (arity and constructor binder domains) are
+    -- never specialized at a level the source leaves free (its own self-references are not yet in
+    -- the environment and are skipped)
+    if genv.protectedNames.contains base.source then
+      let env ← getEnv
+      if let some m := (#[ty] ++ ctors.map (·.type)).findSome? fun e => (typeDomains e).findSome? (freeLevelPin env genv.facts lparams) then
+        return ({ base with status := "UNIVERSE_REJECTED",
+                            message := s!"protected public declaration: universe specialization refused (a quantification range would be narrowed): {m}" }, none)
     -- M6: non-uniform parameters (the native `nparams_rec`, round-trip checked) become the first
     -- indices of the Lean inductive; the arity and constructor types are unchanged
     let nparamsRec := (i.native.getObjValAs? Nat "nparams_rec").toOption.getD i.npars
