@@ -40,8 +40,7 @@ the rest.
 
 ## Entry 1 — Task A: pending-to-final assembly, proof-check integration, corpus provenance (2026-10-13)
 
-Commit: **not committed** — working tree on top of `7d91605` (changed files listed below); to be
-committed on approval.
+Commit: `803d733` (code; local, not pushed), provenance results in the follow-up commit.
 
 ### (1) What was added and why
 
@@ -125,8 +124,17 @@ python3 -I inventory/statement_provenance.py snapshot
 python3 -I inventory/statement_provenance.py roundtrip --jobs 3
 python3 -I inventory/statement_provenance.py union runs/st-corpus-A --jobs 2
 python3 -I inventory/statement_provenance.py manifest runs/st-corpus-A
+python3 -I inventory/statement_provenance.py check
 scripts/test-provenance
 ```
+
+Provenance results (2026-10-14): 36/36 chunk round trips OK (48,064 records), merge re-derived, all
+4,474 protected roots covered, union universe check 0 violated, manifest `CORPUS_PROVENANCE_BOUND`,
+`check` OK, `test-provenance` OK (4 negative controls rejected). See `PROVENANCE.md` §5.
+
+Correction (found in Task C, entry 3 on branch `task-c`): 701 of the protected statements counted
+above as Accepted/Audited Pending were translated with universe levels defaulted to 0 (specialized),
+which neither the translator nor the audit refused at this commit.
 
 Evidence: `reports/statement_only/coverage/{baseline-7d91605,A-assembly}.json`,
 `reports/statement_only/test_{statement,assembly,provenance}.json`, `reports/test_all.json`,

@@ -36,6 +36,13 @@ round trip now uses `Rocq2Lean CheckRelations` (same check, one table; validated
 identical 4,692 confirmations, 75 s → 24 s). The largest chunk (`modern-chunk-0008`, 5,471
 declarations, 960 levels) takes 29 min in full.
 
+The statement-preparation re-derivation (`Rocq2Lean CheckStatementPrepared`, one fresh environment
+preparation *per constant*) dominates the remaining cost: chunks whose modules have large closures
+(`results.rta.*`, `analysis.abstract.*`) take 1–4 h in this step alone, against 3 min for the original
+export, which prepared the environment once for all roots. A batched variant (prepare once, re-derive
+every constant from it, as the export did) is a follow-up; it was not introduced mid-run because it
+would change the round-trip tool and invalidate the finished chunks.
+
 RESULTS: see §5 (filled from `roundtrip.json` when all 36 are done).
 
 ## 3. Global universe consistency (`.work/provenance/union.json`)
@@ -71,6 +78,22 @@ fingerprint, exporter plugin). `check` recomputes all of it; missing or altered 
 (`scripts/test-provenance`: altered chunk IR, missing round trip, a merged record altered under a
 forged manifest, missing union check).
 
-## 5. Results
+## 5. Results (2026-10-14)
 
-(filled when the 36 round trips finish)
+| evidence | result |
+|---|---|
+| per-chunk snapshots | 36/36; every chunk IR matches the digest its export recorded; no library missing or newer than its export |
+| Rocq round trips | **36/36 OK** — 48,064 declaration records re-checked (structural equality with a fresh MetaRocq quotation, opacity, dependency edges, native metadata, statement preparation re-derived, every universe pair); 16.7 CPU-hours (largest chunk 3.75 h, almost all in the statement re-derivation) |
+| merge re-derivation | every one of the 9,970 merged records byte-identical to its chunk copies; merged universe line = union of the chunks' |
+| root coverage | all 4,474 protected declarations are merged roots |
+| union universe check | 251,559 facts: 250,981 exact, 578 `le` entailed by a native `lt`, **0 violated** (§3) |
+| corpus manifest | `CORPUS_MANIFEST.json`: `CORPUS_PROVENANCE_BOUND`, `check` → OK |
+| negative controls (`scripts/test-provenance`) | altered chunk IR, missing round trip, merged record altered under a forged manifest, missing union check: all rejected |
+
+Execution notes. Three batches ran (the first by size, a second for the small chunks, a third for
+three large chunks), on disjoint chunks; to keep them disjoint, the first batch's orchestrator was
+paused (SIGSTOP) for about one hour and labelled placeholder results kept it from re-running the
+third batch's chunks (each placeholder was overwritten by that chunk's real result). The reported
+duration of the three chunks the first batch was running when paused (`0001`, `0003`, `0006`)
+includes the pause. Commands: `python3 -I inventory/statement_provenance.py roundtrip --jobs 3
+[CHUNK …]`, then `manifest runs/st-corpus-A`, `check`, `scripts/test-provenance`.
