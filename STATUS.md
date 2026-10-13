@@ -1,5 +1,19 @@
 # Status
 
+**2026-10-14 — Task A complete; Tasks B and C-1 implemented on branches (see below).**
+- **A** (`main`, `803d733` + provenance commit): pending-to-final assembly (`rocq2lean assemble`,
+  `docs/ASSEMBLY.md`), proof-check integration tests on a synthetic fixture (`scripts/test-assembly`
+  32/32), corpus provenance (`reports/statement_only/PROVENANCE.md`: 36/36 chunk round trips OK,
+  union universe check 0 violated, corpus manifest bound and checked, `scripts/test-provenance` OK),
+  documentation refreshed. Corpus coverage unchanged by design (569 / 2,014 / 1,865 / 26).
+- **B** (branch `task-b`, `220a8c2`): termination lowering with explicit termination obligations and
+  unfolding equations (`docs/TERMINATION.md`); `test-termination` 22/22, `test-all` 18/18.
+- **C-1** (branch `task-c`, `5dcee42`): statements are never specialized by defaulted universe levels
+  (701 protected statements were, in the baseline); fixes the ideal `processor_state` family on the
+  probe; `JLFP`/`FP`/`JLDP_policy` diagnosed as a policy blocker (`docs/UNIVERSE_FAMILY_C.md`).
+- Corpus coverage of B and C: **not yet measured** (`reports/statement_only/ITERATION_LOG.md`).
+- Remote: GitHub `main` is at `7d91605`; the commits above are local (not pushed).
+
 **Current phase: statement-only translation (direction change 2026-10-11).** Rocq2Lean translates
 the datatypes, definitions and theorem *statements* of Prosa v0.6 and Classic, plus what they need,
 mechanically. It never translates a Rocq proof and never writes a Lean proof: proofs are tasks for a
