@@ -21,7 +21,7 @@ Classification of each protected declaration, old run → new run:
 * unchanged / moved within claimed (Accepted ↔ Audited Pending) are counted separately.
 
     python3 -I inventory/c1_transitions.py OLD_SNAPSHOT OLD_REAUDIT NEW_SNAPSHOT NEW_RUN OUT.json
-        [--old-run OLD_RUN] [--flagged OLD_RUN_REPORT]
+        [--old-run OLD_RUN] [--new-audit NEW_REAUDIT]
 
 (NEW_RUN: its translation report gives blocking chains and pending hypotheses.)
 """
@@ -51,7 +51,7 @@ def flagged_rows(report):
             (r.get("universe_level_defaults") or r.get("universe_residuals"))}
 
 
-def main(old_snap, old_reaudit, new_snap, new_run, out, old_run=None):
+def main(old_snap, old_reaudit, new_snap, new_run, out, old_run=None, new_audit=None):
     A = json.loads(Path(old_snap).read_text())
     B = json.loads(Path(new_snap).read_text())
     narrowed = narrowed_rows(json.loads(Path(old_reaudit).read_text()))
@@ -59,7 +59,7 @@ def main(old_snap, old_reaudit, new_snap, new_run, out, old_run=None):
     if old_run:
         flagged = flagged_rows(json.loads((Path(old_run) / "translation_report.json").read_text()))
     rep = json.loads((Path(new_run) / "translation_report.json").read_text())
-    narrowed_now = narrowed_rows(json.loads((Path(new_run) / "audit.json").read_text()))
+    narrowed_now = narrowed_rows(json.loads(Path(new_audit or Path(new_run) / "audit.json").read_text()))
     rows = {r["source"]: r for r in rep["results"]}
     da, db = A["declarations"], B["declarations"]
     prot = sorted(da)
@@ -183,4 +183,4 @@ if __name__ == "__main__":
     a = sys.argv[1:]
     opt = lambda k: a[a.index(k) + 1] if k in a else None
     pos = [x for i, x in enumerate(a) if not x.startswith("--") and (i == 0 or not a[i - 1].startswith("--"))]
-    main(*pos[:5], old_run=opt("--old-run"))
+    main(*pos[:5], old_run=opt("--old-run"), new_audit=opt("--new-audit"))
