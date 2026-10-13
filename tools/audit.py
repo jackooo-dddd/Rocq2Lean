@@ -3227,6 +3227,10 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 v["verdict"] = "MATCH"
                 verdicts.append(v)
                 continue
+            # C: a statement (proof task, opaque-data interface) is never specialized by a defaulted
+            # universe level (every level of a statement is a level of the statement)
+            if s_ in leaves and (r.get("universe_level_defaults") or r.get("universe_residuals")):
+                raise Mismatch(f"statement specialized by {r.get('universe_level_defaults')} defaulted universe level(s)")
             want_t = (pending_target_name if pending else target_name)(s_ + suffix[s_])
             if r["target"] != want_t:
                 raise Mismatch(f"target name {r['target']} is not {want_t}")

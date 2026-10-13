@@ -354,7 +354,8 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       -- references (a level below every other level of its class, not own, not template, whose
       -- every argument still contains a free metavariable); nothing is assigned
       if discover then
-        let tyI ← instLevelMVars ty
+        -- (C: a statement row's statement is its value: implicit levels are read there)
+        let tyI ← instLevelMVars (if stmt then val else ty)
         let valI ← instLevelMVars val
         let argsFor (e : Expr) : MetaM (Array (String × Level)) := do
           let mut out := #[]
@@ -389,7 +390,8 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         for (m, v) in ownMVars do
           if typeLevels.contains m then
             if let .mvar r ← instantiateLevelMVars v then assignLevelMVar r (.param (levelParamName m))
-        let tyI0 ← instLevelMVars ty
+        -- (C: for a statement row, the levels of the statement are those of its value)
+        let tyI0 ← instLevelMVars (if stmt then val else ty)
         let ((), tyMVars) := (levelMVarsOf tyI0).run #[]
         -- statement mode: the source levels of the type's reference arguments (to tell a body level
         -- shared with a referenced declaration from one unification merely identified with an argument)
@@ -423,7 +425,10 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       -- *type* and lies below every other level of its class (`l ≤ l'` entailed by the native
       -- facts), so every other argument of the class satisfies R3's no-raising condition (which
       -- `checkUniverseObligations` re-checks). Own levels and template levels are never chosen.
-      let tyI ← instLevelMVars ty
+      -- C (docs/UNIVERSE_TRANSLATION.md, R3G for statements): a statement row's type is `Prop` and its
+      -- statement is its value, so the free reference levels of the statement are read in the value; a
+      -- statement is never specialized by defaulting such a level to 0
+      let tyI ← instLevelMVars (if stmt then val else ty)
       let valI ← instLevelMVars val
       let argsFor (e : Expr) : MetaM (Array (String × Level)) := do
         let mut out := #[]
@@ -495,6 +500,12 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt keepParams (solve := lower)
     if discover then
       return { base with status := "DISCOVERED", implicitLevels := (← implicitRef.get).qsort (· < ·) }
+    -- C (docs/UNIVERSE_FAMILY_C.md): every level of a statement is a level of the statement; one left
+    -- free after unification and R3G would be fixed by its default, specializing the statement
+    -- (narrowing): refused, never defaulted
+    if stmt && !resid.isEmpty then
+      return { base with status := "UNIVERSE_REJECTED", levelDiagnostics := diags,
+                         message := s!"statement specialization refused: {resid.length} universe level(s) of the statement are not determined by its references (R3G found no source level) and would be defaulted" }
     let base := { base with levelDiagnostics := diags, levelDefaults := resid.length }
     let mut sol : Std.HashMap String Level := {}
     let mut paramLevels : Array String := #[]
