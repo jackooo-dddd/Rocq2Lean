@@ -1,0 +1,436 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   2,
+   0,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 8,
+   "DEFINITION_AUDITED_PENDING": 4,
+   "NOT_TRANSLATED": 1,
+   "STATEMENT_AUDITED": 2,
+   "STATEMENT_AUDITED_PENDING": 4
+  },
+  "rows": {
+   "Corelib.Init.Datatypes.bool": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Datatypes.bool",
+    "pending_hypotheses": [],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "Corelib.Init.Datatypes.fst": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Datatypes.fst",
+    "pending_hypotheses": [],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "Corelib.Init.Datatypes.nat": {
+    "status": "BOOTSTRAP_RESOLVED",
+    "target": "Nat",
+    "pending_hypotheses": [],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "Corelib.Init.Datatypes.prod": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Datatypes.prod",
+    "pending_hypotheses": [],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "Corelib.Init.Logic.eq": {
+    "status": "BOOTSTRAP_RESOLVED",
+    "target": "Eq",
+    "pending_hypotheses": [],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "Corelib.Init.Nat.pred": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Nat.pred",
+    "pending_hypotheses": [],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "Corelib.Init.Peano.le": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Peano.le",
+    "pending_hypotheses": [],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "SF.Wf.T3": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Wf.T3",
+    "pending_hypotheses": [
+     "SF.Wf.edivr__rocq2lean_termination_1"
+    ],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "SF.Wf.divr": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Wf.divr",
+    "pending_hypotheses": [
+     "SF.Wf.edivr__rocq2lean_termination_1"
+    ],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "SF.Wf.divr_7_2": {
+    "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Wf.divr_7_2.statement",
+    "pending_hypotheses": [
+     "SF.Wf.edivr__rocq2lean_termination_1"
+    ],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "SF.Wf.divr_le": {
+    "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Wf.divr_le.statement",
+    "pending_hypotheses": [
+     "SF.Wf.edivr__rocq2lean_termination_1"
+    ],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "SF.Wf.edivr": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Wf.edivr",
+    "pending_hypotheses": [
+     "SF.Wf.edivr__rocq2lean_termination_1"
+    ],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "SF.Wf.edivr__rocq2lean_termination_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Wf.edivr__rocq2lean_termination_1.statement",
+    "pending_hypotheses": [],
+    "synthesized_from": "SF.Wf.edivr",
+    "synthetic_kind": "termination"
+   },
+   "SF.Wf.edivr__rocq2lean_unfold_1": {
+    "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Wf.edivr__rocq2lean_unfold_1.statement",
+    "pending_hypotheses": [
+     "SF.Wf.edivr__rocq2lean_termination_1"
+    ],
+    "synthesized_from": "SF.Wf.edivr",
+    "synthetic_kind": "unfolding_equation"
+   },
+   "SF.Wf.modr": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Wf.modr",
+    "pending_hypotheses": [
+     "SF.Wf.modr__rocq2lean_termination_1"
+    ],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "SF.Wf.modr__rocq2lean_termination_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Wf.modr__rocq2lean_termination_1.statement",
+    "pending_hypotheses": [],
+    "synthesized_from": "SF.Wf.modr",
+    "synthetic_kind": "termination"
+   },
+   "SF.Wf.modr__rocq2lean_unfold_1": {
+    "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Wf.modr__rocq2lean_unfold_1.statement",
+    "pending_hypotheses": [
+     "SF.Wf.modr__rocq2lean_termination_1"
+    ],
+    "synthesized_from": "SF.Wf.modr",
+    "synthetic_kind": "unfolding_equation"
+   },
+   "SF.Wf.sub": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Wf.sub",
+    "pending_hypotheses": [],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   },
+   "SF.Wf.t3": {
+    "status": "KERNEL_REJECTED",
+    "target": "RocqPending.SF.Wf.t3",
+    "pending_hypotheses": [],
+    "synthesized_from": null,
+    "synthetic_kind": null
+   }
+  }
+ },
+ "conversion_dependent": {
+  "SF.Wf.t3": "(kernel) declaration type mismatch, 'RocqPending.SF.Wf.t3' has type\n  {h_SF_Wf_edivr__rocq2lean_termination_1 : Rocq.SF.Wf.edivr__rocq2lean_termination_1.statement} \u2192 Nat\nbut it is expected to have type\n  {h_SF_Wf_edivr__rocq2lean_termination_1 : Rocq.SF.Wf.edivr__rocq2lean_termination_1.statement} \u2192\n    RocqPending.SF.Wf.T3 h_SF_Wf_edivr__rocq2lean_termination_1 [last tier: KERNEL_REJECTED: (kern"
+ },
+ "tasks": {
+  "SF.Wf.divr_7_2": {
+   "kind": "theorem_statement",
+   "statement": "RocqPending.SF.Wf.divr Nat.zero.succ.succ.succ.succ.succ.succ.succ Nat.zero.succ.succ = Nat.zero.succ.succ.succ"
+  },
+  "SF.Wf.divr_le": {
+   "kind": "theorem_statement",
+   "statement": "\u2200 (m d : Nat), Rocq.Corelib.Init.Peano.le (RocqPending.SF.Wf.divr m d) (RocqPending.SF.Wf.divr m d)"
+  },
+  "SF.Wf.edivr__rocq2lean_termination_1": {
+   "kind": "termination_obligation",
+   "statement": "\u2200 (d s : Nat), Acc (fun y s => \u2203 q n h, y = n) s"
+  },
+  "SF.Wf.edivr__rocq2lean_unfold_1": {
+   "kind": "unfolding_equation",
+   "statement": "\u2200 (d m q : Nat),\n  RocqPending.SF.Wf.edivr d m q =\n    Nat.rec (Rocq.Corelib.Init.Datatypes.prod.pair Nat Nat q m) (fun n n_ih => RocqPending.SF.Wf.edivr d n q.succ)\n      (Rocq.SF.Wf.sub m d)"
+  },
+  "SF.Wf.modr__rocq2lean_termination_1": {
+   "kind": "termination_obligation",
+   "statement": "\u2200 (d s : Nat), Acc (fun y s => \u2203 n h, y = n) s"
+  },
+  "SF.Wf.modr__rocq2lean_unfold_1": {
+   "kind": "unfolding_equation",
+   "statement": "\u2200 (d m : Nat), RocqPending.SF.Wf.modr d m = Nat.rec m (fun n n_ih => RocqPending.SF.Wf.modr d n) (Rocq.SF.Wf.sub m d)"
+  }
+ },
+ "mutations": [
+  {
+   "mutation": "wf-lowering-changed-accumulator",
+   "declaration": "SF.Wf.edivr",
+   "applicable": true,
+   "kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "detectors": [
+    "structure"
+   ],
+   "messages": [
+    "SF.Wf.edivr: ['body', 'lam.b', 'intro', 'minor1', 'rec-arg0']: expected application with 1 arguments"
+   ],
+   "consumer": "OK"
+  },
+  {
+   "mutation": "unfolding-rhs-changed-accumulator",
+   "declaration": "SF.Wf.edivr__rocq2lean_unfold_1",
+   "applicable": true,
+   "kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "detectors": [
+    "structure"
+   ],
+   "messages": [
+    "SF.Wf.edivr__rocq2lean_unfold_1: ['unfold', 'rhs', 'minor1', 'arg1']: expected application with 1 arguments"
+   ],
+   "consumer": "OK"
+  }
+ ],
+ "assembly": {
+  "exit": 0,
+  "status": "ASSEMBLY_VALIDATED",
+  "summary": {
+   "validated": 10,
+   "transport_required": 0,
+   "rows": 19,
+   "reuse_mismatch": 0,
+   "proofs_not_supplied": 3,
+   "proofs_assembled": 2,
+   "proof_tasks": 5,
+   "pending": 2,
+   "opaque_values_unbound": 0,
+   "opaque_binding_pending": 0,
+   "not_translated": 1,
+   "complete": false,
+   "assembly_rejected": 0,
+   "assembly_blocked": 0,
+   "assembled": 6
+  },
+  "axioms_by_target": {
+   "Rocq.SF.Wf.edivr__rocq2lean_unfold_1": [],
+   "Rocq.SF.Wf.edivr__rocq2lean_termination_1": []
+  },
+  "rows": {
+   "Corelib.Init.Datatypes.bool": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Datatypes.bool",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Datatypes.fst": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Datatypes.fst",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Datatypes.nat": {
+    "status": "BOOTSTRAP_RESOLVED",
+    "target": "Nat",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Datatypes.prod": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Datatypes.prod",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Logic.eq": {
+    "status": "BOOTSTRAP_RESOLVED",
+    "target": "Eq",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Nat.pred": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Nat.pred",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Peano.le": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Peano.le",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Wf.T3": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Wf.T3",
+    "assembly": "ASSEMBLED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Wf.divr": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Wf.divr",
+    "assembly": "ASSEMBLED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Wf.divr_7_2": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Wf.divr_7_2.statement",
+    "assembly": "ASSEMBLED",
+    "proof_state": "PROOF_NOT_SUPPLIED",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Wf.divr_le": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Wf.divr_le.statement",
+    "assembly": "ASSEMBLED",
+    "proof_state": "PROOF_NOT_SUPPLIED",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Wf.edivr": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Wf.edivr",
+    "assembly": "ASSEMBLED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Wf.edivr__rocq2lean_termination_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Wf.edivr__rocq2lean_termination_1.statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_ASSEMBLED",
+    "proof_target": "Rocq.SF.Wf.edivr__rocq2lean_termination_1",
+    "assembly_note": ""
+   },
+   "SF.Wf.edivr__rocq2lean_unfold_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Wf.edivr__rocq2lean_unfold_1.statement",
+    "assembly": "ASSEMBLED",
+    "proof_state": "PROOF_ASSEMBLED",
+    "proof_target": "Rocq.SF.Wf.edivr__rocq2lean_unfold_1",
+    "assembly_note": ""
+   },
+   "SF.Wf.modr": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Wf.modr",
+    "assembly": "PENDING",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": "waiting for proofs of #[SF.Wf.modr__rocq2lean_termination_1]"
+   },
+   "SF.Wf.modr__rocq2lean_termination_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Wf.modr__rocq2lean_termination_1.statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_NOT_SUPPLIED",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Wf.modr__rocq2lean_unfold_1": {
+    "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Wf.modr__rocq2lean_unfold_1.statement",
+    "assembly": "PENDING",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": "waiting for proofs of #[SF.Wf.modr__rocq2lean_termination_1]"
+   },
+   "SF.Wf.sub": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Wf.sub",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Wf.t3": {
+    "status": "KERNEL_REJECTED",
+    "target": "RocqPending.SF.Wf.t3",
+    "assembly": "NOT_TRANSLATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": "validated status KERNEL_REJECTED"
+   }
+  }
+ },
+ "computation": {
+  "definitional_reduction_elaborator_rfl": {
+   "exit": 1,
+   "output": "/home/shunqwang4/research/r2l-B/runs/st-wf/assembly/5b72a5d2669302cf/lean/Probe_definitional_reduction_elaborator_rfl.lean:2:0: error: Not a definitional equality: the left-hand side\n  Rocq.SF.Wf.divr 7 2\nis not definitionally equal to the right-hand side\n  3\n/home/shunqwang4/research/r2l-B/runs/st-wf/assembly/5b72a5d2669302cf/lean/Probe_definitional_reduction_elaborator_rfl.lean:2:43: error: Type mismatch\n  rfl\nhas type\n  ?m.9 = ?m.9\nbut is expected to have type\n  Rocq.SF.Wf.divr 7 2 = 3"
+  },
+  "definitional_reduction_kernel_decide": {
+   "exit": 0,
+   "output": ""
+  },
+  "definitional_reduction_kernel_t3": {
+   "exit": 0,
+   "output": "KERNEL_ACCEPTED"
+  },
+  "propositional_equation": {
+   "exit": 0,
+   "output": ""
+  },
+  "compiled_evaluation": {
+   "exit": 1,
+   "output": "/home/shunqwang4/research/r2l-B/runs/st-wf/assembly/5b72a5d2669302cf/lean/Probe_compiled_evaluation.lean:2:0: error: Failed to find LCNF signature for Rocq.SF.Wf.divr"
+  }
+ },
+ "computation_summary": {
+  "definitional_reduction_elaborator_rfl": "FAILS",
+  "definitional_reduction_kernel_decide": "OK",
+  "definitional_reduction_kernel_t3": "OK",
+  "propositional_equation": "OK",
+  "compiled_evaluation": "FAILS"
+ }
+}

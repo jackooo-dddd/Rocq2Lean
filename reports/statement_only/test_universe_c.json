@@ -1,0 +1,41 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   2,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 87,
+   "DEFINITION_AUDITED_PENDING": 38,
+   "NOT_TRANSLATED": 1,
+   "STATEMENT_AUDITED": 15,
+   "STATEMENT_AUDITED_PENDING": 3
+  }
+ },
+ "opt_eqP": {
+  "status": "STATEMENT_KERNEL_CHECKED",
+  "level_params": [
+   "u_mathcomp_boot_eqtype_51",
+   "u_mathcomp_boot_eqtype_58"
+  ],
+  "implicit_levels": [
+   "mathcomp.boot.eqtype.51",
+   "mathcomp.boot.eqtype.58"
+  ],
+  "universe_level_defaults": 0
+ },
+ "JLFP_policy": {
+  "status": "UNIVERSE_REJECTED",
+  "message": "reference to Rocq.prosa.behavior.job.JobType: argument u_Corelib_ssr_ssrbool_1105: Corelib.ssr.ssrbool.1105 + 0 \u2264 mathcomp.boot.eqtype.51 is not entailed by the source universe graph, nor is mathcomp.boot.eqtype.51 \u2264 Corelib.ssr.ssrbool.1105 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.mathcomp.boot.eqtype.Equality.sort: argument max\n((max u_Corelib_ssr_ssrbool_1105 u_Corelib_ssr_ssrbool_1171) + 1)\n(max u_Corelib_ssr_ssrbool_1105 u_Corelib_ssr_ssrbool_1171)\nu_mathcomp_boot_eq"
+ },
+ "negative_defaulted_statement_level": {
+  "kernel": true,
+  "validate_exit": 2,
+  "audit_problems": [
+   "mathcomp.boot.eqtype.opt_eqP: statement specialized by 1 defaulted universe level(s)"
+  ],
+  "consumer": "OK"
+ }
+}
