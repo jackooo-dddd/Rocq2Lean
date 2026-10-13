@@ -9,7 +9,7 @@ declarations**.
 
 ## 1. The two mechanisms (diagnosis, measured on `runs/st-corpus-A` and the probe `fixtures/stmt/c`)
 
-### 1a. `processor_state`: a statement specialized by defaulting its implicit levels (fixed, C-1)
+### 1a. `processor_state`: a statement specialized by defaulting its implicit levels (fixed for `opt_eqP` by C-1; `processor_state` itself stays refused, §2)
 
 `ProcessorState`-based definitions need `option_eqType Job` (MathComp's canonical `eqType` on
 `option`) for `Job : JobType`. In the translation:
@@ -48,8 +48,8 @@ Source levels: `JobType := Equality.type@{51,58}` (`51 < 58`), `Equality.sort Jo
 `rel (sort Job)` by **cumulativity** `Type@{51} ≤ Type@{1105}`, and JLFP_policy's type is
 `JobType → Type@{max(Set, 1105, 1171)}` — its result sort is `rel`'s level, not the job's.
 
-Lean has no cumulativity: `rel.{w} (sort Job)` forces `w = (level of sort Job)`. Every translation
-therefore does one of:
+Lean has no cumulativity: `rel.{w} (sort Job)` forces `w = (level of sort Job)`. Under the current
+representation and rules, every translation does one of:
 
 1. **lift the job** (`JobType` at `51 ↦ 1105`, rule R3↑): `JobType`'s level `58` is read as
    `max(51+1, 58)` (R2F, from `51 < 58`), so the lifted instance needs `1105 + 1 ≤ 58`, which the
@@ -59,18 +59,63 @@ therefore does one of:
    statement** (result-sort lowering), refused by the interface protection (P0, Q5: no unapproved
    narrowing).
 
-No third translation exists without a representation change (`ULift` around the carrier would change
-the type `rel` is applied to). So the policy family is **not** a missing translator capability: it
-is the protection policy refusing the only Lean representation. It needs a decision (an approved,
-documented representation change for "result sort inherited from a referenced definition at a level
-above the value's"), not more engineering.
+So the policy family is **unsupported by the current representation and rules**; it is not shown
+that no Lean translation exists (an explicit lifting, e.g. `ULift` of the carrier, or a different
+encoding of the result sort, would be a representation change, not covered by the current rules). It
+stays blocked under the current contract (decision 2026-10-14).
 
-## 2. Status
+Requirements for any future result-sort normalization or explicit lifting (none is applied): a
+**general** representation rule (stated for every declaration it covers, not a name-specific
+exception for these three definitions); a source/target interface analysis (which statements and
+uses change, what the Lean declaration's type promises compared with the source's); an independent
+validation (an audit copy of the rule and negative controls); and downstream-use tests (dependents
+of the changed declarations kernel-checked and audited, including uses at nonzero universes).
 
-* C-1 implemented and measured: see `reports/statement_only/ITERATION_LOG.md` (entry C).
-* 1b: blocker documented; not applied (no approved representation change). Proposed rule, for the
-  user's decision: *R2B-S-inherited* — a protected type-valued definition whose source result sort is
-  only the result sort of the referenced definition it unfolds to (`JLFP_policy := rel _`, the level
-  `1105` belongs to `rel`, not to Prosa) may take its value's sort; validated by the existing R2B-S
-  applicability check (`only_in_result_sort`) plus a check that every such level is a level of the
-  head constant of the body; reported per row; never on theorem statements.
+## 2. The C-1 repair: no specialization at a level the source leaves free (2026-10-14)
+
+C-1 (§1a) made R3G read a statement row's statement. Measuring it showed that the defect class is
+wider than the self-reported defaults: a level can also be **fixed without being defaulted**, by
+unification with an already specialized declaration (a hypothesis typed by the specialized
+`opt_eqP.type.{}` pins `Job : Equality.type.{0,0}` in a definition) or, for a definition, by its
+value (no cumulativity). The audit had accepted these: R3 forbids raising, and a closed level below
+the source level is not raising.
+
+Rule (translator, `Rocq2Lean/Emit.lean` `freeLevelPin`; independent copy in `tools/audit.py`
+`check_statement_generality`): for a reference `c.{σ…} a₁ … aₙ` and a source level `l` of `c` that is
+not a level of the declaration, `l` is **free** when the native graph does not force `l ≤ Set` and
+no applied argument determines it (`c`'s parameter for `l` occurs in no applied binder's domain;
+a pending artifact's hypothesis binders do not count, their levels being the translator's choice;
+type arguments fixed by sibling arguments, `@Eq A a b`, are not inspected). A free level whose
+argument is not its own parameter specializes the declaration. Refused / rejected:
+
+* in **every statement** (proof task, opaque-data interface), anywhere in it (hypothesis telescope
+  peeled);
+* in the **binder domains** (quantification ranges) of **protected** definitions and inductives
+  (P0: no narrowing of the protected interface);
+* reported as a diagnostic, not a rejection, for non-protected definitions (their value may fix the
+  level: `nat`'s canonical `countType` is at level 0 in Lean; library definitions may be instantiated
+  below the source, as R3↓; their effect on protected declarations is checked there).
+
+The audit uses only the source, the native facts and the target terms — no self-reported
+`universe_level_defaults` or residual record.
+
+Correction: the ideal `processor_state` is **refused**, not fixed. With `opt_eqP` generic, its
+translation still has `Job : JobType.{0,_}`: `ProcessorState`'s core-finType level is read as
+`max(u₁₀₁, u₅₁)` (R2F, `51 ≤ 101`), and the ideal model's core is `unit`'s finType at level 0, which
+forces Job to level 0 — a narrowing of a protected definition. (The earlier statement that C-1
+"unblocks the ideal processor_state family with generic jobs" was wrong: its rows were claimed with
+`Job` at level 0, which neither check caught then.) Its two obligations and the generic MathComp
+prerequisites (`opt_eqP`, `option`'s eqType) do translate.
+
+Tests (`scripts/test-universe-c`): narrowed targets with every self-reported trace removed — `opt_eqP`
+at `Equality.type.{0,0}`, `.{0,1}` (a nonzero closed level R3 admits: only the generality obligation
+rejects it) and `.{2,2}` (raising: R3 rejects it), and the protected `job_cost` at its `Job` binder —
+are kernel-accepted and audit-rejected; a positive control instantiates the generic translations at
+universes 2..5 through the kernel (and uses the statement at an `Equality.type.{3,4}`) and fails
+against the narrowed module.
+
+## 3. Status
+
+* C-1 and its repair: measured on the corpus, `reports/statement_only/ITERATION_LOG.md` (entry 4).
+* 1b (`JLFP`/`FP`/`JLDP_policy`): unsupported by the current representation and rules; blocked; no
+  rule proposed for application (requirements above).

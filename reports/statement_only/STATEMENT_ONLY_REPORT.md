@@ -159,7 +159,7 @@ Details are in `BLOCKER_REASSESSMENT.md`.
 | `mathcomp.boot.div.edivn_rec`, `modn_rec` | 694, 490 | recursion on `m - d` (Rocq's guard sees through `subn`): needs a rule with an explicit termination obligation |
 | Prosa `JLFP_policy`, `FP_policy`, `JLDP_policy` | 447, 248, 225 | universe: `ssrbool.1105 ≤ eqtype.51` not entailed (known since P0) |
 | `prosa.model.processor.ideal.processor_state` obligations | 280 | unjustified residual universe defaults in the obligation statements |
-| Classic `SporadicTaskset.taskset_of`, `Affinity.affinity`; modern `ArrivalCurvePrefix` | 216, 189, 195 | the only accepted translation would narrow a protected declaration (R2B-S), refused |
+| Classic `SporadicTaskset.taskset_of`, `Affinity.affinity`; modern `ArrivalCurvePrefix` | 216, 189, 195 | the only translation the current rules accept would narrow a protected declaration (R2B-S), refused |
 | MathComp `nmodule` HB structures | 79 | `reverse_coercion` and HB phantoms vs Lean's lack of cumulativity |
 
 ## 6. Reproduce

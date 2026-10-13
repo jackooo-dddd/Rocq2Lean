@@ -1,0 +1,14 @@
+{
+ "schema": "rocq2lean-roundtrip-tools-base/1",
+ "evidence": "recorded 2026-10-14 from the main tree, which built the exporter plugin used by all 36 chunk round trips",
+ "exporter_plugin_sha256": "8b424c14d44b5a76343f36c31874ac2b17249e8a53ebcbb00a9007d1ecdea862",
+ "exporter_sources_commit": "b4d709b48d38c78dd636357fd5f3505979badef3",
+ "main_tree_exporter_clean": true,
+ "plugin_built_after_every_source": true,
+ "sources": {
+  "rocq/exporter/src/r2l_export.ml": "cfdaf6f026511750184de411591ebd3564464b4890c237d9d944351bef71b6f8",
+  "rocq/exporter/src/g_rocq2lean_export.mlg": "412395636f4563acc905c21c917d450d3ba2044764799a630a4fca39fceb2aea",
+  "rocq/exporter/src/r2l_json.ml": "43a315ca9821a5fcb33f9c475e9cb550a3ed21da082a2e0f03126e352beb7345",
+  "rocq/exporter/theories/Loader.v": "5be15f2697098c0b03c833d2c9ccb14b983b461af21405e34a89e15ebe067bc3"
+ }
+}

@@ -141,6 +141,55 @@ def _roundtrip_one(item):
     return c, res
 
 
+RT_BASE = OUT / "ROUNDTRIP_TOOLS_BASE.json"
+EXPORTER_SOURCES = ["rocq/exporter/src/*.ml", "rocq/exporter/src/*.mli", "rocq/exporter/src/*.mlg",
+                    "rocq/exporter/src/*.mllib", "rocq/exporter/theories/*.v", "rocq/exporter/_RocqProject"]
+
+
+def reuse_section():
+    """Whether the chunk evidence (round trips made with the tools they record) applies to the current
+    implementation. Applicable when the round-trip tool and RtEq.v are unchanged and the exporter
+    plugin's sources differ from those of the plugin the round trips used only by added lines (new
+    commands; the export, statement preparation and round-trip commands are unchanged). The chunk IRs
+    themselves are bound by digest (unchanged inputs); the union check depends only on them and on
+    the Rocq libraries (snapshots). The base (`ROUNDTRIP_TOOLS_BASE.json`) records which commit's
+    exporter sources built the round trips' plugin."""
+    cur = rt_tools()
+    rts = json.loads((PV / "roundtrip.json").read_text())
+    used = {json.dumps(v["tools"], sort_keys=True) for v in rts.values()}
+    out = {"round_trip_tools": None, "current_tools": cur, "problems": []}
+    if len(used) != 1:
+        out.update(status="NOT_APPLICABLE", problems=["chunk round trips used different tools"])
+        return out
+    used = json.loads(used.pop())
+    out["round_trip_tools"] = used
+    if used == cur:
+        out["status"] = "SAME_TOOLS"
+        return out
+    for k in ("roundtrip_py", "rteq_v"):
+        if used[k] != cur[k]:
+            out["problems"].append(f"{k} changed since the round trips")
+    if used["exporter_plugin"] != cur["exporter_plugin"]:
+        base = json.loads(RT_BASE.read_text()) if RT_BASE.exists() else {}
+        if base.get("exporter_plugin_sha256") != used["exporter_plugin"]:
+            out["problems"].append("no record of the sources of the round trips' exporter plugin")
+        else:
+            g = lambda *a: subprocess.run(["git", "-C", str(ROOT), *a], capture_output=True, text=True).stdout
+            num = g("diff", "--numstat", base["exporter_sources_commit"], "--", *EXPORTER_SOURCES)
+            diff = g("diff", base["exporter_sources_commit"], "--", *EXPORTER_SOURCES)
+            files = []
+            for line in num.splitlines():
+                a_, r_, f_ = line.split("\t")
+                files.append({"file": f_, "added": int(a_), "removed": int(r_)})
+            out["exporter_source_diff"] = {"base_commit": base["exporter_sources_commit"], "files": files,
+                                           "added": sum(f["added"] for f in files), "removed": sum(f["removed"] for f in files),
+                                           "diff_sha256": hashlib.sha256(diff.encode()).hexdigest()}
+            if any(f["removed"] for f in files):
+                out["problems"].append("exporter sources changed (lines removed or modified) since the round trips' plugin")
+    out["status"] = "APPLICABLE" if not out["problems"] else "NOT_APPLICABLE"
+    return out
+
+
 def roundtrip(jobs=3, only=None):
     items = [it for it in chunks() if only is None or cid(it[0], it[1], it[3]) in only]
     # largest chunks first (they bound the wall time)
@@ -290,13 +339,16 @@ def manifest(run):
          "union_universes": {"file": str(PV / "union.json"), "sha256": sha(PV / "union.json"), "status": uni["status"]},
          "files": {k: {"path": str(run / k), "sha256": sha(run / k)} for k in
                    ("source.ndjson", "contract.json", "translation_report.json", "translation_manifest.json",
-                    "consumer_result.json", "audit.json") if (run / k).exists()},
+                    "consumer_result.json", "audit.json", "conversion_deps/joined.json", "conversion_deps/result.json")
+                   if (run / k).exists()},
+         "reuse": reuse_section(),
          "tools": {"impl_tree_sha256": R.impl_tree_sha256(), "translator_build_sha256": R.lean_build_sha256(),
                    "toolchains_lock_sha256": R.lock_sha(), "toolchain_fingerprint": R.toolchain_fingerprint()["digest"],
                    "exporter_plugin_sha256": sha(R.EXPORTER / "src" / "rocq2lean_export_plugin.cmxs")}}
     ok = (all(v["roundtrip_status"] == "OK" for v in chunk_entries.values()) and m["merge"]["status"] == "OK"
           and m["root_coverage"]["in_merged_roots"] == len(prot) and uni["status"] == "OK"
-          and all(v["ir_matches_export_record"] for v in snaps.values()))
+          and all(v["ir_matches_export_record"] for v in snaps.values())
+          and m["reuse"]["status"] in ("SAME_TOOLS", "APPLICABLE"))
     m["status"] = "CORPUS_PROVENANCE_BOUND" if ok else "CORPUS_PROVENANCE_INCOMPLETE"
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "CORPUS_MANIFEST.json").write_text(json.dumps(m, indent=1) + "\n")
@@ -329,6 +381,12 @@ def check(manifest_path=None):
     bound(m["union_universes"]["file"], m["union_universes"]["sha256"], "union universe check")
     for k, e in m["files"].items():
         bound(e["path"], e["sha256"], f"run file {k}")
+    # the chunk evidence must still apply to the implementation the check runs with
+    ru = reuse_section()
+    if ru["status"] not in ("SAME_TOOLS", "APPLICABLE"):
+        problems += [f"chunk evidence not applicable to the current tools: {p}" for p in ru["problems"]]
+    if "reuse" in m and m["reuse"].get("status") not in ("SAME_TOOLS", "APPLICABLE"):
+        problems.append(f"manifest reuse status {m['reuse'].get('status')}")
     if not problems:
         mr = _merge_rederive(m["run"])
         if mr["status"] != "OK":
