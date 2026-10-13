@@ -1259,3 +1259,73 @@ let check_instance ~opaque_access key subst_s =
     with e -> "INSTANCE_REJECTED " ^ String.map (fun ch -> if ch = '\n' then ' ' else ch) (Printexc.to_string e)
   in
   Feedback.msg_info Pp.(str ("INSTANCE " ^ key ^ " " ^ res))
+
+(* Rocq2Lean CheckConversionDeps "L1;L2" "deps.txt" "out.txt" (docs/TERMINATION.md): for each constant
+   key in deps.txt, re-run its statement preparation (proof subterms extracted, Rocq's kernel re-check
+   of the rewritten declaration) once in the prepared environment and once with the bodies of the
+   constants L1, L2, ... removed (made opaque). A constant that is accepted in the first and refused in
+   the second needs the definitional unfolding of some Li (conversion dependence): CONV_NEEDS. *)
+let check_conversion_deps ~opaque_access lowered_s inp outp =
+  let genv = Global.env () in
+  let lowered =
+    List.filter_map
+      (fun k ->
+        if k = "" then None
+        else
+          let c = Names.Constant.make1 (kername_of_key k) in
+          if Environ.mem_constant c genv then Some c else None)
+      (String.split_on_char ';' lowered_s)
+  in
+  let ic = open_in inp in
+  let deps = ref [] in
+  (try
+     while true do
+       let l = String.trim (input_line ic) in
+       if l <> "" then deps := l :: !deps
+     done
+   with End_of_file -> ());
+  close_in ic;
+  let deps = List.rev !deps in
+  let crefs =
+    List.filter_map
+      (fun k ->
+        match Names.Constant.make1 (kername_of_key k) with
+        | c when Environ.mem_constant c genv -> Some (k, c)
+        | _ -> None
+        | exception _ -> None)
+      deps
+  in
+  let env =
+    prepare_env ~opaque_access genv
+      (List.map (fun (_, c) -> Names.GlobRef.ConstRef c) crefs @ List.map (fun c -> Names.GlobRef.ConstRef c) lowered)
+  in
+  let env_o =
+    List.fold_left
+      (fun e c ->
+        let cb = Environ.lookup_constant c e in
+        Environ.add_constant c { cb with Declarations.const_body = Declarations.Undef None } e)
+      env lowered
+  in
+  let oc = open_out outp in
+  let line s = output_string oc (String.map (fun ch -> if ch = '\n' then ' ' else ch) s); output_char oc '\n' in
+  let n = ref 0 in
+  List.iter
+    (fun k ->
+      incr n;
+      match List.assoc_opt k crefs with
+      | None -> line ("CONV_SKIP " ^ k ^ " not a constant of the environment")
+      | Some c ->
+        let run e =
+          let st = new_stmt_info () in
+          (try ignore (statement_env_one ~opaque_access st e c) with ex -> Hashtbl.replace st.failed (const_key c) (Printexc.to_string ex));
+          match Hashtbl.find_opt st.failed (const_key c) with
+          | Some why -> Some why
+          | None -> if Hashtbl.mem st.deferred_guard (const_key c) then Some "guard deferred" else None
+        in
+        (match (run env, run env_o) with
+         | Some why, _ -> line ("CONV_BASE_REFUSED " ^ k ^ " " ^ why)
+         | None, None -> line ("CONV_OK " ^ k)
+         | None, Some why -> line ("CONV_NEEDS " ^ k ^ " " ^ why)))
+    deps;
+  close_out oc;
+  Feedback.msg_info Pp.(str ("CONV_DONE " ^ string_of_int !n))

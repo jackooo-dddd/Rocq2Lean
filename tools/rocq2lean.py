@@ -950,10 +950,15 @@ def build_tasks(run_dir, evidence, out=None, ir_path=None):
     fam = lambda n: inv.get(n, {}).get("family", "external")
     recs = []
     for n in leaves:
-        r, d = rows[n], ir[n]
+        r = rows[n]
+        # B (docs/TERMINATION.md): statements the translator generated for a termination lowering
+        syn = r.get("synthesized_from")
+        d = ir[syn] if syn else ir[n]
         rd = rendered[r["target"]]
         st = d.get("body_state")
-        if st == "obligation":
+        if syn:
+            kind = {"termination": "termination_obligation", "unfolding_equation": "unfolding_equation"}[r["synthetic_kind"]]
+        elif st == "obligation":
             kind = "obligation"
         elif st == "opaque_interface":
             kind = "opaque_value"
@@ -988,6 +993,7 @@ def build_tasks(run_dir, evidence, out=None, ir_path=None):
                        "file": src.get("file"), "line": (src.get("source") or {}).get("line"),
                        "keyword": (src.get("source") or {}).get("keyword"),
                        "obligation_of": (d.get("native") or {}).get("obligation", {}).get("of") if kind == "obligation" else None,
+                       "generated_for": syn,
                        "counted_as_proved": False if kind == "source_assumption" else None},
             "lean": {"statement_constant": r["target"], "level_params": rd["level_params"],
                      "statement": rd["statement_pp"], "task_statement": rd["task_type_pp"],

@@ -62,3 +62,11 @@ VERNAC COMMAND EXTEND Rocq2LeanCheckInstance CLASSIFIED AS QUERY STATE opaque_ac
     fun ~opaque_access -> R2l_export.check_instance ~opaque_access key subst
   }
 END
+
+(* Rocq2Lean CheckConversionDeps "L1;L2" "deps.txt" "out.txt": conversion dependence of constants on the
+   unfolding of L1, L2, ... (docs/TERMINATION.md). *)
+VERNAC COMMAND EXTEND Rocq2LeanCheckConversionDeps CLASSIFIED AS QUERY STATE opaque_access
+| [ "Rocq2Lean" "CheckConversionDeps" string(lowered) string(inp) string(outp) ] -> {
+    fun ~opaque_access -> R2l_export.check_conversion_deps ~opaque_access lowered inp outp
+  }
+END

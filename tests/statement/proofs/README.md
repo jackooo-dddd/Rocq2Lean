@@ -7,3 +7,7 @@ Prosa, Classic or MathComp goal, and none enter corpus results.
 
 Each file is a template module body; `@TASK@` is replaced by the task id (the module and the
 declaration are `RocqProofTemplates.T<task_id>` and `RocqProofTemplates.T<task_id>.proof`).
+
+`wf_edivr_termination.lean` and `wf_edivr_unfold.lean` prove the termination obligation and the
+unfolding equation of the synthetic Task B fixture `fixtures/stmt/wf/Wf.v` (`SF.Wf.edivr`), used by
+`tests/statement/check_termination.py` (docs/TERMINATION.md). Same exception, same limits.

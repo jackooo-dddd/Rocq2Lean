@@ -379,6 +379,9 @@ class Auditor:
         # (leaf -> its accepted statement row); a reference to one is that theorem
         self.proved = {}
         self.pending_inds = {}      # mind -> its pending row (hypotheses as leading parameters)
+        # B (docs/TERMINATION.md): termination obligations used by the Acc.rec lowerings of the
+        # declaration being audited, in order (each must be one of its own termination leaves)
+        self.wf_used = []
 
     def ind_target(self, ref):
         mind, idx = ref["mind"], ref["i"]
@@ -728,6 +731,20 @@ class Auditor:
             spine.append(cur["a"])
             cur = cur["f"]
         spine.reverse()
+        # B: in a termination lowering, a match whose branches contain a recursive call carries its
+        # scrutinee equation: I.rec params (lam z. forall h : scrut = z. RET) minors z' (Eq.refl scrut),
+        # each minor binding one more variable (h) that the source branch does not
+        fi = next((i for i, x in enumerate(env) if x[0] == "accrec" and x[1].get("convoy")), None)
+        convoy = fi is not None and any(mentions_rels(br["body"], fi + len(br["ctx"]), 1) for br in s["brs"])
+        if convoy:
+            if len(s["p"]["ctx"]) != 1:
+                raise Mismatch(f"{path}: convoy on an indexed inductive")
+            if not spine:
+                raise Mismatch(f"{path}: convoy match without its equation argument")
+            rh, ra = self.unspine(spine[-1])
+            if rh.get("k") != "const" or rh.get("n") != "Eq.refl" or len(ra) != 2 or ra[1] != spine[-2]:
+                raise Mismatch(f"{path}: convoy match not applied to Eq.refl of its scrutinee")
+            spine = spine[:-1]
         if cur["k"] != "const" or cur["n"] != tname + ".rec":
             raise Mismatch(f"{path}: match must lower to {tname}.rec, found {cur.get('n', cur['k'])}")
         p, brs = s["p"], s["brs"]
@@ -743,14 +760,20 @@ class Auditor:
         for i, a in enumerate(p["params"]):
             self.check(a, spine[len(hs) + i], path + [f"param{i}"], env)
         motive = self.strip_lams(spine[npar], len(p["ctx"]), path + ["motive"])
-        self.check(p["ret"], motive, path + ["motive"], self.push(env, len(p["ctx"])))
+        if convoy:
+            mh, ma = self.unspine(motive.get("t", {})) if motive.get("k") == "forall" else ({}, [])
+            if mh.get("n") != "Eq" or len(ma) != 3 or ma[1] != lift(spine[-1], len(p["ctx"])) or ma[2] != {"k": "bvar", "i": 0}:
+                raise Mismatch(f"{path}: convoy motive is not forall h : scrutinee = z, RET")
+            self.check(p["ret"], motive["b"], path + ["motive"], self.shift(self.push(env, len(p["ctx"])), 1))
+        else:
+            self.check(p["ret"], motive, path + ["motive"], self.push(env, len(p["ctx"])))
         self.check_rec_binders(cur, spine, npar, len(brs), nidx, path,
                                [self.recursive_fields(ref, k, nested) for k in range(len(brs))],
-                               [len(br["ctx"]) for br in brs], 0, aux)
+                               [len(br["ctx"]) for br in brs], 1 if convoy else 0, aux)
         for k, br in enumerate(brs):
             nf, nih = len(br["ctx"]), self.recursive_fields(ref, k, nested)
-            body = self.strip_lams(spine[npar + 1 + k], nf + nih, path + [f"minor{k}"])
-            self.check(br["body"], body, path + [f"minor{k}"], self.shift(self.push(env, nf), nih))
+            body = self.strip_lams(spine[npar + 1 + k], nf + nih + (1 if convoy else 0), path + [f"minor{k}"])
+            self.check(br["body"], body, path + [f"minor{k}"], self.shift(self.push(env, nf), nih + (1 if convoy else 0)))
         # Indices of the major premise are forced by the recursor's (kernel-checked) type.
         self.check(s["c"], spine[-1], path + ["major"], env)
 
@@ -981,8 +1004,12 @@ class Auditor:
             if tgt_body["k"] != "lam":
                 break
             tgt_body = tgt_body["b"]
-        th, _ = self.unspine(tgt_body)
+        th, tsp = self.unspine(tgt_body)
         if th.get("k") == "const" and th.get("n") == "Acc.rec":
+            # B: well-foundedness given by a termination obligation (a hypothesis, or its final
+            # theorem), not constructed: the termination lowering of a recursion on data
+            if STATEMENT_MODE[0] and len(tsp) > 5 and self.wf_term_of(tsp[5], env, nl) is not None:
+                return self.check_fix_acc(s, e, path, env, wf=True)
             return self.check_fix_acc(s, e, path, env)
         # M6 course-of-values: (I.rec params (λ x, PProd (M x) (Below x)) minors x).1 G Q
         cov = th.get("k") == "proj" and th.get("s") == "PProd" and th.get("i") == 0
@@ -1355,7 +1382,25 @@ class Auditor:
                 else:
                     self.check(b_j["brs"][k]["body"], body, path + [f"minor{k}.{j}"], benv)
 
-    def check_fix_acc(self, s, e, path, env):
+    def wf_term_of(self, wf, env, depth):
+        """B: the termination obligation a well-foundedness argument `T Γ.. x` comes from: T is the
+        hypothesis of a termination leaf (env entry ("hyp", leaf, j), `depth` target binders below the
+        env), or a proved leaf's final theorem; Γ are bound variables. None otherwise."""
+        head, args = self.unspine(wf)
+        if not args or any(a.get("k") != "bvar" for a in args):
+            return None
+        if head.get("k") == "bvar":
+            for x in env:
+                if x[0] == "hyp" and x[2] + depth == head["i"] and "__rocq2lean_termination_" in x[1]:
+                    return x[1]
+            return None
+        if head.get("k") == "const":
+            for leaf in self.proved:
+                if "__rocq2lean_termination_" in leaf and head["n"] == target_name(leaf):
+                    return leaf
+        return None
+
+    def check_fix_acc(self, s, e, path, env, wf=False):
         """fix f a0..a_{n-1} {struct a_r} := body, a_r a proof of a Prop inductive I (one or no index),
            result data  ->  lam a0..a_{n-1}. Acc.rec C R motive intro major wf G Q, with
            major = <idx, a_r> (PSigma.mk) or a_r, motive = lam s acc. forall G Q. T[s] and
@@ -1391,6 +1436,8 @@ class Auditor:
         if len(idx) > 1 or any(a["k"] != "rel" or a["i"] >= r for a in idx):
             raise Mismatch(f"{path}: UNAUDITABLE accessibility lowering (indices)")
         has_idx = len(idx) == 1
+        if wf and has_idx:
+            raise Mismatch(f"{path}: termination lowering of a recursion on an indexed inductive")
         idx_pos = {r - 1 - a["i"] for a in idx}
         gpos = sorted(changed_params(d["body"], nl, r) - idx_pos)
         ng, nq = len(gpos), nl - r - 1
@@ -1467,6 +1514,14 @@ class Auditor:
                 raise Mismatch(f"{path}: Acc.rec major is not <index, decreasing argument>")
         elif maj != xb:
             raise Mismatch(f"{path}: Acc.rec major is not the decreasing argument")
+        if wf:
+            # B: the well-foundedness argument is the termination obligation (hypothesis or final
+            # theorem) applied to locals and then to the decreasing argument; its statement
+            # (∀ Γ, ∀ s, Acc C R s) is kernel-checked against this Acc.rec's C and R
+            leaf = self.wf_term_of(spine[5], env, nl)
+            if leaf is None or self.unspine(spine[5])[1][-1] != xb:
+                raise Mismatch(f"{path}: well-foundedness is not a termination obligation applied to the decreasing argument")
+            self.wf_used.append(leaf)
         for j, i in enumerate(gpos):
             if spine[6 + j] != {"k": "bvar", "i": nl - 1 - i}:
                 raise Mismatch(f"{path}: generalized argument {i} not passed on")
@@ -1509,7 +1564,7 @@ class Auditor:
         xent = ("tgt", proj(1, sidx)) if has_idx else ("bvar", sidx)
         benv = [("bvar", t) for t in range(nq)]                     # Q (innermost first)
         benv += [xent] + [lead(k, depth, sidx, nq + ng - 1) for k in reversed(range(r))]
-        info = {"r": r, "ih": depth - 3, "gpos": gpos, "idx_pos": idx_pos, "has_idx": has_idx, "nq": nq}
+        info = {"r": r, "ih": depth - 3, "gpos": gpos, "idx_pos": idx_pos, "has_idx": has_idx, "nq": nq, "convoy": wf}
         benv += [("accrec", info)] + self.shift(list(env), nl + depth)
         self.check(b, ib, path + ["intro"], benv)
 
@@ -2743,6 +2798,97 @@ def check_hyp_telescope(rows, leaves, hs, hyp_t):
             raise Mismatch(f"hypothesis {l}: type is not its statement {lr['target']}")
 
 
+def check_termination_statement(r, used):
+    """B: `def <leaf>.statement : Prop := ∀ Γ, ∀ s : C, Acc C R s`, with no hypothesis; its parent's
+    audited termination lowering applies it (as hypothesis or final theorem) to the locals Γ and the
+    decreasing argument, so the kernel identifies its C and R with the lowering's carrier and call
+    relation (whose shape the parent's audit checked against the source's recursive calls)."""
+    if r.get("pending_hypotheses"):
+        raise Mismatch("a termination statement with hypotheses")
+    if not used:
+        raise Mismatch("not used by its constant's audited termination lowering")
+    if r.get("target_type") != {"k": "sort", "l": {"k": "zero"}}:
+        raise Mismatch("a termination statement is not a Prop")
+    e, prev = r.get("target_value"), None
+    while e.get("k") == "forall":
+        prev, e = e, e["b"]
+    h, a = Auditor.unspine(e)
+    if prev is None or h.get("k") != "const" or h.get("n") != "Acc" or len(a) != 3 or a[2] != {"k": "bvar", "i": 0} \
+            or a[0] != lift(prev["t"], 1):
+        raise Mismatch("a termination statement is not ∀ Γ, ∀ s : C, Acc C R s")
+
+
+def check_unfolding_equation(aud, pd, prow, r, leaves, tele_rows):
+    """B: the unfolding equation of `c := λ outer, fix f args := B`:
+    ∀ outer args, self outer args = ⟦B⟧[f := self outer], with `self` the constant's target (applied to
+    the hypotheses of its own telescope when pending), restated here from the source: the binder
+    types and ⟦B⟧ are compared with the source term by term (the fixpoint body as `check_fix` reads it),
+    the recursive function denoting `self outer`."""
+    hs = r.get("pending_hypotheses") or []
+    ty, val = r["target_type"], r["target_value"]
+    hyp_t = []
+    for i, l in enumerate(hs):
+        if ty.get("k") != "forall" or val.get("k") != "lam" or ty["t"] != val["t"]:
+            raise Mismatch(f"hypothesis {i} ({l}) missing or differing between type and value")
+        hyp_t.append(ty["t"])
+        ty, val = ty["b"], val["b"]
+    check_hyp_telescope(tele_rows, leaves, hs, hyp_t)
+    if ty != {"k": "sort", "l": {"k": "zero"}}:
+        raise Mismatch("an unfolding equation is not a Prop")
+    if prow is None:
+        raise Mismatch("its constant has no row")
+    ph = prow.get("pending_hypotheses") or []
+    if any(h not in hs for h in ph):
+        raise Mismatch("its constant's hypotheses are not among the equation's")
+    olams, b = [], pd["body"]
+    while b["k"] == "lam":
+        olams.append(b)
+        b = b["b"]
+    if b["k"] != "fix" or len(b["defs"]) != 1 or b["idx"] != 0:
+        raise Mismatch("its constant's body is not λ outer, fix f := …")
+    d = b["defs"][0]
+    fbody = zeta_fix_lets(inline_rec_args(d["body"], [d["rarg"] + 1], aud.ir_bodies), 1)
+    flams, fb = [], fbody
+    while fb["k"] == "lam":
+        flams.append(fb)
+        fb = fb["b"]
+    o, a, nh = len(olams), len(flams), len(hs)
+    env = [("hyp", l, nh - 1 - i) for i, l in enumerate(hs)][::-1]
+    cur = val
+    for i, lam in enumerate(olams):
+        if cur.get("k") != "forall":
+            raise Mismatch(f"missing binder for outer argument {i}")
+        aud.check(lam["ty"], cur["t"], ["unfold", f"outer{i}"], env)
+        env = aud.push(env)
+        cur = cur["b"]
+    selfo = {"k": "const", "n": prow["target"], "u": [{"k": "param", "n": l} for l in prow.get("level_params", [])]}
+    for h in ph:
+        selfo = {"k": "app", "f": selfo, "a": {"k": "bvar", "i": Auditor.hyp_index(env, h, ["unfold"])}}
+    for i in range(o):
+        selfo = {"k": "app", "f": selfo, "a": {"k": "bvar", "i": o - 1 - i}}
+    fenv, tenv = [("tgt", selfo)] + list(env), list(env)
+    for i, lam in enumerate(flams):
+        if cur.get("k") != "forall":
+            raise Mismatch(f"missing binder for argument {i}")
+        aud.check(lam["ty"], cur["t"], ["unfold", f"arg{i}"], fenv)
+        fenv, cur = aud.push(fenv), cur["b"]
+    eh, ea = Auditor.unspine(cur)
+    if eh.get("k") != "const" or eh.get("n") != "Eq" or len(ea) != 3:
+        raise Mismatch("not an equation")
+    fty = d["ty"]
+    for i in range(a):
+        if fty["k"] != "prod":
+            raise Mismatch("the fixpoint's type has fewer binders than its body's lambdas")
+        tenv, fty = aud.push(tenv), fty["b"]
+    aud.check(fty, ea[0], ["unfold", "type"], tenv)
+    lhs = lift(selfo, a)
+    for i in range(a):
+        lhs = {"k": "app", "f": lhs, "a": {"k": "bvar", "i": a - 1 - i}}
+    if ea[1] != lhs:
+        raise Mismatch("the left side is not the constant applied to its arguments")
+    aud.check(fb, ea[2], ["unfold", "rhs"], fenv)
+
+
 def pending_target_name(key):
     return "RocqPending." + target_name(key)[len("Rocq."):]
 
@@ -2793,14 +2939,28 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
         problem("coverage", "contract closure differs from the closure recomputed from the source")
     if sorted(decls) != con.get("exported"):
         problem("coverage", "contract export list differs from the source")
+    # B (docs/TERMINATION.md): rows the translator generated for an exported constant: the statement
+    # of a termination obligation of its termination lowering, its unfolding equation
+    SYN_SUFFIX = {"termination": "__rocq2lean_termination_", "unfolding_equation": "__rocq2lean_unfold_"}
+    syn = {}
+    for r_ in results:
+        par = r_.get("synthesized_from")
+        if not par:
+            continue
+        suf, sname = SYN_SUFFIX.get(r_.get("synthetic_kind")), r_.get("source", "")
+        if suf and par in decls and decls[par]["kind"] == "constant" and sname.startswith(par + suf) \
+                and sname[len(par + suf):].isdigit() and sname not in decls:
+            syn[sname] = r_
+        else:
+            problem("coverage", f"{sname}: generated row not attached to an exported constant")
     counts = Counter(r.get("source") for r in results)
     for s_, n in counts.items():
-        if n != 1 or s_ not in decls:
+        if n != 1 or (s_ not in decls and s_ not in syn):
             problem("coverage", f"{s_}: {n} result rows / not exported")
     for s_ in decls:
         if counts[s_] == 0:
             problem("coverage", f"{s_}: exported declaration has no result")
-    rows = {r["source"]: r for r in results if counts[r.get("source")] == 1 and r.get("source") in decls}
+    rows = {r["source"]: r for r in results if counts[r.get("source")] == 1 and (r.get("source") in decls or r.get("source") in syn)}
     st = lambda x: rows.get(x, {}).get("status")
     rep_roots = report.get("roots", [])
     if [(r.get("requested"), r.get("name")) for r in rep_roots] != [(r["requested"], r["name"]) for r in src_roots] \
@@ -2839,8 +2999,8 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
         except Mismatch as e:
             problem("structure", f"{n}: {e}")
             views[n], suffix[n] = d, ""
-    claimed = {n for n in decls if st(n) in ACCEPTED_ST + PENDING_ST}
-    leaves = {n for n in decls if is_leaf(decls[n])}
+    claimed = {n for n in list(decls) + list(syn) if st(n) in ACCEPTED_ST + PENDING_ST}
+    leaves = {n for n in decls if is_leaf(decls[n])} | set(syn)
     pend_defs = {n for n in claimed if st(n) == "PENDING_KERNEL_CHECKED"}
     # assembly (docs/ASSEMBLY.md): the validated report the assembly started from, and the proof
     # tasks with final theorems; prerequisites are those of the validated library (a carried-over
@@ -2859,7 +3019,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
         manifest = {e["leaf"]: e for e in man.get("proofs", [])}
         for n, r in rows.items():
             if r.get("proof_target") is not None:
-                if n not in leaves or decls[n].get("body_state") == "opaque_interface":
+                if n not in leaves or (n in decls and decls[n].get("body_state") == "opaque_interface"):
                     problem("proofs", f"{n}: final theorem for a declaration that is not a proof task")
                 elif n not in manifest:
                     problem("proofs", f"{n}: final theorem without a manifest proof")
@@ -2872,6 +3032,16 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     refs = {}
     for n, v in views.items():
         refs[n] = closure_refs([v["type"], v["body"]] if v["kind"] == "constant" else [v["params"], v["bodies"]], set()) - {n}
+    # B: a termination-lowered constant needs its termination obligations (which its lowering must
+    # use, audited below); a termination statement needs nothing (it is refused when its relation
+    # mentions a pending prerequisite); an unfolding equation needs what its constant needs
+    for n, r_ in syn.items():
+        par = r_["synthesized_from"]
+        if r_["synthetic_kind"] == "termination":
+            refs[n] = set()
+            refs[par] = refs[par] | {n}
+        else:
+            refs[n] = refs[par] | {par}
     need_memo = {}
 
     def need(n, stack=()):
@@ -2925,6 +3095,8 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     # normalized rows (statement views, hypotheses peeled) for the universe and instance checks
     norm_decls, norm_rows, peeled = dict(decls), {}, {}
     for n, r in rows.items():
+        if n in syn:
+            continue            # (generated statements: audited structurally below)
         if n not in claimed or r["status"] == "BOOTSTRAP_RESOLVED":
             norm_rows[n] = r
             continue
@@ -2980,6 +3152,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                     raise Mismatch("template not applied to its prerequisites' final theorems")
             except (Mismatch, KeyError, AttributeError) as ex:
                 problem("proofs", f"{n}: {ex}")
+    wf_users = {}
     for s_ in sorted(decls):
         r, d = rows.get(s_), views[s_]
         v = {"source": s_, "status": r.get("status") if r else None, "leaf": s_ in leaves,
@@ -3001,6 +3174,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             hs = r.get("pending_hypotheses") or []
             pending = r["status"] in PENDING_ST
             aud = aud_carried if (aud_carried is not None and pending) else aud_main
+            aud.wf_used = []
             tele_rows = vrows if (assembly and pending) else rows
             if d["kind"] == "inductive":
                 b = d["bodies"][0]
@@ -3092,10 +3266,46 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                             raise Mismatch(f"inlined {n_} is not a transparent constant with a Set-motive binder")
                     body_s = inline_consts(body_s, set(r["delta_inlined"]), aud.ir_bodies)
                 aud.check(body_s, val, ["body"], env)
+                # B: its termination lowerings use exactly its own termination obligations
+                want_wf = sorted(x for x, rx in syn.items() if rx["synthesized_from"] == s_ and rx["synthetic_kind"] == "termination")
+                if sorted(aud.wf_used) != want_wf:
+                    raise Mismatch(f"termination obligations used by its lowering {sorted(aud.wf_used)} differ from its generated ones {want_wf}")
+                wf_users[s_] = list(aud.wf_used)
             finally:
                 aud.body = None
                 REDUCE[0] = False
                 ADMIT[0] = set()
+            v["verdict"] = "MATCH"
+        except Mismatch as e:
+            v["verdict"] = "MISMATCH"
+            v["reason"] = str(e)
+            problem("structure", f"{s_}: {e}")
+        verdicts.append(v)
+    # B: generated statements
+    for s_ in sorted(syn):
+        r = rows.get(s_)
+        v = {"source": s_, "status": r.get("status") if r else None, "leaf": True, "role": "generated",
+             "synthesized_from": syn[s_]["synthesized_from"], "synthetic_kind": syn[s_]["synthetic_kind"]}
+        try:
+            if r is None:
+                raise Mismatch("no unique result row")
+            if s_ not in claimed:
+                v["verdict"] = "NOT_ACCEPTED"
+                verdicts.append(v)
+                continue
+            par = r["synthesized_from"]
+            if par not in claimed:
+                raise Mismatch(f"generated for {par}, which is not claimed")
+            pending = r["status"] in PENDING_ST
+            aud = aud_carried if (aud_carried is not None and pending) else aud_main
+            tele_rows = vrows if (assembly and pending) else rows
+            want_t = (pending_target_name if pending else target_name)(s_ + ".statement")
+            if r["target"] != want_t or r["target_kind"] != "statement":
+                raise Mismatch(f"target {r['target']} ({r['target_kind']}) is not the statement {want_t}")
+            if r["synthetic_kind"] == "termination":
+                check_termination_statement(r, s_ in wf_users.get(par, []))
+            else:
+                check_unfolding_equation(aud, decls[par], rows.get(par), r, leaves, tele_rows)
             v["verdict"] = "MATCH"
         except Mismatch as e:
             v["verdict"] = "MISMATCH"

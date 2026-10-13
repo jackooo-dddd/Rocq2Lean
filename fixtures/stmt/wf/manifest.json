@@ -1,0 +1,1 @@
+{"name": "stmt-wf", "load_paths": [["-Q", ".", "SF"]], "files": ["Wf.v"], "requires": ["SF.Wf"]}

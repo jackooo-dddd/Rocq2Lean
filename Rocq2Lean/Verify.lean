@@ -235,6 +235,21 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
   for r in results do
     let s := getStr r "source"
     rows := rows.insert s ((rows.getD s #[]).push r)
+  -- B (docs/TERMINATION.md): rows the translator generated for an exported declaration (its
+  -- termination obligation's statement, its unfolding equation), named `<decl>__rocq2lean_termination_<k>`
+  -- / `<decl>__rocq2lean_unfold_<k>`, of that kind, statement mode only
+  let mut generated : Array String := #[]
+  for r in results do
+    let p := getStr r "synthesized_from"
+    if p.isEmpty then continue
+    let s := getStr r "source"
+    let k := getStr r "synthetic_kind"
+    let suf := if k == "termination" then "__rocq2lean_termination_" else if k == "unfolding_equation" then "__rocq2lean_unfold_" else ""
+    let ok := stmtMode && !suf.isEmpty && exported.contains p && (s.drop (p ++ suf).length).all Char.isDigit &&
+      s.startsWith (p ++ suf) && s.length > (p ++ suf).length
+    if ok then generated := generated.push s
+    else problems := note "coverage" s!"{s}: generated row not attached to an exported declaration ({p}, {k})" problems
+  let exported := exported ++ generated
   for (s, rs) in rows.toList do
     if rs.size != 1 then problems := note "coverage" s!"{s}: {rs.size} result rows" problems
     unless exported.contains s do problems := note "coverage" s!"{s}: result for a declaration that was not exported" problems

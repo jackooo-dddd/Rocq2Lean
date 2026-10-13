@@ -1,0 +1,1 @@
+{"name": "stmt-c-probe", "load_paths": [["-R", "../../../.work/prosa-0.6-rocq93", "prosa"]], "files": [], "requires": ["prosa.model.processor.ideal", "prosa.model.priority.definitions", "mathcomp.boot.eqtype"]}

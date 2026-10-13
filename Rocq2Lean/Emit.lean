@@ -115,6 +115,12 @@ structure DeclResult where
   /-- Assembly, proof tasks: `PROOF_ASSEMBLED`, `PROOF_NOT_SUPPLIED`, `ASSEMBLY_TRANSPORT_REQUIRED`,
   `OPAQUE_BINDING_PENDING` or `PROOF_VERIFIED_STATEMENT_PENDING`. -/
   proofState : String := ""
+  /-- B (docs/TERMINATION.md): a row the translator generated for a declaration (its termination
+  obligation's statement, its unfolding equation): the source declaration and the kind. -/
+  synthesizedFrom : String := ""
+  syntheticKind : String := ""
+  /-- Rows generated together with this one (emitted before it). -/
+  synthetic : Array DeclResult := #[]
   deriving Inhabited
 
 def DeclResult.ok (r : DeclResult) : Bool :=
@@ -231,10 +237,27 @@ def justifyResiduals (name : Name) (kind : String) (lps resid : List Name) (gty 
   | .accepted => return none
   | .rejected msg => return some s!"defaulted universe level(s) {resid} not justified: the declaration is not valid for every value ({msg})"
 
-def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
+/-- B: a translator-generated termination-obligation leaf (`transFixWf`). -/
+def isTerminationLeaf (l : String) : Bool := (l.splitOn "__rocq2lean_termination_").length == 2
+
+/-- The type of the `j`-th leading binder of `e` (a ∀ or λ telescope). -/
+def binderTypeAt? : Expr → Nat → Option Expr
+  | .forallE _ t _ _, 0 | .lam _ t _ _, 0 => some t
+  | .forallE _ _ b _, j + 1 | .lam _ _ b _, j + 1 => binderTypeAt? b j
+  | _, _ => none
+
+/-- `e` with the type of its `j`-th leading binder replaced by `t`. -/
+def setBinderTypeAt : Expr → Nat → Expr → Expr
+  | .forallE n _ b bi, 0, t => .forallE n t b bi
+  | .lam n _ b bi, 0, t => .lam n t b bi
+  | .forallE n d b bi, j + 1, t => .forallE n d (setBinderTypeAt b j t) bi
+  | .lam n d b bi, j + 1, t => .lam n d (setBinderTypeAt b j t) bi
+  | e, _, _ => e
+
+partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
-    (stmt : Bool := false) (inferSort : Bool := false) :
+    (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
@@ -251,7 +274,9 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
   unless unavailable.isEmpty do
     return { base with status := "OBLIGATIONS_PENDING",
                        message := s!"needs pending declarations not validated: {unavailable}", blockedBy := pending }
-  let hypsRef? : Option (IO.Ref (Array (MVarId × String))) ← if pending.isEmpty then pure none else some <$> IO.mkRef #[]
+  -- (B: a definition whose recursion needs a termination obligation is translated with it as a
+  -- hypothesis, `wfTerm`, after the plain attempt asked for one)
+  let hypsRef? : Option (IO.Ref (Array (MVarId × String))) ← if pending.isEmpty && !wfTerm then pure none else some <$> IO.mkRef #[]
   let bad := relaxedFlags c.native
   unless bad.isEmpty do
     return { base with status := "AUDIT_REJECTED", message := s!"source declared with relaxed checking: {bad}" }
@@ -301,12 +326,15 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
       let v ← mkFreshLevelMVar
       gl := gl.insert m v
       ownMVars := ownMVars.push (m, v)
-    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? with
+    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? with
+    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name with
       | .ok e => pure e
-      | .error e => return fromTransError base e
+      | .error e =>
+        if e.msg.startsWith "termination obligation required" && !wfTerm && genv.stmtMode then
+          return ← processConstant genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true)
+        return fromTransError base e
     -- pending validation: the hypotheses become the artifact's leading binders *before* universe
     -- solving, so that the levels of their types (references to prerequisite statements) are
     -- unified, defaulted, recorded and checked (R3) like every other level of the declaration
@@ -535,13 +563,86 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     -- unfolding that the sealed source hides; every source proof still checks)
     let kind ← if c.bodyState == "transparent" || c.bodyState == "sealed_implementation" then pure "def"
       else if ← isProp ty then pure "theorem" else pure "opaque"
+    -- B (docs/TERMINATION.md): a termination obligation (a translator-generated leaf) gets its own
+    -- statement `Rocq.<leaf>.statement : Prop := ∀ Γ, ∀ s, Acc R s`, kernel-checked; the artifact's
+    -- hypothesis binder is typed by that statement (δ-equal), like every other leaf's
+    let mut synth : Array DeclResult := #[]
+    let mut ty := ty
+    let mut val := val
+    for j in [0:hyps.size] do
+      let leaf := hyps[j]!.2
+      -- (only this declaration's own obligations; a dependent's hypothesis is already typed by it)
+      unless leaf.startsWith (c.name ++ "__rocq2lean_termination_") do continue
+      let some p := binderTypeAt? ty j
+        | return { base with status := "TRANSLATION_FAILED", message := "termination hypothesis binder not found" }
+      if p.hasLooseBVars then
+        return { base with status := "UNSUPPORTED_FEATURE", message := "termination lowering: the termination statement depends on other hypotheses" }
+      let used := (collectLevelParams {} p).params
+      if polyNames.any used.contains then
+        return { base with status := "UNSUPPORTED_FEATURE", message := "termination lowering: termination statement of a universe-polymorphic definition" }
+      let slps := lparams.filter used.contains
+      let sname := targetName (leaf ++ ".statement")
+      match ← addOrReuse (genv.reuseExisting || (← getEnv).contains sname) (← mkConstDecl sname "def" slps (mkSort .zero) p) with
+      | .rejected msg => return { base with status := "KERNEL_REJECTED", message := s!"termination statement {leaf}: {msg}" }
+      | .accepted => pure ()
+      let sc := mkConst sname (slps.map Level.param)
+      ty := setBinderTypeAt ty j sc
+      val := setBinderTypeAt val j sc
+      synth := synth.push { source := leaf, kind := "constant", status := "STATEMENT_KERNEL_CHECKED",
+                            rule := "termination/statement", target := some sname, targetKind := "statement",
+                            targetType := some (mkSort .zero), targetValue := some p, levelParams := slps,
+                            paramLevels := globals.filter fun g => slps.contains (levelParamName g),
+                            synthesizedFrom := c.name, syntheticKind := "termination" }
+    -- (B: a definition translated with a termination hypothesis that assembly resolved to a final
+    -- theorem has no hypothesis left: it is the accepted declaration)
+    let isPending := hypsRef?.isSome && !(wfTerm && pending.isEmpty && hyps.isEmpty)
+    let name := if isPending then name else targetName c.name
     let base := { base with target := some name, targetKind := kind, rule := s!"constant/{c.bodyState}" }
     if let some msg ← justifyResiduals name kind lparams resid gty gval genv.reuseExisting then
       return { base with status := "UNIVERSE_REJECTED", message := msg }
     let base := if resid.isEmpty then base
       else { base with residualParams := resid, residualDefaults := rdefaults, residualType := gty, residualValue := gval }
     match ← addOrReuse genv.reuseExisting (← mkConstDecl name kind lparams ty val) with
-    | .accepted => return { base with status := if hypsRef?.isSome then "PENDING_KERNEL_CHECKED" else "TRANSLATED_AND_CHECKED",
+    | .accepted =>
+      -- B: the unfolding equation of a termination-lowered fixpoint at the top of the body, stated
+      -- from the source body (a proof task; with the artifact's hypotheses when pending)
+      let ownTerm := c.name ++ "__rocq2lean_termination_"
+      let usedWf := hyps.any (·.2.startsWith ownTerm) ||
+        (val.find? fun e => match e with | .const n _ => (n.toString.splitOn ownTerm).length == 2 | _ => false).isSome
+      if usedWf then
+        let leafU := c.name ++ "__rocq2lean_unfold_1"
+        let uref ← IO.mkRef (#[] : Array (MVarId × String))
+        let selfX : TransM Expr := do
+          let e := mkConst name (lparams.map Level.param)
+          if hyps.isEmpty then pure e else applyHyps uref e (hyps.map (·.2))
+        match ← runTrans genv (withPath "unfolding equation" (do transUnfoldEq body (← selfX))) gl polyLvls factReduce admitLv lower (some uref) c.name with
+        | .ok (some eq0) =>
+          let uh ← uref.get
+          let eqV ← instantiateMVars (← abstractHyps uh eq0 true)
+          let uty ← instantiateMVars (← abstractHyps uh (mkSort .zero) false)
+          let upend := !uh.isEmpty
+          let un := if upend then pendingTargetName (leafU ++ ".statement") else targetName (leafU ++ ".statement")
+          if eqV.hasExprMVar || eqV.hasLevelMVar then
+            synth := synth.push { source := leafU, kind := "constant", status := "TRANSLATION_FAILED", message := "unfolding equation with unresolved metavariables",
+                                  synthesizedFrom := c.name, syntheticKind := "unfolding_equation" }
+          else
+          match ← addOrReuse (genv.reuseExisting || (← getEnv).contains un) (← mkConstDecl un "def" lparams uty eqV) with
+          | .accepted =>
+            synth := synth.push { source := leafU, kind := "constant",
+                                  status := if upend then "STATEMENT_PENDING_KERNEL_CHECKED" else "STATEMENT_KERNEL_CHECKED",
+                                  rule := "termination/unfolding_equation", target := some un, targetKind := "statement",
+                                  targetType := some uty, targetValue := some eqV, levelParams := lparams, paramLevels := globals,
+                                  pendingHyps := uh.map (·.2), synthesizedFrom := c.name, syntheticKind := "unfolding_equation",
+                                  }
+          | .rejected msg =>
+            synth := synth.push { source := leafU, kind := "constant", status := "KERNEL_REJECTED", message := msg,
+                                  synthesizedFrom := c.name, syntheticKind := "unfolding_equation" }
+        | .ok none => pure ()
+        | .error e =>
+          synth := synth.push { source := leafU, kind := "constant", status := e.status, message := s!"unfolding equation: {e.msg}",
+                                synthesizedFrom := c.name, syntheticKind := "unfolding_equation" }
+      return { base with status := if isPending then "PENDING_KERNEL_CHECKED" else "TRANSLATED_AND_CHECKED",
+                                      synthetic := synth,
                                       pendingHyps := hyps.map (·.2), targetType := ty, targetValue := val,
                                       levelParams := lparams, paramLevels := globals, polyParams := polyNames.length,
                                       factReduced := factReduce, implicitLevels, levelInterp,
@@ -891,9 +992,12 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("proof_template", match r.proofTemplate with | some n => Json.str n.toString | none => .null),
     ("proof_type", match r.proofType with | some e => exprJson e | none => .null),
     ("proof_value", match r.proofValue with | some e => exprJson e | none => .null)]
+  -- B: a translator-generated row names its source declaration and kind
+  let syn : List (String × Json) := if r.synthesizedFrom.isEmpty then [] else
+    [("synthesized_from", r.synthesizedFrom), ("synthetic_kind", r.syntheticKind)]
   match r.verbatim with
   | some v@(.obj _) => asm.foldl (fun j (k, x) => j.setObjVal! k x) v
-  | _ => Json.mkObj (rest ++ universes ++ asm)
+  | _ => Json.mkObj (rest ++ universes ++ syn ++ asm)
 
 /-! ## Assembly (docs/ASSEMBLY.md)
 
@@ -1047,13 +1151,45 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
   let opaqueData : Std.HashSet String := src.decls.foldl (init := {}) fun m d => match d with
     | .constant c => if c.bodyState == "opaque_interface" then m.insert c.name else m
     | _ => m
+  -- B (docs/TERMINATION.md): the validated rows generated for each declaration, in report order
+  let generatedOf : Std.HashMap String (Array (String × Json)) := match asm? with
+    | none => {}
+    | some a => a.validated.fold (init := {}) fun m k v =>
+      let p := jStr v "synthesized_from"
+      if p.isEmpty then m else m.insert p ((m.getD p #[]).push (k, v))
   for d in src.decls do
+    -- assembly, B: a termination obligation of `d` (its statement is in the validated library) gets its
+    -- final theorem before `d` is translated again, so that the lowering can use it
+    if let some a := asm? then
+      for (k, v) in (generatedOf.getD d.name #[]).qsort (·.1 < ·.1) do
+        unless jStr v "synthetic_kind" == "termination" do continue
+        let lps := ((v.getObjValAs? (Array String) "level_params").toOption.getD #[]).toList.map String.toName
+        let c0 := asmCopy d v "VALIDATED" ""
+        let mut tr : DeclResult := { c0 with source := k, levelParams := lps }
+        if jStr v "status" != "STATEMENT_KERNEL_CHECKED" then
+          tr := { tr with assembly := "NOT_TRANSLATED", assemblyNote := s!"validated status {jStr v "status"}" }
+        else match a.templates[k]? with
+          | none => tr := { tr with proofState := "PROOF_NOT_SUPPLIED" }
+          | some tmpl => tr ← assembleProof results tr k tmpl #[]
+        if let some thm := tr.proofTarget then
+          genv := { genv with consts := genv.consts.insert k thm, constLevels := genv.constLevels.insert k tr.levelParams.length }
+        if let some n := tr.target then
+          genv := { genv with leafStmt := genv.leafStmt.insert k (n, #[]) }
+        results := results.insert k tr
+        out := out.push tr
     -- assembly: a row that stays as validated is carried over without translation
     if let some a := asm? then
       if let .inl r := asmBefore a opaqueData results d then
         let r := { r with protectedIface := protectedNames.contains r.source }
         results := results.insert r.source r
         out := out.push r
+        -- (B: its other generated rows are carried over with it)
+        for (k, v) in (generatedOf.getD d.name #[]).qsort (·.1 < ·.1) do
+          unless jStr v "synthetic_kind" == "termination" do
+            let x0 := asmCopy d v r.assembly r.assemblyNote
+            let x := { x0 with source := k }
+            results := results.insert k x
+            out := out.push x
         continue
     -- the heartbeat budget is per declaration; a declaration exceeding it is a RESOURCE_LIMIT row
     let saved ← saveState
@@ -1088,8 +1224,43 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
           genv := { genv with constPoly := genv.constPoly.insert d.name r.polyParams,
                               polyByTarget := genv.polyByTarget.insert thm r.polyParams }
     r := { r with protectedIface := protectedNames.contains r.source }
+    -- (B: termination statements are reported before their declaration, unfolding equations after
+    -- it: each row only references rows reported earlier)
+    let gen := r.synthetic
+    r := { r with synthetic := #[] }
+    let mut after : Array DeclResult := #[]
+    for x0 in gen do
+      let mut x := x0
+      -- assembly, B: a generated row is classified against its validated row like any row (a termination
+      -- obligation was handled above: only one with hypotheses could be generated again here)
+      if let some a := asm? then
+        match a.validated[x.source]? with
+        | none => x := { x with assembly := "ASSEMBLY_REJECTED", assemblyNote := "no row in the validated report" }
+        | some v =>
+          if asmAcceptedSt.contains (jStr v "status") then
+            let xj := x.toJson
+            let diff := ["status", "target", "target_kind", "target_type", "target_value", "level_params", "pending_hypotheses"].filter
+              fun k => xj.getObjValD k != v.getObjValD k
+            x := if diff.isEmpty then { x with assembly := "VALIDATED" }
+              else { x with assembly := "REUSE_MISMATCH", assemblyNote := s!"differs from the validated row in {diff}" }
+          else if asmAcceptedSt.contains x.status then
+            x := { x with assembly := "ASSEMBLED", assembledFrom := (if (jStr v "target").isEmpty then none else some (jStr v "target").toName) }
+          else
+            x := { x with assembly := "ASSEMBLY_REJECTED", assemblyNote := s!"generated again as {x.status}" }
+          if x.status == "STATEMENT_KERNEL_CHECKED" && x.proofTarget.isNone && !x.assembly.startsWith "ASSEMBLY_REJ" then
+            match a.templates[x.source]? with
+            | none => x := { x with proofState := "PROOF_NOT_SUPPLIED" }
+            | some tmpl =>
+              x ← assembleProof results x x.source tmpl ((v.getObjValAs? (Array String) "pending_hypotheses").toOption.getD #[])
+      if x.syntheticKind == "termination" then
+        results := results.insert x.source x
+        out := out.push x
+      else after := after.push x
     results := results.insert r.source r
     out := out.push r
+    for x in after do
+      results := results.insert x.source x
+      out := out.push x
   return out
 where
   /-- One declaration (the attempts and retry tiers), with the environment it extends. -/
@@ -1198,6 +1369,13 @@ where
             else if r.status == "PENDING_KERNEL_CHECKED" then "STATEMENT_PENDING_KERNEL_CHECKED" else r.status
           r := { r with source := c0.name, status := st,
                         targetKind := if st != r.status then "statement" else r.targetKind }
+        -- B: generated statements (termination obligations, unfolding equations) are proof tasks
+        for x in r.synthetic do
+          if let some n := x.target then
+            if x.status == "STATEMENT_KERNEL_CHECKED" || x.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
+              genv := { genv with leafStmt := genv.leafStmt.insert x.source (n, x.pendingHyps) }
+              unless x.levelParams.isEmpty do
+                genv := { genv with constGlobals := genv.constGlobals.insert n x.paramLevels }
         -- statement mode: register proof tasks (statements) and pending artifacts for later references
         if r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" || r.status == "PENDING_KERNEL_CHECKED" then
           if let some n := r.target then
