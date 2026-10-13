@@ -48,6 +48,25 @@ accepted, and roots need not all be translated. Additional detectors:
   (`….type`, opaque data), after its hypotheses; an accepted definition is not a proof (its type is
   not a proposition), and nothing accepted is a `theorem`, `opaque` or `axiom`.
 
+Assembly (docs/ASSEMBLY.md; a fourth argument, the assembly's proof manifest): the report is an
+assembly report over the same export. Rows are kept apart by category:
+
+* *validated* rows (`assembly = VALIDATED`) are the statement library itself: axiom-free, as above;
+* *assembled* rows (`ASSEMBLED`) are accepted `Rocq.*` declarations: they may reference the final
+  theorems of proof tasks (never a pending artifact or a template), and their transitive axioms must
+  lie within the manifest's allowance — they are *reported* per target, not required to be empty (an
+  assembled proof field brings the axioms of its proof);
+* *final theorems* (`proof_target`, detector `proofs`) are theorems whose type is exactly the accepted
+  statement at its universe parameters and whose value is the manifest's template for that task applied
+  to its prerequisites' final theorems; the template's own dependencies (including the pending
+  statements it is stated over) are an implementation dependency of the proof term only;
+* *carried-over* rows (`PENDING`, `OPAQUE_BINDING_PENDING`, `ASSEMBLY_BLOCKED`, …) are the unchanged
+  pending artifacts, checked as pending artifacts;
+* `assembly` — every row's assembly state agrees with its status;
+* `proof_dependent_computation` (reported, not a failure) — in an assembled definition, each
+  elimination of a `Prop` inductive into a non-`Prop` sort whose major premise mentions a final theorem:
+  computation that inspects a proof (its reduction may depend on how the proof was written).
+
 Any failure fails the module (non-zero exit of the consumer process).
 -/
 
@@ -55,7 +74,36 @@ namespace Rocq2Lean
 
 open Lean Elab Command Meta
 
-syntax (name := rocqVerify) "#rocq2lean_verify " str str str : command
+syntax (name := rocqVerify) "#rocq2lean_verify " str str str (str)? : command
+
+/-- Assembly: applications of a recursor of a `Prop` inductive at a non-zero motive level whose major
+premise mentions one of `proofs` (computation that inspects an assembled proof). -/
+partial def proofDependentElims (env : Environment) (proofs : Std.HashSet Name) (e : Expr) : MetaM (Array String) := do
+  let mut out := #[]
+  let mentions (x : Expr) : Bool := (x.find? fun y => match y with | .const n _ => proofs.contains n | _ => false).isSome
+  let rec go (e : Expr) (acc : Array String) : MetaM (Array String) := do
+    match e with
+    | .app .. =>
+      let f := e.getAppFn
+      let args := e.getAppArgs
+      let mut acc := acc
+      if let .const n ls := f then
+        if let some (.recInfo rv) := env.find? n then
+          if let some (.inductInfo iv) := env.find? rv.getMajorInduct then
+            let isPropInd ← forallTelescopeReducing iv.type fun _ b => pure b.isProp
+            let large := match ls with | l :: _ => !(l.normalize == .zero) && rv.levelParams.length > iv.levelParams.length | [] => false
+            let mi := rv.getMajorIdx
+            if isPropInd && large && mi < args.size && mentions args[mi]! then
+              acc := acc.push s!"{n} (major premise mentions an assembled proof)"
+      acc ← go f acc
+      for a in args do acc ← go a acc
+      return acc
+    | .lam _ t b _ | .forallE _ t b _ => go b (← go t acc)
+    | .letE _ t v b _ => go b (← go v (← go t acc))
+    | .mdata _ b | .proj _ _ b => go b acc
+    | _ => return acc
+  out ← go e out
+  return out
 
 /-- Obligation for every recursor application `I.rec params motive minors idx major` occurring in
 an accepted value: `idx` are exactly the indices of the (weak-head normalized) type of `major`.
@@ -157,6 +205,14 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
   let some conPath := stx[1].isStrLit? | throwError "expected a contract path"
   let some repPath := stx[2].isStrLit? | throwError "expected a report path"
   let some outPath := stx[3].isStrLit? | throwError "expected a result path"
+  -- assembly: the proof manifest (docs/ASSEMBLY.md)
+  let asmPath? : Option String := (stx[4].getArgs[0]?).bind (·.isStrLit?)
+  let asmManifest ← match asmPath? with
+    | some p => pure (some (← IO.ofExcept (Json.parse (← IO.FS.readFile p))))
+    | none => pure none
+  let asm := asmManifest.isSome
+  let allowedAx : Array Name := ((asmManifest.bind (·.getObjValAs? (Array String) "allowed_axioms" |>.toOption)).getD #[]).map String.toName
+  let manifestProofs : Array Json := (asmManifest.bind (·.getObjValAs? (Array Json) "proofs" |>.toOption)).getD #[]
   let contract ← IO.ofExcept (Json.parse (← IO.FS.readFile conPath))
   let report ← IO.ofExcept (Json.parse (← IO.FS.readFile repPath))
   let results ← IO.ofExcept (report.getObjValAs? (Array Json) "results")
@@ -234,6 +290,15 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
             if isPending then allowedPending := allowedPending.insert (getStr c "name").toName
             else allowed := allowed.insert (getStr c "name").toName
         accepted := accepted.push (s, r)
+        -- assembly: a proof task's final theorem is referenced like an accepted constant; an assembled
+        -- row's former pending artifact stays in the imported library, referenced by carried-over
+        -- pending artifacts only
+        if asm then
+          if let some pt := (r.getObjValAs? String "proof_target").toOption then allowed := allowed.insert pt.toName
+          if let some af := (r.getObjValAs? String "assembled_from").toOption then
+            allowedPending := allowedPending.insert af.toName |>.insert (af.toName.str "rec")
+            for c in (r.getObjValAs? (Array Json) "target_ctors").toOption.getD #[] do
+              allowedPending := allowedPending.insert ((getStr c "name").toName.replacePrefix `Rocq `RocqPending)
       else if st == "BOOTSTRAP_RESOLVED" then
         if let some rule := findBootstrap? s then
           for t in rule.target.types do allowed := allowed.insert t |>.insert (t.str "rec")
@@ -267,6 +332,10 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
         tmpl := tmpl.insert n bind
   let mut residualsChecked : Nat := 0
   let mut instChecked : Nat := 0
+  let mut axiomsBy : Array (String × Json) := #[]
+  let mut pdc : Array Json := #[]
+  let proofTargets : Std.HashSet Name := results.foldl (init := {}) fun m r =>
+    match (r.getObjValAs? String "proof_target").toOption with | some t => m.insert t.toName | none => m
   for (s, r) in accepted do
     let tgt := getStr r "target"
     let some ci := env.find? tgt.toName
@@ -360,7 +429,58 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
       | .error e, _ => problems := note "residual_levels" s!"{tgt}: unreadable residual record ({e})" problems
       | _, none => problems := note "residual_levels" s!"{tgt}: residual record on a declaration without value" problems
     let axs ← liftCoreM (collectAxioms tgt.toName)
-    unless axs.isEmpty do problems := note "axioms" s!"{tgt}: depends on axioms {axs}" problems
+    -- assembly: an assembled row's axioms come from the proofs it contains; reported, within the
+    -- allowance; the validated library (and every pending artifact) stays axiom-free
+    if asm && getStr r "assembly" == "ASSEMBLED" then
+      unless axs.isEmpty do axiomsBy := axiomsBy.push (tgt, Json.arr (axs.map (Json.str ·.toString)))
+      for a in axs do
+        unless allowedAx.contains a do problems := note "axioms" s!"{tgt}: depends on {a}, outside the allowance {allowedAx}" problems
+      if let .defnInfo dv := ci then
+        unless ← liftTermElabM (isProp ci.type) do
+          for x in ← liftTermElabM (proofDependentElims env proofTargets dv.value) do
+            pdc := pdc.push (Json.mkObj [("target", tgt), ("elimination", x)])
+    else unless axs.isEmpty do problems := note "axioms" s!"{tgt}: depends on axioms {axs}" problems
+  -- assembly: final theorems and assembly states
+  let mut proofsChecked : Nat := 0
+  if asm then
+    let byLeaf : Std.HashMap String Json := manifestProofs.foldl (fun m e => m.insert (getStr e "leaf") e) {}
+    let ptOf : Std.HashMap String String := results.foldl (init := {}) fun m r =>
+      match (r.getObjValAs? String "proof_target").toOption with | some t => m.insert (getStr r "source") t | none => m
+    for r in results do
+      let s := getStr r "source"
+      let st := getStr r "status"
+      let a := getStr r "assembly"
+      let isAcc := acceptedSt.contains st || st == "BOOTSTRAP_RESOLVED"
+      if (a == "VALIDATED" || a == "ASSEMBLED") != isAcc then
+        problems := note "assembly" s!"{s}: assembly state {a} with status {st}" problems
+      if a == "ASSEMBLED" && ((r.getObjValAs? (Array Json) "pending_hypotheses").toOption.getD #[]).size != 0 then
+        problems := note "assembly" s!"{s}: assembled with hypotheses" problems
+      let some pt := (r.getObjValAs? String "proof_target").toOption | continue
+      proofsChecked := proofsChecked + 1
+      let some e := byLeaf[s]? | problems := note "proofs" s!"{s}: final theorem without a manifest proof" problems; continue
+      let tmplN := (getStr e "template").toName
+      let prereq := (e.getObjValAs? (Array String) "prerequisites").toOption.getD #[]
+      match env.find? pt.toName, env.find? tmplN with
+      | some (.thmInfo tv), some (.thmInfo _) =>
+        let lps := ((r.getObjValAs? (Array String) "level_params").toOption.getD #[]).toList.map String.toName
+        let want := mkConst (getStr r "target").toName (lps.map Level.param)
+        unless tv.levelParams == lps && tv.type == want && exprJson tv.type == r.getObjValD "proof_type" do
+          problems := note "proofs" s!"{pt}: type is not the accepted statement {getStr r "target"}" problems
+        unless exprJson tv.value == r.getObjValD "proof_value" do
+          problems := note "proofs" s!"{pt}: value differs from the report" problems
+        let fn := tv.value.getAppFn
+        let args := tv.value.getAppArgs
+        unless fn.isConstOf tmplN && args.size == prereq.size &&
+            (args.zip prereq).all (fun (x, h) => match x, ptOf[h]? with
+              | .const n _, some t => n == t.toName
+              | _, _ => false) do
+          problems := note "proofs" s!"{pt}: value is not {tmplN} applied to its prerequisites' final theorems" problems
+        let axs ← liftCoreM (collectAxioms pt.toName)
+        if axs.contains ``sorryAx then problems := note "proofs" s!"{pt}: depends on sorryAx" problems
+        for x in axs do
+          unless allowedAx.contains x do problems := note "proofs" s!"{pt}: depends on {x}, outside the allowance" problems
+        axiomsBy := axiomsBy.push (pt, Json.arr (axs.map (Json.str ·.toString)))
+      | _, _ => problems := note "proofs" s!"{pt}: final theorem or template {tmplN} missing or not a theorem" problems
   -- interface (P0): protection binding from the contract (never from the report under audit)
   let mut ifaceChecked : Nat := 0
   match contract.getObjVal? "protection" with
@@ -388,6 +508,9 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
   let dets := ["binding", "coverage", "roots", "presence", "kind", "safety", "levels", "type", "value", "ctors",
                "target_deps", "axioms", "rec_indices", "residual_levels", "instance_levels", "interface"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
   let dets := if stmtMode then dets ++ ["namespaces", "statements"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL")) else dets
+  let dets := if asm then dets ++ ["proofs", "assembly"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL")) else dets
+  let asmFields : List (String × Json) := if asm then [("assembly", Json.bool true), ("proofs_checked", proofsChecked),
+    ("axioms_by_target", Json.mkObj axiomsBy.toList), ("proof_dependent_computation", Json.arr pdc)] else []
   let modeField : List (String × Json) := if stmtMode then [("mode", Json.str "statement")] else []
   let fields : List (String × Json) := [
     ("schema", "rocq2lean-consumer/1"), ("status", if problems.isEmpty then "OK" else "AUDIT_REJECTED"),
@@ -399,7 +522,7 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
     ("recursors", Json.arr (recs.toArray.map (recursorJson ·.2))),
     ("detectors", Json.mkObj dets),
     ("problems", Json.arr (problems.map fun (d, m) => Json.mkObj [("detector", d), ("message", m)]))]
-  let res := Json.mkObj (modeField ++ fields)
+  let res := Json.mkObj (modeField ++ fields ++ asmFields)
   IO.FS.writeFile outPath (res.pretty ++ "\n")
   unless problems.isEmpty do
     throwError "AUDIT_REJECTED (consumer):\n{String.intercalate "\n" (problems.map fun (d, m) => s!"[{d}] {m}").toList}"

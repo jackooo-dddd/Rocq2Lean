@@ -124,11 +124,16 @@ motivating case, `find_ex_minn`, turned out to be opaque data, see §4.)
 | definition `d` | `def Rocq.d` (or `opaque` for opaque data), body translated |
 | proof-valued `p : T` | `def Rocq.p.statement : Prop := ⟦T⟧` (universe parameters as in R2/R3G) |
 | obligation `o : ∀ Γ, T` | `def Rocq.o.statement : Prop := ⟦∀ Γ, T⟧` |
-| definition needing proofs `c₁ … oₖ` | **pending**: `def Rocq.d` is not added. Its translated body is kernel-checked as `fun (h₁ : ⟦c₁⟧.statement) … => ⟦b'⟧` in a separate pending module (`Rocq2LeanPending`), never in the accepted library |
+| definition needing proofs `c₁ … oₖ` | **pending**: `def Rocq.d` is not added. Its translated body is kernel-checked as `RocqPending.d := fun {h₁ : ⟦c₁⟧.statement} … => ⟦b'⟧` (implicit hypothesis binders), in the same module `Rocq2LeanOut` but in the separate namespace `RocqPending`, which no accepted `Rocq.*` declaration references |
 
-The proving agent proves `theorem Rocq.p : Rocq.p.statement` (the name is reserved). Once every
-prerequisite of a pending definition is kernel-verified, an *assembly* step adds `Rocq.d` with its
-original interface, referencing the proved theorems, and its dependents continue. Rocq2Lean never
+(An earlier version of this table said pending artifacts go to a separate module `Rocq2LeanPending`;
+the implementation keeps one module and separates them by namespace, enforced by the consumer.)
+
+The proving agent submits a *template* `RocqProofTemplates.T<task_id>.proof` proving the task
+statement (§9). `Rocq.<name>` is reserved for the final declaration: once the prerequisites of a pending
+declaration have final theorems, *assembly* (`docs/ASSEMBLY.md`) adds `Rocq.d` with its original
+interface, referencing those theorems, and gives each proved task its theorem
+`Rocq.p : Rocq.p.statement` where the kernel accepts the instantiated template. Rocq2Lean never
 supplies those proofs.
 
 Statement definitions have no proof-local universe levels: their only levels are those of the
@@ -204,15 +209,19 @@ statement, extracted obligation, opaque data value, source assumption):
 * a stable task id (sha256 of the kernel name and the statement digest).
 
 **Task statement.** Without prerequisites, the task is `Rocq.c.statement` (or `Rocq.c.type`). With
-prerequisites `h₁ … hₖ` it is `∀ h₁ … hₖ, RocqPending.c.statement h₁ … hₖ`: a proof hypothesis is
-irrelevant, and Rocq never unfolds opaque data, so this generalization is exactly what Rocq's proof
-establishes, and every task can be proved without waiting for its prerequisites. Prerequisites order
-only the *assembly* of pending definitions.
+prerequisites `h₁ … hₖ` it is `∀ h₁ … hₖ, @RocqPending.c.statement h₁ … hₖ`. Each task records the form
+of this generalization (`docs/ASSEMBLY.md`, "Task statements"): over propositions it is harmless (proof
+irrelevance); over opaque *data* it can be strictly stronger than the source statement, and its
+provability is **not** claimed. (An earlier version of this section claimed that every task can be
+proved without waiting for its prerequisites; that is withdrawn for data prerequisites.) Opaque-data
+value tasks accept no submission: the value must come from the source body (A′), not from an arbitrary
+inhabitant.
 
 `rocq2lean check-proof` checks a proof file submitted by the agent:
-* it is compiled in a fresh Lean process against the statement library;
-* the reserved constant's type must be syntactically the task statement (a `theorem` for proof
-  tasks; a definition or theorem for opaque data; never an axiom, unsafe or partial);
+* it is the module `RocqProofTemplates.T<task_id>`, compiled in a fresh Lean process against the
+  statement library, and it declares nothing outside its namespace;
+* the template constant's type must be syntactically the task statement (a `theorem`; never an axiom,
+  unsafe or partial);
 * `collectAxioms` is recorded; anything beyond the declared allowance is refused, and `sorry`
   (`sorryAx`) is always refused.
 
@@ -226,12 +235,15 @@ rocq2lean translate --input RUN/source.ndjson --out RUN
 rocq2lean validate --run RUN                 # consumer + audit + protection; STATEMENT_AUDITED
 rocq2lean tasks    --run RUN [--out FILE]    # proof tasks
 rocq2lean check-proof --run RUN --task ID --file PROOF.lean [--allow-axioms A,B]
+rocq2lean assemble --run RUN [--complete]  # final declarations from verified submissions (docs/ASSEMBLY.md)
 ```
 
 ## 11. Open points (tracked in `reports/statement_only/BLOCKER_REASSESSMENT.md`)
 
 * Opaque data constants (`data_opaque`) built by tactics: their bodies are definitions, but they can
-  contain proof subterms (obligations).
+  contain proof subterms (obligations). Decided 2026-10-13 (A′): their data-producing bodies are to be
+  translated mechanically, keeping their opacity and extracting their proof subterms as obligations;
+  until then their dependents are not assembled (`OPAQUE_BINDING_PENDING`).
 * Definitions whose computation eliminates a proof (structural recursion on a proof): exported with
   deferred termination, refused by the translator until a rule with a termination task exists.
 * Universe rules for statements: R3 references and template `prod` at `Prop` in statements (as

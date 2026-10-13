@@ -100,10 +100,29 @@ structure DeclResult where
   /-- M6: a non-template inductive with plain universe parameters (`u_l` for each level, no R2F
   fact interpretation; tried first, the more general translation). -/
   plainLevels : Bool := false
+  /-- Assembly (docs/ASSEMBLY.md): the row's assembly state (empty outside assembly), a note, the
+  pending artifact an assembled row replaces, and — for a proof task whose verified proof template
+  was instantiated — the final theorem `Rocq.<leaf>` with its template, type and value. -/
+  assembly : String := ""
+  assemblyNote : String := ""
+  assembledFrom : Option Name := none
+  proofTarget : Option Name := none
+  proofTemplate : Option Name := none
+  proofType : Option Expr := none
+  proofValue : Option Expr := none
+  /-- Assembly: a row carried over unchanged from the validated report (its JSON). -/
+  verbatim : Option Json := none
+  /-- Assembly, proof tasks: `PROOF_ASSEMBLED`, `PROOF_NOT_SUPPLIED`, `ASSEMBLY_TRANSPORT_REQUIRED`,
+  `OPAQUE_BINDING_PENDING` or `PROOF_VERIFIED_STATEMENT_PENDING`. -/
+  proofState : String := ""
   deriving Inhabited
 
 def DeclResult.ok (r : DeclResult) : Bool :=
   r.status == "TRANSLATED_AND_CHECKED" || r.status == "BOOTSTRAP_RESOLVED"
+
+/-- Assembly: a proof task whose final theorem `Rocq.<leaf>` was assembled is available to its
+dependents like an accepted declaration. -/
+def DeclResult.available (r : DeclResult) : Bool := r.ok || r.proofTarget.isSome
 
 /-- An attempt that added its declaration: translated, or (statement mode) kernel-checked as a pending
 validation artifact; the retry ladders stop there. -/
@@ -136,7 +155,7 @@ private def blockedDeps (results : Std.HashMap String DeclResult) (deps : Array 
   deps.foldl (init := (#[], #[], #[])) fun (missing, failed, pending) d =>
     match results[d]? with
     | none => (missing.push d, failed, pending)
-    | some r => if r.ok then (missing, failed, pending)
+    | some r => if r.available then (missing, failed, pending)
       else if pendingStatus r.status then (missing, failed, pending.push d) else (missing, failed.push d, pending)
 
 /-- Global levels of an inductive block (single body): arity and constructor types, sorted. -/
@@ -157,12 +176,57 @@ def mkConstDecl (name : Name) (kind : String) (lps : List Name) (ty val : Expr) 
   | "theorem" => return .thmDecl { name, levelParams := lps, type := ty, value := val, all := [name] }
   | _ => return .opaqueDecl { name, levelParams := lps, type := ty, value := val, isUnsafe := false, all := [name] }
 
+/-- Insert a declaration through the kernel (`addChecked`). Assembly (`reuse`, docs/ASSEMBLY.md):
+the validated statement library is imported, so a declaration whose names it already contains is
+not added again — it must be *identical* to the imported one (same kind, universe parameters, type,
+value / constructors), which the kernel checked when the library was built; anything else is
+rejected. A declaration with new names is kernel-checked as usual. -/
+def addOrReuse (reuse : Bool) (decl : Declaration) : CoreM KernelResult := do
+  unless reuse do return ← addChecked decl
+  let env ← getEnv
+  let differs (n : Name) : KernelResult := .rejected s!"{n} differs from the declaration of the validated library"
+  let same (a b : Expr) : Bool := a == b
+  match decl with
+  | .defnDecl v =>
+    match env.find? v.name with
+    | none => addChecked decl
+    | some (.defnInfo w) => return if w.levelParams == v.levelParams && same w.type v.type && same w.value v.value then .accepted else differs v.name
+    | some _ => return differs v.name
+  | .thmDecl v =>
+    match env.find? v.name with
+    | none => addChecked decl
+    | some (.thmInfo w) => return if w.levelParams == v.levelParams && same w.type v.type && same w.value v.value then .accepted else differs v.name
+    | some _ => return differs v.name
+  | .opaqueDecl v =>
+    match env.find? v.name with
+    | none => addChecked decl
+    | some (.opaqueInfo w) => return if w.levelParams == v.levelParams && same w.type v.type && same w.value v.value then .accepted else differs v.name
+    | some _ => return differs v.name
+  | .inductDecl lps np types _ =>
+    let present := types.filter fun t => env.contains t.name
+    if present.isEmpty then return ← addChecked decl
+    unless present.length == types.length do return .rejected "an inductive block is only partly present in the validated library"
+    for t in types do
+      match env.find? t.name with
+      | some (.inductInfo w) =>
+        unless w.levelParams == lps && w.numParams == np && same w.type t.type && w.ctors == t.ctors.map (·.name) do
+          return differs t.name
+        for c in t.ctors do
+          match env.find? c.name with
+          | some (.ctorInfo cv) => unless same cv.type c.type do return differs c.name
+          | _ => return differs c.name
+      | _ => return differs t.name
+    return .accepted
+  | _ => addChecked decl
+
 /-- Justification of defaulted universe levels (docs/UNIVERSE_TRANSLATION.md, R3'): the declaration
 with each residual level as a fresh universe parameter must be accepted by the kernel, i.e. it is
-well typed for *every* value of those levels, so the default `0` chooses nothing. -/
-def justifyResiduals (name : Name) (kind : String) (lps resid : List Name) (gty gval : Expr) :
+well typed for *every* value of those levels, so the default `0` chooses nothing. (Assembly: the
+target name exists in the imported library, so the check uses an auxiliary name.) -/
+def justifyResiduals (name : Name) (kind : String) (lps resid : List Name) (gty gval : Expr) (reuse : Bool := false) :
     MetaM (Option String) := do
   if resid.isEmpty then return none
+  let name := if reuse then name ++ `_rocq2lean_residual_check else name
   match ← checkOnly (← mkConstDecl name kind (lps ++ resid) gty gval) with
   | .accepted => return none
   | .rejected msg => return some s!"defaulted universe level(s) {resid} not justified: the declaration is not valid for every value ({msg})"
@@ -216,7 +280,7 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     unless st == "transparent" || st == "opaque_present" || st == "sealed_implementation" do
       return { base with status := "EXPORT_VALIDATION_FAILED", message := s!"unknown body state '{st}'" }
     let name := if hypsRef?.isSome then pendingTargetName c.name else targetName c.name
-    if (← getEnv).contains name then
+    if (← getEnv).contains name && !genv.reuseExisting then
       return { base with status := "TRANSLATION_FAILED", message := s!"target name {name} already in use" }
     -- R2S: every own global level (type and body) starts as a level metavariable; references to a
     -- declaration sharing a source level use that variable (coherence by construction). After
@@ -472,11 +536,11 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let kind ← if c.bodyState == "transparent" || c.bodyState == "sealed_implementation" then pure "def"
       else if ← isProp ty then pure "theorem" else pure "opaque"
     let base := { base with target := some name, targetKind := kind, rule := s!"constant/{c.bodyState}" }
-    if let some msg ← justifyResiduals name kind lparams resid gty gval then
+    if let some msg ← justifyResiduals name kind lparams resid gty gval genv.reuseExisting then
       return { base with status := "UNIVERSE_REJECTED", message := msg }
     let base := if resid.isEmpty then base
       else { base with residualParams := resid, residualDefaults := rdefaults, residualType := gty, residualValue := gval }
-    match ← addChecked (← mkConstDecl name kind lparams ty val) with
+    match ← addOrReuse genv.reuseExisting (← mkConstDecl name kind lparams ty val) with
     | .accepted => return { base with status := if hypsRef?.isSome then "PENDING_KERNEL_CHECKED" else "TRANSLATED_AND_CHECKED",
                                       pendingHyps := hyps.map (·.2), targetType := ty, targetValue := val,
                                       levelParams := lparams, paramLevels := globals, polyParams := polyNames.length,
@@ -571,7 +635,7 @@ where
     if isRecord then
       unless body.ctors.size == 1 && body.indices.isEmpty && body.projs.size == body.ctors[0]!.args.size do
         return unsupported "primitive record that is not structure-like (one constructor, no indices, one projection per field)"
-    if (← getEnv).contains (inductiveNames i.name body.name #[]).1 then
+    if (← getEnv).contains (inductiveNames i.name body.name #[]).1 && !genv.reuseExisting then
       return ({ base with status := "TRANSLATION_FAILED", message := "target name already in use" }, none)
     let (tname, cnames) := inductiveNames i.name body.name (body.ctors.map (·.name))
     let pend (n : Name) : Name := if hypsRef?.isSome then n.replacePrefix `Rocq `RocqPending else n
@@ -733,7 +797,7 @@ where
     let base := { base with target := some tname, targetKind := "inductive",
                             rule := if isTemplate then "inductive/generated-template"
                                     else if lparams.isEmpty then "inductive/generated" else "inductive/generated-levels" }
-    match ← addChecked decl with
+    match ← addOrReuse genv.reuseExisting decl with
     | .accepted =>
       let univ := if lparams.isEmpty then UnivRule.mono else .params lparams.length isTemplate
       let tgt : IndTarget := { types := #[tname], ctors := #[cnames], univ, rule := "generated",
@@ -749,8 +813,225 @@ where
                           targetCtors := ctors.map fun c => (c.name, c.type) }, some tgt)
     | .rejected msg => return ({ base with status := "KERNEL_REJECTED", message := msg }, none)
 
-/-- Translate all declarations of an export, in order. -/
-def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}) : MetaM (Array DeclResult) := do
+/-! ## Report -/
+
+partial def levelJson : Level → Json
+  | .zero => Json.mkObj [("k", "zero")]
+  | .succ l => Json.mkObj [("k", "succ"), ("l", levelJson l)]
+  | .max a b => Json.mkObj [("k", "max"), ("a", levelJson a), ("b", levelJson b)]
+  | .imax a b => Json.mkObj [("k", "imax"), ("a", levelJson a), ("b", levelJson b)]
+  | .param n => Json.mkObj [("k", "param"), ("n", n.toString)]
+  | .mvar _ => Json.mkObj [("k", "mvar")]
+
+/-- Lean `Expr` as JSON, for the independent audit. Binder names are kept but are not compared. -/
+partial def exprJson : Expr → Json
+  | .bvar i => Json.mkObj [("k", "bvar"), ("i", i)]
+  | .fvar _ => Json.mkObj [("k", "fvar")]
+  | .mvar _ => Json.mkObj [("k", "mvar")]
+  | .sort l => Json.mkObj [("k", "sort"), ("l", levelJson l)]
+  | .const n ls => Json.mkObj [("k", "const"), ("n", n.toString), ("u", Json.arr (ls.map levelJson).toArray)]
+  | .app f a => Json.mkObj [("k", "app"), ("f", exprJson f), ("a", exprJson a)]
+  | .lam n t b _ => Json.mkObj [("k", "lam"), ("n", n.toString), ("t", exprJson t), ("b", exprJson b)]
+  | .forallE n t b _ => Json.mkObj [("k", "forall"), ("n", n.toString), ("t", exprJson t), ("b", exprJson b)]
+  | .letE n t v b _ =>
+    Json.mkObj [("k", "let"), ("n", n.toString), ("t", exprJson t), ("v", exprJson v), ("b", exprJson b)]
+  | .lit (.natVal n) => Json.mkObj [("k", "natlit"), ("v", n)]
+  | .lit (.strVal s) => Json.mkObj [("k", "strlit"), ("v", s)]
+  | .mdata _ e => Json.mkObj [("k", "mdata"), ("e", exprJson e)]
+  | .proj s i e => Json.mkObj [("k", "proj"), ("s", s.toString), ("i", i), ("e", exprJson e)]
+
+def DeclResult.toJson (r : DeclResult) : Json :=
+  -- (two typed halves: one long list literal is beyond the elaborator's coercion heuristics)
+  let universes : List (String × Json) := [
+    ("universe_cumulativity", Json.bool r.cumulativity),
+    ("universe_lowered", Json.bool r.universeLowered),
+    ("plain_levels", Json.bool r.plainLevels),
+    ("delta_inlined", Json.arr (r.deltaInlined.map Json.str)),
+    ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>
+      Json.mkObj [("level", m), ("sigma", levelJson l), ("in_type", Json.bool (r.r2bpInType.contains m))])),
+    ("sort_lowered_levels", Json.arr (r.sortLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
+    ("protected", Json.bool r.protectedIface),
+    ("pending_hypotheses", Json.arr (r.pendingHyps.map Json.str))]
+  let rest : List (String × Json) := [
+    ("source", r.source), ("kind", r.kind), ("status", r.status), ("rule", r.rule),
+    ("target", match r.target with | some n => Json.str n.toString | none => .null),
+    ("target_kind", r.targetKind), ("message", r.message),
+    ("path", Json.arr (r.path.map Json.str).toArray),
+    ("blocked_by", Json.arr (r.blockedBy.map Json.str)),
+    ("target_type", match r.targetType with | some e => exprJson e | none => .null),
+    ("target_value", match r.targetValue with | some e => exprJson e | none => .null),
+    ("level_params", Json.arr (r.levelParams.map (Json.str ·.toString)).toArray),
+    ("num_params", r.numParams),
+    ("template", r.isTemplate),
+    ("primitive_record", r.primitiveRecord),
+    ("universe_minimal_levels", r.minimalLevels),
+    ("solved_levels", Json.arr (r.bodyLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
+    ("template_params", Json.arr (r.templateParams.map fun (l, k) => Json.mkObj [("level", l), ("param", k)])),
+    ("universe_level_defaults", r.levelDefaults),
+    ("universe_poly_params", r.polyParams),
+    ("sort_fact_reduced", r.factReduced),
+    ("implicit_levels", Json.arr (r.implicitLevels.map Json.str)),
+    ("admitting_levels", Json.arr (r.admittingLevels.map Json.str)),
+    ("level_interp", Json.arr (r.levelInterp.map fun (l, x) => Json.mkObj [("level", l), ("sigma", levelJson x)])),
+    ("universe_checks", r.universeChecks),
+    ("universe_diagnostics", Json.arr (r.levelDiagnostics.map Json.str)),
+    ("universe_residuals", if r.residualParams.isEmpty then .null else Json.mkObj [
+      ("params", Json.arr (r.residualParams.map (Json.str ·.toString)).toArray),
+      ("defaults", Json.arr (r.residualDefaults.map levelJson).toArray),
+      ("justification", "kernel accepted the declaration with these levels as fresh universe parameters"),
+      ("generic_type", match r.residualType with | some e => exprJson e | none => .null),
+      ("generic_value", match r.residualValue with | some e => exprJson e | none => .null)]),
+    ("target_ctors", Json.arr (r.targetCtors.map fun (n, e) =>
+      Json.mkObj [("name", n.toString), ("type", exprJson e)]))]
+  -- assembly (docs/ASSEMBLY.md): the row's assembly state; a carried-over row is its validated JSON
+  let asm : List (String × Json) := if r.assembly.isEmpty then [] else [
+    ("assembly", r.assembly), ("assembly_note", r.assemblyNote), ("proof_state", r.proofState),
+    ("assembled_from", match r.assembledFrom with | some n => Json.str n.toString | none => .null),
+    ("proof_target", match r.proofTarget with | some n => Json.str n.toString | none => .null),
+    ("proof_template", match r.proofTemplate with | some n => Json.str n.toString | none => .null),
+    ("proof_type", match r.proofType with | some e => exprJson e | none => .null),
+    ("proof_value", match r.proofValue with | some e => exprJson e | none => .null)]
+  match r.verbatim with
+  | some v@(.obj _) => asm.foldl (fun j (k, x) => j.setObjVal! k x) v
+  | _ => Json.mkObj (rest ++ universes ++ asm)
+
+/-! ## Assembly (docs/ASSEMBLY.md)
+
+The validated statement library (`Rocq2LeanOut`) and the verified proof templates
+(`RocqProofTemplates.T<task_id>.proof`, each proving its task statement, generalized over the task's
+prerequisites) are imported. The export is translated again, in order:
+
+* a row the validated library accepted is translated again and must be *identical* to the imported
+  declaration (`addOrReuse`); it is not added a second time;
+* a proof task whose statement is accepted and whose template was supplied gets its final theorem
+  `Rocq.<leaf> : Rocq.<leaf>.statement := T Rocq.<p₁> … Rocq.<pₖ>` (its prerequisites' final
+  theorems), *if the kernel accepts that instantiation at the final statement*. A template about a
+  pending artifact does not prove a statement about a re-emitted inductive (a new type): the kernel
+  refuses, and the row records `ASSEMBLY_TRANSPORT_REQUIRED` — nothing is cast or identified;
+* a pending row whose prerequisite leaves all have final theorems, and whose dependencies are all
+  available, is translated again without hypotheses, as `Rocq.<name>` (`ASSEMBLED`);
+* every other row is carried over unchanged from the validated report (its pending artifact stays in
+  `Rocq2LeanOut`; `PENDING`, `OPAQUE_BINDING_PENDING`, `ASSEMBLY_BLOCKED`, `NOT_TRANSLATED`).
+
+Opaque data is never assembled here: no submitted value may stand for a source body (A′). -/
+
+/-- Assembly input: the validated report's rows by source, and the verified proof templates by proof
+task (leaf key ↦ template constant). -/
+structure AsmInput where
+  validated : Std.HashMap String Json
+  templates : Std.HashMap String Name
+  deriving Inhabited
+
+private def jStr (j : Json) (k : String) : String := (j.getObjValAs? String k).toOption.getD ""
+
+def asmAcceptedSt : List String := ["TRANSLATED_AND_CHECKED", "STATEMENT_KERNEL_CHECKED", "BOOTSTRAP_RESOLVED"]
+def asmPendingSt : List String := ["PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED"]
+
+/-- A row carried over from the validated report. -/
+def asmCopy (d : IR.Decl) (v : Json) (state note : String) : DeclResult :=
+  { source := d.name, kind := match d with | .constant _ => "constant" | _ => "inductive",
+    status := jStr v "status", message := jStr v "message",
+    target := if (jStr v "target").isEmpty then none else some (jStr v "target").toName,
+    pendingHyps := (v.getObjValAs? (Array String) "pending_hypotheses").toOption.getD #[],
+    blockedBy := (v.getObjValAs? (Array String) "blocked_by").toOption.getD #[],
+    assembly := state, assemblyNote := note, verbatim := some v }
+
+/-- The dependencies of a declaration (its statement's, for a proof task). -/
+def declDeps (d : IR.Decl) : Array String := match d with
+  | .constant c => c.typeDeps ++ c.bodyDeps
+  | .inductive i => i.typeDeps.filter (· != i.name)
+
+/-- Before translating `d` in assembly: `some row` when the validated row is carried over unchanged. -/
+def asmBefore (a : AsmInput) (opaqueData : Std.HashSet String) (results : Std.HashMap String DeclResult)
+    (d : IR.Decl) : DeclResult ⊕ Unit :=
+  match a.validated[d.name]? with
+  | none => .inl { source := d.name, kind := "", status := "ASSEMBLY_REJECTED", assembly := "ASSEMBLY_REJECTED",
+                   assemblyNote := "no row in the validated report" }
+  | some v =>
+    let st := jStr v "status"
+    if asmAcceptedSt.contains st then .inr ()
+    else if !asmPendingSt.contains st then .inl (asmCopy d v "NOT_TRANSLATED" s!"validated status {st}")
+    else
+      let hs := (v.getObjValAs? (Array String) "pending_hypotheses").toOption.getD #[]
+      let waiting := hs.filter fun h => !((results[h]?.map (·.proofTarget.isSome)).getD false)
+      if !waiting.isEmpty then
+        let opq := waiting.filter opaqueData.contains
+        if opq.isEmpty then .inl (asmCopy d v "PENDING" s!"waiting for proofs of {waiting}")
+        else
+          let rest := waiting.filter (!opq.contains ·)
+          let more := if rest.isEmpty then "" else s!" and proofs of {rest}"
+          .inl (asmCopy d v "OPAQUE_BINDING_PENDING"
+            s!"waiting for opaque data values {opq} (not assembled: no submitted value stands for a source body; A′){more}")
+      else
+        let blocked := (declDeps d).filter fun x => match results[x]? with
+          | some r => !r.available
+          | none => false
+        if blocked.isEmpty then .inr ()
+        else .inl (asmCopy d v "ASSEMBLY_BLOCKED" s!"dependencies not assembled: {blocked}")
+
+/-- The final theorem of a proof task: its verified template instantiated at its prerequisites' final
+theorems, at the final (accepted, audited) statement. Refused — `ASSEMBLY_TRANSPORT_REQUIRED` — unless
+the kernel accepts exactly that; the submitted proof is never rewritten or cast. -/
+def assembleProof (results : Std.HashMap String DeclResult) (r : DeclResult) (leaf : String) (tmpl : Name)
+    (hyps : Array String) : MetaM DeclResult := do
+  let transport (msg : String) : DeclResult :=
+    { r with proofState := "ASSEMBLY_TRANSPORT_REQUIRED", proofTemplate := some tmpl,
+             assemblyNote := s!"verified template {tmpl} not reusable at the final statement: {msg}" }
+  let some stmt := r.target | return transport "no statement target"
+  let thm := targetName leaf
+  if (← getEnv).contains thm then return transport s!"{thm} already declared"
+  let some tci := (← getEnv).find? tmpl | return transport "template not imported"
+  let mut val := mkConst tmpl (← tci.levelParams.mapM fun _ => mkFreshLevelMVar)
+  for h in hyps do
+    let some pt := (results[h]?).bind (·.proofTarget) | return transport s!"prerequisite {h} has no final theorem"
+    let hci ← getConstInfo pt
+    val := mkApp val (mkConst pt (← hci.levelParams.mapM fun _ => mkFreshLevelMVar))
+  let want := mkConst stmt (r.levelParams.map Level.param)
+  let ok ← try isDefEq (← inferType val) want catch _ => pure false
+  unless ok do return transport "the instantiated template's type is not convertible to the final statement"
+  val ← instantiateMVars val
+  if val.hasLevelMVar || val.hasExprMVar then return transport "universe levels of the instantiation left unresolved"
+  match ← addChecked (.thmDecl { name := thm, levelParams := r.levelParams, type := want, value := val, all := [thm] }) with
+  | .accepted =>
+    return { r with proofState := "PROOF_ASSEMBLED", proofTarget := some thm, proofTemplate := some tmpl,
+                    proofType := some want, proofValue := some val }
+  | .rejected msg => return transport s!"kernel: {msg.take 600}"
+
+/-- After translating `d` in assembly: classify the row against its validated row, and assemble the
+final theorem of a proof task. Returns the row and whether the translation result (and its `GEnv`
+update) is kept. -/
+def asmAfter (a : AsmInput) (opaqueData : Std.HashSet String) (results : Std.HashMap String DeclResult)
+    (d : IR.Decl) (r : DeclResult) : MetaM (DeclResult × Bool) := do
+  let some v := a.validated[d.name]? | return (r, false)
+  let vst := jStr v "status"
+  let mut r := r
+  if asmAcceptedSt.contains vst then
+    -- the validated row, reproduced exactly (determinism of the translation, identity with the import)
+    let rj := r.toJson
+    let keys := ["status", "target", "target_kind", "target_type", "target_value", "target_ctors", "level_params",
+                 "pending_hypotheses"]
+    let diff := keys.filter fun k => rj.getObjValD k != v.getObjValD k
+    if diff.isEmpty then r := { r with assembly := "VALIDATED" }
+    else return ({ r with assembly := "REUSE_MISMATCH", assemblyNote := s!"differs from the validated row in {diff}" }, true)
+  else
+    if !asmAcceptedSt.contains r.status then
+      return (asmCopy d v "ASSEMBLY_REJECTED" s!"translation without hypotheses gave {r.status}: {r.message.take 600}", false)
+    r := { r with assembly := "ASSEMBLED", assembledFrom := (if (jStr v "target").isEmpty then none else some (jStr v "target").toName) }
+  -- proof tasks: the final theorem
+  if r.status == "STATEMENT_KERNEL_CHECKED" then
+    if opaqueData.contains d.name then
+      r := { r with proofState := "OPAQUE_BINDING_PENDING",
+                    assemblyNote := "opaque data: a value is not accepted from a submission (A′ translates the source body)" }
+    else match a.templates[d.name]? with
+      | none => r := { r with proofState := "PROOF_NOT_SUPPLIED" }
+      | some tmpl =>
+        let hs := (v.getObjValAs? (Array String) "pending_hypotheses").toOption.getD #[]
+        r ← assembleProof results r d.name tmpl hs
+  return (r, true)
+
+/-- Translate all declarations of an export, in order (`asm?`: assembly, see above). -/
+def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}) (asm? : Option AsmInput := none) :
+    MetaM (Array DeclResult) := do
   let irBodies := src.decls.foldl (init := ({} : Std.HashMap String IR.Term)) fun m d => match d with
     | .constant c => match c.body, c.universes with
       | some b, .monomorphic => if c.bodyState == "transparent" then m.insert c.name b else m
@@ -760,10 +1041,20 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     | .constant c => if irBodies.contains c.name && c.type.hasSetMotive then m.insert c.name else m
     | _ => m
   let stmtMode := ((src.header.getObjVal? "mode").toOption.bind (fun m => (m.getObjValAs? String "name").toOption)) == some "statement"
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, protectedNames, stmtMode }
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, protectedNames, stmtMode, reuseExisting := asm?.isSome }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
+  let opaqueData : Std.HashSet String := src.decls.foldl (init := {}) fun m d => match d with
+    | .constant c => if c.bodyState == "opaque_interface" then m.insert c.name else m
+    | _ => m
   for d in src.decls do
+    -- assembly: a row that stays as validated is carried over without translation
+    if let some a := asm? then
+      if let .inl r := asmBefore a opaqueData results d then
+        let r := { r with protectedIface := protectedNames.contains r.source }
+        results := results.insert r.source r
+        out := out.push r
+        continue
     -- the heartbeat budget is per declaration; a declaration exceeding it is a RESOURCE_LIMIT row
     let saved ← saveState
     -- (an internal error of one declaration is its TRANSLATION_FAILED row, not the end of the run)
@@ -774,13 +1065,29 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
         (withCurrHeartbeats (translateDecl genv results d))) fun e => do
       saved.restore
       pure (Sum.inr (e.isRuntime, ← e.toMessageData.toString))
-    let r ← match r? with
-      | .inl (r, genv') => genv := genv'; pure r
+    let (r, genv?) := match r? with
+      | .inl (r, genv') => (r, some genv')
       | .inr (rt, msg) =>
-        pure { source := d.name, kind := match d with | .constant _ => "constant" | _ => "inductive",
-               status := if rt then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
-               message := if rt then s!"resource limit per declaration: {msg.take 300}" else s!"internal error: {msg.take 600}" }
-    let r := { r with protectedIface := protectedNames.contains r.source }
+        ({ source := d.name, kind := match d with | .constant _ => "constant" | _ => "inductive",
+           status := if rt then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
+           message := if rt then s!"resource limit per declaration: {msg.take 300}" else s!"internal error: {msg.take 600}" }, none)
+    let mut r := r
+    match asm? with
+    | none => if let some g := genv? then genv := g
+    | some a =>
+      let (r', keep) ← asmAfter a opaqueData results d r
+      r := r'
+      if keep then if let some g := genv? then genv := g
+      -- a proof task's final theorem is referenced like an accepted constant by its dependents
+      if let some thm := r.proofTarget then
+        genv := { genv with consts := genv.consts.insert d.name thm,
+                            constLevels := genv.constLevels.insert d.name r.levelParams.length,
+                            constGlobals := if r.levelParams.isEmpty then genv.constGlobals
+                              else genv.constGlobals.insert thm r.paramLevels }
+        if r.polyParams > 0 then
+          genv := { genv with constPoly := genv.constPoly.insert d.name r.polyParams,
+                              polyByTarget := genv.polyByTarget.insert thm r.polyParams }
+    r := { r with protectedIface := protectedNames.contains r.source }
     results := results.insert r.source r
     out := out.push r
   return out
@@ -943,77 +1250,5 @@ where
               genv := { genv with templateLevels := genv.templateLevels.insert l }
         pure r
     return (r, genv)
-
-/-! ## Report -/
-
-partial def levelJson : Level → Json
-  | .zero => Json.mkObj [("k", "zero")]
-  | .succ l => Json.mkObj [("k", "succ"), ("l", levelJson l)]
-  | .max a b => Json.mkObj [("k", "max"), ("a", levelJson a), ("b", levelJson b)]
-  | .imax a b => Json.mkObj [("k", "imax"), ("a", levelJson a), ("b", levelJson b)]
-  | .param n => Json.mkObj [("k", "param"), ("n", n.toString)]
-  | .mvar _ => Json.mkObj [("k", "mvar")]
-
-/-- Lean `Expr` as JSON, for the independent audit. Binder names are kept but are not compared. -/
-partial def exprJson : Expr → Json
-  | .bvar i => Json.mkObj [("k", "bvar"), ("i", i)]
-  | .fvar _ => Json.mkObj [("k", "fvar")]
-  | .mvar _ => Json.mkObj [("k", "mvar")]
-  | .sort l => Json.mkObj [("k", "sort"), ("l", levelJson l)]
-  | .const n ls => Json.mkObj [("k", "const"), ("n", n.toString), ("u", Json.arr (ls.map levelJson).toArray)]
-  | .app f a => Json.mkObj [("k", "app"), ("f", exprJson f), ("a", exprJson a)]
-  | .lam n t b _ => Json.mkObj [("k", "lam"), ("n", n.toString), ("t", exprJson t), ("b", exprJson b)]
-  | .forallE n t b _ => Json.mkObj [("k", "forall"), ("n", n.toString), ("t", exprJson t), ("b", exprJson b)]
-  | .letE n t v b _ =>
-    Json.mkObj [("k", "let"), ("n", n.toString), ("t", exprJson t), ("v", exprJson v), ("b", exprJson b)]
-  | .lit (.natVal n) => Json.mkObj [("k", "natlit"), ("v", n)]
-  | .lit (.strVal s) => Json.mkObj [("k", "strlit"), ("v", s)]
-  | .mdata _ e => Json.mkObj [("k", "mdata"), ("e", exprJson e)]
-  | .proj s i e => Json.mkObj [("k", "proj"), ("s", s.toString), ("i", i), ("e", exprJson e)]
-
-def DeclResult.toJson (r : DeclResult) : Json :=
-  -- (two typed halves: one long list literal is beyond the elaborator's coercion heuristics)
-  let universes : List (String × Json) := [
-    ("universe_cumulativity", Json.bool r.cumulativity),
-    ("universe_lowered", Json.bool r.universeLowered),
-    ("plain_levels", Json.bool r.plainLevels),
-    ("delta_inlined", Json.arr (r.deltaInlined.map Json.str)),
-    ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>
-      Json.mkObj [("level", m), ("sigma", levelJson l), ("in_type", Json.bool (r.r2bpInType.contains m))])),
-    ("sort_lowered_levels", Json.arr (r.sortLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
-    ("protected", Json.bool r.protectedIface),
-    ("pending_hypotheses", Json.arr (r.pendingHyps.map Json.str))]
-  let rest : List (String × Json) := [
-    ("source", r.source), ("kind", r.kind), ("status", r.status), ("rule", r.rule),
-    ("target", match r.target with | some n => Json.str n.toString | none => .null),
-    ("target_kind", r.targetKind), ("message", r.message),
-    ("path", Json.arr (r.path.map Json.str).toArray),
-    ("blocked_by", Json.arr (r.blockedBy.map Json.str)),
-    ("target_type", match r.targetType with | some e => exprJson e | none => .null),
-    ("target_value", match r.targetValue with | some e => exprJson e | none => .null),
-    ("level_params", Json.arr (r.levelParams.map (Json.str ·.toString)).toArray),
-    ("num_params", r.numParams),
-    ("template", r.isTemplate),
-    ("primitive_record", r.primitiveRecord),
-    ("universe_minimal_levels", r.minimalLevels),
-    ("solved_levels", Json.arr (r.bodyLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
-    ("template_params", Json.arr (r.templateParams.map fun (l, k) => Json.mkObj [("level", l), ("param", k)])),
-    ("universe_level_defaults", r.levelDefaults),
-    ("universe_poly_params", r.polyParams),
-    ("sort_fact_reduced", r.factReduced),
-    ("implicit_levels", Json.arr (r.implicitLevels.map Json.str)),
-    ("admitting_levels", Json.arr (r.admittingLevels.map Json.str)),
-    ("level_interp", Json.arr (r.levelInterp.map fun (l, x) => Json.mkObj [("level", l), ("sigma", levelJson x)])),
-    ("universe_checks", r.universeChecks),
-    ("universe_diagnostics", Json.arr (r.levelDiagnostics.map Json.str)),
-    ("universe_residuals", if r.residualParams.isEmpty then .null else Json.mkObj [
-      ("params", Json.arr (r.residualParams.map (Json.str ·.toString)).toArray),
-      ("defaults", Json.arr (r.residualDefaults.map levelJson).toArray),
-      ("justification", "kernel accepted the declaration with these levels as fresh universe parameters"),
-      ("generic_type", match r.residualType with | some e => exprJson e | none => .null),
-      ("generic_value", match r.residualValue with | some e => exprJson e | none => .null)]),
-    ("target_ctors", Json.arr (r.targetCtors.map fun (n, e) =>
-      Json.mkObj [("name", n.toString), ("type", exprJson e)]))]
-  Json.mkObj (rest ++ universes)
 
 end Rocq2Lean

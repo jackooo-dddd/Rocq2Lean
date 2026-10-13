@@ -1,5 +1,15 @@
 # Acceptance invariants
 
+Statement mode (current direction): `rocq2lean validate` applies G1, G3, G6 (axiom-free library), G7
+and the interface gate to every row the translator claims, with the statement-mode detectors and the
+statement audit (`docs/STATEMENT_ONLY_DESIGN.md` §8, `reports/statement_only/VALIDATION_REPORT.md`);
+roots need not all be translated, and unclaimed rows are reported, not certified. `rocq2lean assemble`
+adds the assembly gates of `docs/ASSEMBLY.md` (claimed submissions verified and hash-bound; validated
+rows reproduced identically; final theorems exactly their template applied to their prerequisites'
+theorems; assembled rows audited with proved tasks as constants; axioms reported per target, within the
+allowance). Tests: `scripts/test-statement`, `scripts/test-assembly`. The rest of this file describes
+the proof-transport `verify` gate (historical, still tested by `scripts/test-all`).
+
 `rocq2lean verify --run RUN` publishes `verify.json` with `status: VERIFIED` **only if every
 invariant below holds**; otherwise it publishes the failure status (atomically) and exits 2.
 Each invariant names the component that enforces it and the test that exercises it.

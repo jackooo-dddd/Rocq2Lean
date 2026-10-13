@@ -101,6 +101,9 @@ structure GEnv where
   /-- Statement mode (the IR header's mode): enables the statement-mode-only rules (R3G pick on a
   level some of whose arguments are already determined expressions). -/
   stmtMode : Bool := false
+  /-- Assembly (docs/ASSEMBLY.md): the validated statement library is imported; a declaration it
+  already contains is matched against the imported one (identical, or rejected) instead of added. -/
+  reuseExisting : Bool := false
   deriving Inhabited
 
 /-- M6 accessibility lowering (`transFixAcc`): the recursive calls of the fixpoint being lowered.

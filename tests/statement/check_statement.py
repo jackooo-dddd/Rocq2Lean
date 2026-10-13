@@ -284,18 +284,20 @@ check(rc2 == 0 and [json.loads(l)["task_id"] for l in open(fa / "PROOF_TASKS.jso
 kinds = {t["source"]["kernel_name"]: t["kind"] for t in tasks}
 check(kinds.get("SF.Stmt.half_sig__rocq2lean_obligation_1") == "obligation" and kinds.get("SF.Stmt.double_succ") == "theorem_statement",
       "task kinds: theorem statements and extracted obligations")
-check(all(t["status"] == "PROOF_PENDING" and t["lean"]["reserved_name"] == "Rocq." + t["source"]["kernel_name"] for t in tasks),
-      "every task is PROOF_PENDING with its reserved theorem name")
+check(all(t["status"] == "PROOF_PENDING" and t["lean"]["reserved_name"] == f"RocqProofTemplates.T{t['task_id']}.proof"
+          and t["lean"]["final_name"] == "Rocq." + t["source"]["kernel_name"] for t in tasks),
+      "every task is PROOF_PENDING with its template name (Rocq.<name> reserved for assembly)")
 t0 = next(t for t in tasks if t["source"]["kernel_name"] == "SF.Stmt.double_succ")
 OUT["tasks_fixture"] = {"count": len(tasks), "example": t0}
+TN = t0["lean"]["reserved_name"]
 negs = {
-    "sorry": "import Rocq2LeanOut\ntheorem Rocq.SF.Stmt.double_succ : Rocq.SF.Stmt.double_succ.statement := sorry\n",
-    "wrong-statement": "import Rocq2LeanOut\ntheorem Rocq.SF.Stmt.double_succ : True := trivial\n",
-    "custom-axiom": "import Rocq2LeanOut\naxiom cheat : Rocq.SF.Stmt.double_succ.statement\n"
-                    "theorem Rocq.SF.Stmt.double_succ : Rocq.SF.Stmt.double_succ.statement := cheat\n",
-    "declared-axiom": "import Rocq2LeanOut\naxiom Rocq.SF.Stmt.double_succ : Rocq.SF.Stmt.double_succ.statement\n",
+    "sorry": f"import Rocq2LeanOut\ntheorem {TN} : Rocq.SF.Stmt.double_succ.statement := sorry\n",
+    "wrong-statement": f"import Rocq2LeanOut\ntheorem {TN} : True := trivial\n",
+    "custom-axiom": f"import Rocq2LeanOut\naxiom cheat : Rocq.SF.Stmt.double_succ.statement\n"
+                    f"theorem {TN} : Rocq.SF.Stmt.double_succ.statement := cheat\n",
+    "declared-axiom": f"import Rocq2LeanOut\naxiom {TN} : Rocq.SF.Stmt.double_succ.statement\n",
     "missing": "import Rocq2LeanOut\ntheorem other : True := trivial\n",
-    "not-compiling": "import Rocq2LeanOut\ntheorem Rocq.SF.Stmt.double_succ : Rocq.SF.Stmt.double_succ.statement := by exact 0\n",
+    "not-compiling": f"import Rocq2LeanOut\ntheorem {TN} : Rocq.SF.Stmt.double_succ.statement := by exact 0\n",
 }
 OUT["check_proof_negatives"] = {}
 for label, text in negs.items():

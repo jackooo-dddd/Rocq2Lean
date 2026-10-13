@@ -478,6 +478,36 @@ let check_relation a b want =
     else Feedback.msg_info Pp.(str ("UREL_MISMATCH " ^ a ^ " " ^ b ^ " expected=" ^ want ^ " native=" ^ got))
   | _ -> Feedback.msg_info Pp.(str ("UREL_UNKNOWN " ^ a ^ " " ^ b))
 
+(* Rocq2Lean CheckRelations "in.tsv" "out.txt": re-check every fact of [in.tsv] (one "a<TAB>b<TAB>want"
+   per line) exactly as CheckRelation does, building the graph's name table once; one UREL_* line per
+   fact is written to [out.txt] (the per-call table made large exports' pairwise checks quadratic in
+   the graph's domain). *)
+let check_relations inp outp =
+  let g = Environ.universes (Global.env ()) in
+  let by_name = Hashtbl.create 4096 in
+  Univ.Level.Set.iter (fun l -> Hashtbl.replace by_name (level_name l) l) (UGraph.domain g);
+  Hashtbl.replace by_name "Set" Univ.Level.set;
+  let ic = open_in inp and oc = open_out outp in
+  let n = ref 0 in
+  (try
+     while true do
+       let line = input_line ic in
+       match String.split_on_char '\t' line with
+       | [ a; b; want ] ->
+         incr n;
+         (match (Hashtbl.find_opt by_name a, Hashtbl.find_opt by_name b) with
+          | Some la, Some lb ->
+            let got = if a = b then "eq" else native_relation g la lb in
+            if got = want then output_string oc ("UREL_OK " ^ a ^ " " ^ b ^ " " ^ want ^ "\n")
+            else output_string oc ("UREL_MISMATCH " ^ a ^ " " ^ b ^ " expected=" ^ want ^ " native=" ^ got ^ "\n")
+          | _ -> output_string oc ("UREL_UNKNOWN " ^ a ^ " " ^ b ^ "\n"))
+       | _ -> ()
+     done
+   with End_of_file -> ());
+  close_in ic;
+  close_out oc;
+  Feedback.msg_info Pp.(str ("UREL_DONE " ^ string_of_int !n))
+
 (* Rocq2Lean NativeMeta "key" "constant|inductive": recompute the native metadata of one
    declaration in a fresh process. Keys are parsed back to kernel names (IR_SPEC "Keys"). *)
 let kername_of_key key =

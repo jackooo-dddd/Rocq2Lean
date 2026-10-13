@@ -299,8 +299,56 @@ def subset(roots, out):
     print(f"{n} declarations for {len(rl)} roots -> {out}")
 
 
+def sha(p):
+    return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+
+
+def assemble_dry():
+    """Assembly of the corpus with *no* submitted proofs (docs/ASSEMBLY.md): every validated row must
+    be reproduced identically against the imported library (no REUSE_MISMATCH), every pending row
+    carried over, and the assembly consumer and audit must pass. Evidence that assembly is a no-op on
+    the corpus until proofs exist; it adds no coverage."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import rocq2lean as R
+    A = RUN / "assembly-dry"
+    A.mkdir(parents=True, exist_ok=True)
+    (A / "lean").mkdir(exist_ok=True)
+    proofs = A / "proofs.json"
+    proofs.write_text(json.dumps({"schema": "rocq2lean-assembly-proofs/1", "allowed_axioms": R.DEFAULT_ALLOWED_AXIOMS,
+                                  "proofs": []}, indent=1) + "\n")
+    src, con, rep, out = RUN / "source.ndjson", RUN / "contract.json", RUN / "translation_report.json", A / "assembly_report.json"
+    mod = A / "lean" / "Rocq2LeanAssembled.lean"
+    mod.write_text(f'import Rocq2Lean\nimport Rocq2LeanOut\n#rocq2lean_assemble "{src}" "{sha(src)}" "{con}" "{sha(con)}" '
+                   f'"{rep}" "{sha(rep)}" "{proofs}" "{sha(proofs)}" "{out}"\n')
+    lp = subprocess.run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], capture_output=True, text=True,
+                        env=R.lean_env()).stdout.strip()
+    env = dict(R.lean_env(), LEAN_PATH=":".join([lp, str(RUN / "lean"), str(A / "lean")]))
+    p = subprocess.run([f"{R.HOME}/.elan/bin/lean", f"--root={A / 'lean'}", mod.name, "-o", "Rocq2LeanAssembled.olean"],
+                       cwd=A / "lean", env=env, capture_output=True, text=True)
+    (A / "assemble.out").write_text(p.stdout + p.stderr)
+    print("assemble exit", p.returncode)
+    cres = A / "consumer_result.json"
+    (A / "lean" / "Consumer.lean").write_text(f'import Rocq2LeanAssembled\nimport Rocq2Lean.Verify\n'
+                                              f'#rocq2lean_verify "{con}" "{out}" "{cres}" "{proofs}"\n')
+    p2 = subprocess.run([f"{R.HOME}/.elan/bin/lean", "Consumer.lean"], cwd=A / "lean", env=env, capture_output=True, text=True)
+    (A / "consumer.out").write_text(p2.stdout + p2.stderr)
+    p3 = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), str(src), str(con), str(out),
+                         str(A / "audit.json"), str(cres), "--assembly", str(proofs), "--validated", str(rep)],
+                        capture_output=True, text=True)
+    (A / "audit.out").write_text(p3.stdout + p3.stderr)
+    r = json.loads(out.read_text()) if out.exists() else {}
+    c = json.loads(cres.read_text()) if cres.exists() else {}
+    a = json.loads((A / "audit.json").read_text()) if (A / "audit.json").exists() else {}
+    res = {"assemble_exit": p.returncode, "assembly_status": r.get("status"), "summary": r.get("assembly"),
+           "consumer": c.get("status"), "consumer_failed": [d for d, v in (c.get("detectors") or {}).items() if v != "OK"],
+           "audit": a.get("status"), "audit_problems": len(a.get("problems", []))}
+    (A / "result.json").write_text(json.dumps(res, indent=1) + "\n")
+    print(json.dumps(res, indent=1))
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "subset":
         subset(sys.argv[2].split(","), sys.argv[3])
         sys.exit(0)
-    {"merge": merge, "translate": translate, "check": check, "summary": summary, "tasks": tasks}[sys.argv[1]]()
+    {"merge": merge, "translate": translate, "check": check, "summary": summary, "tasks": tasks,
+     "assemble-dry": assemble_dry}[sys.argv[1]]()

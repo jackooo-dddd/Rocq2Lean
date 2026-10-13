@@ -290,28 +290,35 @@
  "tasks_fixture": {
   "count": 5,
   "example": {
+   "accepts_submissions": true,
    "allowed_axioms": [
     "propext",
     "Quot.sound",
     "Classical.choice"
    ],
+   "blocker": null,
    "kind": "theorem_statement",
    "lean": {
     "declaration_kind": "theorem",
+    "final_name": "Rocq.SF.Stmt.double_succ",
     "level_params": [],
-    "output_file": "RocqProofs/SF/Stmt/double_succ.lean",
-    "output_module": "RocqProofs.SF.Stmt.double_succ",
+    "output_file": "RocqProofTemplates/T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093.lean",
+    "output_module": "RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093",
     "required_modules": [
      "Rocq2LeanOut"
     ],
-    "reserved_name": "Rocq.SF.Stmt.double_succ",
+    "reserved_name": "RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093.proof",
     "statement": "\u2200 (n : Nat), Rocq.SF.Stmt.double n.succ = (Rocq.SF.Stmt.double n).succ.succ",
     "statement_constant": "Rocq.SF.Stmt.double_succ.statement",
     "task_statement": "Rocq.SF.Stmt.double_succ.statement",
     "task_statement_sha256": "3a1c4f809abd943cc4bf3b769c995ca7eff7dd7a8f29f94baf06ce0e313252c7"
    },
    "prerequisites": {
-    "note": "the task statement is generalized over its prerequisites; they bind only the assembly",
+    "generalization": {
+     "form": "none",
+     "justification": "the task statement is the final statement",
+     "prerequisite_kinds": {}
+    },
     "pending": [],
     "proved": []
    },
@@ -336,8 +343,8 @@
    "validation": {
     "audit_verdict": "MATCH",
     "row_status": "STATEMENT_KERNEL_CHECKED",
-    "run_id": "02ab7e8b-c2d2-4647-ba97-70df5e35d29e",
-    "validate_sha256": "03b5e4e3585023c56ea2da2e62aefef03f3daf4f41b2b0ab45874d9133f244a6"
+    "run_id": "a84f145e-dcce-4705-ae9e-abad9fecf5d3",
+    "validate_sha256": "773fb73374a704c6a94c9de474d1ae03651e1c2c14f1b1d322fef5a7a7656f16"
    }
   }
  },
@@ -346,36 +353,38 @@
    "exit": 2,
    "status": "PROOF_REJECTED",
    "problems": [
-    "Rocq.SF.Stmt.double_succ depends on sorryAx"
+    "RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093.proof depends on sorryAx"
    ]
   },
   "wrong-statement": {
    "exit": 2,
    "status": "PROOF_REJECTED",
    "problems": [
-    "Rocq.SF.Stmt.double_succ: its type is not syntactically the task statement"
+    "RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093.proof: its type is not syntactically the task statement"
    ]
   },
   "custom-axiom": {
    "exit": 2,
    "status": "PROOF_REJECTED",
    "problems": [
-    "Rocq.SF.Stmt.double_succ depends on the axiom cheat, outside the allowance #[propext, Quot.sound, Classical.choice]"
+    "the submitted module declares cheat outside RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093",
+    "RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093.proof depends on the axiom cheat, outside the allowance #[propext, Quot.sound, Classical.choice]"
    ]
   },
   "declared-axiom": {
    "exit": 2,
    "status": "PROOF_REJECTED",
    "problems": [
-    "Rocq.SF.Stmt.double_succ is an axiom",
-    "Rocq.SF.Stmt.double_succ depends on the axiom Rocq.SF.Stmt.double_succ, outside the allowance #[propext, Quot.sound, Classical.choice]"
+    "RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093.proof is an axiom",
+    "RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093.proof depends on the axiom RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093.proof, outside the allowance #[propext, Quot.sound, Classical.choice]"
    ]
   },
   "missing": {
    "exit": 2,
    "status": "PROOF_REJECTED",
    "problems": [
-    "Rocq.SF.Stmt.double_succ is not declared by the submitted module"
+    "the submitted module declares other outside RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093",
+    "RocqProofTemplates.T43c6ca4851a9175c545828ae877e6be3fb24c8de116be536e89ced4da49be093.proof is not declared by the submitted module"
    ]
   },
   "not-compiling": {

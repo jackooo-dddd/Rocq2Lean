@@ -352,15 +352,21 @@ def check_universes(lines, out, loadpaths, requires):
     # Fresh-process native re-check of every ordered pair.
     plugin = Path(__file__).resolve().parent.parent / "rocq" / "exporter"
     v = ["From Rocq2LeanExport Require Import Loader.", *[f"Require {r}." for r in requires]]
+    # every ordered pair, in one pass of `Rocq2Lean CheckRelations` (the same check as CheckRelation)
     pairs = [(a, b) for a in names for b in names if a != b]
-    v += [f'Rocq2Lean CheckRelation "{a}" "{b}" "{rel.get((a, b), "none")}".' for a, b in pairs]
+    tsv, res = (out / "RoundTripUniverses.tsv").resolve(), (out / "RoundTripUniverses.out").resolve()
+    tsv.write_text("".join(f"{a}\t{b}\t{rel.get((a, b), 'none')}\n" for a, b in pairs))
+    if res.exists():
+        res.unlink()
+    v.append(f'Rocq2Lean CheckRelations "{tsv}" "{res}".')
     vfile = out / "RoundTripUniverses.v"
     vfile.write_text("\n".join(v) + "\n")
     p = subprocess.run(["rocq", "compile", "-I", str(plugin / "src"), "-Q", str(plugin / "theories"), "Rocq2LeanExport",
                         *loadpaths, str(vfile)], capture_output=True, text=True)
     (out / "logs" / "roundtrip_universes.log").write_text(p.stdout + p.stderr)
-    oks = [l for l in (p.stdout + p.stderr).splitlines() if l.startswith("UREL_OK")]
-    bad = [l for l in (p.stdout + p.stderr).splitlines() if l.startswith(("UREL_MISMATCH", "UREL_UNKNOWN"))]
+    lines = res.read_text().splitlines() if res.exists() else []
+    oks = [l for l in lines if l.startswith("UREL_OK")]
+    bad = [l for l in lines if l.startswith(("UREL_MISMATCH", "UREL_UNKNOWN"))]
     problems += bad
     if p.returncode != 0:
         problems.append(f"universe re-check process exited with {p.returncode}")

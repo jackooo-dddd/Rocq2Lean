@@ -1,0 +1,274 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 8,
+   "DEFINITION_AUDITED_PENDING": 4,
+   "STATEMENT_AUDITED": 3,
+   "STATEMENT_AUDITED_PENDING": 3
+  }
+ },
+ "tasks": {
+  "SF.Asm.double_zero": {
+   "kind": "theorem_statement",
+   "generalization": "none",
+   "accepts_submissions": true
+  },
+  "SF.Asm.half_sig__rocq2lean_obligation_1": {
+   "kind": "obligation",
+   "generalization": "none",
+   "accepts_submissions": true
+  },
+  "SF.Asm.is_zero_of_intro": {
+   "kind": "theorem_statement",
+   "generalization": "over_proof_prerequisites",
+   "accepts_submissions": true
+  },
+  "SF.Asm.pick": {
+   "kind": "opaque_value",
+   "generalization": "none",
+   "accepts_submissions": false
+  },
+  "SF.Asm.pick_succ_pos": {
+   "kind": "theorem_statement",
+   "generalization": "over_data_prerequisites",
+   "accepts_submissions": true
+  },
+  "SF.Asm.zero_of_le": {
+   "kind": "theorem_statement",
+   "generalization": "over_proof_prerequisites",
+   "accepts_submissions": true
+  }
+ },
+ "check_proof_refusals": {
+  "opaque_value": [
+   "the submitted module declares Rocq.SF.Asm.double_zero outside RocqProofTemplates.Tb593f09a7640237925e6bd137e323af6dfb194e8e59950f4358353e0f64bed24"
+  ]
+ },
+ "assembly_without_proofs": {
+  "validated": 11,
+  "transport_required": 0,
+  "rows": 18,
+  "reuse_mismatch": 0,
+  "proofs_not_supplied": 2,
+  "proofs_assembled": 0,
+  "proof_tasks": 3,
+  "pending": 5,
+  "opaque_values_unbound": 1,
+  "opaque_binding_pending": 2,
+  "not_translated": 0,
+  "complete": false,
+  "assembly_rejected": 0,
+  "assembly_blocked": 0,
+  "assembled": 0
+ },
+ "assembly": {
+  "exit": 0,
+  "summary": {
+   "validated": 11,
+   "transport_required": 1,
+   "rows": 18,
+   "reuse_mismatch": 0,
+   "proofs_not_supplied": 0,
+   "proofs_assembled": 3,
+   "proof_tasks": 5,
+   "pending": 0,
+   "opaque_values_unbound": 1,
+   "opaque_binding_pending": 2,
+   "not_translated": 0,
+   "complete": false,
+   "assembly_rejected": 0,
+   "assembly_blocked": 0,
+   "assembled": 5
+  },
+  "axioms_by_target": {
+   "Rocq.SF.Asm.zero_of_le.statement": [
+    "propext"
+   ],
+   "Rocq.SF.Asm.zero_of_le": [
+    "propext"
+   ],
+   "Rocq.SF.Asm.zero_of": [
+    "propext"
+   ],
+   "Rocq.SF.Asm.is_zero_of_intro.statement": [
+    "propext"
+   ],
+   "Rocq.SF.Asm.is_zero_of": [
+    "propext"
+   ],
+   "Rocq.SF.Asm.half_sig__rocq2lean_obligation_1": [
+    "propext"
+   ],
+   "Rocq.SF.Asm.half_sig": [
+    "propext"
+   ],
+   "Rocq.SF.Asm.double_zero": []
+  },
+  "proof_dependent_computation": [],
+  "rows": {
+   "Corelib.Init.Datatypes.nat": {
+    "status": "BOOTSTRAP_RESOLVED",
+    "target": "Nat",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Logic.eq": {
+    "status": "BOOTSTRAP_RESOLVED",
+    "target": "Eq",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Nat.add": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Nat.add",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Peano.le": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Peano.le",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Peano.lt": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Peano.lt",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Specif.proj1_sig": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Specif.proj1_sig",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "Corelib.Init.Specif.sig": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.Corelib.Init.Specif.sig",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Asm.double": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Asm.double",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Asm.double_zero": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Asm.double_zero.statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_ASSEMBLED",
+    "proof_target": "Rocq.SF.Asm.double_zero",
+    "assembly_note": ""
+   },
+   "SF.Asm.half_sig": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Asm.half_sig",
+    "assembly": "ASSEMBLED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Asm.half_sig__rocq2lean_obligation_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Asm.half_sig__rocq2lean_obligation_1.statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_ASSEMBLED",
+    "proof_target": "Rocq.SF.Asm.half_sig__rocq2lean_obligation_1",
+    "assembly_note": ""
+   },
+   "SF.Asm.is_zero_of": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Asm.is_zero_of",
+    "assembly": "ASSEMBLED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Asm.is_zero_of_intro": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Asm.is_zero_of_intro.statement",
+    "assembly": "ASSEMBLED",
+    "proof_state": "ASSEMBLY_TRANSPORT_REQUIRED",
+    "proof_target": null,
+    "assembly_note": "verified template RocqProofTemplates.Tb62356d8664001a14103eb34e14c43ae74ace7567f3dab6a5f7f2ac038e4b0e6.proof not reusable at the final statement: the instantiated template's type is not convertible to the final statement"
+   },
+   "SF.Asm.pick": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Asm.pick.type",
+    "assembly": "VALIDATED",
+    "proof_state": "OPAQUE_BINDING_PENDING",
+    "proof_target": null,
+    "assembly_note": "opaque data: a value is not accepted from a submission (A\u2032 translates the source body)"
+   },
+   "SF.Asm.pick_succ": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Asm.pick_succ",
+    "assembly": "OPAQUE_BINDING_PENDING",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": "waiting for opaque data values #[SF.Asm.pick] (not assembled: no submitted value stands for a source body; A\u2032)"
+   },
+   "SF.Asm.pick_succ_pos": {
+    "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Asm.pick_succ_pos.statement",
+    "assembly": "OPAQUE_BINDING_PENDING",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": "waiting for opaque data values #[SF.Asm.pick] (not assembled: no submitted value stands for a source body; A\u2032)"
+   },
+   "SF.Asm.zero_of": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Asm.zero_of",
+    "assembly": "ASSEMBLED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Asm.zero_of_le": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Asm.zero_of_le.statement",
+    "assembly": "ASSEMBLED",
+    "proof_state": "PROOF_ASSEMBLED",
+    "proof_target": "Rocq.SF.Asm.zero_of_le",
+    "assembly_note": ""
+   }
+  }
+ },
+ "computation": {
+  "definitional_reduction": {
+   "exit": 0,
+   "output": ""
+  },
+  "compiled_evaluation": {
+   "exit": 1,
+   "output": "/home/shunqwang4/research/Rocq2Lean/runs/st-asm/assembly/bf57a19731a52fa7/lean/Probe_compiled_evaluation.lean:2:0: error: Failed to find LCNF signature for Rocq.SF.Asm.zero_of"
+  },
+  "propositional_equations": "not applicable: the fixture has no recursion through a proof"
+ },
+ "negatives_last_output": "d88185dcc53bf4c2ce9a289af: checked against another validation (stale); b593f09a7640237925e6bd137e323af6dfb194e8e59950f4358353e0f64bed24: checked against another validation (stale); b62356d8664001a14103eb34e14c43ae74ace7567f3dab6a5f7f2ac038e4b0e6: checked against another validation (stale); f87a5762d1d2623e3d98c28d55acb825110364ea0e7f8cddaf820cb99bc0876a: checked against another validation (stale)\n"
+}

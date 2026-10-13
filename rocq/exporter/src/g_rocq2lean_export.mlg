@@ -34,6 +34,13 @@ VERNAC COMMAND EXTEND Rocq2LeanCheckRelation CLASSIFIED AS QUERY
   }
 END
 
+(* Rocq2Lean CheckRelations "in.tsv" "out.txt": CheckRelation for every fact of a file, in one pass. *)
+VERNAC COMMAND EXTEND Rocq2LeanCheckRelations CLASSIFIED AS QUERY
+| [ "Rocq2Lean" "CheckRelations" string(inp) string(outp) ] -> {
+    R2l_export.check_relations inp outp
+  }
+END
+
 (* Rocq2Lean CheckPrepared "key": prepared (sealed implementation / lowered) type and body of a
    constant, after Rocq's kernel re-check, for the fresh-process round trip. *)
 VERNAC COMMAND EXTEND Rocq2LeanCheckPrepared CLASSIFIED AS QUERY STATE opaque_access

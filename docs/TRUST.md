@@ -1,6 +1,23 @@
 # Trust boundary
 
-**Claim supported:** for a `VERIFIED` run, the requested roots and their whole required
+**Statement-only claim (current direction).** For a `STATEMENT_VALIDATED` run, every row the
+translator claims was kernel-checked at insertion; a fresh Lean process re-read it against the report
+(kind, type, value, levels, constructors; no axiom, `theorem`, `opaque` or `sorry` in the library); the
+independent audit restated it from the source record (statement view, recomputed prerequisites,
+hypothesis telescope, term-by-term comparison, universe rules); and no protected declaration was
+specialized. An accepted proposition definition is *not* a proved theorem; a pending artifact is checked
+under hypotheses for its unproved prerequisites and is *not* the final public interface; rows the
+translator did not claim are reported, not certified. Assembly (`docs/ASSEMBLY.md`) adds final
+declarations only from verified, hash-bound submissions, and reports the axioms they bring.
+
+The corpus run (`runs/st-corpus*`) is validated by the same consumer and audit; its source anchoring
+is supplied by the per-chunk snapshots, round trips and the corpus manifest
+(`reports/statement_only/PROVENANCE.md`), which are retrospective revalidation evidence.
+
+The rest of this file describes the historical proof-transport pipeline (M1–M6, P0), which is kept as
+regression evidence.
+
+**Claim supported (proof transport, historical):** for a `VERIFIED` run, the requested roots and their whole required
 dependency closure were translated from these exact exported Rocq 9.3.0 declarations (with their
 original proof terms) into Lean v4.33.1 declarations that the Lean kernel accepted, and the
 accepted terms satisfy the documented translation rules as checked by an independent auditor
@@ -174,8 +191,9 @@ theorem is ever mapped.
 
 ## Source proof usage
 
-Translating the original source proofs is the purpose of the project; the Prosa correspondence
-rule `source_theorem_dependency = false` does not apply.
+Proof transport (historical): translating the original source proofs was the purpose of that
+pipeline. Statement mode: original proofs are never translated; the exporter drops proof bodies and
+extracts proof subterms of kept terms as obligations (`docs/STATEMENT_ONLY_DESIGN.md`).
 
 ## Public-interface protection (P0)
 

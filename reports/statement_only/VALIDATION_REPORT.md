@@ -95,7 +95,10 @@ passes.
 | no theorem with the reserved name | not declared |
 | ill-typed proof | the module does not compile |
 
-No positive proof check is part of the suite, because Rocq2Lean does not write proofs.
+No positive proof check is part of this suite, because Rocq2Lean does not write proofs.
+(Addendum 2026-10-13: `scripts/test-assembly` now checks successful submissions and assembly on a
+*synthetic* fixture with tiny test proofs under `tests/statement/proofs/`; docs/ASSEMBLY.md. Task
+templates are now named `RocqProofTemplates.T<task_id>.proof`, and the negatives above use that name.)
 
 ## 3. Historical proof-transport pipeline
 

@@ -1,0 +1,1 @@
+{"name": "stmt-asm", "load_paths": [["-Q", ".", "SF"]], "files": ["Asm.v"], "requires": ["SF.Asm"]}

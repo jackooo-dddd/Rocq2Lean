@@ -375,6 +375,9 @@ class Auditor:
         # the hypotheses of its own telescope
         self.leaves = {}
         self.pending = {}
+        # assembly (docs/ASSEMBLY.md): proof tasks whose final theorem `Rocq.<leaf>` was assembled
+        # (leaf -> its accepted statement row); a reference to one is that theorem
+        self.proved = {}
         self.pending_inds = {}      # mind -> its pending row (hypotheses as leading parameters)
 
     def ind_target(self, ref):
@@ -395,6 +398,15 @@ class Auditor:
     def head(self, t):
         """(expected const name, universe rule) for a global head."""
         k = t["k"]
+        if k == "const" and t["c"] in self.proved:
+            r = self.proved[t["c"]]
+            n = len(r.get("level_params", []))
+            kp = poly_count(self.decls[t["c"]], r)
+            if len(t["u"]) != kp:
+                raise Mismatch(f"universe instance of {len(t['u'])} levels on {t['c']}, which has {kp} universe variables")
+            if kp:
+                return target_name(t["c"]), ("poly", kp, n, t["u"])
+            return target_name(t["c"]), ("mono" if n == 0 else ("params", n))
         if k == "const":
             if t["c"] not in self.ok or self.ok[t["c"]]["status"] != "TRANSLATED_AND_CHECKED":
                 raise Mismatch(f"reference to non-accepted constant {t['c']}")
@@ -2306,7 +2318,7 @@ def sha256_path(p):
     return hashlib.sha256(open(p, "rb").read()).hexdigest()
 
 
-def universe_and_instance_checks(lines, decls, rows, metadata_path, problem):
+def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, aliases=()):
     """Universe interpretation (R3), body levels (R2S/R2B), residuals and typing-determined instance
     levels of every accepted row (`rows`: source name -> result row with status
     TRANSLATED_AND_CHECKED for the rows to check). Returns (universe arguments checked, recursors)."""
@@ -2340,6 +2352,13 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem):
                 TEMPLATE_LEVELS.update(tb_ or {})
                 for n_ in [r_["target"]] + [c["name"] for c in r_.get("target_ctors", [])]:
                     gen[n_] = params_
+    # assembly: a final theorem `Rocq.<leaf>` has the universe parameters of its accepted statement
+    for t_, src_ in aliases:
+        st_ = (rows.get(src_) or {}).get("target")
+        if st_ in gen:
+            gen[t_] = gen[st_]
+            poly[t_] = poly.get(st_, 0)
+            gen_admit[t_] = gen_admit.get(st_, set())
     univ_checked = 0
     if facts is not None:
         for s_, r_ in rows.items():
@@ -2448,11 +2467,14 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem):
     return univ_checked, recursors, inst
 
 
-def main(src_path, contract_path, report_path, out_path, metadata_path=None):
+def main(src_path, contract_path, report_path, out_path, metadata_path=None, assembly=None, validated=None):
     from collections import Counter
     lines = [json.loads(l) for l in open(src_path)]
     if statement_mode(lines[0]):
-        return main_statement(lines, src_path, contract_path, report_path, out_path, metadata_path)
+        return main_statement(lines, src_path, contract_path, report_path, out_path, metadata_path, assembly, validated)
+    if assembly:
+        print("assembly audit requires a statement-mode export", file=sys.stderr)
+        return 2
     decls = {d["name"]: d for d in lines if d["kind"] in ("constant", "inductive")}
     con = json.load(open(contract_path))
     report = json.load(open(report_path))
@@ -2725,7 +2747,7 @@ def pending_target_name(key):
     return "RocqPending." + target_name(key)[len("Rocq."):]
 
 
-def main_statement(lines, src_path, contract_path, report_path, out_path, metadata_path=None):
+def main_statement(lines, src_path, contract_path, report_path, out_path, metadata_path=None, assembly=None, validated=None):
     """Statement-mode audit. Every row the translator claims (accepted: TRANSLATED_AND_CHECKED,
     BOOTSTRAP_RESOLVED, STATEMENT_KERNEL_CHECKED; pending: PENDING_KERNEL_CHECKED,
     STATEMENT_PENDING_KERNEL_CHECKED) is audited against the source: its statement view (above), its
@@ -2820,6 +2842,33 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     claimed = {n for n in decls if st(n) in ACCEPTED_ST + PENDING_ST}
     leaves = {n for n in decls if is_leaf(decls[n])}
     pend_defs = {n for n in claimed if st(n) == "PENDING_KERNEL_CHECKED"}
+    # assembly (docs/ASSEMBLY.md): the validated report the assembly started from, and the proof
+    # tasks with final theorems; prerequisites are those of the validated library (a carried-over
+    # pending artifact keeps them; an assembled row needs all of them proved)
+    vrows, proved, manifest = {}, {}, {}
+    if assembly:
+        vrep = json.load(open(validated))
+        vrows = {r["source"]: r for r in vrep.get("results", [])}
+        if vrep.get("input_sha256") != ir_sha or vrep.get("run_id") != con.get("run_id"):
+            problem("binding", "the validated report is not this run's translation")
+        if report.get("validated_report_sha256") != sha256_path(validated):
+            problem("binding", "the assembly report is not bound to this validated report")
+        man = json.load(open(assembly))
+        if report.get("proofs_sha256") != sha256_path(assembly):
+            problem("binding", "the assembly report is not bound to this proof manifest")
+        manifest = {e["leaf"]: e for e in man.get("proofs", [])}
+        for n, r in rows.items():
+            if r.get("proof_target") is not None:
+                if n not in leaves or decls[n].get("body_state") == "opaque_interface":
+                    problem("proofs", f"{n}: final theorem for a declaration that is not a proof task")
+                elif n not in manifest:
+                    problem("proofs", f"{n}: final theorem without a manifest proof")
+                elif r["status"] != "STATEMENT_KERNEL_CHECKED" or r.get("proof_state") != "PROOF_ASSEMBLED":
+                    problem("proofs", f"{n}: final theorem on a statement that is not accepted")
+                else:
+                    proved[n] = r
+        vst = lambda x: vrows.get(x, {}).get("status")
+        pend_defs = {n for n in decls if vst(n) == "PENDING_KERNEL_CHECKED"}
     refs = {}
     for n, v in views.items():
         refs[n] = closure_refs([v["type"], v["body"]] if v["kind"] == "constant" else [v["params"], v["bodies"]], set()) - {n}
@@ -2834,7 +2883,8 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
         for x in refs.get(n, ()):
             if x in leaves:
                 out |= {x} | need(x, stack + (n,))
-            elif x in pend_defs or (x in decls and decls[x]["kind"] == "inductive" and st(x) == "PENDING_KERNEL_CHECKED"):
+            elif x in pend_defs or (x in decls and decls[x]["kind"] == "inductive" and
+                                    (vrows.get(x, {}).get("status") if assembly else st(x)) == "PENDING_KERNEL_CHECKED"):
                 out |= need(x, stack + (n,))
         need_memo[n] = out
         return out
@@ -2847,6 +2897,23 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                     raise Mismatch(f"claimed with a dependency that is not claimed: {x} ({st(x)})")
             nd = need(n)
             hs = r.get("pending_hypotheses") or []
+            if assembly:
+                a_ = r.get("assembly")
+                v_ = vrows.get(n) or {}
+                keys = ("status", "target", "target_kind", "target_type", "target_value", "target_ctors",
+                        "level_params", "pending_hypotheses")
+                if a_ == "VALIDATED" or r["status"] in PENDING_ST:
+                    if any(r.get(k) != v_.get(k) for k in keys):
+                        raise Mismatch(f"{a_} row differs from the validated row")
+                if r["status"] in PENDING_ST:
+                    if nd <= set(proved) and a_ not in ("ASSEMBLY_REJECTED", "ASSEMBLY_BLOCKED"):
+                        raise Mismatch(f"every prerequisite is proved, yet the row stays {a_} (assembly not maximal)")
+                elif a_ == "ASSEMBLED":
+                    if v_.get("status") not in PENDING_ST or not nd <= set(proved):
+                        raise Mismatch(f"assembled although its prerequisites {sorted(nd - set(proved))} have no final theorem")
+                    nd = set()
+                elif a_ != "VALIDATED":
+                    raise Mismatch(f"accepted row with assembly state {a_}")
             if len(set(hs)) != len(hs) or set(hs) != nd:
                 raise Mismatch(f"hypotheses {hs} differ from the recomputed prerequisites {sorted(nd)}")
             want = ("STATEMENT_" if n in leaves else "") + ("PENDING_KERNEL_CHECKED" if nd else
@@ -2863,14 +2930,56 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             continue
         norm_decls[n] = views[n]
         norm_rows[n] = dict(r, status="TRANSLATED_AND_CHECKED")
-    univ_checked, recursors, inst = universe_and_instance_checks(lines, norm_decls, norm_rows, metadata_path, problem)
+    univ_checked, recursors, inst = universe_and_instance_checks(
+        lines, norm_decls, norm_rows, metadata_path, problem, aliases=[(target_name(n), n) for n in proved])
     # structural fidelity
     acc_rows = [r for n, r in rows.items() if r["status"] in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED")]
-    aud = Auditor(decls, acc_rows, recursors)
+    aud = aud_main = Auditor(decls, acc_rows, recursors)
     aud.leaves = {n: rows[n] for n in leaves if n in claimed}
     aud.pending = {n: (rows[n]["target"], rows[n].get("pending_hypotheses") or []) for n in pend_defs
                    if decls[n]["kind"] == "constant"}
     aud.pending_inds = {n: rows[n] for n in pend_defs if decls[n]["kind"] == "inductive"}
+    aud_carried = None
+    if assembly:
+        # accepted rows: a proved leaf is its final theorem; a carried-over pending artifact is audited
+        # against the validated library it comes from (its prerequisites are hypotheses, as validated)
+        aud.leaves = {n: rows[n] for n in leaves if n in claimed and n not in proved}
+        aud.proved = proved
+        aud.pending = {n: (rows[n]["target"], rows[n].get("pending_hypotheses") or []) for n in claimed
+                       if st(n) == "PENDING_KERNEL_CHECKED" and decls[n]["kind"] == "constant"}
+        aud.pending_inds = {n: rows[n] for n in claimed if st(n) == "PENDING_KERNEL_CHECKED" and decls[n]["kind"] == "inductive"}
+        v_acc = [r for n, r in vrows.items() if r["status"] in ("TRANSLATED_AND_CHECKED", "BOOTSTRAP_RESOLVED")]
+        aud_carried = Auditor(decls, v_acc, recursors)
+        aud_carried.leaves = {n: vrows[n] for n in leaves if vrows.get(n, {}).get("status") in
+                              ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")}
+        aud_carried.pending = {n: (vrows[n]["target"], vrows[n].get("pending_hypotheses") or []) for n in pend_defs
+                               if decls[n]["kind"] == "constant"}
+        aud_carried.pending_inds = {n: vrows[n] for n in pend_defs if decls[n]["kind"] == "inductive"}
+        # final theorems: type exactly the accepted statement, value the manifest's template applied to
+        # the prerequisites' final theorems (prerequisites: the validated statement's hypotheses)
+        for n, r in proved.items():
+            try:
+                e = manifest[n]
+                if r["proof_target"] != target_name(n):
+                    raise Mismatch(f"final theorem {r['proof_target']} is not {target_name(n)}")
+                want = {"k": "const", "n": r["target"], "u": [{"k": "param", "n": l} for l in r.get("level_params", [])]}
+                if r.get("proof_type") != want:
+                    raise Mismatch("final theorem's type is not its accepted statement")
+                hs_v = (vrows.get(n) or {}).get("pending_hypotheses") or []
+                if e.get("prerequisites") != hs_v:
+                    raise Mismatch(f"manifest prerequisites {e.get('prerequisites')} differ from the validated {hs_v}")
+                spine, cur = [], r.get("proof_value")
+                while cur.get("k") == "app":
+                    spine.append(cur["a"])
+                    cur = cur["f"]
+                spine.reverse()
+                if cur.get("k") != "const" or cur["n"] != e["template"]:
+                    raise Mismatch(f"final theorem's value is not headed by its template {e['template']}")
+                if [x.get("n") if x.get("k") == "const" else None for x in spine] != [target_name(h) for h in hs_v] \
+                        or any(h not in proved for h in hs_v):
+                    raise Mismatch("template not applied to its prerequisites' final theorems")
+            except (Mismatch, KeyError, AttributeError) as ex:
+                problem("proofs", f"{n}: {ex}")
     for s_ in sorted(decls):
         r, d = rows.get(s_), views[s_]
         v = {"source": s_, "status": r.get("status") if r else None, "leaf": s_ in leaves,
@@ -2891,6 +3000,8 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 continue
             hs = r.get("pending_hypotheses") or []
             pending = r["status"] in PENDING_ST
+            aud = aud_carried if (aud_carried is not None and pending) else aud_main
+            tele_rows = vrows if (assembly and pending) else rows
             if d["kind"] == "inductive":
                 b = d["bodies"][0]
                 if len(d["bodies"]) != 1:
@@ -2925,7 +3036,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                             raise Mismatch(f"missing hypothesis parameter {i}")
                         hyp_t.append(ty_t["t"])
                         ty_t = ty_t["b"]
-                    check_hyp_telescope(rows, leaves, hs, hyp_t)
+                    check_hyp_telescope(tele_rows, leaves, hs, hyp_t)
                     henv = [("hyp", l, len(hs) - 1 - i) for i, l in enumerate(hs)][::-1]
                     aud.check(b["type"], ty_t, ["arity"], henv)
                     self_ref = ("selfp", t, [{"k": "param", "n": l} for l in want_lp], hs) if hs else \
@@ -2960,7 +3071,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                     raise Mismatch(f"hypothesis {i} ({l}) missing or differing between type and value")
                 hyp_t.append(ty["t"])
                 ty, val = ty["b"], val["b"]
-            check_hyp_telescope(rows, leaves, hs, hyp_t)
+            check_hyp_telescope(tele_rows, leaves, hs, hyp_t)
             env = [("hyp", l, len(hs) - 1 - i) for i, l in enumerate(hs)][::-1]
             params, sol = own_partition(d, r)
             aud.body = sol
@@ -2992,7 +3103,11 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             problem("structure", f"{s_}: {e}")
         verdicts.append(v)
     by = Counter((v["status"], v["verdict"]) for v in verdicts)
+    if assembly:
+        by_asm = Counter(r.get("assembly") for r in rows.values())
     out = {"schema": "rocq2lean-audit-statement/1", "mode": "statement",
+           "assembly": ({"proofs_assembled": len(proved), "by_assembly_state": dict(sorted(by_asm.items(), key=str))}
+                        if assembly else None),
            "status": "OK" if not problems else "AUDIT_REJECTED",
            "universe_arguments_checked": univ_checked, "interface_checked": iface_checked,
            "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
@@ -3008,8 +3123,15 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (5, 6):
-        print("usage: audit.py SOURCE.ndjson CONTRACT.json TRANSLATION_REPORT.json AUDIT_OUT.json [TARGET_METADATA.json]",
-              file=sys.stderr)
+    args = sys.argv[1:]
+    opts = {}
+    for flag in ("--assembly", "--validated"):
+        if flag in args:
+            i = args.index(flag)
+            opts[flag[2:]] = args[i + 1]
+            del args[i:i + 2]
+    if len(args) not in (4, 5) or (("assembly" in opts) != ("validated" in opts)):
+        print("usage: audit.py SOURCE.ndjson CONTRACT.json TRANSLATION_REPORT.json AUDIT_OUT.json [TARGET_METADATA.json] "
+              "[--assembly PROOFS.json --validated VALIDATED_REPORT.json]", file=sys.stderr)
         sys.exit(2)
-    sys.exit(main(*sys.argv[1:]))
+    sys.exit(main(*args, **opts))

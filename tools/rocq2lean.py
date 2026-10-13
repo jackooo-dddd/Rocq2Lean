@@ -9,6 +9,7 @@
     rocq2lean validate  --run RUN_DIR      (statement mode: validate the statement library)
     rocq2lean tasks     --run RUN_DIR [--out FILE]          (statement mode: proof tasks)
     rocq2lean check-proof --run RUN_DIR --task ID --file PROOF.lean [--allow-axioms A,B]
+    rocq2lean assemble --run RUN_DIR [--complete]
     rocq2lean status    --run RUN_DIR      (is the VERIFIED result still current? read-only)
 
 ROOTS is a comma-separated list of fully qualified Rocq names. A SOURCE_MANIFEST is JSON:
@@ -265,14 +266,16 @@ class RunLock:
 DOWNSTREAM = {
     "export": ["source.ndjson", "source_snapshot.json", "contract.json", "roundtrip.json", "translation_report.json",
                "translation_manifest.json", "audit.json", "consumer_result.json", "verify.json", "validate.json",
-               "lean"],
+               "lean", "PROOF_TASKS.jsonl", "assembly"],
     "translate": ["translation_report.json", "translation_manifest.json", "audit.json", "consumer_result.json",
-                  "verify.json", "validate.json", "lean"],
+                  "verify.json", "validate.json", "lean", "PROOF_TASKS.jsonl", "assembly"],
     "verify": ["audit.json", "consumer_result.json", "verify.json", "lean/Rocq2LeanConsumer.lean",
                "lean/Rocq2LeanConsumer.olean", "lean/Rocq2LeanConsumer.ilean"],
     "validate": ["audit.json", "consumer_result.json", "validate.json", "lean/Rocq2LeanConsumer.lean",
-                 "lean/Rocq2LeanConsumer.olean", "lean/Rocq2LeanConsumer.ilean"],
+                 "lean/Rocq2LeanConsumer.olean", "lean/Rocq2LeanConsumer.ilean", "PROOF_TASKS.jsonl", "assembly"],
 }
+# (submitted proofs, `proofs/`, are inputs and are kept: a later validation makes them stale, and
+# `assemble` refuses a stale claimed submission instead of ignoring it)
 
 
 def invalidate(run, phase):
@@ -962,6 +965,23 @@ def build_tasks(run_dir, evidence, out=None, ir_path=None):
         tid = hashlib.sha256(f"{n}\n{ty_sha}".encode()).hexdigest()
         comps = [c for part in n.split("/") for c in part.split(".")]
         src = inv.get(n, {})
+        # docs/ASSEMBLY.md: the agent submits the generalized template `RocqProofTemplates.T<id>.proof`;
+        # `Rocq.<name>` is reserved for the final declaration that assembly builds from it
+        tmod = f"RocqProofTemplates.T{tid}"
+        pend = r.get("pending_hypotheses") or []
+        pkinds = {h: ("data" if (ir.get(h) or {}).get("body_state") == "opaque_interface" else "proof") for h in pend}
+        if not pend:
+            gen = {"form": "none", "justification": "the task statement is the final statement"}
+        elif all(k == "proof" for k in pkinds.values()):
+            gen = {"form": "over_proof_prerequisites",
+                   "justification": "generalized over propositions only: any two proofs of a proposition are "
+                                    "definitionally equal in Lean, so the generalized statement implies the final one "
+                                    "(assembly instantiates it; the kernel checks that instantiation)"}
+        else:
+            gen = {"form": "over_data_prerequisites",
+                   "justification": "generalized over opaque data values: may be strictly stronger than the source "
+                                    "statement; provability is not claimed, and assembly needs the data bound (A′)"}
+        gen["prerequisite_kinds"] = pkinds
         recs.append({
             "schema": "rocq2lean-proof-task/1", "task_id": tid, "status": "PROOF_PENDING", "kind": kind,
             "source": {"kernel_name": n, "family": fam(n), "module": src.get("module") or d.get("name").rsplit(".", 1)[0],
@@ -972,12 +992,15 @@ def build_tasks(run_dir, evidence, out=None, ir_path=None):
             "lean": {"statement_constant": r["target"], "level_params": rd["level_params"],
                      "statement": rd["statement_pp"], "task_statement": rd["task_type_pp"],
                      "task_statement_sha256": ty_sha,
-                     "reserved_name": "Rocq." + ".".join(comps),
-                     "declaration_kind": "def or theorem (a value of the type)" if kind == "opaque_value" else "theorem",
+                     "reserved_name": f"{tmod}.proof",
+                     "final_name": "Rocq." + ".".join(comps),
+                     "declaration_kind": "theorem",
                      "required_modules": ["Rocq2LeanOut"],
-                     "output_module": "RocqProofs." + ".".join(comps), "output_file": "RocqProofs/" + "/".join(comps) + ".lean"},
-            "prerequisites": {"pending": r.get("pending_hypotheses") or [], "proved": [],
-                              "note": "the task statement is generalized over its prerequisites; they bind only the assembly"},
+                     "output_module": tmod, "output_file": tmod.replace(".", "/") + ".lean"},
+            "accepts_submissions": kind != "opaque_value",
+            "blocker": "opaque data: the source body is to be translated mechanically (A′); a submitted "
+                       "inhabitant is not accepted as its value" if kind == "opaque_value" else None,
+            "prerequisites": {"pending": pend, "proved": [], "generalization": gen},
             "priority": {"pending_declarations_needing_it": len(need.get(n, ())),
                          "sole_prerequisite_of": len(sole.get(n, ())),
                          "in_scope_needing_it": sum(1 for x in need.get(n, ()) if fam(x) in ("modern", "classic"))},
@@ -996,12 +1019,14 @@ def build_tasks(run_dir, evidence, out=None, ir_path=None):
 
 
 def check_proof(run_dir, task_id, file, allow_axioms=None):
-    """Check a proof submitted for one task: compiled in a fresh Lean process against the validated
-    statement library, then checked in another fresh process (`#rocq2lean_check_proof`). Rocq2Lean
-    never writes proofs; this only verifies one."""
+    """Check a proof submitted for one task (docs/ASSEMBLY.md): the file is the template module
+    `RocqProofTemplates.T<task_id>` declaring `RocqProofTemplates.T<task_id>.proof`; it is compiled in a
+    fresh Lean process against the validated statement library, then checked in another fresh process
+    (`#rocq2lean_check_proof`). The result is bound to the file, the compiled module, the task statement
+    and the validation it was checked against. Rocq2Lean never writes proofs; this only verifies one."""
     run_dir = Path(run_dir).resolve()
     with RunLock(run_dir):
-        _current_validation(run_dir)
+        v = _current_validation(run_dir)
         tp = run_dir / "PROOF_TASKS.jsonl"
         if not tp.exists():
             raise Rejected("NOT_VALIDATED", "no proof tasks in this run (run `rocq2lean tasks`)")
@@ -1013,34 +1038,194 @@ def check_proof(run_dir, task_id, file, allow_axioms=None):
             import shutil
             shutil.rmtree(d)
         d.mkdir(parents=True)
-        log = d / "check.log"
-        (d / "Proof.lean").write_text(Path(file).read_text())
         allowed = DEFAULT_ALLOWED_AXIOMS if allow_axioms is None else [a for a in allow_axioms.split(",") if a]
-        tj = {"task_id": task_id, "reserved_name": task["lean"]["reserved_name"],
-              "statement_constant": task["lean"]["statement_constant"],
-              "hypotheses": len(task["prerequisites"]["pending"]), "kind": task["kind"], "allowed_axioms": allowed}
-        (d / "task.json").write_text(json.dumps(tj))
-        res = {"schema": "rocq2lean-check-proof/1", "task_id": task_id, "file_sha256": sha256_file(d / "Proof.lean")}
-        lean_dir = run_dir / "lean"
-        lp = run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], log, env=lean_env()).stdout.strip()
-        env = dict(lean_env(), LEAN_PATH=":".join([lp, str(lean_dir), str(d)]))
-        p = run([f"{HOME}/.elan/bin/lean", "Proof.lean", "-o", "Proof.olean"], log, cwd=d, env=env, check=False)
-        if p.returncode != 0:
-            res.update(status="PROOF_REJECTED", stage="compile", problems=["the submitted module does not compile; see check.log"])
-        else:
-            (d / "Check.lean").write_text(f'import Rocq2LeanOut\nimport Proof\nimport Rocq2Lean.Tasks\n'
-                                          f'#rocq2lean_check_proof "{d / "task.json"}" "{d / "checker.json"}"\n')
-            p = run([f"{HOME}/.elan/bin/lean", "Check.lean"], log, cwd=d, env=env, check=False)
-            ck = json.loads((d / "checker.json").read_text()) if (d / "checker.json").exists() else {}
-            res.update(status=ck.get("status", "PROOF_REJECTED") if p.returncode == 0 or ck.get("status") == "PROOF_REJECTED" else "PROOF_REJECTED",
-                       stage="check", axioms=ck.get("axioms"), problems=ck.get("problems", ["checker did not run"]))
-            if p.returncode != 0 and ck.get("status") == "LEAN_PROOF_KERNEL_VERIFIED":
-                res.update(status="PROOF_REJECTED", problems=["checker process failed"])
+        res = _check_template(run_dir, task, Path(file), d, allowed)
+        res.update(run_id=v["run_id"], validate_sha256=sha256_file(run_dir / "validate.json"))
         atomic_write_json(d / "result.json", res)
         print(res["status"], task_id, "; ".join(res.get("problems") or []))
         if res["status"] != "LEAN_PROOF_KERNEL_VERIFIED":
             raise Rejected("PROOF_REJECTED", "; ".join(res.get("problems") or []))
         return res
+
+
+def _check_template(run_dir, task, file, d, allowed, root=None):
+    """Compile `file` as the template module of `task` under the module root `root` (default `d`; the
+    templates of one assembly share a root, as Lean resolves a module through the first search-path
+    entry holding its top-level directory) and check it in a fresh process; logs and checker files in
+    `d`."""
+    task_id = task["task_id"]
+    tmod = task["lean"]["output_module"]
+    rel = Path(task["lean"]["output_file"])
+    root = Path(root or d)
+    log = d / "check.log"
+    src = root / rel
+    src.parent.mkdir(parents=True, exist_ok=True)
+    src.write_bytes(Path(file).read_bytes())
+    tj = {"task_id": task_id, "reserved_name": task["lean"]["reserved_name"], "template_module": tmod,
+          "statement_constant": task["lean"]["statement_constant"],
+          "hypotheses": len(task["prerequisites"]["pending"]), "kind": task["kind"], "allowed_axioms": allowed}
+    (d / "task.json").write_text(json.dumps(tj))
+    res = {"schema": "rocq2lean-check-proof/2", "task_id": task_id, "kind": task["kind"],
+           "template": task["lean"]["reserved_name"], "template_module": tmod, "template_file": str(rel),
+           "final_name": task["lean"].get("final_name"), "leaf": task["source"]["kernel_name"],
+           "task_statement_sha256": task["lean"]["task_statement_sha256"],
+           "file_sha256": sha256_file(src), "allowed_axioms": allowed}
+    if not task.get("accepts_submissions", True):
+        res.update(status="PROOF_REJECTED", stage="policy", problems=[task.get("blocker") or "task accepts no submission"])
+        return res
+    lean_dir = run_dir / "lean"
+    lp = run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], log, env=lean_env()).stdout.strip()
+    env = dict(lean_env(), LEAN_PATH=":".join([lp, str(lean_dir), str(root)]))
+    olean = src.with_suffix(".olean")
+    p = run([f"{HOME}/.elan/bin/lean", f"--root={root}", str(rel), "-o", str(olean.relative_to(root))], log, cwd=root,
+            env=env, check=False)
+    if p.returncode != 0 or not olean.exists():
+        res.update(status="PROOF_REJECTED", stage="compile", problems=["the submitted module does not compile; see check.log"])
+        return res
+    res["olean_sha256"] = sha256_file(olean)
+    (d / "Check.lean").write_text(f'import Rocq2LeanOut\nimport {tmod}\nimport Rocq2Lean.Tasks\n'
+                                  f'#rocq2lean_check_proof "{d / "task.json"}" "{d / "checker.json"}"\n')
+    p = run([f"{HOME}/.elan/bin/lean", "Check.lean"], log, cwd=d, env=env, check=False)
+    ck = json.loads((d / "checker.json").read_text()) if (d / "checker.json").exists() else {}
+    res.update(status=ck.get("status", "PROOF_REJECTED") if p.returncode == 0 or ck.get("status") == "PROOF_REJECTED" else "PROOF_REJECTED",
+               stage="check", axioms=ck.get("axioms"), problems=ck.get("problems", ["checker did not run"]))
+    if p.returncode != 0 and ck.get("status") == "LEAN_PROOF_KERNEL_VERIFIED":
+        res.update(status="PROOF_REJECTED", problems=["checker process failed"])
+    return res
+
+
+# ---------------------------------------------------------------- assemble (statement mode)
+
+def assemble(run_dir, complete=False):
+    """Pending-to-final assembly (docs/ASSEMBLY.md). Inputs: the run's current statement validation and
+    every submission whose recorded check is LEAN_PROOF_KERNEL_VERIFIED. A claimed verified submission
+    that is missing, stale (another validation, another task statement), altered, or that fails a fresh
+    re-check is an invalid submission: the assembly is refused (PROOF_REJECTED). A task without a claimed
+    submission is simply not supplied: its dependents stay pending. Every template is recompiled from its
+    bound source in this assembly and re-checked in a fresh process; the assembled module imports the
+    unchanged validated library and these templates (acyclic: Rocq2LeanOut <- templates <- assembled).
+    `complete=True` fails (ASSEMBLY_INCOMPLETE) unless every row is accepted and every proof task has
+    its final theorem."""
+    run_dir = Path(run_dir).resolve()
+    with RunLock(run_dir):
+        v = _current_validation(run_dir)
+        vsha = sha256_file(run_dir / "validate.json")
+        tp = run_dir / "PROOF_TASKS.jsonl"
+        if not tp.exists():
+            raise Rejected("NOT_VALIDATED", "no proof tasks in this run (run `rocq2lean tasks`)")
+        tasks_by_id = {t["task_id"]: t for t in map(json.loads, open(tp))}
+        claims, invalid = [], []
+        for rp in sorted((run_dir / "proofs").glob("*/result.json")) if (run_dir / "proofs").exists() else []:
+            res = json.loads(rp.read_text())
+            if res.get("status") != "LEAN_PROOF_KERNEL_VERIFIED":
+                continue                       # a rejected submission claims nothing
+            tid, pd = res.get("task_id"), rp.parent
+            task = tasks_by_id.get(tid)
+            why = None
+            if task is None:
+                why = "no such task in the current task list"
+            elif not task.get("accepts_submissions", True):
+                why = f"the task accepts no submission ({task.get('blocker')})"
+            elif res.get("validate_sha256") != vsha or res.get("run_id") != v["run_id"]:
+                why = "checked against another validation (stale)"
+            elif res.get("task_statement_sha256") != task["lean"]["task_statement_sha256"]:
+                why = "checked against another task statement (stale)"
+            elif res.get("template") != task["lean"]["reserved_name"]:
+                why = "template name differs from the task's"
+            else:
+                f = pd / res.get("template_file", "")
+                if not f.is_file():
+                    why = "the verified proof file is missing"
+                elif sha256_file(f) != res.get("file_sha256"):
+                    why = "the verified proof file was altered after its check"
+            if why:
+                invalid.append(f"{tid}: {why}")
+            else:
+                claims.append((task, pd / res["template_file"]))
+        if invalid:
+            raise Rejected("PROOF_REJECTED", "invalid claimed submission(s): " + "; ".join(invalid))
+        ident = hashlib.sha256((vsha + "".join(f"\n{t['task_id']}:{sha256_file(f)}" for t, f in claims)).encode()).hexdigest()
+        A = run_dir / "assembly" / ident[:16]
+        if A.exists():
+            import shutil
+            shutil.rmtree(A)
+        (A / "lean").mkdir(parents=True)
+        (A / "logs").mkdir()
+        log = A / "logs" / "assemble.log"
+        tdir = A / "templates"
+        tdir.mkdir()
+        # every template recompiled from its bound source (one module root) and re-checked in a fresh process
+        entries = []
+        for task, f in claims:
+            d = A / "checks" / task["task_id"]
+            d.mkdir(parents=True)
+            res = _check_template(run_dir, task, f, d, DEFAULT_ALLOWED_AXIOMS, root=tdir)
+            if res["status"] != "LEAN_PROOF_KERNEL_VERIFIED":
+                raise Rejected("PROOF_REJECTED", f"{task['task_id']}: re-check failed: {res.get('problems')}")
+            entries.append({"leaf": task["source"]["kernel_name"], "task_id": task["task_id"], "kind": task["kind"],
+                            "template": task["lean"]["reserved_name"], "template_module": task["lean"]["output_module"],
+                            "template_file": res["template_file"], "file_sha256": res["file_sha256"], "olean_sha256": res["olean_sha256"],
+                            "axioms": res.get("axioms") or [],
+                            "prerequisites": task["prerequisites"]["pending"],
+                            "generalization": task["prerequisites"]["generalization"]["form"]})
+        entries.sort(key=lambda e: e["leaf"])
+        proofs = {"schema": "rocq2lean-assembly-proofs/1", "run_id": v["run_id"], "validate_sha256": vsha,
+                  "allowed_axioms": DEFAULT_ALLOWED_AXIOMS, "proofs": entries}
+        atomic_write_json(A / "proofs.json", proofs)
+        snap = json.loads((run_dir / "source_snapshot.json").read_text())
+        con_p, rep_p, out_p = run_dir / "contract.json", run_dir / "translation_report.json", A / "assembly_report.json"
+        imports = "".join(f"import {e['template_module']}\n" for e in entries)
+        mod = A / "lean" / "Rocq2LeanAssembled.lean"
+        mod.write_text(f"import Rocq2Lean\nimport Rocq2LeanOut\n{imports}"
+                       f'#rocq2lean_assemble "{snap["ir"]}" "{sha256_file(snap["ir"])}" "{con_p}" "{sha256_file(con_p)}" '
+                       f'"{rep_p}" "{sha256_file(rep_p)}" "{A / "proofs.json"}" "{sha256_file(A / "proofs.json")}" "{out_p}"\n')
+        lp = run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], log, env=lean_env()).stdout.strip()
+        env = dict(lean_env(), LEAN_PATH=":".join([lp, str(run_dir / "lean"), str(tdir), str(A / "lean")]))
+        p = run([f"{HOME}/.elan/bin/lean", f"--root={A / 'lean'}", str(mod.name), "-o", "Rocq2LeanAssembled.olean"], log,
+                cwd=A / "lean", env=env, check=False)
+        rep = json.loads(out_p.read_text()) if out_p.exists() else None
+        if rep is None:
+            raise Rejected("TOOL_FAILURE", f"assembly produced no report (exit {p.returncode}); see {log}")
+        if p.returncode != 0:
+            raise Rejected("ASSEMBLY_REJECTED", f"assembly status {rep.get('status')}; see {out_p}")
+        # fresh-process consumer of the assembled module, and the independent audit
+        cres = A / "consumer_result.json"
+        (A / "lean" / "Rocq2LeanAssemblyConsumer.lean").write_text(
+            f'import Rocq2LeanAssembled\nimport Rocq2Lean.Verify\n'
+            f'#rocq2lean_verify "{con_p}" "{out_p}" "{cres}" "{A / "proofs.json"}"\n')
+        p = run([f"{HOME}/.elan/bin/lean", "Rocq2LeanAssemblyConsumer.lean"], log, cwd=A / "lean", env=env, check=False)
+        consumer = json.loads(cres.read_text()) if cres.exists() else {"status": "NOT_RUN", "detectors": {}}
+        if p.returncode != 0 or consumer.get("status") != "OK":
+            raise Rejected("AUDIT_REJECTED", f"assembly consumer failed (exit {p.returncode}): "
+                           f"{[d for d, x in consumer.get('detectors', {}).items() if x != 'OK']}; see {cres}")
+        p = run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), snap["ir"], str(con_p), str(out_p),
+                 str(A / "audit.json"), str(cres), "--assembly", str(A / "proofs.json"), "--validated", str(rep_p)],
+                log, check=False)
+        audit = json.loads((A / "audit.json").read_text()) if (A / "audit.json").exists() else {}
+        if p.returncode != 0 or audit.get("status") != "OK":
+            raise Rejected("AUDIT_REJECTED", f"assembly audit failed (exit {p.returncode}); see {A / 'audit.json'}")
+        summary = rep["assembly"]
+        bound = {"validate": vsha, "ir": sha256_file(snap["ir"]), "contract": sha256_file(con_p),
+                 "translation_report": sha256_file(rep_p), "proofs": sha256_file(A / "proofs.json"),
+                 "assembly_report": sha256_file(out_p), "module_lean": sha256_file(mod),
+                 "module_olean": sha256_file(A / "lean" / "Rocq2LeanAssembled.olean"),
+                 "consumer": sha256_file(cres), "audit": sha256_file(A / "audit.json"),
+                 "impl_tree": impl_tree_sha256(), "translator_build": lean_build_sha256(),
+                 **{f"template:{e['task_id']}": e["olean_sha256"] for e in entries}}
+        status = "ASSEMBLY_VALIDATED" if summary.get("complete") or not complete else "ASSEMBLY_INCOMPLETE"
+        result = {"schema": "rocq2lean-assembly/1", "status": status, "complete": summary.get("complete"),
+                  "requested_complete": complete, "run_id": v["run_id"], "assembly_dir": str(A), "summary": summary,
+                  "axioms_by_target": consumer.get("axioms_by_target", {}),
+                  "proof_dependent_computation": consumer.get("proof_dependent_computation", []),
+                  "consumer_detectors": consumer.get("detectors"), "audit_summary": audit.get("coverage"),
+                  "bound_sha256": bound, "git": git_identity()}
+        atomic_write_json(A / "assembly.json", result)
+        print(status, A, json.dumps(summary))
+        if status != "ASSEMBLY_VALIDATED":
+            unresolved = [r["source"] for r in rep["results"] if r.get("assembly") not in ("VALIDATED", "ASSEMBLED")
+                          or r.get("proof_state") not in ("", "PROOF_ASSEMBLED", None)]
+            raise Rejected("ASSEMBLY_INCOMPLETE", f"{len(unresolved)} unresolved: {unresolved[:20]}")
+        return result
 
 
 # ---------------------------------------------------------------- status
@@ -1097,6 +1282,9 @@ def main(argv=None):
     s = sub.add_parser("tasks")
     s.add_argument("--run", required=True)
     s.add_argument("--out")
+    s = sub.add_parser("assemble")
+    s.add_argument("--run", required=True)
+    s.add_argument("--complete", action="store_true")
     s = sub.add_parser("check-proof")
     s.add_argument("--run", required=True)
     s.add_argument("--task", required=True)
@@ -1120,6 +1308,8 @@ def main(argv=None):
             validate(a.run)
         elif a.cmd == "tasks":
             tasks(a.run, a.out)
+        elif a.cmd == "assemble":
+            assemble(a.run, a.complete)
         elif a.cmd == "check-proof":
             check_proof(a.run, a.task, a.file, a.allow_axioms)
     except Rejected as e:

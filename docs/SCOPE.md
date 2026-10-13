@@ -1,9 +1,11 @@
 # Project scope (locked)
 
-Rocq2Lean is a proof-preserving translator **for one corpus**: the complete Prosa v0.6
-development plus the complete Classic Prosa source tree identified by RTS, together with the
-declarations of their dependencies that these sources actually reach. It is not a translator for
-arbitrary Rocq projects.
+Rocq2Lean is a mechanical translator **for one corpus**: the complete Prosa v0.6 development plus
+the complete Classic Prosa source tree identified by RTS, together with the declarations of their
+dependencies that these sources actually reach. It is not a translator for arbitrary Rocq projects.
+Since 2026-10-11 it translates datatypes, definitions and theorem statements only
+(`docs/STATEMENT_ONLY_DESIGN.md`); the dependencies in scope are those reached by the *statement*
+closure (types, definition bodies after obligation extraction), not by proofs.
 
 The machine-readable lock is `reports/prosa_inventory/scope.lock.json` (written by
 `inventory/scope.py`). The full census, blocker map and per-declaration coverage are in
@@ -31,8 +33,9 @@ listed in the lock (`classic.excluded_copies`): `prosaworkspace/rt-proofs-v0.6/c
 * Source-local helpers, generated schemes, Hierarchy-Builder output and obligations are translated
   only when a target's closure reaches them.
 * External declarations (Corelib, Stdlib, MathComp, Hierarchy-Builder, CoqEAL, micromega) are
-  translated only when the closure of a target reaches them (types, definition bodies and opaque
-  proof bodies). Installing a package to load Prosa does not make its declarations targets.
+  translated only when the statement closure of a target reaches them (types and definition bodies;
+  proof bodies are not followed). Installing a package to load Prosa does not make its declarations
+  targets.
 
 ## Environment (fixed)
 
@@ -40,13 +43,17 @@ Lean 4.33.1, Rocq 9.3.0, MathComp 2.6.0, MetaRocq `c18395ad` (switch `rocq930-mc
 `toolchains.lock.json`. Modern Prosa builds with the five compatibility patches; Classic builds with
 the RTS prelude `Rocq90Compat.v` (two Rocq 9.0 defaults, no source edit) against the modern working
 `prosa.util`. CoqEAL `ce3d1d68` (five modules, compiled unchanged into `.work/coqeal-ce3d1d6`) is
-used only to compile and enumerate the refinements. The RTS Classic proof patch
-(`prosabuddy-classic-rocq93.patch`) is **not** applied: it edits a proof, so it needs an explicit
-decision; until then the three affected Classic files are recorded with unknown declaration counts.
+used only to compile and enumerate the refinements. The RTS Classic compatibility patch
+(`prosabuddy-classic-rocq93.patch`, RTS `f23ca672`) **is applied**, exactly as authorized in P0
+(`reports/prosa_inventory/P0_REPORT.md`): it changes only proof-block lines of one file; all 190
+Classic files compile. (An earlier version of this file said the patch was not applied; that predates
+P0.)
 
 ## Rules for future work
 
 * A new translation feature needs a concrete dependency path from a target to its blocker
   (`reports/prosa_inventory/blockers.json`). Features without such a path are out of scope.
 * Existing regression and negative suites stay; the Prosa-only scope limits new feature work, not
-  correctness checking. No axioms, no changed source proofs, no hand-written Lean proofs.
+  correctness checking. No axioms in translated artifacts, no changed source proofs, no hand-written
+  Lean proofs of corpus goals (tiny proofs of *synthetic* test fixtures under `tests/` only,
+  docs/ASSEMBLY.md).

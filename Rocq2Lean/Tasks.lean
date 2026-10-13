@@ -11,15 +11,19 @@ separate proving agent submits.
   a validated statement library and the number of its prerequisite hypotheses) the Lean statement
   the agent must prove, as an expression and pretty-printed:
   - a task without prerequisites: `Rocq.c.statement` (or `Rocq.c.type` for opaque data);
-  - a task with prerequisites `h₁ … hₖ`: `∀ h₁ … hₖ, RocqPending.c.statement h₁ … hₖ`. The proof is
-    generic in the prerequisites: a proof hypothesis is irrelevant, and Rocq never unfolds opaque
-    data, so the generalized statement is exactly what Rocq's proof establishes.
+  - a task with prerequisites `h₁ … hₖ`: `∀ h₁ … hₖ, RocqPending.c.statement h₁ … hₖ`. Over proof
+    prerequisites (propositions) the generalization is harmless: any two proofs are definitionally
+    equal. Over a *data* prerequisite (opaque data) it can be strictly stronger than the source
+    statement, and its provability is not claimed (docs/ASSEMBLY.md, "Generalized tasks").
 
 * `#rocq2lean_check_proof "task.json" "out.json"` — run in a fresh module that imports the statement
-  library and the agent's proof module: the reserved constant exists, is not unsafe or an axiom, a
-  proof task's constant is a `theorem`, its type is *syntactically* the task statement at the task's
-  universe parameters, and its axioms (`collectAxioms`) are within the declared allowance; `sorryAx`
-  is always refused.
+  library and the submitted template module `RocqProofTemplates.T<task_id>`: the template constant
+  `RocqProofTemplates.T<task_id>.proof` exists, is a `theorem` (not unsafe, partial or an axiom), its
+  type is *syntactically* the task statement at the task's universe parameters, the module declares
+  nothing outside `RocqProofTemplates.T<task_id>`, and its axioms (`collectAxioms`) are within the
+  declared allowance; `sorryAx` is always refused. Opaque-data value submissions are refused (no
+  inhabitant stands for a source body; docs/ASSEMBLY.md). The final declaration `Rocq.<name>` is
+  reserved for assembly.
 -/
 
 namespace Rocq2Lean
@@ -74,20 +78,33 @@ syntax (name := rocqCheckProof) "#rocq2lean_check_proof " str str : command
   let thm := (get "reserved_name").toName
   let stmt := (get "statement_constant").toName
   let nh := (task.getObjValAs? Nat "hypotheses").toOption.getD 0
-  let isProofTask := get "kind" != "opaque_value"
   let allowed := ((task.getObjValAs? (Array String) "allowed_axioms").toOption.getD #[]).map String.toName
   let mut problems : Array String := #[]
   let mut axs : Array Name := #[]
-  match (← getEnv).find? thm with
+  -- opaque data (docs/ASSEMBLY.md): no submitted value stands for a source body (A′ translates it)
+  if get "kind" == "opaque_value" then
+    problems := problems.push "opaque-data value submissions are not accepted: the source body is to be translated (A′), not replaced by an inhabitant"
+  -- the submission declares only its template namespace `RocqProofTemplates.T<task_id>` (its module
+  -- adds nothing to `Rocq.*`, `RocqPending.*` or another task's namespace)
+  let modName := (get "template_module").toName
+  let env ← getEnv
+  match env.getModuleIdx? modName with
+  | none => problems := problems.push s!"the submitted module {modName} is not imported"
+  | some idx =>
+    let ns := thm.getPrefix
+    for (n, _) in env.constants.map₁.toList do
+      if env.getModuleIdxFor? n == some idx then
+        let user := (privateToUserName? n).getD n
+        unless ns.isPrefixOf user do
+          problems := problems.push s!"the submitted module declares {n} outside {ns}"
+  match env.find? thm with
   | none => problems := problems.push s!"{thm} is not declared by the submitted module"
   | some ci =>
     if ci.isUnsafe || ci.isPartial then problems := problems.push s!"{thm} is unsafe or partial"
     match ci with
     | .axiomInfo _ => problems := problems.push s!"{thm} is an axiom"
     | .thmInfo _ => pure ()
-    | .defnInfo _ | .opaqueInfo _ =>
-      if isProofTask then problems := problems.push s!"{thm} must be a theorem"
-    | _ => problems := problems.push s!"{thm} is not a theorem or definition"
+    | _ => problems := problems.push s!"{thm} must be a theorem"
     let (lps, want) ← liftTermElabM (taskStatement stmt nh)
     if ci.levelParams != lps then
       problems := problems.push s!"{thm}: universe parameters {ci.levelParams} differ from the task's {lps}"
