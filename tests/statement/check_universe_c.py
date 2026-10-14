@@ -51,17 +51,22 @@ OUT["pipeline"] = {"exit_codes": rcs, "validation": v.get("status"), "by_validat
 check(rcs[0] == 0 and rcs[2] == 0 and v.get("status") == "STATEMENT_VALIDATED",
       "probe: export/translate/validate (JLFP_policy not translated, everything claimed validated)")
 o = R["mathcomp.boot.eqtype.opt_eqP"]
+# (R3G-F, ITERATION_LOG entry 10: Equality.type also carries its nested result-sort levels; the eqType
+# levels are read from its row instead of being listed: the condition stays "generic, none defaulted")
+EQ_LPS = R["mathcomp.boot.eqtype/Equality.type"]["level_params"]
+EQ_LV = sorted(l for l in json.loads((RUN / "source.ndjson").read_text().splitlines()[4])["levels"]
+               if "u_" + l.replace(".", "_") in EQ_LPS)
 OBLS = [f"mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_{k}" for k in range(1, 6)]
 OUT["opt_eqP"] = {k: o.get(k) for k in ("status", "target_kind", "level_params", "implicit_levels", "universe_level_defaults")}
 # (A′: opt_eqP is opaque data translated with its body -- an opaque constant pending on the 5 proof
 # subterms of its body, each a statement; C-1: all generic in eqtype.51/58)
 check(o["status"] == "PENDING_KERNEL_CHECKED" and o["target_kind"] == "opaque" and set(OBLS) <= set(o["pending_hypotheses"])
-      and o.get("implicit_levels") == ["mathcomp.boot.eqtype.51", "mathcomp.boot.eqtype.58"] and not o.get("universe_level_defaults")
-      and all(R[n]["status"] == "STATEMENT_KERNEL_CHECKED" and R[n]["level_params"] == ["u_mathcomp_boot_eqtype_51", "u_mathcomp_boot_eqtype_58"]
+      and o.get("implicit_levels") == EQ_LV and "u_mathcomp_boot_eqtype_51" in EQ_LPS and not o.get("universe_level_defaults")
+      and all(R[n]["status"] == "STATEMENT_KERNEL_CHECKED" and R[n]["level_params"] == EQ_LPS
               and not R[n].get("universe_level_defaults") for n in OBLS),
       "C-1: opt_eqP (A′: an opaque constant) and its obligation statements keep the reference levels as parameters, none defaulted")
 oe = R["mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality"]
-check(oe.get("level_params") == ["u_mathcomp_boot_eqtype_51", "u_mathcomp_boot_eqtype_58"],
+check(oe.get("level_params") == EQ_LPS,
       "option's canonical eqType is generic in the eqType levels (no longer Set-level only)")
 ps = R["prosa.model.processor.ideal.processor_state"]
 OUT["processor_state"] = {"status": ps["status"], "message": ps.get("message", "")[:400]}
@@ -173,7 +178,8 @@ for l51, l58, want in ((0, 0, "free in the statement"), (0, 1, "free in the stat
         "kernel": kernel_ok, "validate_exit": rc, "blocked_dependents": len(blocked), "audit_problems": probs[:3],
         "row_self_reports": {k: row.get(k) for k in ("universe_level_defaults", "universe_residuals", "implicit_levels", "level_params")}}
     check(kernel_ok and rc == 2 and not row.get("universe_level_defaults") and row.get("universe_residuals") is None
-          and not row.get("implicit_levels") and any(want in p for p in probs) and not any("defaulted" in p for p in probs),
+          and not {"mathcomp.boot.eqtype.51", "mathcomp.boot.eqtype.58"} & set(row.get("implicit_levels") or [])
+          and any(want in p for p in probs) and not any("defaulted" in p for p in probs),
           f"opt_eqP's obligation narrowed to Equality.type.{{{l51},{l58}}} (no self-reported trace): kernel-accepted, rejected by the "
           f"audit from the source ({want!r})")
 
@@ -243,23 +249,29 @@ def posInst (n : Name) (us : List Nat) (tag : String) : MetaM Unit := do
   let us := us.map lv
   addDecl (.defnDecl { name := Name.mkSimple ("posctrl_" ++ tag), levelParams := [], type := ← instantiateTypeLevelParams ci.toConstantVal us,
                        value := mkConst n us, hints := .opaque, safety := .safe })
-run_meta posInst `RocqPending.mathcomp.boot.eqtype.opt_eqP [3, 4] "opt_eqP"
-run_meta posInst `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement [3, 4] "opt_eqP_obligation"
-run_meta posInst `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality [3, 4] "option_eqType"
-run_meta posInst `RocqPending.prosa.behavior.schedule.ProcessorState [3, 4, 3, 5, 2] "ProcessorState"
+run_meta posInst `RocqPending.mathcomp.boot.eqtype.opt_eqP EQUS "opt_eqP"
+run_meta posInst `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement EQUS "opt_eqP_obligation"
+run_meta posInst `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality EQUS "option_eqType"
+run_meta posInst `RocqPending.prosa.behavior.schedule.ProcessorState PSUS "ProcessorState"
 SCHED_LINE
 POLICY_LINES
 -- a use: the statement applies to an eqType at universe 3 (δ-unfolds the statement in the kernel)
 run_meta do
   let ci ← getConstInfo `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement
-  let v ← instantiateValueLevelParams ci [lv 3, lv 4]
+  let us := EQLV
+  let v ← instantiateValueLevelParams ci us
   let .forallE _ d _ _ := v | throwError "statement is not a quantification"
-  unless d == mkConst `Rocq.mathcomp.boot.eqtype.Equality.type [lv 3, lv 4] do throwError "binder range {d}"
-  let h := mkConst `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement [lv 3, lv 4]
+  -- the binder ranges over Equality.type at closed nonzero universes (its carrier level at least 3)
+  unless d.isConstOf `Rocq.mathcomp.boot.eqtype.Equality.type && d.constLevels!.all (fun l => !l.isZero) do throwError "binder range {d}"
+  let h := mkConst `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement us
   addDecl (.defnDecl { name := `posctrl_use, levelParams := [], type := mkForall `h .default h v,
                        value := mkLambda `h .default h (.bvar 0), hints := .opaque, safety := .safe })
 """
 
+# (universe argument counts come from the report rows: nonzero, carrier level at least 3)
+EQUS = [3 + k for k in range(len(EQ_LPS))]
+POS = POS.replace("EQUS", str(EQUS)).replace("EQLV", "[" + ", ".join(f"lv {x}" for x in EQUS) + "]")
+POS = POS.replace("PSUS", str([3 + k for k in range(len(R["prosa.behavior.schedule.ProcessorState"]["level_params"]))]))
 # (schedule's target name and universe parameters come from its report row)
 POS = POS.replace("POLICY_LINES", "\n".join(
     f'run_meta posInst `{R[n]["target"]} {[2 + k for k in range(len(R[n]["level_params"]))]} "{n.split(".")[-1]}"'
@@ -284,7 +296,7 @@ rc_neg, out_neg = run_pos(RUN.parent / f"{RUN.name}-forged-narrowed-statement-0-
 OUT["positive_nonzero_universes"] = {"generic_exit": rc_pos, "generic_output": out_pos, "narrowed_exit": rc_neg,
                                      "narrowed_output": out_neg}
 check(rc_pos == 0, "positive control: opt_eqP, option's eqType, ProcessorState, job_cost, JLFP_policy, EDF, hep_job kernel-checked at universes 2..; "
-                   "the statement applies to an Equality.type.{3,4}")
+                   "the statement applies to an Equality.type at nonzero universes")
 check(rc_neg != 0, "the same positive control fails against the narrowed module (it discriminates)")
 
 (ROOT / "reports" / "statement_only" / "test_universe_c.json").write_text(json.dumps(OUT, indent=1) + "\n")

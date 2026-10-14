@@ -1914,6 +1914,18 @@ where
       | .inductive i => i.typeDeps
     let cl := r.resultSortImplicit.foldl (·.insert ·) (genv.rsOfDeps deps)
     unless cl.isEmpty do genv := { genv with rsClosure := genv.rsClosure.insert d.name cl }
+    -- R3G-F applicability at references to this declaration (docs/RESULT_SORT_LEVELS.md §2): besides an
+    -- inductive's source result-sort-only levels (registered above), the R3G-F levels of its dependency
+    -- closure that are not levels of its own source (they reach it only through such blocks)
+    if r.accepted || r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
+      let expl : Std.HashSet String := match d with
+        | .constant c => globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)
+        | .inductive i => (globalsOfInd i).foldl (·.insert ·) {}
+      let inh := (genv.rsOfDeps deps).fold (fun acc l => if expl.contains l then acc else acc.push l) #[]
+      unless inh.isEmpty do
+        for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
+          let old := (genv.resultOnly[n]?).getD #[]
+          genv := { genv with resultOnly := genv.resultOnly.insert n (old ++ inh.filter (!old.contains ·)) }
     return (r, genv)
 
 end Rocq2Lean

@@ -2841,14 +2841,30 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                     gen[n_] = params_
     # R3G-F: the result-sort-only levels of each generated inductive type, from its source (and its own
     # R3G-F levels, themselves checked when that row is audited)
-    t2s_ = {r_["target"]: s_ for s_, r_ in rows.items() if r_.get("status") == "TRANSLATED_AND_CHECKED"
-            and r_.get("target") and decls[s_]["kind"] == "inductive"}
+    t2s_ = {}
+    for s_, r_ in rows.items():
+        if r_.get("status") == "TRANSLATED_AND_CHECKED" and r_.get("target"):
+            for t_ in [r_["target"]] + [c["name"] for c in r_.get("target_ctors") or []]:
+                t2s_[t_] = s_
     ro_memo = {}
 
     def ro_of(nm):
+        """Levels result-sort-only at references to target nm: an inductive's source result-sort-only levels
+        and its own R3G-F levels, and (any declaration) the R3G-F levels of its dependency closure that are
+        not levels of its own source."""
         if nm not in ro_memo:
             s_ = t2s_.get(nm)
-            ro_memo[nm] = (result_only_levels(decls[s_]) | set(rows[s_].get("result_sort_implicit_levels") or [])) if s_ else set()
+            if not s_:
+                ro_memo[nm] = set()
+            else:
+                d0 = DECL_SRC.get(s_, decls[s_])
+                if d0["kind"] == "inductive":
+                    expl = set(ind_globals(d0))
+                    own_ro = result_only_levels(d0) | set(rows[s_].get("result_sort_implicit_levels") or [])
+                else:
+                    expl = set(source_globals(d0["type"], set())) | source_globals(d0.get("body"), set())
+                    own_ro = set()
+                ro_memo[nm] = own_ro | (rs_deps(d0) - expl)
         return ro_memo[nm]
     # R-SPLIT: at references, a copy stands for its source level (an argument `a <= l`: R3)
     for n_ in gen:
