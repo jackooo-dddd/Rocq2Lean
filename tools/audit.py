@@ -2454,9 +2454,9 @@ def check_statement_generality(facts, own, gen, exprs, poly, types):
             for l, sigma, p in zip(gen[name], us_, lps_):
                 if l in own or l in TEMPLATE_LEVELS:
                     continue                      # (own levels: their parameter, checked by R3; R5)
-                # R-CARRIER P2: an own copy of l (one per independent class) is a parameter for l as well
-                if sigma.get("k") == "param" and any(level_param(cp) == sigma.get("n") and SPLIT_COPIES.get(cp) == l
-                                                     for cp in own):
+                # R-CARRIER P2: a row owning a copy of l (one per independent class) owns l (its arguments are
+                # checked by R3 / coherence, as for an own level)
+                if any(SPLIT_COPIES.get(cp) == l and cp in P2_COPIES for cp in own):
                     continue
                 c, ps = level_nf(sigma)
                 if not ps and facts.entails(l, "Set", 0):

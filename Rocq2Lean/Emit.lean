@@ -306,11 +306,11 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
   for (p, σ) in lps.zip us do
     unless p.toString.startsWith "u_" do continue      -- (R6 universe variables, Lean's own constants)
     if own.contains p then continue                     -- (a level of the declaration: R3)
-    -- R-CARRIER P2: an own copy of the level (`u_l__c<k>`, one per independent class) is generic as well
-    -- (the referenced parameter may itself be a copy of the same source level)
-    if let .param q := σ then
-      let base (x : Name) : String := (x.toString.splitOn "__c").head!
-      if own.contains q && q != p && base q == base p && (q.toString.splitOn "__c").length > 1 then continue
+    -- R-CARRIER P2: a declaration that owns a copy of the level (`u_l__c<k>`, one per independent class)
+    -- owns the level, as for `own.contains p` above: its arguments are R3/coherence-checked (the referenced
+    -- parameter may itself be a copy of the same source level)
+    let base (x : Name) : String := (x.toString.splitOn "__c").head!
+    if own.any (fun q => q != p && base q == base p && (q.toString.splitOn "__c").length > 1) then continue
     if !σ.hasParam then
       if let some l := facts.levels.find? (fun l => levelParamName l == p) then
         if entails facts l "Set" 0 then continue
