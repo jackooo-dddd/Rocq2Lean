@@ -504,3 +504,98 @@ python3 -I inventory/c1_transitions.py C1-repair.json C1_AUDIT AP-opaque.json ru
 Evidence: `coverage/{AP-opaque,transitions-C1-to-AP-opaque,transitions-A-to-AP-opaque}.json`,
 `provenance/CORPUS_MANIFEST.json`, `termination/CONVERSION_DEPENDENCE-AP.json`, `PROOF_TASKS.jsonl`
 (A′), `test_opaque.json`, `docs/OPAQUE_DATA.md`.
+
+---
+
+## Entry 6 — R2B-V: a type-valued definition declared at the sort of its value (2026-10-14)
+
+Approved by the user on 2026-10-14 ("feel free to merge task-c and any JLFP_policy rule after the other
+parts … are done"). Commits (branch `task-r2bv`, on top of `task-a-prime`): `7957a82` (rule),
+`5922bc6` (the value's sort must be a Type — found by the first corpus run, see below), `df09655`
+(only validated runs are bound by a manifest). Also: `main` fast-forwarded to `task-c` (`ec3409c`;
+local, not pushed).
+
+### (1) What was added and why
+
+`JLFP`/`FP`/`JLDP_policy` (`:= rel Job`) are typed by Rocq at `rel`'s level through cumulativity; Lean
+has none. Rule R2B-V (`docs/UNIVERSE_FAMILY_C.md` §4), general (no name-specific case): for a
+*definition* whose source type ends in a sort, the levels occurring only in that result sort are
+replaced by the sort of the translated value, each solved to a **lowering** (native facts), the value's
+sort a **Type** (never Prop); binders, value and references unchanged (C generality and R3 still
+apply). Last translation tier, statement mode only, so no previously accepted row changes. Independent
+copies: audit (applicability, occurrence in the result sort, lowering, Type, never a statement),
+consumer (in Lean: declared result sort = the value's sort, never zero), CLI validation (flag required
+for a protected result-sort lowering).
+
+First corpus run (`7957a82`) — **not validated**: the audit rejected 5 rows (sort mismatch) and the
+consumer 1 (a definition emitted as a theorem): Prop-valued relations declared in `Type` (CoqEAL `Rnat`,
+`hrel.fun_hrel`; Prosa `Rtask`, `Rtask_ab`, `RArrivalCurvePrefix`) had been declared as propositions —
+not a level lowering. Fixed in `5922bc6` (all three checkers require a Type; fixture control
+`SF.R2bv.Rprop`); the numbers below are from the re-run.
+
+### (2) Coverage — same 4,474 protected roots, A′ export (10,966 records, chunk evidence reused: `SAME_TOOLS`)
+
+| run | family | Accepted | Audited Pending | Blocked Dependency | Direct Failure |
+|---|---|---|---|---|---|
+| A′ (`2f1d5cb`) | modern | 338 | 989 | 1,146 | 31 |
+| | Classic | 182 | 612 | 1,126 | 50 |
+| | total | 520 | 1,601 | 2,272 | 81 |
+| **R2B-V** (`5922bc6`) | modern | 446 | 1,276 | 745 | 37 |
+| | Classic | 227 | 899 | 775 | 69 |
+| | **total** | **673** | **2,175** | **1,520** | **106** |
+
+Consumer OK, audit OK (0 problems), provenance bound (`checks` consumer/audit OK, reuse `SAME_TOOLS`),
+`check` OK, `test-provenance` OK.
+
+### (3) Transitions A′ → R2B-V (`coverage/transitions-AP-to-V-r2bv.json`)
+
+3,708 unchanged; **727 newly supported** (modern 395, Classic 332); 39 Blocked → Direct Failure; **no
+claimed row lost** (no false acceptance, no regression). A → R2B-V (`transitions-A-to-V-r2bv.json`):
+767 newly supported, 1,397 false acceptances corrected, 479 rejected, 17 collateral losses, 6 genuine
+regressions (the C-1 `refine_*`).
+
+Rows using the rule: 14, all protected — `JLFP`/`FP`/`JLDP_policy` and `TDMA_slot_order` (modern and
+Classic), Classic `Sustainability.type_of_label`, four Classic `ConcreteTask.concrete_taskset`, modern
+`ArrivalCurvePrefix`.
+
+Downstream-use measurement: the 14 have 1,439 protected dependents — 713 newly supported (143
+Accepted, 570 Audited Pending), 687 still blocked (other blockers), **39 direct failures**: the uses the
+interface analysis predicts (a dependent needing the definition at a larger universe, refused, never
+narrowed): 15 refused by the C generality check, 7 by R2B-P protection, 5 by level solving, 1 by binder
+protection, and 9 `TRANSLATION_FAILED` ("pending prerequisite pair_eqP__rocq2lean_obligation_1 is
+needed at two different types": the prerequisite statement is used at two universe instances in one
+declaration, and a pending artifact has one hypothesis per prerequisite — a reported limitation of the
+hypothesis telescope, not a crash).
+
+### (4) Remaining blockers and pending obligations
+
+Proof tasks: 2,116 (1,581 theorem statements, 526 obligations, 2 termination obligations, 2 unfolding
+equations, 4 source assumptions, 1 opaque value). Conversion dependence: 887 dependents, 886 OK, 1
+needs the unfolding (`gcdn`, not claimed). Blockers: the `HB_unnamed_mixin_106` obligation family
+(max-coupled levels), protected definitions whose translation narrows (`JobReady`, ideal / overheads
+`processor_state`), the 39 use-site refusals, CoqEAL cumulativity (`Prop ≤ Type`).
+
+### (5) Regressions and validation
+
+`test-universe-c` 22 (R2B-V: policies translated with the job generic; 6 downstream uses audited;
+nonzero-universe positive control; forgeries — not a lowering, a binder level, on a statement, the
+protected lowering without the rule — rejected; Prop-valued control), `test-statement` 30,
+`test-assembly` 34, `test-termination` 22, `test-opaque` 16: OK on `5922bc6`; `test-all` 18/18 on
+`7957a82` and 18/18 on `5922bc6` (frozen worktree `r2l-B-test`; the proof-mode pipeline does not use the
+tier).
+
+### (6) Commands and evidence
+
+```
+# r2l-run-V (5922bc6 / df09655); source = runs/st-corpus-AP/source.ndjson; chunk evidence of A′ linked
+export STATEMENT_EXPORT=export-statement-aprime STATEMENT_PROVENANCE=provenance-aprime STATEMENT_RUN=runs/st-corpus-V
+python3 -I inventory/statement_run.py translate && … check && … tasks
+python3 -I inventory/conversion_deps.py runs/st-corpus-V --jobs 2
+python3 -I inventory/coverage_delta.py snapshot runs/st-corpus-V reports/statement_only/coverage/V-r2bv.json
+python3 -I inventory/statement_provenance.py manifest runs/st-corpus-V && … check; scripts/test-provenance
+python3 -I inventory/c1_transitions.py AP-opaque.json AP_AUDIT V-r2bv.json runs/st-corpus-V transitions-AP-to-V-r2bv.json
+```
+Evidence: `coverage/{V-r2bv,transitions-AP-to-V-r2bv,transitions-A-to-V-r2bv}.json`,
+`provenance/CORPUS_MANIFEST.json` (current = R2B-V; `-AP`, `-C1`, `-B`, `-A` kept),
+`termination/CONVERSION_DEPENDENCE-V.json`, `PROOF_TASKS.jsonl`, `test_universe_c.json`,
+`docs/UNIVERSE_FAMILY_C.md` §4.

@@ -21,6 +21,12 @@ with its body as Lean `opaque` constants, proof subterms as obligations (`docs/O
 lost; protected pending rows needing an opaque value **1,588 → 6** (1,595 now wait only for proof tasks).
 ITERATION_LOG entry 5.
 
+**2026-10-14 — R2B-V (branch `task-r2bv`, on top of A′; approved rule; not merged).** A type-valued
+definition declared at the sort of its value (`docs/UNIVERSE_FAMILY_C.md` §4): `JLFP`/`FP`/`JLDP_policy`
+and 11 other protected definitions translated, job generic. Corpus (consumer, audit, provenance OK):
+**673 / 2,175 / 1,520 / 106** (modern 446 / 1,276 / 745 / 37, Classic 227 / 899 / 775 / 69); 727 newly
+supported, no claimed row lost. `main` = `task-c` (fast-forwarded, local). ITERATION_LOG entry 6.
+
 **Current phase: statement-only translation (direction change 2026-10-11).** Rocq2Lean translates
 the datatypes, definitions and theorem *statements* of Prosa v0.6 and Classic, plus what they need,
 mechanically. It never translates a Rocq proof and never writes a Lean proof: proofs are tasks for a
