@@ -768,7 +768,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         let ownI := (freeT ++ chosen.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
         -- (R3G-F levels are minimal only where they are implicit: not levels of this declaration's source)
         let explicitLv := globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)
-        let ι := ownLevelInterp genv.facts ownI (genv.rsMinimal.fold (fun acc l => if explicitLv.contains l then acc else acc.insert l) {})
+        let ι := ownLevelInterp genv.facts ownI ((genv.rsOfDeps (c.typeDeps ++ c.bodyDeps)).fold (fun acc l => if explicitLv.contains l then acc else acc.insert l) {})
         interpRef.set (ownI.map fun l => (l, ι[l]!))
         for (m, v) in ownMVars do
           if ownI.contains m then
@@ -1040,11 +1040,11 @@ def templateBinding (i : IR.InductiveDecl) (globals : Array String) :
     unless (out.filter (·.1 == d)).size == 1 do throw ("UNSUPPORTED_FEATURE", s!"template level {d} is not bound by exactly one parameter")
   return out
 
-/-- R3G-F: the levels read minimally in a block's R2F interpretation — its own R3G-F levels and those of
-earlier blocks, where they are implicit (not levels of this block's source). -/
+/-- R3G-F: the levels read minimally in a block's R2F interpretation — its own R3G-F levels and those in
+its dependency closure, where they are implicit (not levels of this block's source). -/
 def rsMinimalFor (genv : GEnv) (i : IR.InductiveDecl) (rsOwn : Array String) : Std.HashSet String :=
   let expl := globalsOfInd i
-  (rsOwn.foldl (·.insert ·) genv.rsMinimal).fold (fun acc l => if expl.contains l then acc else acc.insert l) {}
+  (rsOwn.foldl (·.insert ·) (genv.rsOfDeps i.typeDeps)).fold (fun acc l => if expl.contains l then acc else acc.insert l) {}
 
 def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
     (raw : Json) (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false)
@@ -1904,10 +1904,16 @@ where
             if !r.isTemplate then
               let ro := Split.resultOnlyLevels i ++ r.resultSortImplicit
               unless ro.isEmpty do genv := { genv with resultOnly := genv.resultOnly.insert tn ro }
-              genv := { genv with rsMinimal := r.resultSortImplicit.foldl (·.insert ·) genv.rsMinimal }
+
             for (l, _) in r.templateParams do
               genv := { genv with templateLevels := genv.templateLevels.insert l }
         pure r
+    -- R3G-F: the declaration's closure of result-sort implicit levels (its dependencies' and its own)
+    let deps := match d with
+      | .constant c => c.typeDeps ++ c.bodyDeps
+      | .inductive i => i.typeDeps
+    let cl := r.resultSortImplicit.foldl (·.insert ·) (genv.rsOfDeps deps)
+    unless cl.isEmpty do genv := { genv with rsClosure := genv.rsClosure.insert d.name cl }
     return (r, genv)
 
 end Rocq2Lean

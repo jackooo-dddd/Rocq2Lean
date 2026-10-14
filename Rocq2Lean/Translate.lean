@@ -70,8 +70,10 @@ structure GEnv where
   /-- R3G-F (docs/RESULT_SORT_LEVELS.md): for an accepted inductive type (by target name), the source
   levels that occur in its declaration only in its result sort (and its own R3G-F implicit levels). -/
   resultOnly : Std.HashMap Name (Array String) := {}
-  /-- R3G-F: the result-sort implicit levels of the accepted blocks (minimal in every R2F reading). -/
-  rsMinimal : Std.HashSet String := {}
+  /-- R3G-F: for each translated source declaration, the result-sort implicit levels of the blocks in its
+  dependency closure (itself included). A declaration reads these minimally where they are implicit;
+  the set depends only on the declaration's own dependencies, never on unrelated blocks. -/
+  rsClosure : Std.HashMap String (Std.HashSet String) := {}
   /-- Template levels of the translated template inductives (R5, exempt from R3). -/
   templateLevels : Std.HashSet String := {}
   /-- Native universe facts of the export. -/
@@ -242,6 +244,10 @@ def binderName (n : AName) : Name :=
   | none => .anonymous
 
 /-! ## Universes -/
+
+/-- R3G-F: the result-sort implicit levels in the dependency closure of `deps` (source names). -/
+def GEnv.rsOfDeps (genv : GEnv) (deps : Array String) : Std.HashSet String :=
+  deps.foldl (fun acc d => ((genv.rsClosure[d]?).getD {}).fold (·.insert ·) acc) {}
 
 /-- `a + k ≤ b` is entailed by the native facts (`Set` included): `k = 0` needs `≤`, `k = 1`
 needs `<`, larger offsets need a chain of strict steps. -/

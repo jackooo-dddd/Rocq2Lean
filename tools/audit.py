@@ -244,7 +244,7 @@ def ind_globals(d):
     return sorted(source_globals([[b["type"], [c["type"] for c in b["ctors"]]] for b in d["bodies"]], set()))
 
 
-def own_level_interp(facts, own, explicit=()):
+def own_level_interp(facts, own, explicit=(), minimal=frozenset()):
     """Independent copy of rule R2F: the Lean level standing for each own level l of a non-template
     inductive block is max(u_l, interp(m) + k) over native facts m <= l (k = 0) / m < l (k = 1)
     between own levels; mutually <= (equal) levels contribute their parameter directly."""
@@ -255,7 +255,7 @@ def own_level_interp(facts, own, explicit=()):
         acc = {"k": "param", "n": level_param(l)}
         # R3G-F (docs/RESULT_SORT_LEVELS.md §2): a result-sort implicit level is not read through the levels
         # below it (it stands for an argument a <= l); it still raises the levels above it
-        if fuel == 0 or (l in RS_MINIMAL and l not in explicit):
+        if fuel == 0 or (l in minimal and l not in explicit):
             return acc
         for m in own:
             if m == l or not leq(m, l):
@@ -1980,7 +1980,17 @@ class Facts:
 
 
 RSI_CHECKED = [0]   # R3G-F rows' levels checked (check_result_sort_implicit)
-RS_MINIMAL = set()  # R3G-F: the reported result-sort implicit levels (each row's checked independently)
+DECL_SRC = {}        # source name -> exported declaration (its dependency lists), set with RS_CLOSURE
+RS_CLOSURE = {}      # R3G-F: source name -> result-sort implicit levels in its dependency closure (itself included)
+
+
+def rs_deps(d):
+    """R3G-F: the result-sort implicit levels in the dependency closure of d's dependencies."""
+    dd = d.get("deps") or {}
+    out = set()
+    for x in (dd.get("type") or []) + (dd.get("body") or []):
+        out |= RS_CLOSURE.get(x, set())
+    return out
 SPLIT_COPIES = {}    # R-SPLIT: copy level -> its source level (set by main_statement; read by Facts and R3)
 
 
@@ -2671,7 +2681,8 @@ def own_partition_full(d, r):
             raise Mismatch("level interpretation without native facts")
         if not set(interp) <= tl or set(interp) & set(sol):
             raise Mismatch(f"interpreted levels {sorted(interp)} must be type or implicit levels {sorted(tl)}, not solved ones")
-        want = own_level_interp(FACTS, sorted(interp), set(source_globals(d["type"], set())) | source_globals(d["body"], set()))
+        want = own_level_interp(FACTS, sorted(interp), set(source_globals(d["type"], set())) | source_globals(d["body"], set()),
+                                rs_deps(DECL_SRC.get(d["name"], d)))
         for l, x in interp.items():
             if level_nf(x) != level_nf(want[l]):
                 raise Mismatch(f"interpretation of {l} is {x}, the R2F interpretation is {want[l]}")
@@ -2796,10 +2807,15 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
     if facts is None:
         problem("universe", "source IR has no native universe facts")
     gen, poly, gen_admit = {}, {}, {}
-    RS_MINIMAL.clear()
-    for r_ in rows.values():
-        if r_.get("status") == "TRANSLATED_AND_CHECKED":
-            RS_MINIMAL.update(r_.get("result_sort_implicit_levels") or [])
+    # R3G-F: closures in source order (a declaration's dependencies precede it in the merged IR)
+    RS_CLOSURE.clear()
+    DECL_SRC.clear()
+    DECL_SRC.update({x["name"]: x for x in lines if x.get("kind") in ("constant", "inductive")})
+    for x in lines:
+        if x.get("kind") in ("constant", "inductive") and x["name"] in rows:
+            cl = rs_deps(x) | set(rows[x["name"]].get("result_sort_implicit_levels") or [])
+            if cl:
+                RS_CLOSURE[x["name"]] = cl
     for s_, r_ in rows.items():
         if r_.get("status") == "TRANSLATED_AND_CHECKED" and r_.get("level_params"):
             d_ = decls[s_]
@@ -2938,7 +2954,8 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                     params_i, bl, tb_i = ind_params(d_, r_)
                     own = set(params_i)
                     if tb_i is None and not r_.get("plain_levels"):
-                        bl = own_level_interp(facts, params_i, set(ind_globals(d_)))     # explicit and implicit levels (R2F)
+                        bl = own_level_interp(facts, params_i, set(ind_globals(d_)),
+                                              rs_deps(d_) | set(r_.get("result_sort_implicit_levels") or []))     # explicit and implicit levels (R2F)
                     self_n = {r_.get("target")} | {c["name"] for c in r_.get("target_ctors", [])}
                     RSI_CHECKED[0] += check_result_sort_implicit(facts, d_, r_, gen, ro_of)
                     for l in r_.get("implicit_levels") or []:
@@ -3201,7 +3218,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
                 if tb is None and r.get("plain_levels"):
                     aud.body = None               # M6: plain parameters (u_l itself for every level)
                 elif tb is None:
-                    aud.body = own_level_interp(FACTS, params0, set(ind_globals(d))) if FACTS is not None else None   # explicit and implicit levels
+                    aud.body = own_level_interp(FACTS, params0, set(ind_globals(d)), rs_deps(d) | set(r.get("result_sort_implicit_levels") or [])) if FACTS is not None else None   # explicit and implicit levels
                 else:
                     if FACTS is not None:
                         check_body_levels(FACTS, d, sol0, params0)
@@ -3773,7 +3790,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 if tb is None and r.get("plain_levels"):
                     aud.body = None
                 elif tb is None:
-                    aud.body = own_level_interp(FACTS, params0, set(ind_globals(d))) if FACTS is not None else None
+                    aud.body = own_level_interp(FACTS, params0, set(ind_globals(d)), rs_deps(d) | set(r.get("result_sort_implicit_levels") or [])) if FACTS is not None else None
                 else:
                     aud.body = sol0
                 try:
