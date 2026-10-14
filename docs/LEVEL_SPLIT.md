@@ -1,8 +1,8 @@
-# R-SPLIT: one source level shared by several parameter sorts (experimental rule)
+# R-SPLIT: one source level shared by several parameter sorts
 
-Status: **experimental**, on branch `rules-split`; approved as a controlled translation-rule
-extension (Option A, 2026-10-14). Not merged until the semantic correspondence and the full-corpus
-results have been reviewed. ITERATION_LOG entry 9.
+Status: approved as a controlled translation-rule extension (Option A, 2026-10-14); developed on
+branch `rules-split`, reviewed and merged into `main` (2026-10-14) after the semantic correspondence
+and the full-corpus results (ITERATION_LOG entry 9).
 
 ## 1. The problem
 

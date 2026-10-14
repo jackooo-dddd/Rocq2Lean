@@ -1,6 +1,14 @@
 # Status
 
-**2026-10-14 — checkpoint after B + C-1 (branch `task-c`, not merged; awaiting approval).**
+**2026-10-14 — current baseline: rule round 2 + P3 + R-SPLIT (branches `rules-r2`, `rules-split`;
+reviewed, merged into `main` by fast-forward to `69dc4cc`).** Binder-level independence and joint
+level metavariables (entry 7), per-instance prerequisite hypotheses (entry 8), and R-SPLIT
+(`docs/LEVEL_SPLIT.md`, entry 9). Corpus at the validated implementation `a28c4b3` (run
+`r2l-run-SPLIT2`; consumer, audit, source instances, provenance OK), the fixed 4,474 protected roots:
+**673 Accepted / 2,177 Audited Pending / 1,518 Blocked / 106 Direct Failure** — the baseline for the
+next milestone.
+
+**2026-10-14 — checkpoint after B + C-1 (branch `task-c`; merged into `main` 2026-10-14).**
 - **A** (`main`): assembly, proof-check tests, corpus provenance (36/36 round trips; manifest bound).
 - **B** (termination obligations + unfolding equations, `docs/TERMINATION.md`) and **C-1 correctness
   repair** (`docs/UNIVERSE_FAMILY_C.md` §2): no statement, and no protected quantification range, is
@@ -15,17 +23,17 @@
 - Not applied: any result-sort rule for `JLFP`/`FP`/`JLDP_policy` (unsupported by the current
   representation and rules).
 
-**2026-10-14 — A′ (branch `task-a-prime`, on top of `task-c`; not merged).** Opaque data translated
+**2026-10-14 — A′ (branch `task-a-prime`, on top of `task-c`; merged into `main` 2026-10-14).** Opaque data translated
 with its body as Lean `opaque` constants, proof subterms as obligations (`docs/OPAQUE_DATA.md`). Corpus
 (re-exported, 10,966 records; consumer, audit, provenance OK): 520 / 1,601 / 2,272 / 81; no claimed row
 lost; protected pending rows needing an opaque value **1,588 → 6** (1,595 now wait only for proof tasks).
 ITERATION_LOG entry 5.
 
-**2026-10-14 — R2B-V (branch `task-r2bv`, on top of A′; approved rule; not merged).** A type-valued
+**2026-10-14 — R2B-V (branch `task-r2bv`, on top of A′; approved rule; merged into `main` 2026-10-14).** A type-valued
 definition declared at the sort of its value (`docs/UNIVERSE_FAMILY_C.md` §4): `JLFP`/`FP`/`JLDP_policy`
 and 11 other protected definitions translated, job generic. Corpus (consumer, audit, provenance OK):
 **673 / 2,175 / 1,520 / 106** (modern 446 / 1,276 / 745 / 37, Classic 227 / 899 / 775 / 69); 727 newly
-supported, no claimed row lost. `main` = `task-c` (fast-forwarded, local). ITERATION_LOG entry 6.
+supported, no claimed row lost. ITERATION_LOG entry 6.
 
 **Current phase: statement-only translation (direction change 2026-10-11).** Rocq2Lean translates
 the datatypes, definitions and theorem *statements* of Prosa v0.6 and Classic, plus what they need,
