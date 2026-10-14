@@ -1075,3 +1075,192 @@ Evidence:
 * `termination/CONVERSION_DEPENDENCE-RS4.json`;
 * `rsonly/`;
 * `test_result_sort.json` and the other test reports from the frozen run.
+
+---
+
+## Entry 11 — R-CARRIER (case B, Option 2): per-operand carrier universe levels (2026-10-15)
+
+Branch `rules-carrier`, from `main` `f9c9073` (plus the local `CLAUDE.md` commit `0120f56`). Commits:
+`bb1840d` `d462a93` `202de49` `326033f` `dda0a2a` `a29cfbc` `eefad94` `775f1d4` `ee4e779` `58996a3`.
+**Experimental, not merged or pushed: pending review.** Design: `docs/CARRIER_LEVELS.md`.
+
+Corpus run worktrees:
+* `r2l-run-CB2` (implementation `775f1d4`) and `r2l-run-CB3` (implementation `ee4e779`);
+* the merged source is byte-identical to RS4's (`8eaf2da4…`);
+* the exporter plugin is byte-identical (`44a8c6ac…`).
+
+The suites ran in the frozen worktree `r2l-B-test`.
+
+### (1) Diagnosis (real exporter, fixture `fixtures/stmt/cb`)
+
+Case B and the two solution-fact rows on the 749-root path were reproduced with the real MathComp
+declarations (`reports/statement_only/carrier/pre_fixture_report.json`).
+
+| Row | Mechanism |
+|---|---|
+| `prod_eqType T nat_eqType` (Classic `fp_rta_comp`) | one parameter `u_51` named the two operands' free carrier classes; `nat_eqType` (carrier `Nat : Type 0`) pinned the generic operand at 0 |
+| `HB_unnamed_mixin_107` obligations 2/4/8 | `Countable.type`'s carrier 959 pinned through `SubType` (next row) |
+| `eqtype.insub` | R2F read `SubType`'s parameter carrier 573 as `max(u573, u577)` (fact `577 ≤ 573`); `SubType.sort` identified the carriers and `Sub` pinned both at 0 |
+| `fintype.HB_unnamed_factory_57` | **not a carrier coupling**: 551 is the motive level of `isSub`'s `Sub_rect` (542; `551 = 542` in the source). A statement class containing a proof-local own level was represented by it and never named, so 551 was defaulted to 0 |
+
+**Correction to entry 10:** `factory_57` was grouped with the structure-carrier couplings. It is a
+separate mechanism (P3 below).
+
+### (2) What was changed
+
+All parts are derived from the source and from typing; there are no names and no whitelists.
+* **P1:** a block's parameter carrier is not raised by its own block's other levels. These pairs are
+  `Split.decoupledPairs` in the translator and `DECOUPLED` in the audit.
+* **P2:** the distinct free classes of an implicit level in a declaration's type (a statement's
+  statement) are named as copies `l__c<k>`, which lie below `l` and inherit its upper bounds.
+  References read every copy as `l`, and the report field `level_copies` lists them.
+* **P3:** in statement mode only own *type* levels represent a class. A proof-local level is solved
+  and checked by R2S.
+
+There is no lifting: no `ULift` occurs anywhere, and `nat_eqType`'s carrier stays `Nat`.
+
+Refinements found on the corpus:
+1. P2 classes are counted without the generated prerequisite-hypothesis binders.
+2. A post-pass merges stale and dangling copies.
+3. A copy position skips the shared-level coherence rule, but not R3.
+4. Owning a copy means owning the level in the generality check.
+5. **(new in this round, `ee4e779`)** In the generality check, an argument `max(u_a, …)` of own
+   parameters for a referenced level `l` is accepted when every summand is *equal* to `l` in the
+   source graph (≤ both ways). It is `l`'s reading, not a specialization. Implemented in the
+   translator (`freeLevelRef`) and in the audit (`check_statement_generality`).
+
+Codex workers:
+* `taskcost` diagnosed and proposed refinement 1;
+* `corr` wrote the correspondence proofs.
+
+Both were reviewed and rerun here.
+
+### (3) Independent checks and controls
+
+* **Audit:** `carrier_levels`, `DECOUPLED`, the `level_copies` pre-pass (fresh, implicit, occurring),
+  copies registered with R-SPLIT's copy map, `GEN_COPY_POS` coherence and the generality refinements.
+* **Consumer:** each copy is a universe parameter occurring in the type (for a statement, in its
+  statement).
+* **`test-carrier`: 20 checks.**
+  * Fixed rows and the representation checks.
+  * Negative controls:
+    * accidental pinning: kernel-accepted, audit-rejected;
+    * incorrect identification (a structure copy relabelled as a carrier copy): kernel-accepted,
+      audit-rejected;
+    * splitting the genuine dependency `prod_same`: rejected by the kernel;
+    * P1 coupling restored on `subT`: kernel-accepted, audit-rejected.
+  * Positive control at mixed nonzero universes.
+  * 17 axiom-free synthetic correspondence proofs (equality and `insub`).
+  * **New:** refinement-5 controls. `max(u_a, u_b)` is accepted only for source-equal levels; it is
+    rejected when a summand is only below `l`, carries an offset, or is not an own level.
+
+### (4) Coverage — FULL CORPUS, same 4,474 protected roots
+
+| Run | Impl | Accepted | Audited Pending | Blocked | Direct Failure | Notes |
+|---|---|---|---|---|---|---|
+| RS4 baseline (entry 10, `main`) | `6fe8890` | 673 | 2,180 | 1,518 | 103 | |
+| corpus run 1 | `326033f` | – | – | – | – | not validated: stale copies; 61 rows lost to the five mechanisms fixed by refinements 1–4 and the narrowed P1; not adopted |
+| **CB2** | **`775f1d4`** | **673** | **2,257** | **1,499** | **45** | validated |
+| **CB3** | **`ee4e779`** | **673** | **2,260** | **1,494** | **47** | validated |
+
+**CB3 by family:** modern 446 / 1,281 / 743 / 34 (unchanged from RS4); Classic 227 / 979 / 751 / 13.
+
+**Checks (CB2 and CB3):** consumer, audit, source instances, `CORPUS_PROVENANCE_BOUND` (10,966
+declarations) and the conversion dependence are all OK.
+
+**Protected transitions:**
+* RS4 → CB2: 77 newly Audited Pending (all Classic); 0 regressions; 0 old false acceptances.
+* CB2 → CB3:
+  * 3 newly Audited Pending: Classic `Affinity.affinity`, `task_affinity` and `is_subaffinity`;
+  * 2 moved from Blocked to Direct Failure: `ConcreteTask.concrete_task` (a protected-range refusal)
+    and `Affinity.can_execute_on` (coherence). Their dependencies now translate, exposing their own
+    refusals; they were not claimed before;
+  * 0 regressions; 0 old false acceptances.
+
+**All rows (10,970):**
+* claimed rows: RS4 4,422 → CB2 4,532 (+110) → CB3 4,583 (+51);
+* **0 claimed rows lost in either step**;
+* rows with level copies: 887;
+* proof tasks: 2,440 → 2,524 → 2,551.
+
+**Reported separately** (`carrier/case_b_status.json`):
+
+| Row | RS4 | CB2 | CB3 |
+|---|---|---|---|
+| case B, Classic `fp_claimed_bounds_gt_zero` (basic and jitter) | refused | **claimed** | claimed |
+| `HB_unnamed_mixin_107` and obligations 2/4/8 (Countable carrier) | refused/blocked | **claimed** | claimed |
+| `eqtype.insub` | refused | **claimed** | claimed |
+| `fintype.HB_unnamed_factory_57` | refused | **claimed** (`551 := u542`) | claimed |
+| `choice.HB_unnamed_mixin_109` obligation 13 | blocked | refused (equal-level `max`) | **claimed** (refinement 5) |
+| `choice.HB_unnamed_factory_165` obligation 1 | refused | refused | **claimed** |
+| ideal `processor_state` | refused | refused (coherence) | refused (coherence) |
+
+**The 749/761-root group (STATEMENT_FREE_LEVEL_PINNED only; 744 Classic, 17 modern) is not
+unblocked.**
+* Its frontier moved twice:
+  * RS4: `mixin_107` and the solution-fact rows;
+  * CB2: `mixin_109` obligation 13, blocking 751 roots;
+  * CB3: `fintype.HB_unnamed_factory_66` obligation 1, blocking 712 roots.
+* In CB3, 3 of these roots are claimed, 746 are blocked and 12 are refused.
+
+### (5) Remaining blockers on the selected paths (CB3)
+
+* **`factory_66` obligation 1** (712 roots of the group): `ord_enum`'s level `ssrbool.1169` (ordinal's
+  sort) reaches the statement at 0. Cause, upstream:
+  * `choice.eqtype_sub_type__canonical__choice_Countable` (not protected) is accepted only on the R3↓
+    tier, with 4 defaulted levels;
+  * its plain tiers fail the shared-level coherence rule on R2F `max` readings: `Countable`'s class
+    level 968 is read `max(299, 938, 965, 1, 968, 32)`;
+  * the specialization then flows through `factory_59` and `mixin_63` to `ordinal.{0}`.
+
+  This is the REFERENCE_COHERENCE mechanism.
+* **REFERENCE_COHERENCE** (213 roots alone; ideal `processor_state` and 9 others): a shared monomorphic
+  level, such as `Equality`'s class level 58, gets a concrete instance's R2F reading (unit's eqType:
+  `max(u32+1, u55, 1)`) in a prerequisite-hypothesis type, where coherence demands `u_58`. The R3↓
+  tiers then narrow `Job`'s carrier: refused, correctly.
+* **PROTECTED_RANGE_NARROWED** (227; `JobReady`, `concrete_job`, `SystemEvolutions`, `concrete_task`).
+* **R2F readings of source-equal levels** (`docs/CARRIER_LEVELS.md` §5). In the corpus-wide facts one
+  class of 232 levels is mutually equal; it includes `eqtype.51`, `choice.959`, `eqtype.577`,
+  `ssrbool.1169` and `fintype.101`. Two repairs were measured on corpus subsets and **not kept**:
+  * one parameter per source-equal class (R2F-eq): 8 protected `schedule`/`service` rows lost;
+  * identifying `max` summands of equal levels at uses (P4): protected `service_during` lost.
+
+  Both merged independent Prosa carriers.
+
+Each of these needs a decision on the coherence rule or a new representation; that decision is the user's (a proposal follows this entry, not yet adopted).
+
+### (6) Process corrections in this round
+
+* **Corpus run 1.** P1 was broad (every carrier minimal everywhere), and P2 counted hypothesis binders.
+  The run lost 61 rows, `task_T`, `TaskCost` and `is_idle_iff` among them. P1 was narrowed and
+  refinements 1–4 were added; CB2 lost 0 rows.
+* **`test-universe-c`.** It expected ideal `processor_state` to be claimed (`dda0a2a`), which held only
+  under the broad P1. At `775f1d4` it failed (1/22). The check now states the actual result: refused,
+  never claimed narrowed, now by the coherence rule (`ee4e779`; 22/22).
+* **Ablations.** Ablations run without the run's contract skip protection. Only CLI and corpus-subset
+  translations through `statement_run` are used as evidence.
+
+### (7) Regressions and validation
+
+* **At `ee4e779` (frozen worktree):**
+  * `test-statement` 30, `test-termination` 22, `test-assembly` 34, `test-opaque` 16;
+  * `test-universe-c` 22, `test-universe-r2` 9, `test-multi-instance` 8;
+  * `test-level-split` 18, `test-result-sort` 15, `test-carrier` 19, `test-provenance` 5;
+  * **`test-all`: 18/18.**
+* **At `58996a3`:** `test-carrier` 20 (adds the refinement-5 controls; test-only commit).
+* **Corpus:** 0 claimed rows lost; 0 protected regressions; validated.
+
+### (8) Commands and evidence
+
+As entry 10, with `runs/st-corpus-CB2` and `runs/st-corpus-CB3`. Corpus subsets for the diagnoses:
+`STATEMENT_RUN=<corpus run> python3 -I inventory/statement_run.py subset ROOT out/source.ndjson`, then
+`statement_run.py translate` and `check` (protection-bound).
+
+Evidence:
+* `coverage/{CB2,CB3,transitions-RS4-to-CB2,transitions-CB2-to-CB3}.json`;
+* `RULE_BACKLOG.{md,json}` (regenerated from CB3);
+* `PROOF_TASKS.jsonl` (CB3);
+* `provenance/CORPUS_MANIFEST.json` (CB3; `-CB2` and `-RS4` kept);
+* `termination/CONVERSION_DEPENDENCE{,-CB2,-CB3}.json`;
+* `carrier/{pre_fixture_report,case_b_status}.json`;
+* the `test_*.json` reports from the frozen runs.

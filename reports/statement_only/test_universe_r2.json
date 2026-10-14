@@ -2,7 +2,7 @@
  "pipeline": {
   "exit_codes": [
    0,
-   2,
+   0,
    0
   ],
   "validation": "STATEMENT_VALIDATED",
@@ -47,6 +47,7 @@
    "u_mathcomp_boot_choice_968",
    "u_mathcomp_boot_eqtype_32",
    "u_mathcomp_boot_eqtype_533",
+   "u_mathcomp_boot_eqtype_577",
    "u_mathcomp_boot_eqtype_583",
    "u_mathcomp_boot_eqtype_588"
   ],
@@ -60,6 +61,7 @@
    "mathcomp.boot.choice.968",
    "mathcomp.boot.eqtype.32",
    "mathcomp.boot.eqtype.533",
+   "mathcomp.boot.eqtype.577",
    "mathcomp.boot.eqtype.583",
    "mathcomp.boot.eqtype.588"
   ],

@@ -1,5 +1,21 @@
 # Status
 
+**2026-10-15 — R-CARRIER, case B Option 2 (branch `rules-carrier`, experimental; committed locally,
+not merged or pushed, pending review).**
+* Per-operand carrier universe levels: P1 decoupled parameter carriers, P2 implicit operand copies
+  `l__c<k>`, P3 proof-local levels never represent a class, and refinements 1–5
+  (`docs/CARRIER_LEVELS.md`).
+* **Corpus** at `ee4e779` (run `r2l-run-CB3`; consumer, audit, source instances and provenance OK):
+  **673 Accepted / 2,260 Audited Pending / 1,494 Blocked / 47 Direct Failure** (from 673 / 2,180 /
+  1,518 / 103).
+  * 80 protected roots newly Audited Pending, all Classic;
+  * 0 protected regressions; 0 claimed rows lost; +161 claimed rows.
+* Case B, `insub`, `factory_57` and `mixin_107` are fixed.
+* The 761-root STATEMENT_FREE_LEVEL_PINNED group is **not** unblocked. Its frontier is now
+  `fintype.HB_unnamed_factory_66` obligation 1 (712 roots), a consequence of the REFERENCE_COHERENCE
+  mechanism.
+* ITERATION_LOG entry 11.
+
 **2026-10-14 — current baseline: R3G-F + the P2 retry tier for definitions (branch `rules-rsonly`,
 reviewed, merged into `main`).**
 * **R3G-F** (`docs/RESULT_SORT_LEVELS.md`) handles result-sort-only levels of class records. It solves

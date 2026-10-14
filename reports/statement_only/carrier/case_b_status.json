@@ -1,0 +1,684 @@
+{
+ "runs": {
+  "RS4": "/home/shunqwang4/research/r2l-run-RS4/runs/st-corpus-RS4",
+  "CB2": "/home/shunqwang4/research/r2l-run-CB2/runs/st-corpus-CB2",
+  "CB3": "/home/shunqwang4/research/r2l-run-CB3/runs/st-corpus-CB3"
+ },
+ "rows": {
+  "case B (Classic, prod_eqType T nat_eqType)": {
+   "prosa.classic.analysis.uni.basic.fp_rta_comp/ResponseTimeIterationFP.fp_claimed_bounds_gt_zero": {
+    "RS4": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "statement specialization refused: Rocq.mathcomp.boot.eqtype.Equality.type: the level of u_mathcomp_boot_eqtype_51 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_mathcomp_boot_eqtype_51 [last tier: UNIVERSE_REJECTED: statemen"
+    },
+    "CB2": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_eqtype_32__c0",
+      "u_mathcomp_boot_eqtype_32__c1",
+      "u_mathcomp_boot_eqtype_32__c2",
+      "u_mathcomp_boot_eqtype_51",
+      "u_mathcomp_boot_eqtype_55__c0",
+      "u_mathcomp_boot_eqtype_55__c1",
+      "u_mathcomp_boot_eqtype_55__c2",
+      "u_mathcomp_boot_eqtype_58__c0",
+      "u_mathcomp_boot_eqtype_58__c1",
+      "u_mathcomp_boot_eqtype_58__c2"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    },
+    "CB3": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_eqtype_32__c0",
+      "u_mathcomp_boot_eqtype_32__c1",
+      "u_mathcomp_boot_eqtype_32__c2",
+      "u_mathcomp_boot_eqtype_51",
+      "u_mathcomp_boot_eqtype_55__c0",
+      "u_mathcomp_boot_eqtype_55__c1",
+      "u_mathcomp_boot_eqtype_55__c2",
+      "u_mathcomp_boot_eqtype_58__c0",
+      "u_mathcomp_boot_eqtype_58__c1",
+      "u_mathcomp_boot_eqtype_58__c2"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   },
+   "prosa.classic.analysis.uni.jitter.fp_rta_comp/ResponseTimeIterationFP.fp_claimed_bounds_gt_zero": {
+    "RS4": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "statement specialization refused: Rocq.mathcomp.boot.eqtype.Equality.type: the level of u_mathcomp_boot_eqtype_51 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_mathcomp_boot_eqtype_51 [last tier: UNIVERSE_REJECTED: statemen"
+    },
+    "CB2": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_eqtype_32__c0",
+      "u_mathcomp_boot_eqtype_32__c1",
+      "u_mathcomp_boot_eqtype_32__c2",
+      "u_mathcomp_boot_eqtype_51",
+      "u_mathcomp_boot_eqtype_55__c0",
+      "u_mathcomp_boot_eqtype_55__c1",
+      "u_mathcomp_boot_eqtype_55__c2",
+      "u_mathcomp_boot_eqtype_58__c0",
+      "u_mathcomp_boot_eqtype_58__c1",
+      "u_mathcomp_boot_eqtype_58__c2"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    },
+    "CB3": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_eqtype_32__c0",
+      "u_mathcomp_boot_eqtype_32__c1",
+      "u_mathcomp_boot_eqtype_32__c2",
+      "u_mathcomp_boot_eqtype_51",
+      "u_mathcomp_boot_eqtype_55__c0",
+      "u_mathcomp_boot_eqtype_55__c1",
+      "u_mathcomp_boot_eqtype_55__c2",
+      "u_mathcomp_boot_eqtype_58__c0",
+      "u_mathcomp_boot_eqtype_58__c1",
+      "u_mathcomp_boot_eqtype_58__c2"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   }
+  },
+  "Countable carrier (mixin_107 and obligations 2/4/8)": {
+   "mathcomp.boot.choice.HB_unnamed_mixin_107": {
+    "RS4": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_2, mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_4, mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_8]"
+    },
+    "CB2": {
+     "status": "PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_959",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32__c0",
+      "u_mathcomp_boot_eqtype_32__c1",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_577",
+      "u_mathcomp_boot_eqtype_58",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    },
+    "CB3": {
+     "status": "PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_959",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32__c0",
+      "u_mathcomp_boot_eqtype_32__c1",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_577",
+      "u_mathcomp_boot_eqtype_58",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   },
+   "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_2": {
+    "RS4": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "statement specialization refused: Rocq.mathcomp.boot.choice.Countable.type: the level of u_mathcomp_boot_choice_959 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_mathcomp_boot_choice_959 [last tier: UNIVERSE_REJECTED: state"
+    },
+    "CB2": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_959",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_577",
+      "u_mathcomp_boot_eqtype_58",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    },
+    "CB3": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_959",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_577",
+      "u_mathcomp_boot_eqtype_58",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   },
+   "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_4": {
+    "RS4": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "statement specialization refused: Rocq.mathcomp.boot.choice.Countable.type: the level of u_mathcomp_boot_choice_959 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_mathcomp_boot_choice_959 [last tier: UNIVERSE_REJECTED: state"
+    },
+    "CB2": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_959",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_577",
+      "u_mathcomp_boot_eqtype_58",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    },
+    "CB3": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_959",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_577",
+      "u_mathcomp_boot_eqtype_58",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   },
+   "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_8": {
+    "RS4": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "statement specialization refused: Rocq.mathcomp.boot.choice.Countable.type: the level of u_mathcomp_boot_choice_959 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_mathcomp_boot_choice_959 [last tier: UNIVERSE_REJECTED: state"
+    },
+    "CB2": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_959",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_577",
+      "u_mathcomp_boot_eqtype_58",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    },
+    "CB3": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_959",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_577",
+      "u_mathcomp_boot_eqtype_58",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   }
+  },
+  "insub": {
+   "mathcomp.boot.eqtype.insub": {
+    "RS4": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "proof-local level mathcomp.boot.eqtype.695 solved as (some 0): native fact Set lt mathcomp.boot.eqtype.695 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level mathcomp.boot.eqtype.695 solved as (some 0): native fact Set lt mathcomp.boot.eqtype.695 does not hold for the so"
+    },
+    "CB2": {
+     "status": "PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_577",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588",
+      "u_mathcomp_boot_eqtype_695"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    },
+    "CB3": {
+     "status": "PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_577",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588",
+      "u_mathcomp_boot_eqtype_695"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   }
+  },
+  "factory_57": {
+   "mathcomp.boot.fintype.HB_unnamed_factory_57": {
+    "RS4": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 1,
+     "message": "proof-local level mathcomp.boot.eqtype.551 solved as (some 0): native fact Corelib.ssr.ssrbool.1169 le mathcomp.boot.eqtype.551 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level mathcomp.boot.eqtype.551 solved as (some 0): native fact Corelib.ssr.ssrbool.1169 le mathcom"
+    },
+    "CB2": {
+     "status": "PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_Corelib_ssr_ssrbool_1169",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_542"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    },
+    "CB3": {
+     "status": "PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_Corelib_ssr_ssrbool_1169",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_542"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   },
+   "mathcomp.boot.fintype.HB_unnamed_factory_57__rocq2lean_obligation_1": {
+    "RS4": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_Corelib_ssr_ssrbool_1169"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    },
+    "CB2": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_Corelib_ssr_ssrbool_1169"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    },
+    "CB3": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_Corelib_ssr_ssrbool_1169"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   }
+  },
+  "equal-level refinement (mixin_109 obligation 13)": {
+   "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_13": {
+    "RS4": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_10, mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_12, mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_4, mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_6, mathcom"
+    },
+    "CB2": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "statement specialization refused: Rocq.mathcomp.boot.eqtype.SubType.type: the level of u_mathcomp_boot_eqtype_577 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max u_mathcomp_boot_choice_1053__c0 u_mathcomp_boot_choice_959__c0, not "
+    },
+    "CB3": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_1007",
+      "u_mathcomp_boot_choice_1053",
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_959",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   },
+   "mathcomp.boot.choice.HB_unnamed_mixin_109": {
+    "RS4": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_2, mathcomp.boot.eqtype.insub, mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_10, mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_12, mathcomp.boot.choice.HB_unnamed_mixin_109__roc"
+    },
+    "CB2": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_13]"
+    },
+    "CB3": {
+     "status": "PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_1007",
+      "u_mathcomp_boot_choice_1053",
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_959",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_583",
+      "u_mathcomp_boot_eqtype_588"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   },
+   "mathcomp.boot.choice.HB_unnamed_factory_165__rocq2lean_obligation_1": {
+    "RS4": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "reference to Rocq.mathcomp.boot.choice.Countable.sort: coherence: source level mathcomp.boot.choice.299 is shared with the referring declaration, so its argument must be u_mathcomp.boot.choice.299, not max u_mathcomp_boot_choice_299 u_mathcomp_boot_choice_333 [last tier: UNIVERSE_REJECTED: statement"
+    },
+    "CB2": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "statement specialization refused: Rocq.mathcomp.boot.choice.Countable.type: the level of u_mathcomp_boot_choice_959 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is u_mathcomp_boot_choice_333, not u_mathcomp_boot_choice_959 [last tier:"
+    },
+    "CB3": {
+     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299__c0",
+      "u_mathcomp_boot_choice_299__c1",
+      "u_mathcomp_boot_choice_333",
+      "u_mathcomp_boot_choice_339",
+      "u_mathcomp_boot_choice_342",
+      "u_mathcomp_boot_choice_938__c0",
+      "u_mathcomp_boot_choice_938__c1",
+      "u_mathcomp_boot_choice_938__c2",
+      "u_mathcomp_boot_choice_965__c0",
+      "u_mathcomp_boot_choice_965__c1",
+      "u_mathcomp_boot_choice_965__c2",
+      "u_mathcomp_boot_choice_968__c0",
+      "u_mathcomp_boot_choice_968__c1",
+      "u_mathcomp_boot_choice_968__c2",
+      "u_mathcomp_boot_eqtype_32__c0",
+      "u_mathcomp_boot_eqtype_32__c1",
+      "u_mathcomp_boot_eqtype_32__c2",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_58"
+     ],
+     "universe_level_defaults": 0,
+     "message": ""
+    }
+   }
+  },
+  "next frontier (ordinal chain)": {
+   "mathcomp.boot.choice.eqtype_sub_type__canonical__choice_Countable": {
+    "RS4": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.choice.HB_unnamed_mixin_106, mathcomp.boot.choice.HB_unnamed_mixin_107, mathcomp.boot.choice.HB_unnamed_mixin_109]"
+    },
+    "CB2": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.choice.HB_unnamed_mixin_109]"
+    },
+    "CB3": {
+     "status": "PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_339",
+      "u_mathcomp_boot_choice_342",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_965__c0",
+      "u_mathcomp_boot_choice_965__c1",
+      "u_mathcomp_boot_choice_968",
+      "u_mathcomp_boot_eqtype_32__c0",
+      "u_mathcomp_boot_eqtype_32__c1",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_58",
+      "u_mathcomp_boot_eqtype_583"
+     ],
+     "universe_level_defaults": 4,
+     "message": ""
+    }
+   },
+   "mathcomp.boot.fintype.HB_unnamed_factory_59": {
+    "RS4": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.choice.eqtype_sub_type__canonical__choice_Countable, mathcomp.boot.fintype.fintype_ordinal__canonical__eqtype_SubType]"
+    },
+    "CB2": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.choice.eqtype_sub_type__canonical__choice_Countable]"
+    },
+    "CB3": {
+     "status": "PENDING_KERNEL_CHECKED",
+     "level_params": [
+      "u_mathcomp_boot_choice_299",
+      "u_mathcomp_boot_choice_339",
+      "u_mathcomp_boot_choice_342",
+      "u_mathcomp_boot_choice_938",
+      "u_mathcomp_boot_choice_965",
+      "u_mathcomp_boot_eqtype_32",
+      "u_mathcomp_boot_eqtype_533",
+      "u_mathcomp_boot_eqtype_55",
+      "u_mathcomp_boot_eqtype_58",
+      "u_mathcomp_boot_eqtype_583"
+     ],
+     "universe_level_defaults": 2,
+     "message": ""
+    }
+   },
+   "mathcomp.boot.fintype.HB_unnamed_factory_66__rocq2lean_obligation_1": {
+    "RS4": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.fintype.HB_unnamed_mixin_63, mathcomp.boot.fintype.ord_enum]"
+    },
+    "CB2": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.fintype.HB_unnamed_mixin_63]"
+    },
+    "CB3": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "statement specialization refused: RocqPending.mathcomp.boot.fintype.ord_enum: the level of u_Corelib_ssr_ssrbool_1169 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_Corelib_ssr_ssrbool_1169 [last tier: UNIVERSE_REJECTED: sta"
+    }
+   },
+   "mathcomp.boot.fintype.fintype_ordinal__canonical__fintype_Finite": {
+    "RS4": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.fintype.HB_unnamed_factory_66, mathcomp.boot.fintype.HB_unnamed_mixin_63, mathcomp.boot.fintype.HB_unnamed_mixin_64, mathcomp.boot.fintype.HB_unnamed_mixin_65]"
+    },
+    "CB2": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.fintype.HB_unnamed_factory_66, mathcomp.boot.fintype.HB_unnamed_mixin_63, mathcomp.boot.fintype.HB_unnamed_mixin_64, mathcomp.boot.fintype.HB_unnamed_mixin_65]"
+    },
+    "CB3": {
+     "status": "BLOCKED_DEPENDENCY",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "failed dependencies: #[mathcomp.boot.fintype.HB_unnamed_factory_66]"
+    }
+   }
+  },
+  "ideal processor_state (coherence)": {
+   "prosa.model.processor.ideal.processor_state": {
+    "RS4": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "reference to Rocq.mathcomp.boot.eqtype.HB_unnamed_factory_16__rocq2lean_obligation_1.statement: coherence: source level mathcomp.boot.eqtype.58 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.58, not max\n(max\n (max (max u_mathcomp_boot_eqtype_32 1) u_mathcomp"
+    },
+    "CB2": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "reference to Rocq.mathcomp.boot.eqtype.HB_unnamed_factory_16__rocq2lean_obligation_1.statement: coherence: source level mathcomp.boot.eqtype.58 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.58, not max\n(max\n (max (max u_mathcomp_boot_eqtype_32 1) u_mathcomp"
+    },
+    "CB3": {
+     "status": "UNIVERSE_REJECTED",
+     "level_params": [],
+     "universe_level_defaults": 0,
+     "message": "reference to Rocq.mathcomp.boot.eqtype.HB_unnamed_factory_16__rocq2lean_obligation_1.statement: coherence: source level mathcomp.boot.eqtype.58 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.58, not max\n(max\n (max (max u_mathcomp_boot_eqtype_32 1) u_mathcomp"
+    }
+   }
+  }
+ },
+ "pinned_group_CB2": {
+  "roots": 761,
+  "by_family": {
+   "modern": 17,
+   "classic": 744
+  },
+  "direct_blockers_CB2": [
+   [
+    "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_13",
+    751
+   ],
+   [
+    "mathcomp.boot.tuple.HB_unnamed_factory_1__rocq2lean_obligation_1",
+    2
+   ],
+   [
+    "prosa.analysis.facts.transform.replace_at.service_at_other_times_invariant",
+    1
+   ],
+   [
+    "prosa.analysis.facts.transform.replace_at.service_delta",
+    1
+   ],
+   [
+    "prosa.analysis.facts.transform.replace_at.service_in_replaced",
+    1
+   ]
+  ],
+  "CB3_status": {
+   "BLOCKED_DEPENDENCY": 746,
+   "UNIVERSE_REJECTED": 12,
+   "claimed": 3
+  },
+  "CB3_direct_blockers": [
+   [
+    "mathcomp.boot.fintype.HB_unnamed_factory_66__rocq2lean_obligation_1",
+    712
+   ],
+   [
+    "prosa.classic.model.schedule.apa.affinity/Affinity.can_execute_on",
+    101
+   ],
+   [
+    "prosa.classic.implementation.apa.task/ConcreteTask.concrete_task",
+    36
+   ],
+   [
+    "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.alpha1_obligation_3",
+    7
+   ],
+   [
+    "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.alpha2_obligation_2",
+    7
+   ],
+   [
+    "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.alpha3_obligation_2",
+    7
+   ],
+   [
+    "prosa.classic.implementation.apa.bertogna_edf_example/ResponseTimeAnalysisEDF.alpha1_obligation_3",
+    5
+   ],
+   [
+    "prosa.classic.implementation.apa.bertogna_edf_example/ResponseTimeAnalysisEDF.alpha2_obligation_2",
+    5
+   ],
+   [
+    "prosa.classic.implementation.apa.bertogna_edf_example/ResponseTimeAnalysisEDF.alpha3_obligation_2",
+    5
+   ],
+   [
+    "mathcomp.boot.tuple.HB_unnamed_factory_1__rocq2lean_obligation_1",
+    2
+   ]
+  ]
+ }
+}

@@ -288,5 +288,11 @@
   "exit": 0,
   "theorems_without_axioms": 17,
   "output": "'CarrierCorrespondence.eq_down_up' does not depend on any axioms\n'CarrierCorrespondence.eq_up_down' does not depend on any axioms\n'CarrierCorrespondence.liftEq_eqop' does not depend on any axioms\n'CarrierCorrespondence.prod_down_up' does not depend on any axioms\n'CarrierCorrespondence.prod_up_down' does not depend on any axioms\n'CarrierCorrespondence.prod_eqop' does not depend on any axioms\n'CarrierCorrespondence.prod_nat_down_up' does not depend on any axioms\n'CarrierCorrespondence.prod_nat_up_down' does not depend on any axioms\n'CarrierCorrespondence.prod_nat_eqop' does not depend on any axioms\n'CarrierCorrespondence.sub_down_up' does not depend on any axioms\n'CarrierCorrespondence.sub_up_down' does not depend on any axioms\n'CarrierCorrespondence.liftSub_value' does not depend on any axioms\n'CarrierCorrespondence.liftSub_ssub' does not depend on any axioms\n'CarrierCorrespondence.fromOption_toOption' does not depend on any axioms\n'CarrierCorrespondence.toOption_fromOption' does not depend on any axioms\n'CarrierCorrespondence.insub_lift' does not depend on any axioms\n'CarrierCorrespondence.insub_lift_map' does not depend on any axioms\n"
+ },
+ "equal_level_generality": {
+  "equal": true,
+  "one_summand_only_below": false,
+  "offset": false,
+  "not_own": false
  }
 }
