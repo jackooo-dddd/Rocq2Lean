@@ -117,5 +117,50 @@ against the narrowed module.
 ## 3. Status
 
 * C-1 and its repair: measured on the corpus, `reports/statement_only/ITERATION_LOG.md` (entry 4).
-* 1b (`JLFP`/`FP`/`JLDP_policy`): unsupported by the current representation and rules; blocked; no
-  rule proposed for application (requirements above).
+* 1b (`JLFP`/`FP`/`JLDP_policy`): handled by the approved rule R2B-V (§4, 2026-10-14); entry 6.
+
+## 4. Rule R2B-V: a type-valued definition declared at the sort of its value (approved 2026-10-14)
+
+**Rule.** For a *definition* (never a statement, proof task or opaque-data interface) whose source type
+is `∀ Γ, Sort s`, the levels that occur in the source only in the result sort `s` may be replaced by the
+sort of the translated value: the Lean declaration is `∀ ⟦Γ⟧, Sort σ` with `σ` the sort of
+`⟦body⟧ Γ` (`fun Γ ↦ ⟦body⟧`), each replaced level `l` solved to a level `σ_l` that is a **lowering**:
+every summand `g + k` of `σ_l` has `g + k ≤ l` in the native facts (`g` a parameter's source level),
+every constant `k` has `Set + k ≤ l`. A replaced level that no longer occurs anywhere is recorded at 0
+(a lowering). It is a general rule — stated for every declaration it covers — tried as the last tier of
+the translation ladder (only when every other tier fails, so no accepted translation changes), in
+statement mode only. Reported per row: `result_sort_inherited: true`, `sort_lowered_levels`.
+
+**Why it is needed.** Rocq types `rel (sort Job)` at `rel`'s level by cumulativity
+(`Type@{51} ≤ Type@{1105}`), so `JLFP_policy : JobType → Type@{1105}`; Lean has no cumulativity, so
+the declaration either raises the job to `rel`'s level (R3 refuses) or is declared at the job's level.
+
+**Source/target interface analysis.**
+* Unchanged: every binder (quantification range) — the C generality check still applies to the
+  protected definition's binder domains (`Job : JobType.{u51, ι58}` stays generic); the value (term by
+  term, audited); every reference (R3 on each argument; `rel` lowered to the job's level, R3↓).
+* Changed: only the declared result sort: `JLFP_policy.{u51,u58} Job : Type u51` instead of
+  Rocq's `Type@{1105}` (with `51 ≤ 1105` native). The Lean type is exactly the type of the value; Rocq's
+  declared sort was an upper bound reached by cumulativity.
+* Consequence for uses: a use of the definition that needs it *at* the larger universe (the defined type
+  placed where a type of a strictly larger fixed universe is required) cannot be expressed without
+  cumulativity; in Lean such a use fails the kernel check of the *use* (reported, never silently
+  accepted). Every use the corpus contains is measured (entry 6).
+
+**Independent validation.**
+* Audit (`tools/audit.py`): the flag only on a definition whose source type ends in a sort; every
+  replaced level occurs in the source result sort and only there; each solution a lowering; R2B-V on a
+  statement rejected; the replaced levels are exempt from the solution-fact check (they have no
+  counterpart), all other universe checks unchanged; the protection check accepts a protected
+  result-sort lowering only with the flag.
+* Consumer (`Rocq2Lean/Verify.lean`, in Lean): for a protected row with the flag, the imported
+  declaration's result sort equals the sort its value inhabits, and it is not a statement.
+* CLI validation: a protected result-sort lowering without the flag is refused.
+* Negative controls (`scripts/test-universe-c`, report-level forgeries, kernel-accepted): a non-lowering
+  solution, a level that is not a result-sort level, the flag on a statement, the protected lowering
+  without the rule — each rejected.
+
+**Downstream-use tests.** Probe (`fixtures/stmt/c`): `JLFP`/`FP`/`JLDP_policy` translated under the
+rule, the job generic; `hep_job`, `JLFP_to_JLDP`, `EDF`, `FIFO`, two statements about priorities
+translated and audited; positive control: the policies, `EDF` and `hep_job` kernel-checked at nonzero
+universes. Corpus: entry 6.

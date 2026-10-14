@@ -88,6 +88,8 @@ structure DeclResult where
   /-- R2B-S: levels of the declaration's own result sort solved with `Set < l` read as `Set ≤ l`
   (a type definition at the level of its value), with their solutions. -/
   sortLevels : Array (String × Level) := #[]
+  /-- R2B-V: the result sort is the sort of the value (its lowered levels are `sortLevels`). -/
+  resultSortInherited : Bool := false
   /-- M6: constants δ-inlined in the body (`Set`-motive constants used at a `Prop` family). -/
   deltaInlined : Array String := #[]
   /-- R3↓: accepted with references instantiated below shared levels (cumulativity tier). -/
@@ -348,10 +350,29 @@ private def typeDomains (t : Expr) : Array Expr := Id.run do
     | _ => break
   return out
 
+private partial def irEndsInSort : IR.Term → Bool
+  | .prod _ _ b => irEndsInSort b
+  | .sort _ => true
+  | _ => false
+
+/-- R2B-V: `σ` (over the parameters `u_g`, `g ∈ globals`) is at most source level `m`: every summand
+`g + k` has `g + k ≤ m` and every constant `k` has `Set + k ≤ m` in the native facts. -/
+private partial def lowersTo (facts : IR.UniverseFacts) (globals : Array String) (σ : Level) (m : String) : Bool :=
+  let rec go (l : Level) (k : Nat) : Bool :=
+    match l with
+    | .zero => entails facts "Set" m k
+    | .succ l => go l (k + 1)
+    | .max a b | .imax a b => go a k && go b k
+    | .param p => match globals.find? (fun g => levelParamName g == p) with
+      | some g => entails facts g m k
+      | none => false
+    | .mvar _ => false
+  go σ.normalize 0
+
 partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
-    (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) :
+    (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
@@ -413,6 +434,12 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     -- (a statement definition's levels are those of its value, the statement)
     let explicitTy := (if stmt then globalsOf body (globalsOf c.type) else globalsOf c.type).toArray
     let typeLevels := (explicitTy ++ extraOwn).toList.eraseDups.toArray.qsort (· < ·)
+    -- R2B-V (docs/UNIVERSE_FAMILY_C.md §4): the levels of a type-valued definition's result sort (and
+    -- only there) are not parameters; the declared result sort is the sort of the translated value
+    let resultLv : Array String := if inheritSort then (globalsOf c.type).toArray.filter (onlyInResultSort c.type ·) else #[]
+    if inheritSort && (stmt || resultLv.isEmpty || !irEndsInSort c.type) then
+      return { base with status := "UNSUPPORTED_FEATURE", message := "R2B-V: not a type-valued definition with result-sort levels" }
+    let typeLevels := typeLevels.filter (!resultLv.contains ·)
     -- R8: motive levels of the type (only when requested; see the translation ladder)
     let admitLv := if admit then (motiveLevels c.type).filter explicitTy.contains else #[]
     let own := ((globalsOf body (globalsOf c.type)).toArray ++ extraOwn).toList.eraseDups.toArray.qsort (· < ·)
@@ -429,7 +456,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       | .ok e => pure e
       | .error e =>
         if e.msg.startsWith "termination obligation required" && !wfTerm && genv.stmtMode then
-          return ← processConstant genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true)
+          return ← processConstant genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort)
         return fromTransError base e
     -- pending validation: the hypotheses become the artifact's leading binders *before* universe
     -- solving, so that the levels of their types (references to prerequisite statements) are
@@ -441,6 +468,18 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     -- Rocq's native sort of T is an upper bound that cumulativity absorbs and Lean cannot; the
     -- interface is T itself, not its sort (the audit checks the type is a sort, the value is T)
     let ty ← if inferSort then instantiateMVars (← inferType val) else pure ty
+    -- R2B-V: ∀ Γ, Sort s  ↦  ∀ Γ, (the sort of the value applied to Γ)
+    let ty ← if !inheritSort then pure ty else
+      try
+        forallTelescope ty fun xs cod => do
+          unless (← whnf cod).isSort do throwError "the type does not end in a sort"
+          -- (checked first: argument typing unifies the levels of the value's references)
+          let b := mkAppN val xs
+          Meta.check b
+          let s ← whnf (← instantiateMVars (← inferType b))
+          unless s.isSort do throwError "the value is not a type"
+          mkForallFVars xs s
+      catch e => return { base with status := "UNSUPPORTED_FEATURE", message := s!"R2B-V: {← e.toMessageData.toString}" }
     -- after unification: every own level still free that occurs in the (solved) type becomes a
     -- parameter — a type level, or a body level that a type level's solution now mentions
     let implicitRef ← IO.mkRef (#[] : Array String)
@@ -537,7 +576,8 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       let inTy ← argsFor tyI
       let all := inTy ++ (← argsFor valI)
       -- (statement mode: a class that contains an own level is represented by that own level)
-      let ownCur ← ownMVars.mapM fun (_, v) => instantiateLevelMVars v
+      -- (R2B-V: the result-sort levels being replaced by the value's sort do not represent a class)
+      let ownCur ← (ownMVars.filter fun (m, _) => !resultLv.contains m).mapM fun (_, v) => instantiateLevelMVars v
       let mut done : Array Level := #[]
       let mut chosen : Array (String × Array LMVarId) := #[]
       -- (R2F-c: classes of the body are candidates too; their levels become own levels)
@@ -616,6 +656,9 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
                                message := s!"R2F-c: own level {m} was identified with another own level by unification; it is not its own reading" }
     for (m, v) in ownMVars do
       let s ← instantiateLevelMVars v
+      -- (R2B-V: a result-sort level that no longer occurs anywhere — the result sort is the value's —
+      -- has no counterpart in the target: recorded at 0, a lowering)
+      let s := if resultLv.contains m && s.isMVar then .zero else s
       if levelInterp.any (·.1 == m) then continue        -- R2F-c own level: a parameter, read through ι
       if s == .param (levelParamName m) then paramLevels := paramLevels.push m
       else sol := sol.insert m s.normalize
@@ -627,6 +670,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     let base := { base with bodyLevels := own.filterMap fun m => sol[m]?.map (m, ·) }
     for m in own do
       if sol.contains m then
+        if resultLv.contains m then continue          -- (R2B-V: a lowering, checked below)
         if let .error msg := checkBodyLevel genv.facts globals sol m admitLv cumul then
           return { base with status := "UNIVERSE_REJECTED", message := msg }
     -- levels for which the relaxation was actually needed (the strict check fails): proof-local ones
@@ -642,6 +686,15 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
             -- specialized at the checked instance (R2B-P with `in_type`; never on a requested root)
             if tyGlobals.contains m && onlyInResultSort c.type m then sortLv := sortLv.push (m, σ)
             else r2bp := r2bp.push (m, σ)
+    -- R2B-V: each result-sort level is solved to a level its native facts place below it (a
+    -- lowering, never a raising: every summand of σ is entailed ≤ the level)
+    if inheritSort then
+      for m in resultLv do
+        if let some σ := sol[m]? then
+          unless lowersTo genv.facts globals σ m do
+            return { base with status := "UNIVERSE_REJECTED", message := s!"R2B-V: result-sort level {m} would be raised to {σ}" }
+          unless sortLv.any (·.1 == m) do sortLv := sortLv.push (m, σ)
+    let inherited := inheritSort && !sortLv.isEmpty && sortLv.all (resultLv.contains ·.1)
     -- P0 interface protection: a protected public declaration keeps its source statement. A
     -- statement specialization (R2B-S lowers the result sort; R2B-P fixes a level of the type) is
     -- refused for it, as root or as dependency; there is no approved representation change.
@@ -654,7 +707,9 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
                          message := s!"statement specialization refused (R2B-P levels {r2bp.map (·.1)}, R2B-S levels {sortLv.map (·.1)})" }
     if genv.protectedNames.contains c.name then
       let stmt := (r2bp.map (·.1)).filter (globalsOf c.type).contains
-      unless sortLv.isEmpty && stmt.isEmpty do
+      -- (R2B-V: a result sort taken from the value lowers no quantification range; approved
+      -- representation rule, docs/UNIVERSE_FAMILY_C.md §4)
+      unless (sortLv.isEmpty || inherited) && stmt.isEmpty do
         return { base with status := "INTERFACE_REJECTED",
                            message := s!"protected public declaration: statement specialization refused (R2B-S result-sort levels {sortLv.map (·.1)}, R2B-P statement levels {stmt})" }
     let nchecks ← match checkUniverseObligations genv globals ty solι admitLv cumul lower,
@@ -767,7 +822,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
                                       pendingHyps := hyps.map (·.2), targetType := ty, targetValue := val,
                                       levelParams := lparams, paramLevels := globals, polyParams := polyNames.length,
                                       factReduced := factReduce, implicitLevels, levelInterp,
-                                      admittingLevels := admitLv, cumulativity := cumul, r2bpLevels := r2bp, sortLevels := sortLv,
+                                      admittingLevels := admitLv, cumulativity := cumul, r2bpLevels := r2bp, sortLevels := sortLv, resultSortInherited := inherited,
                                       r2bpInType := (r2bp.map (·.1)).filter (globalsOf c.type).contains,
                                       universeLowered := lower, deltaInlined := inlinedA }
     | .rejected msg => return { base with status := "KERNEL_REJECTED", message := msg }
@@ -1080,6 +1135,7 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>
       Json.mkObj [("level", m), ("sigma", levelJson l), ("in_type", Json.bool (r.r2bpInType.contains m))])),
     ("sort_lowered_levels", Json.arr (r.sortLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
+    ("result_sort_inherited", Json.bool r.resultSortInherited),
     ("protected", Json.bool r.protectedIface),
     ("pending_hypotheses", Json.arr (r.pendingHyps.map Json.str))]
   let rest : List (String × Json) := [
@@ -1480,6 +1536,18 @@ where
                 if r'.accepted then
                   r := r'
                   break
+          -- R2B-V last (docs/UNIVERSE_FAMILY_C.md §4): a type-valued definition declared at the sort
+          -- of its value (only when every other tier failed: no accepted translation changes)
+          if !r.accepted && !isStmt && genv.stmtMode && (retry r.status || r.status == "INTERFACE_REJECTED") then
+            for (fr, it, cu, lo) in [(false, false, false, false), (false, true, false, false), (false, false, false, true),
+                                     (false, true, false, true), (true, true, true, true)] do
+              let r' ← processConstant genv results c (stmt := isStmt) (factReduce := fr) (interp := it) (cumul := cu)
+                (extraOwn := eo) (lower := lo) (inheritSort := true)
+              if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+              if r'.accepted then
+                r := r'
+                iface := none
+                break
           if r.accepted then break
         -- a declaration that no attempt accepts keeps the diagnosis of the plain attempt without
         -- implicit levels (the earlier behaviour)

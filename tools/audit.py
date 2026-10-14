@@ -2570,8 +2570,34 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                     for l_ in rs:
                         if not only_in_result_sort(d_["type"], l_):
                             raise Mismatch(f"R2B-S level {l_} occurs in the source type outside its result sort")
-                    check_body_levels(facts, d_, sol_only, params, own_admit, bool(r_.get("universe_cumulativity")),
-                                      rp | rs)
+                    # R2B-V (docs/UNIVERSE_FAMILY_C.md §4), independently: a result sort taken from the
+                    # value is allowed on a type-valued definition only (never a statement), for levels
+                    # of the source result sort only, each solved to a lowering (no raising)
+                    if r_.get("result_sort_inherited"):
+                        if not rs:
+                            raise Mismatch("R2B-V without lowered result-sort levels")
+                        if s_ in statements:
+                            raise Mismatch("R2B-V on a statement")
+                        t_ = d_["type"]
+                        while t_["k"] == "prod":
+                            t_ = t_["b"]
+                        if t_["k"] != "sort":
+                            raise Mismatch("R2B-V on a definition whose source type does not end in a sort")
+                        back_ = {level_param(g): g for g in params}
+                        res_lv = source_globals(t_, set())
+                        for x in r_.get("sort_lowered_levels") or []:
+                            l_ = x["level"]
+                            if l_ not in res_lv:
+                                raise Mismatch(f"R2B-V: level {l_} does not occur in the source result sort")
+                            c_, ps_ = level_nf(x["sigma"])
+                            if not ((c_ is None or facts.entails("Set", l_, c_)) and
+                                    all(p in back_ and facts.entails(back_[p], l_, k) for p, k in ps_)):
+                                raise Mismatch(f"R2B-V: result-sort level {l_} solved to {x['sigma']}, not a lowering")
+                    # (R2B-V: the replaced result-sort levels are checked as lowerings below, not as
+                    # solutions: they have no counterpart in the target)
+                    inh_ = {x["level"] for x in r_.get("sort_lowered_levels") or []} if r_.get("result_sort_inherited") else set()
+                    check_body_levels(facts, d_, {k: v for k, v in sol_only.items() if k not in inh_}, params, own_admit,
+                                      bool(r_.get("universe_cumulativity")), rp | rs)
                     bl = {**sol_only, **interp_}            # coherence: an own level's argument is its image
                     # R3G: an implicit level must be the source level of a parameter of a referenced
                     # declaration, and occur as that parameter's argument in the accepted terms
@@ -3158,7 +3184,10 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 problem("interface", f"{r_.get('source')}: protection flag differs from the pinned manifest")
             if r_.get("source") in prot and r_.get("status") in ACCEPTED_ST + PENDING_ST:
                 iface_checked += 1
-                if r_.get("sort_lowered_levels") or any(x.get("in_type") for x in r_.get("r2bp_levels") or []):
+                # (R2B-V: an inherited result sort is the approved representation rule; its conditions are
+                # checked independently with the universe checks)
+                if (r_.get("sort_lowered_levels") and not r_.get("result_sort_inherited")) or \
+                        any(x.get("in_type") for x in r_.get("r2bp_levels") or []):
                     problem("interface", f"{r_.get('source')}: protected public declaration translated with a specialized statement")
     except (OSError, KeyError, ValueError) as e:
         problem("interface", f"protection data unreadable: {e}")

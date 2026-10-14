@@ -521,7 +521,22 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
         let sl := (r.getObjValAs? (Array Json) "sort_lowered_levels").toOption.getD #[]
         let pin := ((r.getObjValAs? (Array Json) "r2bp_levels").toOption.getD #[]).filter fun x =>
           (x.getObjValAs? Bool "in_type").toOption == some true
-        unless sl.isEmpty && pin.isEmpty do
+        -- R2B-V (approved rule, docs/UNIVERSE_FAMILY_C.md §4): a definition's result sort lowered to the
+        -- sort of its value; checked here in Lean: not a statement, and the imported declaration's result
+        -- sort is exactly the sort its value inhabits
+        let inherited := (r.getObjValAs? Bool "result_sort_inherited").toOption.getD false
+        let mut inhOk := false
+        if inherited && pin.isEmpty && !sl.isEmpty && !(getStr r "status").startsWith "STATEMENT_" then
+          if let some ci := env.find? (getStr r "target").toName then
+            if let some v := ci.value? (allowOpaque := true) then
+              inhOk ← liftTermElabM <| forallTelescope ci.type fun xs cod => do
+                match ← whnf cod with
+                | .sort l =>
+                  match ← whnf (← inferType (mkAppN v xs)) with
+                  | .sort l' => pure (l.normalize == l'.normalize)
+                  | _ => pure false
+                | _ => pure false
+        unless (sl.isEmpty || inhOk) && pin.isEmpty do
           problems := note "interface" s!"{s}: protected public declaration translated with a specialized statement ({sl.size} R2B-S, {pin.size} R2B-P statement level(s))" problems
   | _ => problems := note "interface" "the contract carries no protection binding" problems
   for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)

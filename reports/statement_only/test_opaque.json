@@ -151,11 +151,11 @@
  "opacity": {
   "rfl": [
    1,
-   "/home/shunqwang4/research/r2l-B-test/runs/st-opq/lean/Probe_opaque_rfl.lean:2:34: error: Type mismatch\n  rfl\nhas type\n  ?m.5 = ?m.5\nbut is expected to have type\n  Rocq.SF.Opq.pick = 3"
+   "/home/shunqwang4/research/r2l-B/runs/st-opq/lean/Probe_opaque_rfl.lean:2:34: error: Type mismatch\n  rfl\nhas type\n  ?m.5 = ?m.5\nbut is expected to have type\n  Rocq.SF.Opq.pick = 3"
   ],
   "kernel_decide": [
    1,
-   "/home/shunqwang4/research/r2l-B-test/runs/st-opq/lean/Probe_opaque_kernel.lean:2:37: error: Tactic `decide` failed for proposition\n  Rocq.SF.Opq.pick = 3\nbecause its `Decidable` instance\n  instDecidableEqNat Rocq.SF.Opq.pick 3\ndid not reduce to `isTrue` or `isFalse`.\n\nReduction got stuck at the `Dec"
+   "/home/shunqwang4/research/r2l-B/runs/st-opq/lean/Probe_opaque_kernel.lean:2:37: error: Tactic `decide` failed for proposition\n  Rocq.SF.Opq.pick = 3\nbecause its `Decidable` instance\n  instDecidableEqNat Rocq.SF.Opq.pick 3\ndid not reduce to `isTrue` or `isFalse`.\n\nReduction got stuck at the `Decidabl"
   ]
  },
  "negative": {

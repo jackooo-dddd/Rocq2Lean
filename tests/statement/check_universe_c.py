@@ -14,8 +14,11 @@ on a small Prosa probe (fixtures/stmt/c: opt_eqP, ideal processor_state, JLFP_po
 3. Positive control at nonzero universes: the generic translations are kernel-checked at universes
    2..5 and the statement is used at an `Equality.type.{3,4}`; the same file fails against the narrowed
    module.
-4. The policy family (JLFP_policy) stays refused: unsupported by the current representation and rules
-   (no approved result-sort rule); the refusal is reported.
+4. R2B-V (approved 2026-10-14): JLFP/FP/JLDP_policy are declared at the sort of their value, the job
+   generic; downstream uses (hep_job, JLFP_to_JLDP, EDF, FIFO, two statements) translate and are
+   audited; report-level forgeries of the rule (not a lowering, a binder level, on a statement, the
+   protected lowering without the rule) are audit-rejected; the positive control instantiates the
+   policies and EDF at nonzero universes.
 
 Writes reports/statement_only/test_universe_c.json.
 """
@@ -30,8 +33,12 @@ from lib import ROOT, check, cli, finish, forge_run, results  # noqa: E402
 
 OUT = {}
 RUN = ROOT / "runs" / "st-c-probe"
+PRI = "prosa.model.priority."
+DOWN = [PRI + "definitions.hep_job", PRI + "coercion.JLFP_to_JLDP", PRI + "edf.EDF", PRI + "fifo.FIFO",
+        PRI + "coercion.reflexive_priorities_JLFP_implies_JLDP", "prosa.analysis.facts.priority.classes.hp_trans"]
 ROOTS = ["mathcomp.boot.eqtype.opt_eqP", "prosa.model.processor.ideal.processor_state",
-         "prosa.model.priority.definitions.JLFP_policy", "prosa.behavior.job.job_cost"]
+         PRI + "definitions.JLFP_policy", PRI + "definitions.FP_policy", PRI + "definitions.JLDP_policy",
+         "prosa.behavior.job.job_cost"] + DOWN
 
 shutil.rmtree(RUN, ignore_errors=True)
 rcs = [cli("export", "--mode", "statement", "--manifest", ROOT / "fixtures/stmt/c/manifest.json",
@@ -71,9 +78,20 @@ check(all(not r.get("universe_level_defaults") for r in stmt_rows), f"no stateme
 a0 = json.loads((RUN / "audit.json").read_text())
 check(a0.get("status") == "OK" and not [p for p in a0.get("problems", []) if "free in the statement" in p["message"]],
       "the audit's source-derived generality check accepts every claimed row")
-jl = R["prosa.model.priority.definitions.JLFP_policy"]
-OUT["JLFP_policy"] = {"status": jl["status"], "message": jl.get("message", "")[:500]}
-check(jl["status"] == "UNIVERSE_REJECTED", "JLFP_policy stays refused (unsupported by the current representation and rules)")
+# R2B-V (docs/UNIVERSE_FAMILY_C.md §4, approved 2026-10-14): the policy definitions are declared at the
+# sort of their value (rel at the job's level); the job stays generic
+OUT["policies"] = {}
+for n in ("JLFP_policy", "FP_policy", "JLDP_policy"):
+    jl = R[PRI + "definitions." + n]
+    OUT["policies"][n] = {k: jl.get(k) for k in ("status", "level_params", "sort_lowered_levels", "result_sort_inherited", "message")}
+    check(jl["status"] == "TRANSLATED_AND_CHECKED" and jl.get("result_sort_inherited") and jl.get("protected")
+          and "u_mathcomp_boot_eqtype_51" in jl["level_params"]
+          and {x["level"] for x in jl["sort_lowered_levels"]} >= {"Corelib.ssr.ssrbool.1105"},
+          f"{n} (protected): translated under R2B-V, generic in the job's level, result sort lowered from rel's level")
+dn = {n: R[n]["status"] for n in DOWN}
+OUT["downstream"] = {n: {"status": R[n]["status"], "message": (R[n].get("message") or "")[:300]} for n in DOWN}
+check(all(st in ("TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED", "STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
+          for st in dn.values()), f"downstream uses of the policies translate and are audited: {dn}")
 
 
 # 2. negative controls: the target itself is narrowed (not merely a flag). A declaration's universe
@@ -168,6 +186,48 @@ OUT["negative_narrowed_protected_definition"] = {"kernel": kernel_ok, "validate_
 check(kernel_ok and rc == 2 and any("narrowed quantification range" in p for p in probs),
       "protected job_cost narrowed at its Job binder (no self-reported trace): kernel-accepted, audit-rejected")
 
+# R2B-V negative controls (report-level: the declarations are unchanged, so the kernel replay accepts
+# them; only the independent audit can reject)
+JL = PRI + "definitions.JLFP_policy"
+
+
+def forge_row(label, src, fn):
+    rep2 = copy.deepcopy(rep)
+    row = next(r for r in rep2["results"] if r["source"] == src)
+    fn(row)
+    _, kernel_ok, rc, cons, aud = forge_run(RUN, label, rep2, check_cmd="validate")
+    probs = [p["message"][:300] for p in aud.get("problems", []) if p["message"].startswith(src + ":")]
+    # (the consumer, also independent of the translator, may refuse first: its detectors are reported)
+    probs += [f"consumer {d}" for d, v in (cons.get("detectors") or {}).items() if v != "OK"]
+    OUT.setdefault("negative_r2bv", {})[label] = {"kernel": kernel_ok, "validate_exit": rc, "audit_problems": probs[:4]}
+    return kernel_ok, rc, probs
+
+
+def set_sigma(level, sigma):
+    def f(row):
+        for x in row["sort_lowered_levels"]:
+            if x["level"] == level:
+                x["sigma"] = sigma
+        for x in row.get("solved_levels") or []:
+            if x["level"] == level:
+                x["sigma"] = sigma
+    return f
+
+
+k, rc, probs = forge_row("r2bv-not-a-lowering", JL, set_sigma("Corelib.ssr.ssrbool.1171", closed(5)))
+check(k and rc == 2 and any("not a lowering" in p for p in probs),
+      "R2B-V with a solution above the source level (Set+5 for a level the graph does not place there): audit-rejected")
+k, rc, probs = forge_row("r2bv-binder-level", JL, lambda row: row["sort_lowered_levels"].append(
+    {"level": "mathcomp.boot.eqtype.51", "sigma": {"k": "zero"}}))
+check(k and rc == 2 and probs, "R2B-V claimed for a level of a binder (not only the result sort): audit-rejected")
+k, rc, probs = forge_row("r2bv-without-rule", JL, lambda row: row.update(result_sort_inherited=False))
+check(k and rc == 2 and any("specialized statement" in p or p == "consumer interface" for p in probs),
+      "a protected result-sort lowering without the R2B-V rule is still refused by the interface protection")
+STMT_ROW = next(r["source"] for r in rep["results"] if r["status"] == "STATEMENT_KERNEL_CHECKED" and r.get("level_params"))
+k, rc, probs = forge_row("r2bv-on-statement", STMT_ROW, lambda row: row.update(
+    result_sort_inherited=True, sort_lowered_levels=[{"level": "x", "sigma": {"k": "zero"}}]))
+check(k and rc == 2 and probs, "R2B-V claimed on a statement: audit-rejected (statements never)")
+
 # 3. positive control: the generic translations are usable at nonzero universes (kernel-checked
 # instantiations and a use of the statement at a universe-3 eqType); the same file fails against the
 # narrowed module (discrimination)
@@ -185,6 +245,7 @@ run_meta posInst `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.stat
 run_meta posInst `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality [3, 4] "option_eqType"
 run_meta posInst `RocqPending.prosa.behavior.schedule.ProcessorState [3, 4, 3, 5, 2] "ProcessorState"
 SCHED_LINE
+POLICY_LINES
 -- a use: the statement applies to an eqType at universe 3 (δ-unfolds the statement in the kernel)
 run_meta do
   let ci ← getConstInfo `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement
@@ -197,6 +258,9 @@ run_meta do
 """
 
 # (schedule's target name and universe parameters come from its report row)
+POS = POS.replace("POLICY_LINES", "\n".join(
+    f'run_meta posInst `{R[n]["target"]} {[2 + k for k in range(len(R[n]["level_params"]))]} "{n.split(".")[-1]}"'
+    for n in [JL, PRI + "edf.EDF", PRI + "definitions.hep_job"] if R[n].get("target")))
 POS = POS.replace("SCHED_LINE", f'run_meta posInst `{R[SCH]["target"]} {[2 + k for k in range(len(R[SCH]["level_params"]))]} "job_cost"')
 
 
@@ -216,7 +280,7 @@ rc_pos, out_pos = run_pos(RUN, "PositiveControl")
 rc_neg, out_neg = run_pos(RUN.parent / f"{RUN.name}-forged-narrowed-statement-0-0", "PositiveControl")
 OUT["positive_nonzero_universes"] = {"generic_exit": rc_pos, "generic_output": out_pos, "narrowed_exit": rc_neg,
                                      "narrowed_output": out_neg}
-check(rc_pos == 0, "positive control: opt_eqP, option's eqType, ProcessorState and job_cost kernel-checked at universes 2..5; "
+check(rc_pos == 0, "positive control: opt_eqP, option's eqType, ProcessorState, job_cost, JLFP_policy, EDF, hep_job kernel-checked at universes 2..; "
                    "the statement applies to an Equality.type.{3,4}")
 check(rc_neg != 0, "the same positive control fails against the narrowed module (it discriminates)")
 

@@ -801,8 +801,11 @@ def _validate_finish(run_dir, snap, tm, con, rep, consumer, audit, h0, log):
             prot.get("protected_in_export") != len(con["protection"]["protected"]):
         raise Rejected("AUDIT_REJECTED", "translation was not run under this contract's protection binding")
     pset = set(con["protection"]["protected"])
+    # (R2B-V, docs/UNIVERSE_FAMILY_C.md §4: a result sort taken from the value is the approved rule; the
+    # consumer and the audit checked its conditions independently above)
     narrowed = [r["source"] for r in rep["results"] if r["source"] in pset and r.get("status") in ACCEPTED_ST + PENDING_ST
-                and (r.get("sort_lowered_levels") or any(x.get("in_type") for x in r.get("r2bp_levels") or []))]
+                and ((r.get("sort_lowered_levels") and not r.get("result_sort_inherited"))
+                     or any(x.get("in_type") for x in r.get("r2bp_levels") or []))]
     if narrowed:
         raise Rejected("AUDIT_REJECTED", f"protected public declarations translated with a specialized statement: {narrowed}")
     # R2B-P source instances: checked for accepted definitions (as in verify); a pending artifact
