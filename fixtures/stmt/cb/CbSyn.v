@@ -6,7 +6,8 @@
    - natEq : nat's instance (its carrier stays nat, at the lowest level);
    - subT / sval / insubT : a subtype structure over a base carrier T : Type@{cs1} whose own sort is at
      cs2 <= cs1 (P1: the parameter carrier is read minimally; insubT keeps both carriers generic);
-   - prod_nat_refl / insub_some : statements over a generic eqT paired with natEq, and over insubT. *)
+   - prod_nat_refl / insub_some : statements over a generic eqT paired with natEq, and over insubT;
+   - prod_same : a genuine dependency (the operands are equal: typing relates their carriers, never split). *)
 Universes cb1 cb2.
 Record eqT : Type@{cb2} := EqPack { carrier : Type@{cb1}; eqop : carrier -> carrier -> bool }.
 Definition prodEq (T1 T2 : eqT) : eqT :=
@@ -14,6 +15,8 @@ Definition prodEq (T1 T2 : eqT) : eqT :=
 Definition natEq : eqT := EqPack nat Nat.eqb.
 Lemma prod_nat_refl (T : eqT) (x : carrier T) (n : nat) :
   eqop (prodEq T natEq) (x, n) (x, n) = andb (eqop T x x) (Nat.eqb n n).
+Proof. reflexivity. Qed.
+Lemma prod_same (T1 T2 : eqT) (e : T1 = T2) (x : carrier (prodEq T1 T2)) : x = x.
 Proof. reflexivity. Qed.
 Universes cs1 cs2 cs3.
 Constraint cs2 <= cs1.

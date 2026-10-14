@@ -307,8 +307,10 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
     unless p.toString.startsWith "u_" do continue      -- (R6 universe variables, Lean's own constants)
     if own.contains p then continue                     -- (a level of the declaration: R3)
     -- R-CARRIER P2: an own copy of the level (`u_l__c<k>`, one per independent class) is generic as well
+    -- (the referenced parameter may itself be a copy of the same source level)
     if let .param q := σ then
-      if own.contains q && q.toString.startsWith (p.toString ++ "__c") then continue
+      let base (x : Name) : String := (x.toString.splitOn "__c").head!
+      if own.contains q && q != p && base q == base p && (q.toString.splitOn "__c").length > 1 then continue
     if !σ.hasParam then
       if let some l := facts.levels.find? (fun l => levelParamName l == p) then
         if entails facts l "Set" 0 then continue
@@ -736,7 +738,9 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       let all := inTy ++ (← argsFor valI)
       -- (statement mode: a class that contains an own level is represented by that own level)
       -- (R2B-V: the result-sort levels being replaced by the value's sort do not represent a class)
-      let ownCur ← (ownMVars.filter fun (m, _) => !resultLv.contains m).mapM fun (_, v) => instantiateLevelMVars v
+      -- (only own *type* levels represent a class: a proof-local level is solved, fact-checked by R2S, and
+      -- never decides the class — R-CARRIER, factory_57's 551 against isSub's motive level 542)
+      let ownCur ← (ownMVars.filter fun (m, _) => !resultLv.contains m && (typeLevels.contains m || stmt)).mapM fun (_, v) => instantiateLevelMVars v
       let mut done : Array Level := #[]
       let mut chosen : Array (String × Array LMVarId) := #[]
       -- (R2F-c: classes of the body are candidates too; their levels become own levels)

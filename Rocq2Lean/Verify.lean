@@ -603,6 +603,22 @@ partial def splitPositionOk (ty : Expr) (nh pos : Nat) (p : Name) : Bool :=
         unless iv.levelParams.contains p && resultImplicitOk iv.type ctys p do
           problems := note "levels" s!"{s}: result-sort implicit level {l} is not confined to the block's result sort and to universe arguments" problems
     | _ => problems := note "levels" s!"{s}: result-sort implicit levels on a declaration that is not an imported inductive" problems
+  -- R-CARRIER P2 (detector `levels`): each copy of an implicit level is a universe parameter of the
+  -- imported declaration that occurs in its type (a statement row: in its statement, the value)
+  for (s, r) in accepted do
+    let lc := (r.getObjValAs? (Array Json) "level_copies").toOption.getD #[]
+    if lc.isEmpty then continue
+    match env.find? (getStr r "target").toName with
+    | none => problems := note "levels" s!"{s}: declaration with level copies not imported" problems
+    | some ci =>
+      let stmtRow := (getStr r "status").startsWith "STATEMENT_"
+      let where_ := if stmtRow then (ci.value? (allowOpaque := true)).getD ci.type else ci.type
+      let ps := (collectLevelParams {} where_).params
+      for x in lc do
+        for c in (x.getObjValAs? (Array String) "copies").toOption.getD #[] do
+          let p := levelParamName c
+          unless ci.levelParams.contains p && ps.contains p do
+            problems := note "levels" s!"{s}: level copy {c} is not a universe parameter occurring in the declaration's type" problems
   for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)
   let dets := ["binding", "coverage", "roots", "presence", "kind", "safety", "levels", "type", "value", "ctors",
                "target_deps", "axioms", "rec_indices", "residual_levels", "instance_levels", "interface"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
