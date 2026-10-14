@@ -233,10 +233,12 @@ def view : Decl → Option (Decl × Array Info)
   | .constant c => (viewConstant c).map fun (c', is) => (.constant c', is)
   | .inductive i => (viewInductive i).map fun (i', is) => (.inductive i', is)
 
-/-- The copies inherit the upper bounds of their level (`l ≤ m`, `l < m`), never its lower bounds. -/
+/-- The copies lie below their level (`l__s<i> ≤ l`: a copy stands for an argument `a ≤ l`, R3 at every
+use) and inherit its upper bounds (`l ≤ m`, `l < m`), never its lower bounds. -/
 def copiedRelations (facts : UniverseFacts) (infos : Array Info) : Array (String × String × String) :=
   infos.foldl (fun acc inf =>
     facts.relations.foldl (fun acc (a, r, b) =>
-      if a == inf.level && b != inf.level && (r == "le" || r == "lt") then acc ++ inf.names.map fun n => (n, r, b) else acc) acc) #[]
+      if a == inf.level && b != inf.level && (r == "le" || r == "lt") then acc ++ inf.names.map fun n => (n, r, b) else acc)
+      (acc ++ inf.names.map fun n => (n, "le", inf.level))) #[]
 
 end Rocq2Lean.Split

@@ -7,11 +7,15 @@
               by cumulativity; Lean: only through the split view);
    - qR / qR_intro: `uq` also occurs in a constructor argument: not eligible; the statement stays
               refused (binder independence), as before the rule;
-   - gR:      `ug` also occurs in the body: not eligible (the negative control forges a split of it). *)
+   - gR:      `ug` also occurs in the body: not eligible (the negative control forges a split of it);
+   - pR_tail: a split definition referencing the split pR at the same level `us` (its copies are
+              arguments for pR's copies: `us__s<i> <= us`). *)
 Universe us ur.
 Inductive pR (A1 A2 : Type@{us}) (R : A1 -> A2 -> Type@{us}) : Type@{ur} :=
   | pR_nil : pR A1 A2 R
   | pR_cons : forall a1 a2, R a1 a2 -> pR A1 A2 R -> pR A1 A2 R.
+Definition pR_tail (A1 A2 : Type@{us}) (R : A1 -> A2 -> Type@{us}) (x : pR A1 A2 R) : pR A1 A2 R :=
+  match x with pR_nil _ _ _ => pR_nil A1 A2 R | pR_cons _ _ _ _ _ _ t => t end.
 Universe uf.
 Definition fun_R (A1 A2 : Type@{uf}) (A_R : A1 -> A2 -> Type@{uf}) (B1 B2 : Type) (B_R : B1 -> B2 -> Type)
   (f1 : A1 -> B1) (f2 : A2 -> B2) : Type :=

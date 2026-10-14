@@ -6,7 +6,7 @@
    0
   ],
   "validation": "STATEMENT_VALIDATED",
-  "level_split_checked": 2
+  "level_split_checked": 3
  },
  "rows": {
   "SF.Split.pR": {
@@ -37,21 +37,21 @@
    "status": "STATEMENT_KERNEL_CHECKED",
    "level_params": [
     "u_SF_Split_22",
-    "u_SF_Split_33",
     "u_SF_Split_34",
-    "u_SF_Split_35"
+    "u_SF_Split_35",
+    "u_SF_Split_36"
    ],
    "level_split": []
   },
   "SF.Split.fun_R": {
    "status": "TRANSLATED_AND_CHECKED",
    "level_params": [
-    "u_SF_Split_26__s0",
-    "u_SF_Split_26__s1",
-    "u_SF_Split_26__s2",
-    "u_SF_Split_27",
+    "u_SF_Split_27__s0",
+    "u_SF_Split_27__s1",
+    "u_SF_Split_27__s2",
     "u_SF_Split_28",
-    "u_SF_Split_29"
+    "u_SF_Split_29",
+    "u_SF_Split_30"
    ],
    "level_split": [
     {
@@ -60,11 +60,11 @@
       1,
       2
      ],
-     "level": "SF.Split.26",
+     "level": "SF.Split.27",
      "copies": [
-      "SF.Split.26__s0",
-      "SF.Split.26__s1",
-      "SF.Split.26__s2"
+      "SF.Split.27__s0",
+      "SF.Split.27__s1",
+      "SF.Split.27__s2"
      ]
     }
    ]
@@ -72,17 +72,17 @@
   "SF.Split.fun_R_id": {
    "status": "STATEMENT_KERNEL_CHECKED",
    "level_params": [
-    "u_SF_Split_40",
     "u_SF_Split_41",
-    "u_SF_Split_42"
+    "u_SF_Split_42",
+    "u_SF_Split_43"
    ],
    "level_split": []
   },
   "SF.Split.qR": {
    "status": "TRANSLATED_AND_CHECKED",
    "level_params": [
-    "u_SF_Split_45",
-    "u_SF_Split_46"
+    "u_SF_Split_46",
+    "u_SF_Split_47"
    ],
    "level_split": []
   },
@@ -94,9 +94,33 @@
   "SF.Split.gR": {
    "status": "TRANSLATED_AND_CHECKED",
    "level_params": [
-    "u_SF_Split_55"
+    "u_SF_Split_56"
    ],
    "level_split": []
+  },
+  "SF.Split.pR_tail": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "level_params": [
+    "u_SF_Split_21__s0",
+    "u_SF_Split_21__s1",
+    "u_SF_Split_21__s2",
+    "u_SF_Split_22"
+   ],
+   "level_split": [
+    {
+     "params": [
+      0,
+      1,
+      2
+     ],
+     "level": "SF.Split.21",
+     "copies": [
+      "SF.Split.21__s0",
+      "SF.Split.21__s1",
+      "SF.Split.21__s2"
+     ]
+    }
+   ]
   }
  },
  "gR": {
@@ -104,7 +128,7 @@
    "t": {
     "l": {
      "l": {
-      "n": "u_SF_Split_55",
+      "n": "u_SF_Split_56",
       "k": "param"
      },
      "k": "succ"
@@ -117,7 +141,7 @@
     "t": {
      "l": {
       "l": {
-       "n": "u_SF_Split_55",
+       "n": "u_SF_Split_56",
        "k": "param"
       },
       "k": "succ"
@@ -130,7 +154,7 @@
      "l": {
       "l": {
        "l": {
-        "n": "u_SF_Split_55",
+        "n": "u_SF_Split_56",
         "k": "param"
        },
        "k": "succ"
@@ -142,7 +166,7 @@
    }
   },
   "level_params": [
-   "u_SF_Split_55"
+   "u_SF_Split_56"
   ]
  },
  "negative": {
@@ -150,9 +174,9 @@
    "kernel": true,
    "validate_exit": 2,
    "audit_problems": [
-    "SF.Split.gR: reported split [{'level': 'SF.Split.55', 'params': [0, 1], 'copies': ['SF.Split.55__s0', 'SF.Split.55__s1']}] is not the split derived from the source []",
-    "SF.Split.gR: universe parameters ['u_SF_Split_55', 'u_SF_Split_55__s0', 'u_SF_Split_55__s1'] are not parameters for source levels",
-    "SF.Split.gR: universe parameters ['u_SF_Split_55', 'u_SF_Split_55__s0', 'u_SF_Split_55__s1'] are not parameters for source levels"
+    "SF.Split.gR: reported split [{'level': 'SF.Split.56', 'params': [0, 1], 'copies': ['SF.Split.56__s0', 'SF.Split.56__s1']}] is not the split derived from the source []",
+    "SF.Split.gR: universe parameters ['u_SF_Split_56', 'u_SF_Split_56__s0', 'u_SF_Split_56__s1'] are not parameters for source levels",
+    "SF.Split.gR: universe parameters ['u_SF_Split_56', 'u_SF_Split_56__s0', 'u_SF_Split_56__s1'] are not parameters for source levels"
    ],
    "consumer_problems": []
   },
@@ -160,8 +184,8 @@
    "kernel": true,
    "validate_exit": 2,
    "audit_problems": [
-    "SF.Split.gR: universe parameters ['u_SF_Split_55', 'u_SF_Split_55__s0', 'u_SF_Split_55__s1'] are not parameters for source levels",
-    "SF.Split.gR: universe parameters ['u_SF_Split_55', 'u_SF_Split_55__s0', 'u_SF_Split_55__s1'] are not parameters for source levels"
+    "SF.Split.gR: universe parameters ['u_SF_Split_56', 'u_SF_Split_56__s0', 'u_SF_Split_56__s1'] are not parameters for source levels",
+    "SF.Split.gR: universe parameters ['u_SF_Split_56', 'u_SF_Split_56__s0', 'u_SF_Split_56__s1'] are not parameters for source levels"
    ],
    "consumer_problems": []
   },
@@ -172,15 +196,28 @@
     "SF.Split.fun_R: ['type', 'prod.ty']: sort mismatch"
    ],
    "consumer_problems": [
-    "SF.Split.fun_R: split level SF.Split.26__s0 is not exactly the sort of parameter binder 0",
-    "SF.Split.fun_R: split level SF.Split.26__s1 is not exactly the sort of parameter binder 1"
+    "SF.Split.fun_R: split level SF.Split.27__s0 is not exactly the sort of parameter binder 0",
+    "SF.Split.fun_R: split level SF.Split.27__s1 is not exactly the sort of parameter binder 1"
+   ]
+  },
+  "pRtail-degenerate": {
+   "kernel": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Split.pR_tail: a split copy is not a universe parameter of the translation",
+    "SF.Split.pR_tail: universe parameters ['u_SF_Split_21__s0', 'u_SF_Split_21__s1', 'u_SF_Split_22'] are not parameters for source levels",
+    "SF.Split.pR_tail: universe parameters ['u_SF_Split_21__s0', 'u_SF_Split_21__s1', 'u_SF_Split_22'] are not parameters for source levels"
+   ],
+   "consumer_problems": [
+    "SF.Split.pR_tail: split level SF.Split.21__s0 is not exactly the sort of parameter binder 0",
+    "SF.Split.pR_tail: split level SF.Split.21__s2 is not exactly the sort of parameter binder 2"
    ]
   },
   "funRid-diagonal": {
    "kernel": true,
    "validate_exit": 2,
    "audit_problems": [
-    "SF.Split.fun_R_id: Rocq.SF.Split.fun_R: SF.Split.40 + 0 <= SF.Split.28 not entailed by the source universe graph"
+    "SF.Split.fun_R_id: Rocq.SF.Split.fun_R: SF.Split.41 + 0 <= SF.Split.29 not entailed by the source universe graph"
    ],
    "consumer_problems": []
   }

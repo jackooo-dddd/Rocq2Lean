@@ -4,12 +4,14 @@ parameter binders, translated with one universe parameter per binder. Through th
 fixtures/stmt/split (synthetic Split.v; not Prosa).
 
 1. pR (inductive, list_R's shape) and fun_R (definition, map_R's shape) are translated through the
-   split view (`level_split` = the source-derived split); the statements using them at carriers of
+   split view (`level_split` = the source-derived split), as is pR_tail (a split definition passing its
+   copies to pR's: `us__s<i> <= us`); the statements using them at carriers of
    independent levels are accepted; the ineligible qR (level also in a constructor argument) and gR
    (level also in the body) are not split, and qR_intro stays refused (binder independence).
 2. Negative controls, kernel-accepted, rejected by the independent checks:
    - a forged split of the ineligible gR (self-reported, and with the report field hidden);
    - fun_R's copies exchanged between binders (wrong group mapping);
+   - pR_tail with one copy identified with another (a split row whose copies are not all generic);
    - fun_R_id narrowed to the diagonal (its carriers identified: the old shape).
 3. Positive control: pR, fun_R and the two statements at off-diagonal nonzero universes, kernel.
 4. Correspondence (synthetic, fixture only): tests/statement/proofs/split_correspondence.lean proves
@@ -31,7 +33,7 @@ from lib import ROOT, audit_report, check, cli, finish, forge_run, results  # no
 
 OUT = {}
 RUN = ROOT / "runs" / "st-split"
-ROOTS = ["SF.Split.pR_intro", "SF.Split.fun_R_id", "SF.Split.qR_intro", "SF.Split.gR"]
+ROOTS = ["SF.Split.pR_intro", "SF.Split.fun_R_id", "SF.Split.qR_intro", "SF.Split.gR", "SF.Split.pR_tail"]
 
 shutil.rmtree(RUN, ignore_errors=True)
 rcs = [cli("export", "--mode", "statement", "--manifest", ROOT / "fixtures/stmt/split/manifest.json",
@@ -43,9 +45,9 @@ R, rep = results(RUN)
 aud0 = json.loads((RUN / "audit.json").read_text())
 OUT["pipeline"] = {"exit_codes": rcs, "validation": v.get("status"), "level_split_checked": aud0.get("level_split_checked")}
 check(rcs[0] == 0 and rcs[2] == 0 and v.get("status") == "STATEMENT_VALIDATED", "fixture: export/translate/validate")
-check(aud0.get("level_split_checked") == 2, "audit: two split rows checked against the source-derived split")
+check(aud0.get("level_split_checked") == 3, "audit: three split rows checked against the source-derived split")
 OUT["rows"] = {s: {k: R[s].get(k) for k in ("status", "level_params", "level_split")} for s in R if s.startswith("SF.")}
-for n in ("SF.Split.pR", "SF.Split.fun_R"):
+for n in ("SF.Split.pR", "SF.Split.fun_R", "SF.Split.pR_tail"):
     ls = R[n].get("level_split") or []
     check(R[n]["status"] == "TRANSLATED_AND_CHECKED" and len(ls) == 1 and ls[0]["params"] == [0, 1, 2],
           f"{n}: translated through the split view (one level, binders 0, 1, 2)")
@@ -150,6 +152,22 @@ def swap(rows):
 k, rc, probs, cprobs = forge("funR-swapped", swap, ["SF.Split.fun_R"])
 check(k and rc == 2 and any("parameter binder" in p for p in cprobs) and probs,
       "fun_R's copies exchanged between binders: kernel-accepted, consumer- and audit-rejected")
+
+# (2b) a split row whose copy is not kept generic: pR_tail's third copy identified with the first
+t = R["SF.Split.pR_tail"]
+t0, t2 = t["level_params"][0], t["level_params"][2]
+
+
+def degenerate(rows):
+    r = rows["SF.Split.pR_tail"]
+    m = {t2: {"k": "param", "n": t0}}
+    r["target_type"], r["target_value"] = subst(r["target_type"], m), subst(r["target_value"], m)
+    r["level_params"] = [p_ for p_ in r["level_params"] if p_ != t2]
+
+
+k, rc, probs, cprobs = forge("pRtail-degenerate", degenerate, ["SF.Split.pR_tail"])
+check(k and rc == 2 and any("not a universe parameter" in p for p in probs) and cprobs,
+      "a split row with a copy identified with another: kernel-accepted, consumer- and audit-rejected")
 
 # (3) fun_R_id at the diagonal only (its three carrier levels identified: the pre-split shape)
 fi = R["SF.Split.fun_R_id"]

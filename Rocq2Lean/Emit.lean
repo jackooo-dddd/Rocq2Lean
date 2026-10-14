@@ -1627,8 +1627,10 @@ where
     let facts' := genv0.facts.extend copies (Split.copiedRelations genv0.facts infos)
     let saved ← saveState
     let (r, genv) ← translateDecl { genv0 with facts := facts' } results d'
-    if r.ok || r.status == "PENDING_KERNEL_CHECKED" || r.status == "STATEMENT_KERNEL_CHECKED" ||
-        r.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
+    -- (every copy must stay a universe parameter: a copy solved or defaulted would not be the split view)
+    let generic := copies.all fun c => r.levelParams.contains (levelParamName c)
+    if generic && (r.ok || r.status == "PENDING_KERNEL_CHECKED" || r.status == "STATEMENT_KERNEL_CHECKED" ||
+        r.status == "STATEMENT_PENDING_KERNEL_CHECKED") then
       -- references: each copy stands for the source level
       let mut cg := genv.constGlobals
       for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
@@ -1639,7 +1641,8 @@ where
               { genv with constGlobals := cg })
     saved.restore
     let (r0, g0) ← translateDecl genv0 results d
-    return ({ r0 with levelDiagnostics := r0.levelDiagnostics.push s!"R-SPLIT view not accepted ({r.status}: {r.message.take 300}); unsplit translation" }, g0)
+    let why := if generic then s!"{r.status}: {r.message.take 300}" else "a copy was not kept as a universe parameter"
+    return ({ r0 with levelDiagnostics := r0.levelDiagnostics.push s!"R-SPLIT view not accepted ({why}); unsplit translation" }, g0)
 
   /-- One declaration (the attempts and retry tiers), with the environment it extends. -/
   translateDecl (genv0 : GEnv) (results : Std.HashMap String DeclResult) (d : IR.Decl) : MetaM (DeclResult × GEnv) := do

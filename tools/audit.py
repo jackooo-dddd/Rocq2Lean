@@ -1960,8 +1960,10 @@ class Facts:
         self.levels = ["Set"] + list(rec["levels"])
         self.rel = {(x["l"], x["r"]): x["rel"] for x in rec["relations"]}
         # R-SPLIT: a copy of a level inherits its upper bounds (l <= m, l < m), never its lower bounds
+        # and lies below it (a copy stands for an argument a <= l, R3 at every use)
         for c, l in SPLIT_COPIES.items():
             self.levels.append(c)
+            self.rel[(c, l)] = "le"
             for (a, b), r in list(self.rel.items()):
                 if a == l and b != l and r in ("le", "lt"):
                     self.rel[(c, b)] = r
@@ -3403,11 +3405,17 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             problem("level_split", f"{n}: reported split {ls} is not the split derived from the source {infos}")
             continue
         cs = [c for x in infos for c in x["copies"]]
-        if len(set(cs)) != len(cs) or any(c in src_levels or c in SPLIT_COPIES or _occ_paths(decls[n], c) for c in cs):
+        # (fresh: no source level, not in the declaration; a copy name recurs in another split declaration
+        # only for the same level and position, the same universe range)
+        if len(set(cs)) != len(cs) or any(c in src_levels or SPLIT_COPIES.get(c, x["level"]) != x["level"] or _occ_paths(decls[n], c)
+                                          for x in infos for c in x["copies"]):
             problem("level_split", f"{n}: split copies {cs} are not fresh levels")
             continue
         if level_unsplit(v, infos) != decls[n]:
             problem("level_split", f"{n}: the diagonal of the split view is not the source declaration")
+            continue
+        if any(level_param(c) not in (r.get("level_params") or []) for c in cs):
+            problem("level_split", f"{n}: a split copy is not a universe parameter of the translation")
             continue
         decls[n] = v
         for x in infos:
