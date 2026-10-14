@@ -2295,10 +2295,14 @@ def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None
                 if da and not ca:
                     raise Mismatch(f"{name}: source level {l} is a motive level of the referring declaration only")
                 bump = (lambda x: {"k": "succ", "l": x}) if ca and not da else (lambda x: x)
+                # Rule R (docs/COHERENCE_READINGS.md): for a shared level, max(u_l, s1, ...) whose other
+                # summands pass the R3 check below equals l at every model of the source facts (an R2F
+                # reading, not a specialization); not for motive-level (R8) parameters
+                reading = not ca and not da and any(p == level_param(l) and k == 0 for p, k in ps)
                 if body and l in body and not (lower and (c, ps) != level_nf(bump(body[l]))):
                     if (c, ps) != level_nf(bump(body[l])):
                         raise Mismatch(f"{name}: source level {l} is proof-local, argument must be its solution {body[l]}")
-                elif l in own_l and not (body and l in body) and not (lower and (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)}))):
+                elif l in own_l and not (body and l in body) and not reading and not (lower and (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)}))):
                     if (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)})):
                         raise Mismatch(f"{name}: source level {l} is shared, argument must be {level_param(l)}")
                 else:

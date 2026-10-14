@@ -2383,6 +2383,14 @@ def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) 
   -- (R-CARRIER P2: an argument for a copy of `l` stands for an argument `a ≤ l`, not for a shared `l`)
   else if own.contains l && !copyArg then
     if σ.normalize == (shift (.param (levelParamName l))).normalize then return
+    -- Rule R (docs/COHERENCE_READINGS.md): an argument `max (u_l, s₁, …)` whose other summands pass R3
+    -- below (`m + k ≤ l`, `Set + c ≤ l` entailed) equals `l` at every model of the source facts: it is a
+    -- referenced declaration's R2F reading of `l`, not a specialization. Not for motive-level (R8)
+    -- parameters, where the argument is `u_l + 1`.
+    let reading := !cAdmit && !dAdmit && (match levelNF σ.normalize with
+      | some (_, ps) => ps.any (fun (p, k) => p == levelParamName l && k == 0)
+      | none => false)
+    if reading then pure () else
     -- R3↓ (cumulativity tier only, reported per declaration): a lower argument, checked below not to
     -- raise (Set + c ≤ l and m + k ≤ l entailed): Rocq used the reference at l with arguments of
     -- lower levels by cumulativity, Lean instantiates it at their level

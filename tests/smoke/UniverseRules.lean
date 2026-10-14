@@ -22,6 +22,21 @@ private def u (s : String) : Level := .param (levelParamName s)
 #guard ok #["a"] "b" (.max .zero (u "a"))            -- normalization: max 0 a = a
 #guard !ok #["a"] "b" (.param `u_unrelated)          -- foreign parameter
 
+-- Rule R (docs/COHERENCE_READINGS.md): for a shared level b, max(u_b, s…) with every other summand
+-- passing R3 is b's R2F reading (equal to b at every model of the facts); nothing else is accepted.
+#guard ok #["a", "b"] "b" (.max (u "b") (u "a"))     -- a ≤ b: the reading max(u_b, u_a)
+#guard ok #["a", "b"] "b" (.max (u "a") (u "b"))     -- (summand order is irrelevant)
+#guard ok #["b"] "b" (.max (u "b") (.succ .zero))    -- Set + 1 ≤ b (Set < b)
+#guard !ok #["b", "c"] "b" (.max (u "b") (u "c"))    -- c ≤ b not entailed: raising, rejected
+#guard !ok #["a", "b"] "b" (.max (u "b") (.succ (u "a")))  -- a + 1 ≤ b not entailed
+#guard !ok #["b"] "b" (.max (u "b") (.succ (.succ .zero)))  -- Set + 2 ≤ b not entailed
+#guard !ok #["a", "b"] "b" (.max (.succ (u "b")) (u "a"))   -- u_b + 1 is not a reading of b
+#guard !ok #["a", "b", "c"] "c" (.max (u "a") (u "b"))      -- no u_c summand: a specialization of c
+#guard !(checkInstantiation F #["a", "b"] "b" (.max (u "b") (u "a")) {} true).toBool
+                                                     -- motive-level (R8) parameter: expects u_b + 1
+#guard !(checkInstantiation F #["a", "b"] "b" (.max (u "b") (u "a")) (({} : Std.HashMap String Level).insert "b" (u "a"))).toBool
+                                                     -- proof-local level: the argument is its solution
+
 -- Justification of defaulted (residual) levels: accepted only if the declaration is kernel-valid
 -- with the residual as a fresh universe parameter (here: `Prop : Sort (r+1)` holds only for r = 0).
 open Meta in

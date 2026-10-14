@@ -229,6 +229,10 @@ declaration that every strict tier rejected, and reported per row.
   (the dependencies keep `l`): Stdlib `ZMicromega.ZWitness := Psatz Z`. Positive `up_nat`; negative
   `up_binder` (the level also in a binder type: not R2B-S, and its instance fails). Applicability is
   re-derived by the auditor from the source type (`only_in_result_sort`).
+- *Rule R (coherence modulo an R2F reading; docs/COHERENCE_READINGS.md).* An argument
+  `max (u_l, s₁, …)` for a shared level `l`, every other summand passing R3, equals `l` at every model
+  of the source facts and satisfies coherence (not for motive-level or proof-local levels). Translator
+  `checkInstantiation`, audit `check_universe_args`; controls in `scripts/test-coherence`.
 - *R3↓ (downward instantiation).* A reference whose argument lives below a level shared with the
   referring declaration (`PolC@{l} Z` with `Z : Set ≤ Type@{l}`; `Box@{l} nat` in a field of an
   inductive at `l`) takes a fresh level, solved by Lean's unifier at the argument's level; the
