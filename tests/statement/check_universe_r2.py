@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lib import ROOT, check, cli, finish, forge_run, results  # noqa: E402
+from lib import ROOT, audit_report, check, cli, finish, forge_run, results  # noqa: E402
 
 OUT = {}
 RUN = ROOT / "runs" / "st-r2"
@@ -87,8 +87,15 @@ def narrow(src, m, label):
             r.setdefault("solved_levels", []).append({"level": own_l, "sigma": sg})
     r["implicit_levels"] = [l for l in imp if "u_" + l.replace(".", "_") not in m]
     r["universe_level_defaults"], r["universe_residuals"] = 0, None
-    _, kernel_ok, rc, cons, aud = forge_run(RUN, label, rep2, check_cmd="validate")
-    probs = [p["message"][:300] for p in aud.get("problems", []) if p["message"].startswith(src + ":")]
+    d_, kernel_all, rc, cons, aud = forge_run(RUN, label, rep2, check_cmd="validate")
+    # (R-CARRIER, entry 11: the forged row's dependents may now be claimed and reference its original
+    # universe parameters; the control requires the forged row itself to be kernel-accepted)
+    rp_ = d_ / "lean" / "replay.json"
+    kernel_ok = rp_.exists() and any(x["source"] == src and x["kernel"] == "ACCEPTED" for x in json.loads(rp_.read_text())["results"])
+    # (validate stops at the consumer when dependents of the forged row fail to replay: the standalone
+    # auditor is then run on the forged report)
+    aprobs = aud.get("problems") if aud else audit_report(d_, rep2, "forged")[1]
+    probs = [p["message"][:300] for p in aprobs if p["message"].startswith(src + ":")]
     OUT.setdefault("negative", {})[label] = {"kernel": kernel_ok, "validate_exit": rc, "audit_problems": probs[:3]}
     return kernel_ok, rc, probs
 

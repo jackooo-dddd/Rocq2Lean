@@ -5,7 +5,8 @@ on a small Prosa probe (fixtures/stmt/c: opt_eqP, ideal processor_state, JLFP_po
 1. C-1 (R3G for statements): MathComp's opt_eqP (A′: an opaque constant, its body's proof subterms
    statements) keeps its reference levels as parameters (eqtype.51, eqtype.58), so option's canonical
    eqType is generic; no statement row has a
-   defaulted level. The ideal processor_state is refused (correction): its Lean translation would narrow Job to level 0.
+   defaulted level. The ideal processor_state was refused (it narrowed Job to level 0); since R-CARRIER
+   (entry 11) it is claimed with Job generic.
 2. Negative controls, the target itself narrowed with every self-reported trace removed (no
    `universe_level_defaults`, no residual record, no implicit level): opt_eqP's first obligation
    statement at closed levels {0,0}, {0,1}, {2,2}
@@ -66,16 +67,22 @@ check(o["status"] == "PENDING_KERNEL_CHECKED" and o["target_kind"] == "opaque" a
               and not R[n].get("universe_level_defaults") for n in OBLS),
       "C-1: opt_eqP (A′: an opaque constant) and its obligation statements keep the reference levels as parameters, none defaulted")
 oe = R["mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality"]
-check(oe.get("level_params") == EQ_LPS,
+# (R-CARRIER P2, entry 11: the operand's and the result's structure levels are independent copies; the
+# carrier 51 is one class; every parameter is an eqType level or a copy of one, none defaulted)
+_eq_base = lambda p: p.split("__c")[0]
+check(set(map(_eq_base, oe.get("level_params") or [])) == set(EQ_LPS) and "u_mathcomp_boot_eqtype_51" in oe["level_params"]
+      and not oe.get("universe_level_defaults"),
       "option's canonical eqType is generic in the eqType levels (no longer Set-level only)")
 ps = R["prosa.model.processor.ideal.processor_state"]
 OUT["processor_state"] = {"status": ps["status"], "message": ps.get("message", "")[:400]}
-# correction (2026-10-14): with opt_eqP generic, the ideal processor_state is still narrowed when
-# translated: Lean has no cumulativity and ProcessorState's core finType level is max(u101, u51) (R2F),
-# so `unit`'s finType (level 0) forces Job : JobType.{0, _} -- a protected definition whose
-# quantification range would shrink: refused, never claimed
-check(ps["status"] == "UNIVERSE_REJECTED" and "universe specialization refused" in ps.get("message", ""),
-      "ideal processor_state (protected) is refused: under the current representation its translation narrows Job to level 0")
+# correction (2026-10-14): with opt_eqP generic, the ideal processor_state was still narrowed: `unit`'s
+# finType (level 0) forced Job : JobType.{0, _} through one carrier level -- refused. R-CARRIER (entry 11):
+# the concrete instance's carrier and Job's are independent classes, so the protected definition is
+# claimed with Job generic (its carrier eqtype.51 a parameter); the protection checks (translator, audit,
+# consumer) accept its ranges
+check(ps["status"] in ("TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED") and ps.get("protected")
+      and "u_mathcomp_boot_eqtype_51" in ps.get("level_params", []) and v.get("status") == "STATEMENT_VALIDATED",
+      "ideal processor_state (protected) is claimed with Job generic (R-CARRIER), validated by the independent checks")
 claimed = [r for r in rep["results"] if r["status"] in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED",
                                                          "TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED")]
 stmt_rows = [r for r in claimed if r["status"].startswith("STATEMENT_")]
@@ -251,7 +258,7 @@ def posInst (n : Name) (us : List Nat) (tag : String) : MetaM Unit := do
                        value := mkConst n us, hints := .opaque, safety := .safe })
 run_meta posInst `RocqPending.mathcomp.boot.eqtype.opt_eqP EQUS "opt_eqP"
 run_meta posInst `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement EQUS "opt_eqP_obligation"
-run_meta posInst `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality EQUS "option_eqType"
+run_meta posInst `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality OEUS "option_eqType"
 run_meta posInst `RocqPending.prosa.behavior.schedule.ProcessorState PSUS "ProcessorState"
 SCHED_LINE
 POLICY_LINES
@@ -271,6 +278,7 @@ run_meta do
 # (universe argument counts come from the report rows: nonzero, carrier level at least 3)
 EQUS = [3 + k for k in range(len(EQ_LPS))]
 POS = POS.replace("EQUS", str(EQUS)).replace("EQLV", "[" + ", ".join(f"lv {x}" for x in EQUS) + "]")
+POS = POS.replace("OEUS", str([3 + k for k in range(len(oe["level_params"]))]))
 POS = POS.replace("PSUS", str([3 + k for k in range(len(R["prosa.behavior.schedule.ProcessorState"]["level_params"]))]))
 # (schedule's target name and universe parameters come from its report row)
 POS = POS.replace("POLICY_LINES", "\n".join(
