@@ -16,6 +16,7 @@ eqType / subType hierarchy (CbSyn.v) for the correspondence proofs.
    kernel itself); P1 coupling restored on subT (the forged row kernel-accepted, audit-rejected).
 4. Positive controls at mixed nonzero universes (fixture and real declarations), and the synthetic
    correspondence proofs (tests/statement/proofs/carrier_correspondence.lean) checked without axioms.
+5. Refinement 5 (equal-level arguments in the generality check): accepted only for source-equal levels.
 
 Writes reports/statement_only/test_carrier.json.
 """
@@ -234,6 +235,43 @@ if proof.exists():
           f"correspondence proofs: split instances vs lifted common-universe instances ({n_ax} declarations, no axioms)")
 else:
     check(False, "correspondence proofs present")
+
+# 5. Refinement 5 (the generality check, audit side; the translator's freeLevelRef is the independent copy):
+# an argument max(u_a, u_b) for a referenced level l of a statement is l's reading only when a and b are
+# *equal* to l in the source graph (<= both ways). A unit-level control on audit.check_statement_generality
+# with synthetic facts: accepted for equal levels; rejected when one summand is merely below l, has an
+# offset, or is not an own level (each a specialization the source does not force).
+import importlib.util  # noqa: E402
+_spec = importlib.util.spec_from_file_location("r2l_audit", ROOT / "tools" / "audit.py")
+A = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(A)
+
+
+def _gen(rels, sigma, own=("SF.a", "SF.b")):
+    facts = A.Facts({"levels": ["SF.a", "SF.b", "SF.l", "SF.c"],
+                     "relations": [{"l": x, "rel": r, "r": y} for x, r, y in rels]})
+    stmt = {"k": "app", "f": {"k": "const", "n": "C", "u": [sigma]}, "a": {"k": "sort", "l": {"k": "zero"}}}
+    types = {"C": ({"k": "forall", "t": {"k": "sort", "l": {"k": "zero"}}, "b": {"k": "sort", "l": {"k": "zero"}}},
+                   [A.level_param("SF.l")], 0)}
+    try:
+        A.check_statement_generality(facts, set(own), {"C": ["SF.l"]}, [stmt], {}, types)
+        return True
+    except A.Mismatch:
+        return False
+
+
+_P = lambda n: {"k": "param", "n": A.level_param(n)}
+_MAX = {"k": "max", "a": _P("SF.a"), "b": _P("SF.b")}
+_EQ = [("SF.a", "le", "SF.l"), ("SF.l", "le", "SF.a"), ("SF.b", "le", "SF.l"), ("SF.l", "le", "SF.b")]
+OUT["equal_level_generality"] = r5 = {
+    "equal": _gen(_EQ, _MAX),
+    "one_summand_only_below": _gen(_EQ[:3], _MAX),
+    "offset": _gen(_EQ, {"k": "max", "a": _P("SF.a"), "b": {"k": "succ", "l": _P("SF.b")}}),
+    "not_own": _gen(_EQ, _MAX, own=("SF.a",)),
+}
+check(r5["equal"] and not (r5["one_summand_only_below"] or r5["offset"] or r5["not_own"]),
+      "refinement 5: max(u_a, u_b) for l accepted only when a, b are equal to l in the source (below only, offset, "
+      f"not own: rejected) {r5}")
 
 (ROOT / "reports" / "statement_only" / "test_carrier.json").write_text(json.dumps(OUT, indent=1) + "\n")
 finish("test-carrier")
