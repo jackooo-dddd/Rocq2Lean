@@ -1,18 +1,19 @@
 # Status
 
-**2026-10-14 — Task A complete; Tasks B and C-1 implemented on branches (see below).**
-- **A** (`main`, `803d733` + provenance commit): pending-to-final assembly (`rocq2lean assemble`,
-  `docs/ASSEMBLY.md`), proof-check integration tests on a synthetic fixture (`scripts/test-assembly`
-  32/32), corpus provenance (`reports/statement_only/PROVENANCE.md`: 36/36 chunk round trips OK,
-  union universe check 0 violated, corpus manifest bound and checked, `scripts/test-provenance` OK),
-  documentation refreshed. Corpus coverage unchanged by design (569 / 2,014 / 1,865 / 26).
-- **B** (branch `task-b`, `220a8c2`): termination lowering with explicit termination obligations and
-  unfolding equations (`docs/TERMINATION.md`); `test-termination` 22/22, `test-all` 18/18.
-- **C-1** (branch `task-c`, `5dcee42`): statements are never specialized by defaulted universe levels
-  (701 protected statements were, in the baseline); fixes the ideal `processor_state` family on the
-  probe; `JLFP`/`FP`/`JLDP_policy` diagnosed as a policy blocker (`docs/UNIVERSE_FAMILY_C.md`).
-- Corpus coverage of B and C: **not yet measured** (`reports/statement_only/ITERATION_LOG.md`).
-- Remote: GitHub `main` is at `7d91605`; the commits above are local (not pushed).
+**2026-10-14 — checkpoint after B + C-1 (branch `task-c`, not merged; awaiting approval).**
+- **A** (`main`): assembly, proof-check tests, corpus provenance (36/36 round trips; manifest bound).
+- **B** (termination obligations + unfolding equations, `docs/TERMINATION.md`) and **C-1 correctness
+  repair** (`docs/UNIVERSE_FAMILY_C.md` §2): no statement, and no protected quantification range, is
+  specialized at a universe level the source leaves free — refused by the translator, rejected by an
+  independent source-derived audit check.
+- **Corpus, B + C-1** (same 4,474 protected roots and merged IR; consumer OK, audit OK, provenance
+  bound): **525 Accepted / 1,596 Audited Pending / 2,266 Blocked / 87 Direct Failure** (modern 340 /
+  987 / 1,140 / 37, Classic 185 / 609 / 1,126 / 50). Claims surviving the source-derived audit: 707 in
+  A → 2,121. Transitions A → B + C-1: 258 newly supported, 1,189 false acceptances corrected, 687
+  rejected, 27 collateral losses, **6 genuine regressions** (`refine_*`). B-only is diagnostic (its new
+  support is mostly narrowed). Details: `reports/statement_only/ITERATION_LOG.md` entry 4.
+- Not applied: any result-sort rule for `JLFP`/`FP`/`JLDP_policy` (unsupported by the current
+  representation and rules). Next: A′ (opaque data bodies).
 
 **Current phase: statement-only translation (direction change 2026-10-11).** Rocq2Lean translates
 the datatypes, definitions and theorem *statements* of Prosa v0.6 and Classic, plus what they need,

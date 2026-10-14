@@ -125,3 +125,11 @@ submitted proof is chosen.
 * The relation `R` is the call relation, not a fixed order: provability of the obligation is the
   agent's task; an `R` that were too large would make it unprovable (never unsound), one too small is
   kernel-rejected (the certificates could not be built).
+
+## 8. Corpus measurement (2026-10-14, `ITERATION_LOG.md` entry 4)
+
+Lowered: `edivn_rec`, `modn_rec` (2 termination obligations, 2 unfolding equations, all proof tasks).
+B + C-1: their termination obligations are prerequisites of 204 / 138 protected pending declarations.
+Conversion dependence: 738 dependents re-checked in Rocq, 737 `CONV_OK`, 1 `CONV_NEEDS`
+(`mathcomp.boot.div.gcdn`, not claimed; it fails in the translator with an internal "unknown
+metavariable" error instead of a clean refusal — to fix). No claimed row needs the unfolding.

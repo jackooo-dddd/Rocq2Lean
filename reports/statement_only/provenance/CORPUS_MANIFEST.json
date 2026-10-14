@@ -1,11 +1,11 @@
 {
  "schema": "rocq2lean-corpus-manifest/1",
  "evidence": "retrospective revalidation: created after the chunk exports, from the files present now; it is not a record that existed at export time",
- "created": "2026-10-14T01:37:17+0800",
- "run": "/home/shunqwang4/research/Rocq2Lean/runs/st-corpus-A",
+ "created": "2026-10-14T08:14:40+0800",
+ "run": "/home/shunqwang4/research/r2l-run-C/runs/st-corpus-C1",
  "chunks": {
   "modern-chunk-0000-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0000/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0000/source-00.ndjson",
    "ir_sha256": "e505cca1a32410c55489912bbda8673eb0989db2dd1a3b5707c157e16d98a231",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0000-00.json",
    "snapshot_sha256": "24cca0af3afad1639d75af9eb90d9e6803d45937ec9a4476d40d1248b6c025f5",
@@ -14,7 +14,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0001-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0001/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0001/source-00.ndjson",
    "ir_sha256": "f76eade8dc6214c6299c3b4e83cad16f6f44d7468c35f3df1e0b4c2e9ad0ea33",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0001-00.json",
    "snapshot_sha256": "c1ce299275eefc4da5a386ebe8ed7e9bb3c3d55b50bd86cf785bfeea4456961c",
@@ -23,7 +23,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0002-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0002/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0002/source-00.ndjson",
    "ir_sha256": "fa778580dd9858d40d4a79ccef95decc68d13e98d6dd3fa4b4ec99f468be18cc",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0002-00.json",
    "snapshot_sha256": "58ff40bcde5a9781d6c9842c2cdb67733e3e8a1c587694fa02f77cb3ea62d668",
@@ -32,7 +32,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0003-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0003/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0003/source-00.ndjson",
    "ir_sha256": "8455010367c5bf958487817eba8ee25c6cf9197c2735adca773582e724228e91",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0003-00.json",
    "snapshot_sha256": "78a26dd4ab42cc2d91e22ab2bf9096e5a5902c24bd1258576bdda0bcf0a2c1ec",
@@ -41,7 +41,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0004-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0004/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0004/source-00.ndjson",
    "ir_sha256": "b042b5d7591e3a919cad60b529abc1fe66ed9034d56250fbac2fff0e099bea50",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0004-00.json",
    "snapshot_sha256": "468f0abfd96864fc947c530eb1dc4fcefecc0fdf92e1457dd9423d5c9fd97590",
@@ -50,7 +50,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0005-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0005/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0005/source-00.ndjson",
    "ir_sha256": "fa9f27642c439d6502d7746e55b9ea5f07fa193c63757eb23263bd1fb24653f6",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0005-00.json",
    "snapshot_sha256": "2dfc03c6e2226b7e29fdb4b2fdddbb4fdd43e22ad4f4df717d2ac64744307f51",
@@ -59,7 +59,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0006-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0006/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0006/source-00.ndjson",
    "ir_sha256": "2f5ecc25f487fd4f2261e1064f58929c8d667d5c6c6bc02cf336cb8e72377e14",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0006-00.json",
    "snapshot_sha256": "43c8bb646e549a2e4c7b4a23d6921bc1a7844f6c8c2450274f208059c585cef9",
@@ -68,7 +68,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0007-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0007/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0007/source-00.ndjson",
    "ir_sha256": "6cd5ea411ff111a1ced00942211d3f23729cb54ce5d85204ab927b9b07fb4dac",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0007-00.json",
    "snapshot_sha256": "cd2e782779c8b485d16bfe1222ce2099ff26f33c0ac44965a057025fd4c8c077",
@@ -77,7 +77,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0008-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0008/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0008/source-00.ndjson",
    "ir_sha256": "0779f15b1c31ca4603c944e60241c6e66b34da5deb2a0fef84aea3a31dc8c268",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0008-00.json",
    "snapshot_sha256": "62a76add17b5909e400cec9677d506f8f5f8ef7d9361b8147a6b38a805a4f0e2",
@@ -86,7 +86,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0009-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0009/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0009/source-00.ndjson",
    "ir_sha256": "46b8941355983dbf17de663830a0d186b670f21b1fbd45425446b7f43a0103f5",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0009-00.json",
    "snapshot_sha256": "0d8aff28b78c78f2b809c2475f1a7d9dfd72428400d164639cad6e0fa8dc3682",
@@ -95,7 +95,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0010-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0010/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0010/source-00.ndjson",
    "ir_sha256": "a84a663e76e462d16693314e94d435fb080f6c80d8904401ed6f259eb3bbc3b2",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0010-00.json",
    "snapshot_sha256": "005bb21194015e75d780b1178585e1aa815d05d70f177334f912fad599925a2f",
@@ -104,7 +104,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0011-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0011/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0011/source-00.ndjson",
    "ir_sha256": "a53df91222b4723c5d847e7264c653363ed1ea39a0f39764def5dde3c45461bd",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0011-00.json",
    "snapshot_sha256": "be2e04a2f6c2dba542691109ac157c6ea5a380e46943070cd93e700aa1fddfa1",
@@ -113,7 +113,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0012-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0012/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0012/source-00.ndjson",
    "ir_sha256": "aff25da9b01e6bf4b1d0d03cffaa99edd5c4e40e7a34079e168da9ffd402ad93",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0012-00.json",
    "snapshot_sha256": "88a8af9963943e28458c90a24f71e67c2742b1d117cad33762b9e02c153219f2",
@@ -122,7 +122,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0013-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0013/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0013/source-00.ndjson",
    "ir_sha256": "8eca9bb7f80fa0c2e6876e32f681e1aafde8bbea170b5751b415c4315331ffb6",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0013-00.json",
    "snapshot_sha256": "ae2576293ed7f725e6d82663220546cd31c4ec8758c020dcaf10051c7ccb564f",
@@ -131,7 +131,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0014-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0014/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0014/source-00.ndjson",
    "ir_sha256": "c9d6eac5f318288b3e73784614cbfea16018865b6345f68462c0851958cee115",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0014-00.json",
    "snapshot_sha256": "60329792bb9a9196a9d6423730eaef6db7a3f2b840fcddd72fc2f7339e735441",
@@ -140,7 +140,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0015-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0015/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0015/source-00.ndjson",
    "ir_sha256": "cdc1b7b4f46721411742d058d1229bea4a9c3ebc548317e0032910cc03e23e7e",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0015-00.json",
    "snapshot_sha256": "022fe2c18649dee6a3fa6755da24a51b3a8f4dd54406062b912f993cecbc390a",
@@ -149,7 +149,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0016-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0016/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0016/source-00.ndjson",
    "ir_sha256": "cba1cf80b21d3ad00b49e4ddd216b37f18b0ee0001b6b709592b156263bd0b0e",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0016-00.json",
    "snapshot_sha256": "a53fbc02d0dea2327852f6b09c741636d5f6247d8a6d2ae90af99c45f59a545a",
@@ -158,7 +158,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0017-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0017/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0017/source-00.ndjson",
    "ir_sha256": "bc2d953417b1cf1cb958c5e6d7212df945ebc8c26db725c1e15c16a4cd35020c",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0017-00.json",
    "snapshot_sha256": "88c145bff7fa4c99a048e505c8fe4e589ea3603adfcfff38f646d395316619ae",
@@ -167,7 +167,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0018-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0018/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0018/source-00.ndjson",
    "ir_sha256": "b217b4bf80fdf57f9cb5d7d2725edb5a4c1d8714ece344a24006be7c6bb74786",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0018-00.json",
    "snapshot_sha256": "900660292fe43ab0c97791116f39f3946cb520b914ccded77b0cab3f1390c1ef",
@@ -176,7 +176,7 @@
    "roundtrip_status": "OK"
   },
   "modern-chunk-0019-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-modern/chunk-0019/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-modern/chunk-0019/source-00.ndjson",
    "ir_sha256": "eeb9c756f5ed246bbdd19ac5d0f55d3983ce099c6bb5a0956f5d13a26bd7b116",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/modern-chunk-0019-00.json",
    "snapshot_sha256": "47056e1fb54210caa8fa9ca329eafcae0a21e4c42aca69a86a5fe8789c3efcd5",
@@ -185,7 +185,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0000-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0000/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0000/source-00.ndjson",
    "ir_sha256": "489cf209db237d411138018356a2d57811e76d11f2fa1bf1259951fa7165c98b",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0000-00.json",
    "snapshot_sha256": "79e74ce962851fbcde2d4351e4ea9ae645772e0040cd420c67f520d531cca577",
@@ -194,7 +194,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0001-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0001/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0001/source-00.ndjson",
    "ir_sha256": "8b9b206684e93c317f0a86f0645b819c0b67adfce58738c514a070342edf7084",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0001-00.json",
    "snapshot_sha256": "0cb0d154c23c883ff537f8b16a2e7278c4480724144a3d5fa0fac97c17ee6836",
@@ -203,7 +203,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0002-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0002/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0002/source-00.ndjson",
    "ir_sha256": "806d1cf7566d3c59fdd647a0242539d4ad1705009ba4bc85f8b22fadf4745b19",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0002-00.json",
    "snapshot_sha256": "9a99f2872b8a5669b1434f63ad3d0779be532fc9539b693c176700955174e6e2",
@@ -212,7 +212,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0003-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0003/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0003/source-00.ndjson",
    "ir_sha256": "146bdb5c03f0cd4085ea3992424ebd1f3c7947712cf8488fa634dd0a6ac23d6c",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0003-00.json",
    "snapshot_sha256": "2eec19478aefc02515086b66369bffdc5fd9ac5abfd6ce3f8270cbff45b6a146",
@@ -221,7 +221,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0004-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0004/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0004/source-00.ndjson",
    "ir_sha256": "dede11e2c9ce323181fade852b7dbdf3e511e578fad9523b22c314c5dbe803fd",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0004-00.json",
    "snapshot_sha256": "1800b8355c6b39d31072ea3584cdf2a3ad59b2d3fc69379ddddaec7df9a41292",
@@ -230,7 +230,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0005-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0005/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0005/source-00.ndjson",
    "ir_sha256": "25ec96a015fe611dd7c9b04607e23227ba2fdac2de5007bd038604ce82e4609e",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0005-00.json",
    "snapshot_sha256": "864422a4618742bbee8be17024473b0ff0263220421611bf2487513a1991f656",
@@ -239,7 +239,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0006-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0006/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0006/source-00.ndjson",
    "ir_sha256": "cdd75a514f8e10b9adf45907e42d35c9829368a7a3c5b53b097338746581e237",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0006-00.json",
    "snapshot_sha256": "9d7115aef2289728178ef56635680b006433a30a5253700d2687f85156dfac6d",
@@ -248,7 +248,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0007-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0007/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0007/source-00.ndjson",
    "ir_sha256": "8ea0a90080eaeac27e21e92b857492db89fb5760dd28fb1ab7007c14fc0b3194",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0007-00.json",
    "snapshot_sha256": "0fcf142ca9e83190fd335228dc40e0ce9d4c5f0c97d641218546654b71849ea5",
@@ -257,7 +257,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0008-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0008/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0008/source-00.ndjson",
    "ir_sha256": "1f3cb1bb18fe928f3941a0d52686f6ca617159e92c51637f6b227207e33f6399",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0008-00.json",
    "snapshot_sha256": "5d2663ce6503aa6a45d1bd98feb110ebd1871b9536d842865c84c093cb95d2df",
@@ -266,7 +266,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0009-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0009/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0009/source-00.ndjson",
    "ir_sha256": "1602ae6e99d616b160555093e0bcff5c1f64ba4178e1b9f4516a3797da5c8016",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0009-00.json",
    "snapshot_sha256": "0267c44693df184642829ff458ecbc171ca164cf862285796c710c5ebea3445f",
@@ -275,7 +275,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0010-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0010/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0010/source-00.ndjson",
    "ir_sha256": "d15b7e0512d49a257c301292cee55f42c822c85455095d6f4401e4acdc3dac91",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0010-00.json",
    "snapshot_sha256": "ad91d7ff1c46212e6e78450d6ecebbd66a13d449c28fffc0607e983d2e09ddde",
@@ -284,7 +284,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0011-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0011/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0011/source-00.ndjson",
    "ir_sha256": "d41ec6161565cc65fca2763d6e35061c77afe3b0dcc527b769152388226fdccd",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0011-00.json",
    "snapshot_sha256": "13afb91908eb4d35fbc9ab705ba63efb8b167d621f8498dc183a7c0448e6b9d2",
@@ -293,7 +293,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0012-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0012/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0012/source-00.ndjson",
    "ir_sha256": "084da8743d6f4f6e3999a315d299172a71d361cea47314bc6f7aebf7126996fd",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0012-00.json",
    "snapshot_sha256": "0b65e1d8198bfdfb9d5cfbbea2268e52fd45f3ac07365f38b252b99c7fb5ea6f",
@@ -302,7 +302,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0013-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0013/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0013/source-00.ndjson",
    "ir_sha256": "c0ca5ea89de59d00299b84b127f8f3d47c665b577bf7faaec708f91c3c17289b",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0013-00.json",
    "snapshot_sha256": "64facd12e8baea779266615b520d4298ba94423ed6f3d012c4ff525b14a2ad6d",
@@ -311,7 +311,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0014-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0014/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0014/source-00.ndjson",
    "ir_sha256": "b1b31001ff02b04566b0f4b497d0fa014a6f0b5ab65053538d4534ff78d9ad62",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0014-00.json",
    "snapshot_sha256": "c790416d415fc535932b37189f8064435fdd44416cceaa60c2d74552b116c171",
@@ -320,7 +320,7 @@
    "roundtrip_status": "OK"
   },
   "classic-chunk-0015-00": {
-   "ir": "/home/shunqwang4/research/Rocq2Lean/.work/inventory/export-statement-classic/chunk-0015/source-00.ndjson",
+   "ir": "/home/shunqwang4/research/r2l-run-C/.work/inventory/export-statement-classic/chunk-0015/source-00.ndjson",
    "ir_sha256": "70f71408d91ef8b196871bde252d5ebf9bf2601073dec2044e526e05579017cc",
    "snapshot": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/snapshots/classic-chunk-0015-00.json",
    "snapshot_sha256": "1be4adc0e6b1c7f9def6b963825b421aced07703d014306f5dfa6577dbf4ce3a",
@@ -342,42 +342,78 @@
   "missing": []
  },
  "union_universes": {
-  "file": "/home/shunqwang4/research/Rocq2Lean/.work/provenance/union.json",
+  "file": "/home/shunqwang4/research/r2l-run-C/.work/provenance/union.json",
   "sha256": "aeac61b48795cf5185b0c4cec884fa148a02c91a3e889a95cbf5dd553b645c50",
   "status": "OK"
  },
  "files": {
   "source.ndjson": {
-   "path": "/home/shunqwang4/research/Rocq2Lean/runs/st-corpus-A/source.ndjson",
+   "path": "/home/shunqwang4/research/r2l-run-C/runs/st-corpus-C1/source.ndjson",
    "sha256": "ec0bd22c1604c715fff3cbd0ed95a96d81a11edb0b9fd9b7641d4368608c91be"
   },
   "contract.json": {
-   "path": "/home/shunqwang4/research/Rocq2Lean/runs/st-corpus-A/contract.json",
-   "sha256": "abd9c96b8859ff0df88b9ef049d7a762e9625c8ce552ae7637a5edb5fd569620"
+   "path": "/home/shunqwang4/research/r2l-run-C/runs/st-corpus-C1/contract.json",
+   "sha256": "2f0aa030069f1f64a9edfe054a1a4b809b0d750d5747e496104ae62703b53bc8"
   },
   "translation_report.json": {
-   "path": "/home/shunqwang4/research/Rocq2Lean/runs/st-corpus-A/translation_report.json",
-   "sha256": "7345ef02ae0e505ac71102741819f48ad97b75516e3762ce565a653126dd16d6"
+   "path": "/home/shunqwang4/research/r2l-run-C/runs/st-corpus-C1/translation_report.json",
+   "sha256": "7d3a21ff8bb7d3b77b8772ac7d938d49e66130818cc74bced7366ec93286ff87"
   },
   "translation_manifest.json": {
-   "path": "/home/shunqwang4/research/Rocq2Lean/runs/st-corpus-A/translation_manifest.json",
-   "sha256": "7c97447acd29bad31a08c29a9a13939dda5ee1b523f7f91913516878b929bb8a"
+   "path": "/home/shunqwang4/research/r2l-run-C/runs/st-corpus-C1/translation_manifest.json",
+   "sha256": "fa5794e2b041bd1588b17267ef66cff97c1edeb60b1751a51947d910c7bfe989"
   },
   "consumer_result.json": {
-   "path": "/home/shunqwang4/research/Rocq2Lean/runs/st-corpus-A/consumer_result.json",
-   "sha256": "72b3947a221a6a3926528cb2a644e0704ace207f86f67003568640e8a8ca7e6c"
+   "path": "/home/shunqwang4/research/r2l-run-C/runs/st-corpus-C1/consumer_result.json",
+   "sha256": "7544a57ec87799e55ecb9070ddc47e67aad8c400afdd6af5638314a029dfbdb3"
   },
   "audit.json": {
-   "path": "/home/shunqwang4/research/Rocq2Lean/runs/st-corpus-A/audit.json",
-   "sha256": "6dde86d9cf217ac0afd1a388921fdafaed3efbb6ba259296db3954ba5ca61fd1"
+   "path": "/home/shunqwang4/research/r2l-run-C/runs/st-corpus-C1/audit.json",
+   "sha256": "3f500dd5bb53e921492dcdd5ac0ee74ec4091bb6b470f91b7f17459dc169d382"
+  },
+  "conversion_deps/joined.json": {
+   "path": "/home/shunqwang4/research/r2l-run-C/runs/st-corpus-C1/conversion_deps/joined.json",
+   "sha256": "12c2ebfe4cdbb697a4f853d288aea2cb06b48c0f96b712005f2f269ec22b8a71"
   }
  },
+ "reuse": {
+  "round_trip_tools": {
+   "exporter_plugin": "8b424c14d44b5a76343f36c31874ac2b17249e8a53ebcbb00a9007d1ecdea862",
+   "roundtrip_py": "f34f062eae62821157100af4afbce9a37985da5bc41b7ed7e26fb1e08bd04d8e",
+   "rteq_v": "6e90ef2ce03c406e892c6fe8b04b96748cacd3766c9909024c9072032ed36478"
+  },
+  "current_tools": {
+   "roundtrip_py": "f34f062eae62821157100af4afbce9a37985da5bc41b7ed7e26fb1e08bd04d8e",
+   "exporter_plugin": "4cf3874fbadef8da2b763b6bb00c4c317e439872074fdbe71d1060c4c41b8383",
+   "rteq_v": "6e90ef2ce03c406e892c6fe8b04b96748cacd3766c9909024c9072032ed36478"
+  },
+  "problems": [],
+  "exporter_source_diff": {
+   "base_commit": "b4d709b48d38c78dd636357fd5f3505979badef3",
+   "files": [
+    {
+     "file": "rocq/exporter/src/g_rocq2lean_export.mlg",
+     "added": 8,
+     "removed": 0
+    },
+    {
+     "file": "rocq/exporter/src/r2l_export.ml",
+     "added": 70,
+     "removed": 0
+    }
+   ],
+   "added": 78,
+   "removed": 0,
+   "diff_sha256": "e17202ec55c12565c74a5d19c2be65c00b9594ff6b937989676ee81d110d9832"
+  },
+  "status": "APPLICABLE"
+ },
  "tools": {
-  "impl_tree_sha256": "894d1d83ea406ebd5af0b12a73faf5c0683a0b2e469c690892df86da44a54509",
-  "translator_build_sha256": "838f7db243b7339afb02e51befb45e86944fc4bfb54f55f4eba9a1102948a7b7",
+  "impl_tree_sha256": "ea0bad4fce362e491c4be6cfa34d169039c273dfae946b14e344155753d1ea59",
+  "translator_build_sha256": "f46f53a5befd591da4f6fafeae8b5570b884c5c62e48cbc99a674c4ab33b045b",
   "toolchains_lock_sha256": "9fd40a1d021c990e7062abc958e5ebb4719d21ebb556a35ecb3fedf715b9d573",
   "toolchain_fingerprint": "b3abee0cf3aaa40a9cf2cb36f1a1f93e35bd435cf13707eb9ba496880bc42922",
-  "exporter_plugin_sha256": "8b424c14d44b5a76343f36c31874ac2b17249e8a53ebcbb00a9007d1ecdea862"
+  "exporter_plugin_sha256": "4cf3874fbadef8da2b763b6bb00c4c317e439872074fdbe71d1060c4c41b8383"
  },
  "status": "CORPUS_PROVENANCE_BOUND"
 }
