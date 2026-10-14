@@ -81,21 +81,21 @@ FAMILY_NOTES = {
                   "attributed to pcancel-like single-level references; ssrfun.pcancel's two carriers are at "
                   "separate levels, so that attribution was wrong.)"},
     "STATEMENT_FREE_LEVEL_PINNED": {
-        "category": 1, "priority": "P2 (largest universe family; needs a semantic decision)",
-        "mechanism": "C-1 generality: a statement's reference argument for a source-free level is closed. "
-                     "Entry 9 diagnosis (R3 report, replacing the wrong round-2 pcancel attribution: pcancel's "
-                     "rT and aT are separate levels): 280 of 340 members pin the RESULT-SORT-ONLY level of an "
-                     "HB structure, hasDecEq.axioms_ (T : Type@{eqtype.29}) : Type@{eqtype.32} (144) and "
-                     "hasChoice.axioms_ at choice.299 (136); 50 more at Equality.type. The level occurs in the "
-                     "referenced declaration only as its result sort (R2F reading max(u, u29)); the Lean use "
-                     "context (an expected Type 0) fixes it to 0, where Rocq leaves it free by cumulativity.",
-        "proposal": "candidate (NOT adopted; needs approval): an independently checked irrelevance criterion "
-                    "for a reference level that occurs only in the referenced declaration's result sort (any "
-                    "value gives a ULift-isomorphic instance), instead of refusing the pin.",
-        "acceptance": "statement generic or the pin proved irrelevant by an independent check; generality "
-                      "negative controls unchanged; no protected range narrowed.",
-        "status": "diagnosed (lead confirmed on 280/340 members by message head; mechanism per member not yet "
-                  "checked); awaiting a decision"},
+        "category": 1, "priority": "P2 (case A: R3G-F experimental, entry 10; case B: needs a decision)",
+        "mechanism": "C-1 generality: a statement's reference argument for a source-free level is closed. Entry 10 split "
+                     "the members mechanically by where the pinned level occurs in the referenced source declaration. "
+                     "Case A (result-sort-only: hasDecEq.axioms_ eqtype.32, hasChoice.axioms_ choice.299; 280 members in "
+                     "R-SPLIT): the class records' fields fixed that level to 0 (R3″). Case B (a structure's carrier, a "
+                     "field sort: Equality.type 51, Countable.type 959, Choice.type 333, JobType/TaskType; 73 members): a "
+                     "concrete instance (nat_eqType packs Nat : Type 0) coupled to a generic one through one carrier "
+                     "level (prod_eqType SporadicTask nat_eqType).",
+        "proposal": "case A: R3G-F (docs/RESULT_SORT_LEVELS.md, branch rules-rsonly, not merged): such a level is an "
+                    "implicit universe parameter of the block, read minimally, scoped by the dependency closure. Case B: "
+                    "needs a representation decision (lifted carriers of concrete instances with transport at every "
+                    "use of `sort`, or per-operand carrier levels of structure operations); kept blocked.",
+        "acceptance": "case A: 276 of 280 members accepted (4 remain: a mixin level identified with another statement "
+                      "level, Builders_62.HB_unnamed_factory_64); case B: unchanged.",
+        "status": "case A: R3G-F measured (not merged); case B: awaiting a representation decision"},
     "PROTECTED_RANGE_NARROWED": {
         "category": 1, "priority": "P4", "mechanism": "a protected definition's only current translation narrows a "
         "quantification range (JobReady, ideal/overheads processor_state: unit's finType forces Job to level 0).",
@@ -116,8 +116,12 @@ FAMILY_NOTES = {
         "unification with a single-level sort `?a+1` makes the bounded solver set the free level to 0 "
         "(max(?a+1, ?x) = ?a+1 ⇒ ?x := 0), which the generality check refuses (last tier).",
         "proposal": "a representation question of its own (a single-level occurrence vs a two-level R2F "
-                    "reading; entry 9: not the COUPLED_BINDER_LEVELS mechanism); not changed without approval.",
-        "acceptance": "-", "status": "diagnosed"},
+                    "reading; entry 9: not the COUPLED_BINDER_LEVELS mechanism); not changed without approval. Entry 10: "
+                    "the P2 retry tier for definitions (joint identification + bounded solver, kept only with fewer "
+                    "defaults and parameters of the type) and R3G-F's minimal reading resolve some members (3 protected "
+                    "Prosa roots: delay_propagation.propagated_arrival_curve_{valid,respected}, "
+                    "instantiated_task_intra_interference_is_bounded); attribution by ablation in entry 10.",
+        "acceptance": "-", "status": "diagnosed; partly resolved (entry 10)"},
     "PROP_TYPE_CUMULATIVITY": {
         "category": 1, "priority": "P4", "mechanism": "a Prop-valued term where Rocq expects Type (Prop <= Type "
         "cumulativity), mostly CoqEAL parametricity relations.", "proposal": "representation decision "

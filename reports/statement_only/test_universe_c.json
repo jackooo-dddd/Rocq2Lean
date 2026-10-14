@@ -18,24 +18,30 @@
   "status": "PENDING_KERNEL_CHECKED",
   "target_kind": "opaque",
   "level_params": [
+   "u_mathcomp_boot_eqtype_32",
    "u_mathcomp_boot_eqtype_51",
+   "u_mathcomp_boot_eqtype_55",
    "u_mathcomp_boot_eqtype_58"
   ],
   "implicit_levels": [
+   "mathcomp.boot.eqtype.32",
    "mathcomp.boot.eqtype.51",
+   "mathcomp.boot.eqtype.55",
    "mathcomp.boot.eqtype.58"
   ],
   "universe_level_defaults": 0
  },
  "processor_state": {
   "status": "UNIVERSE_REJECTED",
-  "message": "reference to Rocq.mathcomp.boot.eqtype.HB_unnamed_factory_16__rocq2lean_obligation_1.statement: coherence: source level mathcomp.boot.eqtype.58 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.58, not 1 [last tier: UNIVERSE_REJECTED: protected public declaration: universe specialization refused (a quantification range would be narrowed): Rocq.prosa.behavior."
+  "message": "reference to Rocq.mathcomp.boot.eqtype.HB_unnamed_factory_16__rocq2lean_obligation_1.statement: coherence: source level mathcomp.boot.eqtype.58 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.58, not max\n(max\n (max (max u_mathcomp_boot_eqtype_32 1) u_mathcomp_boot_eqtype_55)\n (max u_mathcomp_boot_eqtype_32 u_mathcomp_boot_eqtype_55)\n 1)\n1 [last tier: UNIVER"
  },
  "policies": {
   "JLFP_policy": {
    "status": "TRANSLATED_AND_CHECKED",
    "level_params": [
+    "u_mathcomp_boot_eqtype_32",
     "u_mathcomp_boot_eqtype_51",
+    "u_mathcomp_boot_eqtype_55",
     "u_mathcomp_boot_eqtype_58"
    ],
    "sort_lowered_levels": [
@@ -59,7 +65,9 @@
   "FP_policy": {
    "status": "TRANSLATED_AND_CHECKED",
    "level_params": [
+    "u_mathcomp_boot_eqtype_32",
     "u_mathcomp_boot_eqtype_51",
+    "u_mathcomp_boot_eqtype_55",
     "u_mathcomp_boot_eqtype_58"
    ],
    "sort_lowered_levels": [
@@ -83,7 +91,9 @@
   "JLDP_policy": {
    "status": "TRANSLATED_AND_CHECKED",
    "level_params": [
+    "u_mathcomp_boot_eqtype_32",
     "u_mathcomp_boot_eqtype_51",
+    "u_mathcomp_boot_eqtype_55",
     "u_mathcomp_boot_eqtype_58"
    ],
    "sort_lowered_levels": [
@@ -146,8 +156,14 @@
   "row_self_reports": {
    "universe_level_defaults": 0,
    "universe_residuals": null,
-   "implicit_levels": [],
-   "level_params": []
+   "implicit_levels": [
+    "mathcomp.boot.eqtype.32",
+    "mathcomp.boot.eqtype.55"
+   ],
+   "level_params": [
+    "u_mathcomp_boot_eqtype_32",
+    "u_mathcomp_boot_eqtype_55"
+   ]
   }
  },
  "negative_narrowed_statement_0-1": {
@@ -160,8 +176,14 @@
   "row_self_reports": {
    "universe_level_defaults": 0,
    "universe_residuals": null,
-   "implicit_levels": [],
-   "level_params": []
+   "implicit_levels": [
+    "mathcomp.boot.eqtype.32",
+    "mathcomp.boot.eqtype.55"
+   ],
+   "level_params": [
+    "u_mathcomp_boot_eqtype_32",
+    "u_mathcomp_boot_eqtype_55"
+   ]
   }
  },
  "negative_narrowed_statement_2-2": {
@@ -174,8 +196,14 @@
   "row_self_reports": {
    "universe_level_defaults": 0,
    "universe_residuals": null,
-   "implicit_levels": [],
-   "level_params": []
+   "implicit_levels": [
+    "mathcomp.boot.eqtype.32",
+    "mathcomp.boot.eqtype.55"
+   ],
+   "level_params": [
+    "u_mathcomp_boot_eqtype_32",
+    "u_mathcomp_boot_eqtype_55"
+   ]
   }
  },
  "negative_narrowed_protected_definition": {
@@ -221,6 +249,6 @@
   "generic_exit": 0,
   "generic_output": "",
   "narrowed_exit": 1,
-  "narrowed_output": "PositiveControl.lean:10:0: error(lean.unknownIdentifier): Unknown constant `RocqPending.mathcomp.boot.eqtype.opt_eqP`\nPositiveControl.lean:11:0: error: (kernel) incorrect number of universe levels parameters for 'Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement', #0 expected, #2 provided\nPositiveControl.lean:12:0: error(lean.unknownIdentifier): Unknown constant `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality`\nPositiveControl.lean:19:0: error: binder range Rocq.mathcomp.boot.eqtype.Equality.type\n"
+  "narrowed_output": "PositiveControl.lean:10:0: error(lean.unknownIdentifier): Unknown constant `RocqPending.mathcomp.boot.eqtype.opt_eqP`\nPositiveControl.lean:11:0: error: (kernel) incorrect number of universe levels parameters for 'Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement', #2 expected, #4 provided\nPositiveControl.lean:12:0: error(lean.unknownIdentifier): Unknown constant `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality`\nPositiveControl.lean:19:0: error: binder range Rocq.mathcomp.boot.eqtype.Equality.type\n"
  }
 }

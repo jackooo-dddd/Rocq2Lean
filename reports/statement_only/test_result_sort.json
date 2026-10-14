@@ -188,11 +188,17 @@
   "SF.Rs.wrapA": {
    "status": "TRANSLATED_AND_CHECKED",
    "level_params": [
+    "u_SF_Rs_22",
     "u_SF_Rs_23",
+    "u_SF_Rs_24",
+    "u_SF_Rs_25",
     "u_SF_Rs_36"
    ],
    "implicit_levels": [
-    "SF.Rs.23"
+    "SF.Rs.22",
+    "SF.Rs.23",
+    "SF.Rs.24",
+    "SF.Rs.25"
    ],
    "result_sort_implicit_levels": []
   },
@@ -258,22 +264,28 @@
    "forged_rows_kernel_accepted": true,
    "validate_exit": 2,
    "audit_problems": [
-    "SF.Rs.wrapA: R3G-F level SF.Rs.23 is not result-sort-only in a declaration referenced by a field"
+    "SF.Rs.wrapA: R3G-F level SF.Rs.22 is not bounded by the block's result sort ['SF.Rs.36'] in the source graph"
    ],
    "consumer_problems": [
-    "SF.Rs.wrapA: result-sort implicit level SF.Rs.23 is not confined to the block's result sort and to universe arguments"
+    "SF.Rs.wrapA: result-sort implicit level SF.Rs.22 is not confined to the block's result sort and to universe arguments"
    ],
    "dependents_rejected_by_kernel": []
   },
   "axE-field-level": {
-   "kernel": true,
+   "kernel": false,
    "forged_rows_kernel_accepted": true,
    "validate_exit": 2,
    "audit_problems": [
     "SF.Rs.axE: implicit level SF.Rs.22 is not the argument of a reference for that level"
    ],
    "consumer_problems": [],
-   "dependents_rejected_by_kernel": []
+   "dependents_rejected_by_kernel": [
+    "SF.Rs.getop",
+    "SF.Rs.mix",
+    "SF.Rs.mk",
+    "SF.Rs.mk_op",
+    "SF.Rs.unify_like"
+   ]
   },
   "typeE-carrier-range": {
    "kernel": false,
@@ -301,8 +313,7 @@
    "forged_rows_kernel_accepted": true,
    "validate_exit": 2,
    "audit_problems": [
-    "SF.Rs.unify_like: interpreted levels ['SF.Rs.22', 'SF.Rs.24', 'SF.Rs.26'] must be type or implicit levels ['SF.Rs.24', 'SF.Rs.26'], not solved ones",
-    "SF.Rs.unify_like: interpreted levels ['SF.Rs.22', 'SF.Rs.24', 'SF.Rs.26'] must be type or implicit levels ['SF.Rs.24', 'SF.Rs.26'], not solved ones"
+    "SF.Rs.unify_like: Rocq.SF.Rs.hasDec: source level SF.Rs.22 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_SF_Rs_22: the statement is specialized (R3G)"
    ],
    "consumer_problems": [],
    "dependents_rejected_by_kernel": []

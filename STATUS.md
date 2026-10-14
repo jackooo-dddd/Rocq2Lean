@@ -1,12 +1,24 @@
 # Status
 
-**2026-10-14 — current baseline: rule round 2 + P3 + R-SPLIT (branches `rules-r2`, `rules-split`;
+**2026-10-14 — current baseline: R3G-F + the P2 retry tier for definitions (branch `rules-rsonly`,
+reviewed, merged into `main`).**
+* **R3G-F** (`docs/RESULT_SORT_LEVELS.md`) handles result-sort-only levels of class records. It solves
+  276 internal MathComp rows and adds no protected root on its own (ablation).
+* **The P2 retry tier for definitions** supports 3 more protected Prosa roots, previously refused by
+  coherence.
+* **Corpus** at the validated implementation `6fe8890` (run `r2l-run-RS4`; consumer, audit, source
+  instances and provenance OK), on the fixed 4,474 protected roots: **673 Accepted / 2,180 Audited
+  Pending / 1,518 Blocked / 103 Direct Failure**.
+* **Open:** case B (carrier levels of structures with concrete instances) awaits a representation
+  decision. ITERATION_LOG entry 10.
+
+**2026-10-14 — rule round 2 + P3 + R-SPLIT (branches `rules-r2`, `rules-split`;
 reviewed, merged into `main` by fast-forward to `69dc4cc`).** Binder-level independence and joint
 level metavariables (entry 7), per-instance prerequisite hypotheses (entry 8), and R-SPLIT
 (`docs/LEVEL_SPLIT.md`, entry 9). Corpus at the validated implementation `a28c4b3` (run
 `r2l-run-SPLIT2`; consumer, audit, source instances, provenance OK), the fixed 4,474 protected roots:
-**673 Accepted / 2,177 Audited Pending / 1,518 Blocked / 106 Direct Failure** — the baseline for the
-next milestone.
+**673 Accepted / 2,177 Audited Pending / 1,518 Blocked / 106 Direct Failure** (the baseline of
+entry 10).
 
 **2026-10-14 — checkpoint after B + C-1 (branch `task-c`; merged into `main` 2026-10-14).**
 - **A** (`main`): assembly, proof-check tests, corpus provenance (36/36 round trips; manifest bound).

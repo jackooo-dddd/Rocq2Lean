@@ -901,3 +901,177 @@ Evidence:
 * `provenance/CORPUS_MANIFEST.json` (current: SPLIT2; `-R3` kept);
 * `termination/CONVERSION_DEPENDENCE-SPLIT2.json`;
 * `test_level_split.json`.
+
+## Entry 10 — R3G-F (result-sort-only levels) and the P2 retry tier for definitions (2026-10-14)
+
+Branch `rules-rsonly`, from `main` `679dd59`. The validated implementation is `6fe8890` (commits
+`6ff07a7` `dd0deec` `c77696c` `2200033` `48a8ec3` `6fe8890`); it was reviewed and merged into `main`.
+
+Corpus run worktree `r2l-run-RS4`, run `runs/st-corpus-RS4`. Inputs:
+* the A′ export, with its chunk evidence reused;
+* the merged source is byte-identical to R-SPLIT's (`8eaf2da4…`);
+* the exporter plugin is byte-identical (`44a8c6ac…`).
+
+The statement suites and test-all ran in the frozen worktree `r2l-B-test` at `6fe8890`. Design:
+`docs/RESULT_SORT_LEVELS.md`.
+
+### (1) Diagnosis: the STATEMENT_FREE_LEVEL_PINNED members are two cases
+
+The 356 pinned rows of the R-SPLIT run were classified by where the pinned level occurs in the
+referenced declaration's source (by occurrence paths; scripts and `pin_classes.json` in
+`reports/statement_only/rsonly/`).
+
+| Case | Rows | Pinned level | Mechanism |
+|---|---|---|---|
+| **A: result-sort-only** | 280 | `hasDecEq.axioms_` `eqtype.32` (144); `hasChoice.axioms_` `choice.299` (136) | R3″ fixed it to 0 inside the class records' fields (`Equality.axioms_.Class : hasDecEq.axioms_.{u51, 0} T → …`), so a statement holding a mixin at its own level unified it to 0 |
+| **B: a structure's carrier (a field sort)** | 58 + 18 | `Equality.type` 51, `Countable.type` 959, `Choice.type` 333, `JobType`/`TaskType` | A concrete instance (`nat_eqType` packs `Nat : Type 0`) coupled to a generic one through one carrier level (`prod_eqType SporadicTask nat_eqType`) |
+
+Reproducers:
+* Case A: the corpus obligation `Builders_32.HB_unnamed_factory_34` obligation 5, and the fixture
+  `SF.Rs.unify_like` (pre-change result in `rsonly/pre_fixture_report.json`).
+* Case B: the Classic `fp_rta_comp` statements.
+
+Protected paths (frontier of the R-SPLIT run):
+* 749 roots are blocked by B (`HB_unnamed_mixin_107` obligations 2/4/8, `Countable.type`'s carrier) and
+  by two solution-fact rows (`eqtype.insub`, `fintype.HB_unnamed_factory_57`);
+* 62 roots are blocked by B alone;
+* case A lies on the frontier of 79 roots, all also blocked by B, solution facts or kernel failures.
+
+**Correction to entry 9:** "280 of 340 members pin the result-sort-only level" holds, but those rows
+are not on the protected paths alone; B is.
+
+### (2) What was changed: two separate mechanisms
+
+**R3G-F (case A).** A level metavariable qualifies when:
+* it occurs only in the constructor fields of a non-template single-body block;
+* at every reference it is the argument for a level `l` that is result-sort-only in the referenced
+  declaration;
+* the native facts bound `l` by a level of the block's result sort.
+
+Such an `l` becomes an implicit universe parameter of the block. Three refinements were needed:
+* **Minimal reading.** `ι l = u_l`: the lower bounds of `l` are omitted, as for R-SPLIT's copies; the
+  levels above it are still raised.
+* **Scope.** A level is read minimally only where it is implicit, and only for R3G-F levels of the
+  declaration's own **dependency closure**.
+* **Applicability at constants.** A level also counts at a reference to a constant (for example a
+  projection) when it is in that constant's closure and not in its own source.
+
+There is no lifting and no transport: the previous translation is the instance `u_l := 0`.
+
+Independent checks:
+* **Audit** (`check_result_sort_implicit`, `result_only_levels`, `RS_CLOSURE`, `ro_of`, minimal
+  `own_level_interp`) re-derives every condition from the source.
+* **Consumer** (`resultImplicitOk`): no binder range mentions the parameter, and no constructor type
+  has it as a sort.
+
+**P2 retry tier for definitions (a coherence-family mechanism, not part of R3G-F).**
+* A definition accepted only with defaulted levels is retried with the statement-mode joint
+  identification and the M6 bounded solver.
+* The retry is kept only if it is accepted with fewer defaults and every added parameter occurs in the
+  type.
+* Reproducer: fixture `pr1`, MathComp `eqtype.pred1`'s shape.
+
+### (3) Coverage — FULL CORPUS, same 4,474 protected roots (validated)
+
+| Run | Impl | Accepted | Audited Pending | Blocked | Direct Failure | Notes |
+|---|---|---|---|---|---|---|
+| R-SPLIT baseline (entry 9) | `a28c4b3` | 673 | 2,177 | 1,518 | 106 | |
+| R3G-F v1 | `6ff07a7` | 549 | 593 | 3,128 | 204 | validated; 1,708 protected genuine regressions (R2F `max` readings at references); not adopted |
+| R3G-F v2 | `c77696c` | – | – | – | – | superseded mid-run (value-only parameters found); not measured |
+| R3G-F v3 | `2200033` | 673 | 1,645 | 2,075 | 81 | validated; one direct regression, protected `ProcessorState`, from global order-dependent minimality |
+| **R3G-F + P2 retry tier (v4)** | **`6fe8890`** | **673** | **2,180** | **1,518** | **103** | **merged** |
+| R3G-F only (ablation of v4) | `6fe8890` with the retry tier disabled | 673 | 2,177 | 1,518 | 106 | measurement patch, not committed |
+
+* **v4 by family:** modern 446 / 1,281 / 743 / 34; Classic 227 / 899 / 775 / 69 (Classic unchanged).
+* **v4 checks:** consumer, audit, source instances (4) and provenance (`CORPUS_PROVENANCE_BOUND`) are
+  all OK.
+* **Ablation:** consumer and audit OK.
+
+**Attribution.**
+* **R3G-F solves 276 internal rows** (all case-A pins: 144 `hasDecEq.axioms_`, 132
+  `hasChoice.axioms_`; 4 case-A rows remain) **and adds zero protected roots independently**: the
+  ablation's protected coverage equals the baseline.
+* **The P2 retry tier for definitions is responsible for the three newly supported protected roots**,
+  all previously refused by coherence (REFERENCE_COHERENCE). With the tier disabled, nothing else is
+  claimed or lost. The three roots:
+  * `prosa.analysis.facts.delay_propagation.propagated_arrival_curve_valid`;
+  * `prosa.analysis.facts.delay_propagation.propagated_arrival_curve_respected`;
+  * `prosa.analysis.abstract.restricted_supply.task_intra_interference_bound.instantiated_task_intra_interference_is_bounded`.
+
+**Protected transitions (baseline → v4):**
+* newly Audited Pending: 3 (above);
+* newly Accepted: 0;
+* unchanged: 4,471;
+* genuine regressions: 0;
+* old false acceptances corrected: 0 (none found).
+
+**All rows (10,970):**
+* claimed rows go from 4,143 to 4,422 (+279); 0 claimed rows lost; no accepted row became pending;
+* direct failures (backlog census) go from 741 to 462;
+* 25 rows carry R3G-F levels; 13 definitions used the retry tier;
+* newly supported external dependencies: 276 MathComp rows (`mathcomp.boot` 224, `mathcomp.order` 52),
+  all proof-task statements or their definitions; the other 3 gained rows are the Prosa protected roots
+  above.
+
+**Prerequisite / assembly readiness.**
+* Proof tasks: 2,161 → 2,440.
+* Statements with no prerequisites: 626 → 902.
+* Statements with prerequisites: 1,535 → 1,538 (the 3 protected roots).
+* Pending definitions: 965, unchanged.
+* No existing pending row's prerequisite set changed.
+
+### (4) Remaining blockers on the selected paths (v4)
+
+* **749 roots: case B plus solution facts.**
+  * `HB_unnamed_mixin_107` obligations 2, 4, 8 pin `Countable.type`'s carrier 959.
+  * `eqtype.insub`: `SubType.sort` identifies `SubType`'s parameter level 573 with its sort field 577
+    under R2F; `Sub` fixes 573 to 0 by R2B-P; this forces 695 to 0 against `Set < 695`.
+  * `fintype.HB_unnamed_factory_57`: 551 is solved to 0 against `ssrbool.1169 ≤ 551`.
+  * Both solution-fact rows are structure-carrier couplings.
+* **62 roots:** case B alone.
+* **4 case-A rows** (`Builders_62.HB_unnamed_factory_64` obligations 3/7/10/14): the mixin level is
+  identified with another statement level, `u_order_15972`; C-1 correctly refuses them.
+* **Independent blockers of comparable size:** coherence (`ideal.processor_state`, 225 roots alone)
+  and `JobReady` (212).
+
+**Case B needs a representation decision (not implemented).** The options:
+1. lifted carriers of concrete instances, with transport at every use of `sort`;
+2. per-operand carrier levels for structure operations, an R-SPLIT-style extension.
+
+### (5) Process corrections in this round
+
+* A suite run in the dev tree while the implementation was being edited is invalid. Suites now run in
+  the frozen worktree `r2l-B-test` at a pinned commit.
+* Direct translations without the run's contract skip the protection binding: protected-range
+  refusals are invisible there. Only CLI runs bound to the contract, and corpus runs, are
+  authoritative.
+
+### (6) Regressions and validation (`6fe8890`, frozen worktree)
+
+* `test-result-sort` (new): 15 checks.
+  * Fixture `stmt/rs` plus the real `Equality` structures and corpus obligation 5.
+  * Positive controls: projections (`getop`), dependent elimination (`pack_eta`), a constructed
+    instance (`mk_op`), and instantiation at nonzero universes.
+  * Negative controls, each kernel-accepted, then rejected:
+    * a carrier claimed as result-sort-only: audit and consumer;
+    * a field at a level that is not its interpretation: audit;
+    * a carrier range raised by the new level: audit and consumer;
+    * a dependent use narrowed: audit.
+* `test-universe-c`: 22. Its expectations now read `Equality.type`'s parameters from its row (four
+  levels: 32, 51, 55, 58) instead of listing two; the conditions are unchanged (generic, none
+  defaulted, narrowing rejected, nonzero positive control, discrimination).
+* Other suites: `test-statement` 30, `test-assembly` 34, `test-termination` 22, `test-opaque` 16,
+  `test-universe-r2` 9, `test-multi-instance` 8, `test-level-split` 18, `test-provenance` 5.
+* **`test-all`: 18/18.**
+
+### (7) Commands and evidence
+
+As entry 9, with `runs/st-corpus-RS4` (and `runs/st-corpus-RS4abl` for the ablation).
+
+Evidence:
+* `coverage/{RS4,RS4abl,transitions-SPLIT2-to-RS4,transitions-SPLIT2-to-RS4abl}.json`;
+* `RULE_BACKLOG.{md,json}`;
+* `provenance/CORPUS_MANIFEST.json` (current: RS4; `-SPLIT2` kept);
+* `termination/CONVERSION_DEPENDENCE-RS4.json`;
+* `rsonly/`;
+* `test_result_sort.json` and the other test reports from the frozen run.

@@ -38,15 +38,29 @@
  "obligation": {
   "status": "STATEMENT_KERNEL_CHECKED",
   "level_params": [
+   "u_mathcomp_boot_choice_299",
+   "u_mathcomp_boot_choice_339",
    "u_mathcomp_boot_choice_342",
+   "u_mathcomp_boot_choice_938",
    "u_mathcomp_boot_choice_959",
+   "u_mathcomp_boot_choice_965",
    "u_mathcomp_boot_choice_968",
+   "u_mathcomp_boot_eqtype_32",
+   "u_mathcomp_boot_eqtype_533",
+   "u_mathcomp_boot_eqtype_583",
    "u_mathcomp_boot_eqtype_588"
   ],
   "implicit_levels": [
+   "mathcomp.boot.choice.299",
+   "mathcomp.boot.choice.339",
    "mathcomp.boot.choice.342",
+   "mathcomp.boot.choice.938",
    "mathcomp.boot.choice.959",
+   "mathcomp.boot.choice.965",
    "mathcomp.boot.choice.968",
+   "mathcomp.boot.eqtype.32",
+   "mathcomp.boot.eqtype.533",
+   "mathcomp.boot.eqtype.583",
    "mathcomp.boot.eqtype.588"
   ],
   "universe_level_defaults": 0
