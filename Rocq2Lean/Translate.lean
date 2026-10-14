@@ -188,6 +188,9 @@ structure TCtx where
   hyps : Option (IO.Ref (Array (MVarId × String))) := none
   /-- The source key of the declaration being translated (names translator-generated leaves). -/
   declKey : String := ""
+  /-- P3 retry tier: a prerequisite hypothesis is reused only at a type equal *without* assigning any
+  level metavariable (each other use gets its own hypothesis; duplicates are collapsed after solving). -/
+  hypExact : Bool := false
 
 abbrev TransM := ReaderT TCtx (ExceptT TransError MetaM)
 
@@ -345,17 +348,36 @@ def levelsOf (n : Name) : TransM (List Level) := do
 one shared hypothesis per leaf (a data leaf such as an opaque interface must be the same term
 everywhere it occurs), created at its first use with type `d`. -/
 def hypFor (ref : IO.Ref (Array (MVarId × String))) (l : String) (d : Expr) : TransM Expr := do
-  match (← ref.get).find? (·.2 == l) with
-  | some (m, _) =>
-    unless ← liftMeta (isDefEq (← m.getType) d) do
-      failT "TRANSLATION_FAILED" s!"pending prerequisite {l} is needed at two different types"
-    pure (mkMVar m)
-  | none =>
-    -- a deterministic binder name (the artifact's hypothesis binders are abstracted from these
-    -- metavariables; a hygienic name would differ between the declaration and its residual record)
-    let m ← liftMeta (mkFreshExprMVar (some d) .syntheticOpaque (Name.mkSimple ("h_" ++ l.map fun ch => if ch == '.' || ch == '/' then '_' else ch)))
-    ref.modify (·.push (m.mvarId!, l))
-    pure m
+  -- P3 (ITERATION_LOG entry 8): one hypothesis per *instance* of a prerequisite — an existing
+  -- hypothesis of the leaf is reused only at its own type (definitional equality, which may still
+  -- unify free universe levels of the use with it); a prerequisite needed at another instance gets its
+  -- own hypothesis `h_<leaf>__<k>`. A hypothesis is never reused at a different type.
+  let same := (← ref.get).filter (·.2 == l)
+  -- (same instance: the statement constant's universe arguments unify, then the arguments are
+  -- definitionally equal; comparing different instances by `isDefEq` alone would unfold the statement)
+  let sameInst (t : Expr) : MetaM Bool := do
+    match t.getAppFn, d.getAppFn with
+    | .const n1 us1, .const n2 us2 =>
+      if n1 != n2 || us1.length != us2.length || t.getAppNumArgs != d.getAppNumArgs then return false
+      let s ← saveState
+      if (← (us1.zip us2).allM fun (a, b) => isLevelDefEq a b) &&
+         (← (t.getAppArgs.zip d.getAppArgs).allM fun (x, y) => isDefEq x y) then return true
+      s.restore
+      return false
+    | _, _ => isDefEq t d
+  let exact := (← read).hypExact
+  for (m, _) in same do
+    let t ← m.getType
+    if ← liftMeta (if exact then withNewMCtxDepth (isDefEq t d) else sameInst t) then return mkMVar m
+  -- (a prerequisite with hypotheses of its own is applied to the hypotheses of its prerequisites at
+  -- this instance, resolved the same way; the audit checks each binder's structure)
+  -- a deterministic binder name (the artifact's hypothesis binders are abstracted from these
+  -- metavariables; a hygienic name would differ between the declaration and its residual record)
+  let base := "h_" ++ l.map fun ch => if ch == '.' || ch == '/' then '_' else ch
+  let nm := if same.isEmpty then base else s!"{base}__{same.size + 1}"
+  let m ← liftMeta (mkFreshExprMVar (some d) .syntheticOpaque (Name.mkSimple nm))
+  ref.modify (·.push (m.mvarId!, l))
+  pure m
 
 /-- Pending validation: apply a pending artifact `e` to the hypotheses of the leaves of its telescope
 (shared per leaf; registered in `ref` with their leaf keys). -/
@@ -2204,9 +2226,9 @@ def transUnfoldEq (body : IR.Term) (self : Expr) : TransM (Option Expr) := do
 def runTrans {α} (genv : GEnv) (x : TransM α) (globalLevels : Std.HashMap String Level := {})
     (polyLevels : Array Level := #[]) (factReduce : Bool := false) (admitLevels : Array String := #[])
     (lowerShared : Bool := false) (hyps : Option (IO.Ref (Array (MVarId × String))) := none)
-    (declKey : String := "") :
+    (declKey : String := "") (hypExact : Bool := false) :
     MetaM (Except TransError α) :=
-  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey }).run
+  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact }).run
 
 /-- Pending validation: the hypothesis metavariables (in creation order) become binders of the
 declaration, `∀ hs, e` (`lam := false`) or `fun hs => e` (Lean's binding abstraction handles their

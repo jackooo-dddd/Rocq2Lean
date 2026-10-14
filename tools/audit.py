@@ -588,18 +588,24 @@ class Auditor:
 
     @staticmethod
     def hyp_index(env, name, path):
-        for x in env:
-            if x[0] == "hyp" and x[1] == name:
-                return x[2]
-        raise Mismatch(f"{path}: reference to the unproved prerequisite {name} outside a pending declaration "
-                       f"that has it as a hypothesis")
+        return Auditor.hyp_indices(env, name, path)[0]
+
+    @staticmethod
+    def hyp_indices(env, name, path):
+        """P3: every hypothesis of the prerequisite (one per universe instance); the kernel checked that
+        the one used has the right type."""
+        out = [x[2] for x in env if x[0] == "hyp" and x[1] == name]
+        if not out:
+            raise Mismatch(f"{path}: reference to the unproved prerequisite {name} outside a pending declaration "
+                           f"that has it as a hypothesis")
+        return out
 
     def strip_hyp_args(self, e, hs, env, path):
         """A pending inductive (type or constructor) is applied to the hypotheses of its own telescope
         first: returns the head after checking them."""
         for h in reversed(hs):
-            j = self.hyp_index(env, h, path)
-            if e.get("k") != "app" or e["a"] != {"k": "bvar", "i": j}:
+            js = self.hyp_indices(env, h, path)
+            if e.get("k") != "app" or e["a"] not in [{"k": "bvar", "i": j} for j in js]:
                 raise Mismatch(f"{path}: pending inductive not applied to the hypothesis of {h}")
             e = e["f"]
         return e
@@ -611,15 +617,15 @@ class Auditor:
         if s.get("u"):
             raise Mismatch(f"{path}: universe-polymorphic prerequisite {c}")
         if c in self.leaves:
-            j = self.hyp_index(env, c, path)
-            if e != {"k": "bvar", "i": j}:
-                raise Mismatch(f"{path}: {c} must be its hypothesis (bvar {j}), found {e.get('k')}")
+            js = self.hyp_indices(env, c, path)
+            if e not in [{"k": "bvar", "i": j} for j in js]:
+                raise Mismatch(f"{path}: {c} must be one of its hypotheses (bvar {js}), found {e.get('k')}")
             return
         tgt, hs = self.pending[c]
         cur = e
         for h in reversed(hs):
-            j = self.hyp_index(env, h, path)
-            if cur.get("k") != "app" or cur["a"] != {"k": "bvar", "i": j}:
+            js = self.hyp_indices(env, h, path)
+            if cur.get("k") != "app" or cur["a"] not in [{"k": "bvar", "i": j} for j in js]:
                 raise Mismatch(f"{path}: pending {c} must be applied to the hypothesis of {h}")
             cur = cur["f"]
         if cur.get("k") != "const" or cur["n"] != tgt:
@@ -3035,13 +3041,21 @@ def check_hyp_telescope(rows, leaves, hs, hyp_t):
     """The hypothesis telescope of a pending artifact: one binder per prerequisite, in the reported
     order, each the prerequisite's statement (its own pending artifact applied to its own hypotheses,
     which must come earlier)."""
+    seen_t = {}
     for i, (l, t) in enumerate(zip(hs, hyp_t)):
         lr = rows.get(l)
         if lr is None or l not in leaves or lr["status"] not in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED"):
             raise Mismatch(f"hypothesis {l} is not a translated proof task")
+        # P3: a prerequisite may have one hypothesis per universe instance, never two at the same type
+        # (its own hypotheses are resolved to a hypothesis of the right leaf, below)
+        key = json.dumps(canon_levels(t), sort_keys=True)
+        if key in seen_t.setdefault(l, set()):
+            raise Mismatch(f"prerequisite {l} has two hypotheses at the same type")
+        seen_t[l].add(key)
         cur, earlier = t, hs[:i]
         for h in reversed(lr.get("pending_hypotheses") or []):
-            if h not in earlier or cur.get("k") != "app" or cur["a"] != {"k": "bvar", "i": i - 1 - earlier.index(h)}:
+            ids = [j for j, x in enumerate(earlier) if x == h]
+            if not ids or cur.get("k") != "app" or cur["a"] not in [{"k": "bvar", "i": i - 1 - j} for j in ids]:
                 raise Mismatch(f"hypothesis {l}: its statement is not applied to the hypothesis of {h}")
             cur = cur["f"]
         if cur.get("k") != "const" or cur["n"] != lr["target"]:
@@ -3337,7 +3351,9 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                     nd = set()
                 elif a_ != "VALIDATED":
                     raise Mismatch(f"accepted row with assembly state {a_}")
-            if len(set(hs)) != len(hs) or set(hs) != nd:
+            # (P3: a prerequisite may occur once per universe instance; check_hyp_telescope checks that
+            # its occurrences have different types)
+            if set(hs) != nd:
                 raise Mismatch(f"hypotheses {hs} differ from the recomputed prerequisites {sorted(nd)}")
             want = ("STATEMENT_" if n in leaves else "") + ("PENDING_KERNEL_CHECKED" if nd else
                                                             ("KERNEL_CHECKED" if n in leaves else "TRANSLATED_AND_CHECKED"))

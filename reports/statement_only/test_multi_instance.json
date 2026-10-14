@@ -1,0 +1,87 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "reason": null,
+  "rows": {
+   "SF.P3.odat__rocq2lean_obligation_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "level_params": [
+     "u_SF_P3_21"
+    ],
+    "pending_hypotheses": []
+   },
+   "SF.P3.odat": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "level_params": [
+     "u_SF_P3_21"
+    ],
+    "pending_hypotheses": [
+     "SF.P3.odat__rocq2lean_obligation_1"
+    ]
+   },
+   "SF.P3.use2": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "level_params": [
+     "u_SF_P3_26"
+    ],
+    "pending_hypotheses": [
+     "SF.P3.odat__rocq2lean_obligation_1",
+     "SF.P3.odat__rocq2lean_obligation_1"
+    ]
+   },
+   "SF.P3.use2_id": {
+    "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+    "level_params": [
+     "u_SF_P3_28"
+    ],
+    "pending_hypotheses": [
+     "SF.P3.odat__rocq2lean_obligation_1",
+     "SF.P3.odat__rocq2lean_obligation_1"
+    ]
+   }
+  }
+ },
+ "negative_same_type": {
+  "kernel": false,
+  "validate_exit": 2,
+  "problems": [
+   "consumer presence"
+  ]
+ },
+ "assembly": {
+  "exit": 0,
+  "status": "ASSEMBLY_VALIDATED",
+  "rows": {
+   "SF.P3.odat__rocq2lean_obligation_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.P3.odat__rocq2lean_obligation_1.statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_ASSEMBLED"
+   },
+   "SF.P3.odat": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.P3.odat",
+    "assembly": "ASSEMBLED",
+    "proof_state": ""
+   },
+   "SF.P3.use2": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.P3.use2",
+    "assembly": "ASSEMBLED",
+    "proof_state": ""
+   },
+   "SF.P3.use2_id": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.P3.use2_id.statement",
+    "assembly": "ASSEMBLED",
+    "proof_state": "PROOF_NOT_SUPPLIED"
+   }
+  }
+ }
+}

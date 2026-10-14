@@ -350,6 +350,36 @@ private def typeDomains (t : Expr) : Array Expr := Id.run do
     | _ => break
   return out
 
+/-- P3: leading hypothesis binders of the same leaf at the same type (after universe solving) are
+collapsed into the first; returns the new type, value and the indices of the kept binders. -/
+def collapseHyps (ty val : Expr) (names : Array String) : MetaM (Expr × Expr × Array Nat) := do
+  let n := names.size
+  forallBoundedTelescope ty n fun xs tb => do
+    let vb ← instantiateLambda val xs
+    let mut keep : Array Nat := #[]
+    let mut dupOf : Array (Expr × Expr) := #[]
+    for j in [0:xs.size] do
+      let tj := (← instantiateMVars (← inferType xs[j]!)).replaceFVars (dupOf.map (·.1)) (dupOf.map (·.2))
+      let mut canon : Option Nat := none
+      for i in keep do
+        if canon.isNone && names[i]! == names[j]! then
+          if (← instantiateMVars (← inferType xs[i]!)) == tj then canon := some i
+      match canon with
+      | some i => dupOf := dupOf.push (xs[j]!, xs[i]!)
+      | none => keep := keep.push j
+    if keep.size == xs.size then return (ty, val, keep)
+    let rec go (k : Nat) (vars : Array Expr) (sub : Array (Expr × Expr)) : MetaM (Expr × Expr) := do
+      let tr (e : Expr) : Expr := (e.replaceFVars (dupOf.map (·.1)) (dupOf.map (·.2))).replaceFVars (sub.map (·.1)) (sub.map (·.2))
+      if h : k < keep.size then
+        let x := xs[keep[k]]!
+        let t := tr (← instantiateMVars (← inferType x))
+        withLocalDeclD (← x.fvarId!.getUserName) t fun y => go (k + 1) (vars.push y) (sub.push (x, y))
+      else
+        return (← mkForallFVars vars (tr tb), ← mkLambdaFVars vars (tr vb))
+    termination_by keep.size - k
+    let (t', v') ← go 0 #[] #[]
+    return (t', v', keep)
+
 /-! ### Binder-level independence (statements; independent copy in tools/audit.py)
 
 The quantification ranges of a statement are the sorts of its binders. The translation must keep the
@@ -475,7 +505,8 @@ private partial def lowersTo (facts : IR.UniverseFacts) (globals : Array String)
 partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
-    (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false) :
+    (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
+    (hypExact : Bool := false) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
@@ -552,14 +583,14 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       let v ← mkFreshLevelMVar
       gl := gl.insert m v
       ownMVars := ownMVars.push (m, v)
-    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name with
+    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name with
+    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact with
       | .ok e => pure e
       | .error e =>
         if e.msg.startsWith "termination obligation required" && !wfTerm && genv.stmtMode then
-          return ← processConstant genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort)
+          return ← processConstant genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact)
         return fromTransError base e
     -- pending validation: the hypotheses become the artifact's leading binders *before* universe
     -- solving, so that the levels of their types (references to prerequisite statements) are
@@ -746,6 +777,12 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         pure (minimalModelLevel genv.facts cur m)
       | none => pure .zero
     let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt keepParams (solve := lower)
+    -- P3 retry tier: hypotheses of one leaf that ended at the same type are collapsed into the first
+    let (ty, val, hyps) ← if !hypExact || hyps.isEmpty then pure (ty, val, hyps) else do
+      unless resid.isEmpty do
+        return { base with status := "UNSUPPORTED_FEATURE", message := "P3 tier: residual levels with per-instance hypotheses" }
+      let (ty', val', keep) ← collapseHyps ty val (hyps.map (·.2))
+      pure (ty', val', keep.map (hyps[·]!))
     if discover then
       return { base with status := "DISCOVERED", implicitLevels := (← implicitRef.get).qsort (· < ·) }
     -- C (docs/UNIVERSE_FAMILY_C.md): every level of a statement is a level of the statement; one left
@@ -1661,6 +1698,17 @@ where
                 if r'.accepted then
                   r := r'
                   break
+          -- P3 (ITERATION_LOG entry 8): per-instance prerequisite hypotheses (no level unified across uses;
+          -- duplicates collapsed after solving), when the attempts above failed
+          if !r.accepted && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then
+            for (fr, it, cu, lo) in [(false, false, false, false), (false, true, false, false), (false, false, false, true)] do
+              let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+                (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := true)
+              if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+              if r'.accepted then
+                r := r'
+                iface := none
+                break
           -- R2B-V last (docs/UNIVERSE_FAMILY_C.md §4): a type-valued definition declared at the sort
           -- of its value (only when every other tier failed: no accepted translation changes)
           if !r.accepted && !isStmt && genv.stmtMode && (retry r.status || r.status == "INTERFACE_REJECTED") then

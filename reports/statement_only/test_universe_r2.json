@@ -10,7 +10,7 @@
  },
  "pairR_intro": {
   "status": "UNIVERSE_REJECTED",
-  "message": "statement specialization refused: binder levels SF.R2.25 \u2264 SF.R2.26 would be forced by the translation (u_SF_R2_25 \u2264 u_SF_R2_25), not by the source [last tier: UNIVERSE_REJECTED: R2F-c: own level SF.R2.26 was identified with another own level by unification; it is not its own reading]"
+  "message": "statement specialization refused: binder levels SF.R2.25 \u2264 SF.R2.26 would be forced by the translation (u_SF_R2_25 \u2264 u_SF_R2_25), not by the source [last tier: UNIVERSE_REJECTED: statement specialization refused: binder levels SF.R2.25 \u2264 SF.R2.26 would be forced by the translation (u_SF_R2_25 \u2264 u_SF_R2_25), not by the source]"
  },
  "obligation": {
   "status": "STATEMENT_KERNEL_CHECKED",
