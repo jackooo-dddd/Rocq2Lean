@@ -23,6 +23,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 W = ROOT / ".work" / "inventory"
+# (STATEMENT_EXPORT: the chunk directories' prefix, default export-statement; see inventory/export.py
+# INVENTORY_EXPORT_TAG)
+EXPORT = os.environ.get("STATEMENT_EXPORT", "export-statement")
 RUN = Path(os.environ["STATEMENT_RUN"]).resolve() if os.environ.get("STATEMENT_RUN") else ROOT / "runs" / "st-corpus"
 OUT = ROOT / "reports" / "statement_only"
 
@@ -34,7 +37,7 @@ def merge():
     mode = Counter()
     refused = {}
     for fam in ("modern", "classic"):
-        for rp in sorted((W / f"export-statement-{fam}").glob("chunk-*/result.json")):
+        for rp in sorted((W / f"{EXPORT}-{fam}").glob("chunk-*/result.json")):
             r = json.loads(rp.read_text())
             for x in r["irs"]:
                 with open(ROOT / x["ir"]) as fh:

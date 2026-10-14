@@ -3408,10 +3408,15 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             want_t = (pending_target_name if pending else target_name)(s_ + suffix[s_])
             if r["target"] != want_t:
                 raise Mismatch(f"target name {r['target']} is not {want_t}")
-            if r["target_kind"] not in (("statement",) if s_ in leaves else ("def",)):
+            # A′: opaque data with its prepared body is an opaque constant (Rocq never unfolds Qed;
+            # Lean's kernel never unfolds `opaque`); every other definition is a `def`
+            want_k = ("statement",) if s_ in leaves else (("opaque",) if d.get("body_state") == "opaque_data" else ("def",))
+            if r["target_kind"] not in want_k:
                 raise Mismatch(f"{'proof task' if s_ in leaves else 'definition'} emitted as {r['target_kind']}")
-            if d.get("body_state") != "transparent" and d.get("body_state") != "sealed_implementation":
+            if d.get("body_state") not in ("transparent", "sealed_implementation", "opaque_data"):
                 raise Mismatch(f"body state {d.get('body_state')} is not a definition in statement mode")
+            if d.get("body_state") == "opaque_data" and (d.get("native") or {}).get("body_kind") != "opaque":
+                raise Mismatch("opaque_data whose native body is not opaque")
             ty, val = r.get("target_type"), r.get("target_value")
             if ty is None or val is None:
                 raise Mismatch("success claimed without target type/value")

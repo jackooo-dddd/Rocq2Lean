@@ -39,7 +39,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import rocq2lean as R  # noqa: E402
 
 W = ROOT / ".work" / "inventory"
-PV = ROOT / ".work" / "provenance"
+EXPORT = os.environ.get("STATEMENT_EXPORT", "export-statement")      # chunk directories' prefix
+PV = ROOT / ".work" / os.environ.get("STATEMENT_PROVENANCE", "provenance")   # evidence directory
 OUT = ROOT / "reports" / "statement_only" / "provenance"
 EVIDENCE = ("retrospective revalidation: created after the chunk exports, from the files present now; "
             "it is not a record that existed at export time")
@@ -53,7 +54,7 @@ def chunks():
     """(family, chunk dir, result, ir record) for every chunk IR of the statement exports."""
     out = []
     for fam in ("modern", "classic"):
-        for rp in sorted((W / f"export-statement-{fam}").glob("chunk-*/result.json")):
+        for rp in sorted((W / f"{EXPORT}-{fam}").glob("chunk-*/result.json")):
             r = json.loads(rp.read_text())
             for x in r["irs"]:
                 out.append((fam, rp.parent, r, x))
@@ -216,7 +217,7 @@ def union(run, jobs=4):
                 break
     rels = facts["relations"]
     allreq = sorted({m for _, d, _, x in chunks() for m in requires(d, x)})
-    lp = json.loads((W / "export-statement-classic" / "chunk-0000" / "result.json").read_text())["exporter"]["load_paths"]
+    lp = json.loads((W / f"{EXPORT}-classic" / "chunk-0000" / "result.json").read_text())["exporter"]["load_paths"]
     for _, _, r, _ in chunks():               # every chunk's load paths are among the Classic ones
         for i in range(0, len(r["exporter"]["load_paths"]), 3):
             if r["exporter"]["load_paths"][i:i + 3] != lp[i:i + 3] and r["exporter"]["load_paths"][i:i + 3] not in [lp[j:j + 3] for j in range(0, len(lp), 3)]:

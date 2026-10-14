@@ -60,7 +60,7 @@ def main(run, jobs=2):
     out = run / "conversion_deps"
     out.mkdir(exist_ok=True)
     allreq = sorted({m for _, d, _, x in P.chunks() for m in P.requires(d, x)})
-    lp = json.loads((P.W / "export-statement-classic" / "chunk-0000" / "result.json").read_text())["exporter"]["load_paths"]
+    lp = json.loads((P.W / f"{P.EXPORT}-classic" / "chunk-0000" / "result.json").read_text())["exporter"]["load_paths"]
     parts = [consts[k::jobs] for k in range(jobs)]
 
     def one(k):

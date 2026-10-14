@@ -7,15 +7,16 @@
   ],
   "validation": "STATEMENT_VALIDATED",
   "by_validation": {
-   "DEFINITION_AUDITED": 89,
-   "DEFINITION_AUDITED_PENDING": 37,
+   "DEFINITION_AUDITED": 93,
+   "DEFINITION_AUDITED_PENDING": 46,
    "NOT_TRANSLATED": 2,
-   "STATEMENT_AUDITED": 15,
+   "STATEMENT_AUDITED": 31,
    "STATEMENT_AUDITED_PENDING": 3
   }
  },
  "opt_eqP": {
-  "status": "STATEMENT_KERNEL_CHECKED",
+  "status": "PENDING_KERNEL_CHECKED",
+  "target_kind": "opaque",
   "level_params": [
    "u_mathcomp_boot_eqtype_51",
    "u_mathcomp_boot_eqtype_58"
@@ -37,9 +38,9 @@
  "negative_narrowed_statement_0-0": {
   "kernel": true,
   "validate_exit": 2,
-  "blocked_dependents": 4,
+  "blocked_dependents": 5,
   "audit_problems": [
-   "mathcomp.boot.eqtype.opt_eqP: Rocq.mathcomp.boot.eqtype.Equality.type: source level mathcomp.boot.eqtype.51 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_mathcomp_boot_eqtype_51: the statement is specialized (R3G)"
+   "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1: Rocq.mathcomp.boot.eqtype.Equality.type: source level mathcomp.boot.eqtype.51 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_mathcomp_boot_eqtype_51: the statement is specialized (R3G)"
   ],
   "row_self_reports": {
    "universe_level_defaults": 0,
@@ -51,9 +52,9 @@
  "negative_narrowed_statement_0-1": {
   "kernel": true,
   "validate_exit": 2,
-  "blocked_dependents": 4,
+  "blocked_dependents": 5,
   "audit_problems": [
-   "mathcomp.boot.eqtype.opt_eqP: Rocq.mathcomp.boot.eqtype.Equality.type: source level mathcomp.boot.eqtype.51 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_mathcomp_boot_eqtype_51: the statement is specialized (R3G)"
+   "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1: Rocq.mathcomp.boot.eqtype.Equality.type: source level mathcomp.boot.eqtype.51 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_mathcomp_boot_eqtype_51: the statement is specialized (R3G)"
   ],
   "row_self_reports": {
    "universe_level_defaults": 0,
@@ -65,9 +66,9 @@
  "negative_narrowed_statement_2-2": {
   "kernel": true,
   "validate_exit": 2,
-  "blocked_dependents": 4,
+  "blocked_dependents": 5,
   "audit_problems": [
-   "mathcomp.boot.eqtype.opt_eqP: Rocq.mathcomp.boot.eqtype.opt_eq: Set + 2 <= mathcomp.boot.eqtype.51 not entailed by the source universe graph"
+   "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1: Rocq.mathcomp.boot.eqtype.Equality.sort: Set + 2 <= mathcomp.boot.eqtype.51 not entailed by the source universe graph"
   ],
   "row_self_reports": {
    "universe_level_defaults": 0,
@@ -88,6 +89,6 @@
   "generic_exit": 0,
   "generic_output": "",
   "narrowed_exit": 1,
-  "narrowed_output": "PositiveControl.lean:10:0: error: (kernel) incorrect number of universe levels parameters for 'Rocq.mathcomp.boot.eqtype.opt_eqP.type', #0 expected, #2 provided\nPositiveControl.lean:11:0: error(lean.unknownIdentifier): Unknown constant `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality`\nPositiveControl.lean:15:0: error: binder range Rocq.mathcomp.boot.eqtype.Equality.type\n"
+  "narrowed_output": "PositiveControl.lean:10:0: error(lean.unknownIdentifier): Unknown constant `RocqPending.mathcomp.boot.eqtype.opt_eqP`\nPositiveControl.lean:11:0: error: (kernel) incorrect number of universe levels parameters for 'Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement', #0 expected, #2 provided\nPositiveControl.lean:12:0: error(lean.unknownIdentifier): Unknown constant `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality`\nPositiveControl.lean:16:0: error: binder range Rocq.mathcomp.boot.eqtype.Equality.type\n"
  }
 }

@@ -8,9 +8,9 @@
   ],
   "validation": "STATEMENT_VALIDATED",
   "by_validation": {
-   "DEFINITION_AUDITED": 8,
+   "DEFINITION_AUDITED": 10,
    "DEFINITION_AUDITED_PENDING": 4,
-   "STATEMENT_AUDITED": 3,
+   "STATEMENT_AUDITED": 4,
    "STATEMENT_AUDITED_PENDING": 3
   }
  },
@@ -30,12 +30,17 @@
    "generalization": "over_proof_prerequisites",
    "accepts_submissions": true
   },
-  "SF.Asm.pick": {
+  "SF.Asm.pick_succ_pos": {
+   "kind": "theorem_statement",
+   "generalization": "none",
+   "accepts_submissions": true
+  },
+  "SF.Asm.pick_wf": {
    "kind": "opaque_value",
    "generalization": "none",
    "accepts_submissions": false
   },
-  "SF.Asm.pick_succ_pos": {
+  "SF.Asm.pick_wf_succ_pos": {
    "kind": "theorem_statement",
    "generalization": "over_data_prerequisites",
    "accepts_submissions": true
@@ -52,13 +57,13 @@
   ]
  },
  "assembly_without_proofs": {
-  "validated": 11,
+  "validated": 14,
   "transport_required": 0,
-  "rows": 18,
+  "rows": 21,
   "reuse_mismatch": 0,
-  "proofs_not_supplied": 2,
+  "proofs_not_supplied": 3,
   "proofs_assembled": 0,
-  "proof_tasks": 3,
+  "proof_tasks": 4,
   "pending": 5,
   "opaque_values_unbound": 1,
   "opaque_binding_pending": 2,
@@ -71,13 +76,13 @@
  "assembly": {
   "exit": 0,
   "summary": {
-   "validated": 11,
+   "validated": 14,
    "transport_required": 1,
-   "rows": 18,
+   "rows": 21,
    "reuse_mismatch": 0,
    "proofs_not_supplied": 0,
-   "proofs_assembled": 3,
-   "proof_tasks": 5,
+   "proofs_assembled": 4,
+   "proof_tasks": 6,
    "pending": 0,
    "opaque_values_unbound": 1,
    "opaque_binding_pending": 2,
@@ -97,6 +102,7 @@
    "Rocq.SF.Asm.zero_of": [
     "propext"
    ],
+   "Rocq.SF.Asm.pick_succ_pos": [],
    "Rocq.SF.Asm.is_zero_of_intro.statement": [
     "propext"
    ],
@@ -218,28 +224,52 @@
     "assembly_note": "verified template RocqProofTemplates.Tb62356d8664001a14103eb34e14c43ae74ace7567f3dab6a5f7f2ac038e4b0e6.proof not reusable at the final statement: the instantiated template's type is not convertible to the final statement"
    },
    "SF.Asm.pick": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Asm.pick",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Asm.pick_succ": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Asm.pick_succ",
+    "assembly": "VALIDATED",
+    "proof_state": "",
+    "proof_target": null,
+    "assembly_note": ""
+   },
+   "SF.Asm.pick_succ_pos": {
     "status": "STATEMENT_KERNEL_CHECKED",
-    "target": "Rocq.SF.Asm.pick.type",
+    "target": "Rocq.SF.Asm.pick_succ_pos.statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_ASSEMBLED",
+    "proof_target": "Rocq.SF.Asm.pick_succ_pos",
+    "assembly_note": ""
+   },
+   "SF.Asm.pick_wf": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Asm.pick_wf.type",
     "assembly": "VALIDATED",
     "proof_state": "OPAQUE_BINDING_PENDING",
     "proof_target": null,
     "assembly_note": "opaque data: a value is not accepted from a submission (A\u2032 translates the source body)"
    },
-   "SF.Asm.pick_succ": {
+   "SF.Asm.pick_wf_succ": {
     "status": "PENDING_KERNEL_CHECKED",
-    "target": "RocqPending.SF.Asm.pick_succ",
+    "target": "RocqPending.SF.Asm.pick_wf_succ",
     "assembly": "OPAQUE_BINDING_PENDING",
     "proof_state": "",
     "proof_target": null,
-    "assembly_note": "waiting for opaque data values #[SF.Asm.pick] (not assembled: no submitted value stands for a source body; A\u2032)"
+    "assembly_note": "waiting for opaque data values #[SF.Asm.pick_wf] (not assembled: no submitted value stands for a source body; A\u2032)"
    },
-   "SF.Asm.pick_succ_pos": {
+   "SF.Asm.pick_wf_succ_pos": {
     "status": "STATEMENT_PENDING_KERNEL_CHECKED",
-    "target": "RocqPending.SF.Asm.pick_succ_pos.statement",
+    "target": "RocqPending.SF.Asm.pick_wf_succ_pos.statement",
     "assembly": "OPAQUE_BINDING_PENDING",
     "proof_state": "",
     "proof_target": null,
-    "assembly_note": "waiting for opaque data values #[SF.Asm.pick] (not assembled: no submitted value stands for a source body; A\u2032)"
+    "assembly_note": "waiting for opaque data values #[SF.Asm.pick_wf] (not assembled: no submitted value stands for a source body; A\u2032)"
    },
    "SF.Asm.zero_of": {
     "status": "TRANSLATED_AND_CHECKED",
@@ -266,9 +296,9 @@
   },
   "compiled_evaluation": {
    "exit": 1,
-   "output": "/home/shunqwang4/research/r2l-B/runs/st-asm/assembly/546e85d07e2de822/lean/Probe_compiled_evaluation.lean:2:0: error: Failed to find LCNF signature for Rocq.SF.Asm.zero_of"
+   "output": "/home/shunqwang4/research/r2l-B/runs/st-asm/assembly/ad8d68f0aa910475/lean/Probe_compiled_evaluation.lean:2:0: error: Failed to find LCNF signature for Rocq.SF.Asm.zero_of"
   },
   "propositional_equations": "not applicable: the fixture has no recursion through a proof"
  },
- "negatives_last_output": "d88185dcc53bf4c2ce9a289af: checked against another validation (stale); b593f09a7640237925e6bd137e323af6dfb194e8e59950f4358353e0f64bed24: checked against another validation (stale); b62356d8664001a14103eb34e14c43ae74ace7567f3dab6a5f7f2ac038e4b0e6: checked against another validation (stale); f87a5762d1d2623e3d98c28d55acb825110364ea0e7f8cddaf820cb99bc0876a: checked against another validation (stale)\n"
+ "negatives_last_output": "d88185dcc53bf4c2ce9a289af: checked against another validation (stale); 7f7729301cdb007e8b0994712da71c9bf88fe0e8665d460c4843c1c2f788b079: checked against another validation (stale); b593f09a7640237925e6bd137e323af6dfb194e8e59950f4358353e0f64bed24: checked against another validation (stale); b62356d8664001a14103eb34e14c43ae74ace7567f3dab6a5f7f2ac038e4b0e6: checked against another validation (stale)\n"
 }

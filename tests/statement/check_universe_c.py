@@ -2,11 +2,13 @@
 """Task C (docs/UNIVERSE_FAMILY_C.md): the Equality.type / JobType universe family, through the real CLI
 on a small Prosa probe (fixtures/stmt/c: opt_eqP, ideal processor_state, JLFP_policy).
 
-1. C-1 (R3G for statements): MathComp's opaque-data interface opt_eqP keeps its reference levels as
-   parameters (eqtype.51, eqtype.58), so option's canonical eqType is generic; no statement row has a
+1. C-1 (R3G for statements): MathComp's opt_eqP (A′: an opaque constant, its body's proof subterms
+   statements) keeps its reference levels as parameters (eqtype.51, eqtype.58), so option's canonical
+   eqType is generic; no statement row has a
    defaulted level. The ideal processor_state is refused (correction): its Lean translation would narrow Job to level 0.
 2. Negative controls, the target itself narrowed with every self-reported trace removed (no
-   `universe_level_defaults`, no residual record, no implicit level): opt_eqP at closed levels 0 and 2
+   `universe_level_defaults`, no residual record, no implicit level): opt_eqP's first obligation
+   statement at closed levels {0,0}, {0,1}, {2,2}
    and the protected ProcessorState at its Job binder are kernel-accepted and rejected by the audit's
    source-derived generality obligation (`check_statement_generality`).
 3. Positive control at nonzero universes: the generic translations are kernel-checked at universes
@@ -42,9 +44,15 @@ OUT["pipeline"] = {"exit_codes": rcs, "validation": v.get("status"), "by_validat
 check(rcs[0] == 0 and rcs[2] == 0 and v.get("status") == "STATEMENT_VALIDATED",
       "probe: export/translate/validate (JLFP_policy not translated, everything claimed validated)")
 o = R["mathcomp.boot.eqtype.opt_eqP"]
-OUT["opt_eqP"] = {k: o.get(k) for k in ("status", "level_params", "implicit_levels", "universe_level_defaults")}
-check(o["status"] == "STATEMENT_KERNEL_CHECKED" and o.get("implicit_levels") == ["mathcomp.boot.eqtype.51", "mathcomp.boot.eqtype.58"]
-      and not o.get("universe_level_defaults"), "C-1: opt_eqP's reference levels are parameters (R3G on the statement), none defaulted")
+OBLS = [f"mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_{k}" for k in range(1, 6)]
+OUT["opt_eqP"] = {k: o.get(k) for k in ("status", "target_kind", "level_params", "implicit_levels", "universe_level_defaults")}
+# (A′: opt_eqP is opaque data translated with its body -- an opaque constant pending on the 5 proof
+# subterms of its body, each a statement; C-1: all generic in eqtype.51/58)
+check(o["status"] == "PENDING_KERNEL_CHECKED" and o["target_kind"] == "opaque" and set(OBLS) <= set(o["pending_hypotheses"])
+      and o.get("implicit_levels") == ["mathcomp.boot.eqtype.51", "mathcomp.boot.eqtype.58"] and not o.get("universe_level_defaults")
+      and all(R[n]["status"] == "STATEMENT_KERNEL_CHECKED" and R[n]["level_params"] == ["u_mathcomp_boot_eqtype_51", "u_mathcomp_boot_eqtype_58"]
+              and not R[n].get("universe_level_defaults") for n in OBLS),
+      "C-1: opt_eqP (A′: an opaque constant) and its obligation statements keep the reference levels as parameters, none defaulted")
 oe = R["mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality"]
 check(oe.get("level_params") == ["u_mathcomp_boot_eqtype_51", "u_mathcomp_boot_eqtype_58"],
       "option's canonical eqType is generic in the eqType levels (no longer Set-level only)")
@@ -122,10 +130,14 @@ def specialize(rep0, source, levels):
             for k in ("target", "target_type", "target_value", "target_ctors", "target_kind", "pending_hypotheses"):
                 x.pop(k, None)
             x.update(status="BLOCKED_DEPENDENCY", message=f"failed dependencies: #[{source}]", blocked_by=[source])
+    # (the report's root records follow their rows)
+    for rr in rep_.get("roots") or []:
+        if rr.get("name") in blocked or rr.get("source") in blocked:
+            rr["status"] = "BLOCKED_DEPENDENCY"
     return rep_, blocked
 
 
-OPT = "mathcomp.boot.eqtype.opt_eqP"
+OPT = "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1"      # a statement (an extracted proof subterm)
 E51, E58 = "u_mathcomp_boot_eqtype_51", "u_mathcomp_boot_eqtype_58"
 # (0,0): the pre-C translation; (0,1): a nonzero closed level that R3 (no raising) admits, so only the
 # generality obligation can reject it; (2,2): raising, rejected by R3 itself
@@ -141,7 +153,7 @@ for l51, l58, want in ((0, 0, "free in the statement"), (0, 1, "free in the stat
         "row_self_reports": {k: row.get(k) for k in ("universe_level_defaults", "universe_residuals", "implicit_levels", "level_params")}}
     check(kernel_ok and rc == 2 and not row.get("universe_level_defaults") and row.get("universe_residuals") is None
           and not row.get("implicit_levels") and any(want in p for p in probs) and not any("defaulted" in p for p in probs),
-          f"opt_eqP narrowed to Equality.type.{{{l51},{l58}}} (no self-reported trace): kernel-accepted, rejected by the "
+          f"opt_eqP's obligation narrowed to Equality.type.{{{l51},{l58}}} (no self-reported trace): kernel-accepted, rejected by the "
           f"audit from the source ({want!r})")
 
 # a protected definition narrowed at a quantification range: job_cost {Job : JobType.{0,_}}
@@ -168,17 +180,18 @@ def posInst (n : Name) (us : List Nat) (tag : String) : MetaM Unit := do
   let us := us.map lv
   addDecl (.defnDecl { name := Name.mkSimple ("posctrl_" ++ tag), levelParams := [], type := ← instantiateTypeLevelParams ci.toConstantVal us,
                        value := mkConst n us, hints := .opaque, safety := .safe })
-run_meta posInst `Rocq.mathcomp.boot.eqtype.opt_eqP.type [3, 4] "opt_eqP"
+run_meta posInst `RocqPending.mathcomp.boot.eqtype.opt_eqP [3, 4] "opt_eqP"
+run_meta posInst `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement [3, 4] "opt_eqP_obligation"
 run_meta posInst `RocqPending.mathcomp.boot.eqtype.Datatypes_option__canonical__eqtype_Equality [3, 4] "option_eqType"
 run_meta posInst `RocqPending.prosa.behavior.schedule.ProcessorState [3, 4, 3, 5, 2] "ProcessorState"
 SCHED_LINE
 -- a use: the statement applies to an eqType at universe 3 (δ-unfolds the statement in the kernel)
 run_meta do
-  let ci ← getConstInfo `Rocq.mathcomp.boot.eqtype.opt_eqP.type
+  let ci ← getConstInfo `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement
   let v ← instantiateValueLevelParams ci [lv 3, lv 4]
   let .forallE _ d _ _ := v | throwError "statement is not a quantification"
   unless d == mkConst `Rocq.mathcomp.boot.eqtype.Equality.type [lv 3, lv 4] do throwError "binder range {d}"
-  let h := mkConst `Rocq.mathcomp.boot.eqtype.opt_eqP.type [lv 3, lv 4]
+  let h := mkConst `Rocq.mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1.statement [lv 3, lv 4]
   addDecl (.defnDecl { name := `posctrl_use, levelParams := [], type := mkForall `h .default h v,
                        value := mkLambda `h .default h (.bvar 0), hints := .opaque, safety := .safe })
 """

@@ -52,8 +52,10 @@ unique inhabitant. Assembly therefore never accepts a submitted value for it:
 * `check-proof` refuses opaque-value submissions (`accepts_submissions: false` in the task record);
 * rows that need an opaque value stay pending, with assembly state `OPAQUE_BINDING_PENDING`.
 
-A′ will translate the data-producing bodies of these constants mechanically (keeping their opacity and
-extracting their genuine proof subterms as obligations), so each value is bound once, from the source.
+A′ (`docs/OPAQUE_DATA.md`) translates the data-producing bodies of these constants mechanically (Lean
+`opaque` constants, their genuine proof subterms extracted as obligations), so each value is bound once,
+from the source. The policy above now applies only to opaque data whose body could not be prepared
+(kept as an interface, with the reason: e.g. a body recursing on a proof).
 
 ## Algorithm (`rocq2lean assemble --run RUN [--complete]`)
 

@@ -1,0 +1,1 @@
+{"name": "stmt-opq", "load_paths": [["-Q", ".", "SF"]], "files": ["Opq.v"], "requires": ["SF.Opq"]}

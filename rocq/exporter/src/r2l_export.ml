@@ -379,6 +379,12 @@ type stmt_info = {
   (* opaque data (Qed with a type that is not a proposition): the type only, with its sort; Rocq's
      kernel never unfolds it, so its body is not exported and providing a value is a task *)
   opaque_data : (string, Constr.t) Hashtbl.t;
+  (* A′: opaque data whose body was prepared (proof subterms extracted, Rocq's kernel re-check
+     passed): exported with its body, translated as an opaque constant (never unfolded, as Rocq never
+     unfolds Qed). [opaque_body_refused]: opaque data whose body could not be prepared; it keeps the
+     interface treatment above, with the reason *)
+  opaque_body : (string, unit) Hashtbl.t;
+  opaque_body_refused : (string, string) Hashtbl.t;
   obligation_of : (string, string * int) Hashtbl.t;
   def_obligations : (string, string list) Hashtbl.t;
   failed : (string, string) Hashtbl.t;
@@ -388,7 +394,8 @@ type stmt_info = {
 }
 
 let new_stmt_info () =
-  { proof_only = Hashtbl.create 97; opaque_data = Hashtbl.create 17; obligation_of = Hashtbl.create 97; def_obligations = Hashtbl.create 97;
+  { proof_only = Hashtbl.create 97; opaque_data = Hashtbl.create 17; opaque_body = Hashtbl.create 17;
+    opaque_body_refused = Hashtbl.create 7; obligation_of = Hashtbl.create 97; def_obligations = Hashtbl.create 97;
     failed = Hashtbl.create 17; deferred_guard = Hashtbl.create 7 }
 
 (* The IR key of a native kernel name (same scheme as [kn_key]). *)
@@ -574,6 +581,7 @@ let decl_json ?stmt ~opaque_access env ((kn : K.kername), (d : E.global_decl)) =
       match stmt with
       | Some st when Hashtbl.mem st.obligation_of key -> "obligation"
       | Some st when Hashtbl.mem st.proof_only key -> "statement_only"
+      | Some st when Hashtbl.mem st.opaque_body key -> "opaque_data"
       | Some st when Hashtbl.mem st.opaque_data key -> "opaque_interface"
       | Some st when Hashtbl.mem st.failed key -> "obligation_extraction_failed"
       | _ -> body_state native_kind cb.E.cst_body
@@ -584,6 +592,12 @@ let decl_json ?stmt ~opaque_access env ((kn : K.kername), (d : E.global_decl)) =
         [ ("obligations", J.Arr (List.map (fun o -> J.Str o) (Hashtbl.find st.def_obligations key))) ]
       | Some st when Hashtbl.mem st.failed key -> [ ("extraction_refused", J.Str (Hashtbl.find st.failed key)) ]
       | _ -> []
+    in
+    let stmt_fields =
+      match stmt with
+      | Some st when Hashtbl.mem st.opaque_body_refused key ->
+        stmt_fields @ [ ("opaque_body_refused", J.Str (Hashtbl.find st.opaque_body_refused key)) ]
+      | _ -> stmt_fields
     in
     let stmt_fields =
       match stmt with
@@ -945,8 +959,9 @@ let statement_env ?(follow = true) ~opaque_access st env0 roots =
                | exception Not_found -> false)
          in
          let ty' = EConstr.to_constr sigma (extract_proofs env0 sigma mk (EConstr.of_constr cb.Declarations.const_type)) in
+         let obls_ty = List.rev !obls in
          let body' =
-           if is_proof || is_opaque_data then None
+           if is_proof then None
            else
              match Global.body_of_constant_body opaque_access cb with
              | None -> None
@@ -972,7 +987,7 @@ let statement_env ?(follow = true) ~opaque_access st env0 roots =
          (* the constant's own typing flags, as when Rocq checked it *)
          let flags = cb.Declarations.const_typing_flags in
          let env' = Environ.set_typing_flags flags env' in
-         let check env' =
+         let check ?(body' = body') env' =
            try
              let _ = Typeops.infer_type env' ty' in
              List.iter (fun (_, stmt) -> ignore (Typeops.infer_type env' stmt)) obls;
@@ -998,6 +1013,35 @@ let statement_env ?(follow = true) ~opaque_access st env0 roots =
               | Some (_, why') -> Some why')
            | Some (_, why) -> Some why
          in
+         (* A′: an opaque data body that cannot be prepared falls back to the interface (type only,
+            as before A′), with the reason; the type's own obligations are kept *)
+         (* (also when its body is accepted only with the guard check deferred: a recursion on an
+            extracted proof subterm has no translation rule, and Rocq never unfolds the body anyway) *)
+         let fallback why =
+           match check ~body':None env' with
+           | None -> Hashtbl.replace st.opaque_body_refused key why; (None, None)
+           | Some (_, why') -> (body', Some why')
+         in
+         let body', checked =
+           match checked, body' with
+           | Some why, Some _ when is_opaque_data -> fallback why
+           | None, Some _ when is_opaque_data && Hashtbl.mem st.deferred_guard key ->
+             let why = "termination deferred (recursion on an extracted proof subterm): " ^ Hashtbl.find st.deferred_guard key in
+             Hashtbl.remove st.deferred_guard key;
+             fallback why
+           | _ -> (body', checked)
+         in
+         (* (an interface fallback keeps only the obligations of the type) *)
+         let obls = if Hashtbl.mem st.opaque_body_refused key then obls_ty else obls in
+         let add_obls e =
+           List.fold_left
+             (fun e (o, stmt) ->
+               Environ.add_constant o
+                 { cb with Declarations.const_body = Declarations.Undef None; const_type = stmt;
+                           const_relevance = Sorts.Relevant; const_hyps = [] }
+                 e)
+             e obls
+         in
          (match checked with
           | Some why when not is_proof ->
             (* refused: exported without a body, statement deps only *)
@@ -1012,7 +1056,8 @@ let statement_env ?(follow = true) ~opaque_access st env0 roots =
             List.iteri (fun i (o, _) -> Hashtbl.replace st.obligation_of (const_key o) (key, i + 1)) obls;
             if obls <> [] then Hashtbl.replace st.def_obligations key (List.map (fun (o, _) -> const_key o) obls);
             if is_proof then Hashtbl.replace st.proof_only key ();
-            if is_opaque_data then
+            if is_opaque_data && body' <> None then Hashtbl.replace st.opaque_body key ()
+            else if is_opaque_data then
               Hashtbl.replace st.opaque_data key
                 (EConstr.to_constr sigma (EConstr.mkSort (Retyping.get_sort_of env' sigma (EConstr.of_constr ty'))));
             let body = match body' with Some b -> Declarations.Def b | None -> Declarations.Undef None in
@@ -1179,9 +1224,9 @@ let export_statements ~opaque_access file (roots : Libnames.qualid list) =
 
 (* Round trip of the statement preparation: a fresh process re-prepares one constant alone and
    prints its rewritten type and body and its obligations (quoted), to be compared with the IR. *)
-let check_statement_prepared ~opaque_access key =
+let check_statement_prepared ?env ~opaque_access key =
   let c = Names.Constant.make1 (kername_of_key key) in
-  let env = prepare_env ~opaque_access (Global.env ()) [ Names.GlobRef.ConstRef c ] in
+  let env = match env with Some e -> e | None -> prepare_env ~opaque_access (Global.env ()) [ Names.GlobRef.ConstRef c ] in
   let st = new_stmt_info () in
   (* only this constant: stop the closure walk after it *)
   let env' = statement_env_one ~opaque_access st env c in
@@ -1200,12 +1245,33 @@ let check_statement_prepared ~opaque_access key =
   let state =
     if Hashtbl.mem st.failed key && not (Hashtbl.mem st.proof_only key) then "obligation_extraction_failed"
     else if Hashtbl.mem st.proof_only key then "statement_only"
+    else if Hashtbl.mem st.opaque_body key then "opaque_data"
     else if Hashtbl.mem st.opaque_data key then "opaque_interface" else "kept"
   in
   Feedback.msg_info
     Pp.(str ("STATEMENT " ^ key ^ " " ^ J.to_string (J.Obj [ ("type", q cb.Declarations.const_type); ("body", body);
                                                                 ("state", J.Str state); ("obligations", J.Arr obls);
                                                                 ("termination", if Hashtbl.mem st.deferred_guard key then J.Str "deferred" else J.Null) ])))
+
+(* Batched: the statement preparation of every constant listed in [file] (one key per line), the
+   environment prepared once for all of them (as the export prepares it for all its roots); each
+   constant is then re-derived alone (statement_env_one, a fresh record), printed as above. *)
+let check_statements_prepared ~opaque_access file =
+  let ic = open_in file in
+  let keys = ref [] in
+  (try
+     while true do
+       let l = String.trim (input_line ic) in
+       if l <> "" then keys := l :: !keys
+     done
+   with End_of_file -> ());
+  close_in ic;
+  let keys = List.rev !keys in
+  let env =
+    prepare_env ~opaque_access (Global.env ())
+      (List.map (fun k -> Names.GlobRef.ConstRef (Names.Constant.make1 (kername_of_key k))) keys)
+  in
+  List.iter (fun k -> check_statement_prepared ~env ~opaque_access k) keys
 
 (* Fresh-process recomputation for the round trip: the prepared type and body of one constant, quoted,
    after the kernel re-check (prepare_env raises otherwise). *)

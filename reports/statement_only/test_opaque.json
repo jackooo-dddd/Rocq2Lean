@@ -1,0 +1,319 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 15,
+   "DEFINITION_AUDITED_PENDING": 4,
+   "STATEMENT_AUDITED": 8,
+   "STATEMENT_AUDITED_PENDING": 1
+  },
+  "roundtrip": "OK",
+  "rows": {
+   "SF.Opq.bounded": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Opq.bounded",
+    "target_kind": "opaque",
+    "pending_hypotheses": [
+     "SF.Opq.bounded__rocq2lean_obligation_1"
+    ]
+   },
+   "SF.Opq.bounded__rocq2lean_obligation_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.bounded__rocq2lean_obligation_1.statement",
+    "target_kind": "statement",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.bval": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Opq.bval",
+    "target_kind": "def",
+    "pending_hypotheses": [
+     "SF.Opq.bounded__rocq2lean_obligation_1"
+    ]
+   },
+   "SF.Opq.bval_le": {
+    "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Opq.bval_le.statement",
+    "target_kind": "statement",
+    "pending_hypotheses": [
+     "SF.Opq.bounded__rocq2lean_obligation_1"
+    ]
+   },
+   "SF.Opq.eq_dec_nat": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Opq.eq_dec_nat",
+    "target_kind": "def",
+    "pending_hypotheses": [
+     "SF.Opq.nat_eqP__rocq2lean_obligation_1",
+     "SF.Opq.nat_eqP__rocq2lean_obligation_2",
+     "SF.Opq.nat_eqP__rocq2lean_obligation_3",
+     "SF.Opq.nat_eqP__rocq2lean_obligation_4",
+     "SF.Opq.nat_eqP__rocq2lean_obligation_5"
+    ]
+   },
+   "SF.Opq.eqb": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Opq.eqb",
+    "target_kind": "def",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.eqb_refl": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.eqb_refl.statement",
+    "target_kind": "statement",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.nat_eqP": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Opq.nat_eqP",
+    "target_kind": "opaque",
+    "pending_hypotheses": [
+     "SF.Opq.nat_eqP__rocq2lean_obligation_1",
+     "SF.Opq.nat_eqP__rocq2lean_obligation_2",
+     "SF.Opq.nat_eqP__rocq2lean_obligation_3",
+     "SF.Opq.nat_eqP__rocq2lean_obligation_4",
+     "SF.Opq.nat_eqP__rocq2lean_obligation_5"
+    ]
+   },
+   "SF.Opq.nat_eqP__rocq2lean_obligation_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.nat_eqP__rocq2lean_obligation_1.statement",
+    "target_kind": "statement",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.nat_eqP__rocq2lean_obligation_2": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.nat_eqP__rocq2lean_obligation_2.statement",
+    "target_kind": "statement",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.nat_eqP__rocq2lean_obligation_3": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.nat_eqP__rocq2lean_obligation_3.statement",
+    "target_kind": "statement",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.nat_eqP__rocq2lean_obligation_4": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.nat_eqP__rocq2lean_obligation_4.statement",
+    "target_kind": "statement",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.nat_eqP__rocq2lean_obligation_5": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.nat_eqP__rocq2lean_obligation_5.statement",
+    "target_kind": "statement",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.pick": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Opq.pick",
+    "target_kind": "opaque",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.pick_succ": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Opq.pick_succ",
+    "target_kind": "def",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.pick_succ_pos": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.pick_succ_pos.statement",
+    "target_kind": "statement",
+    "pending_hypotheses": []
+   },
+   "SF.Opq.reflect": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Opq.reflect",
+    "target_kind": "inductive",
+    "pending_hypotheses": []
+   }
+  }
+ },
+ "tasks": {
+  "SF.Opq.bounded__rocq2lean_obligation_1": "obligation",
+  "SF.Opq.bval_le": "theorem_statement",
+  "SF.Opq.eqb_refl": "theorem_statement",
+  "SF.Opq.nat_eqP__rocq2lean_obligation_1": "obligation",
+  "SF.Opq.nat_eqP__rocq2lean_obligation_2": "obligation",
+  "SF.Opq.nat_eqP__rocq2lean_obligation_3": "obligation",
+  "SF.Opq.nat_eqP__rocq2lean_obligation_4": "obligation",
+  "SF.Opq.nat_eqP__rocq2lean_obligation_5": "obligation",
+  "SF.Opq.pick_succ_pos": "theorem_statement"
+ },
+ "opacity": {
+  "rfl": [
+   1,
+   "/home/shunqwang4/research/r2l-B/runs/st-opq/lean/Probe_opaque_rfl.lean:2:34: error: Type mismatch\n  rfl\nhas type\n  ?m.5 = ?m.5\nbut is expected to have type\n  Rocq.SF.Opq.pick = 3"
+  ],
+  "kernel_decide": [
+   1,
+   "/home/shunqwang4/research/r2l-B/runs/st-opq/lean/Probe_opaque_kernel.lean:2:37: error: Tactic `decide` failed for proposition\n  Rocq.SF.Opq.pick = 3\nbecause its `Decidable` instance\n  instDecidableEqNat Rocq.SF.Opq.pick 3\ndid not reduce to `isTrue` or `isFalse`.\n\nReduction got stuck at the `Decidabl"
+  ]
+ },
+ "negative": {
+  "opaque-value-changed": {
+   "kernel": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Opq.pick: ['body', 'arg0', 'arg0', 'arg0']: expected constant Nat.zero, found app"
+   ]
+  },
+  "opaque-as-def": {
+   "kernel": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Opq.pick: definition emitted as def"
+   ]
+  }
+ },
+ "assembly": {
+  "exit": 0,
+  "status": "ASSEMBLY_VALIDATED",
+  "summary": {
+   "validated": 23,
+   "transport_required": 0,
+   "rows": 28,
+   "reuse_mismatch": 0,
+   "proofs_not_supplied": 8,
+   "proofs_assembled": 1,
+   "proof_tasks": 9,
+   "pending": 2,
+   "opaque_values_unbound": 0,
+   "opaque_binding_pending": 0,
+   "not_translated": 0,
+   "complete": false,
+   "assembly_rejected": 0,
+   "assembly_blocked": 0,
+   "assembled": 3
+  },
+  "rows": {
+   "SF.Opq.bounded": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Opq.bounded",
+    "target_kind": "opaque",
+    "assembly": "ASSEMBLED",
+    "proof_state": ""
+   },
+   "SF.Opq.bounded__rocq2lean_obligation_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.bounded__rocq2lean_obligation_1.statement",
+    "target_kind": "statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_ASSEMBLED"
+   },
+   "SF.Opq.bval": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Opq.bval",
+    "target_kind": "def",
+    "assembly": "ASSEMBLED",
+    "proof_state": ""
+   },
+   "SF.Opq.bval_le": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.bval_le.statement",
+    "target_kind": "statement",
+    "assembly": "ASSEMBLED",
+    "proof_state": "PROOF_NOT_SUPPLIED"
+   },
+   "SF.Opq.eq_dec_nat": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Opq.eq_dec_nat",
+    "target_kind": "def",
+    "assembly": "PENDING",
+    "proof_state": ""
+   },
+   "SF.Opq.eqb": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Opq.eqb",
+    "target_kind": "def",
+    "assembly": "VALIDATED",
+    "proof_state": ""
+   },
+   "SF.Opq.eqb_refl": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.eqb_refl.statement",
+    "target_kind": "statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_NOT_SUPPLIED"
+   },
+   "SF.Opq.nat_eqP": {
+    "status": "PENDING_KERNEL_CHECKED",
+    "target": "RocqPending.SF.Opq.nat_eqP",
+    "target_kind": "opaque",
+    "assembly": "PENDING",
+    "proof_state": ""
+   },
+   "SF.Opq.nat_eqP__rocq2lean_obligation_1": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.nat_eqP__rocq2lean_obligation_1.statement",
+    "target_kind": "statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_NOT_SUPPLIED"
+   },
+   "SF.Opq.nat_eqP__rocq2lean_obligation_2": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.nat_eqP__rocq2lean_obligation_2.statement",
+    "target_kind": "statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_NOT_SUPPLIED"
+   },
+   "SF.Opq.nat_eqP__rocq2lean_obligation_3": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.nat_eqP__rocq2lean_obligation_3.statement",
+    "target_kind": "statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_NOT_SUPPLIED"
+   },
+   "SF.Opq.nat_eqP__rocq2lean_obligation_4": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.nat_eqP__rocq2lean_obligation_4.statement",
+    "target_kind": "statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_NOT_SUPPLIED"
+   },
+   "SF.Opq.nat_eqP__rocq2lean_obligation_5": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.nat_eqP__rocq2lean_obligation_5.statement",
+    "target_kind": "statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_NOT_SUPPLIED"
+   },
+   "SF.Opq.pick": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Opq.pick",
+    "target_kind": "opaque",
+    "assembly": "VALIDATED",
+    "proof_state": ""
+   },
+   "SF.Opq.pick_succ": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Opq.pick_succ",
+    "target_kind": "def",
+    "assembly": "VALIDATED",
+    "proof_state": ""
+   },
+   "SF.Opq.pick_succ_pos": {
+    "status": "STATEMENT_KERNEL_CHECKED",
+    "target": "Rocq.SF.Opq.pick_succ_pos.statement",
+    "target_kind": "statement",
+    "assembly": "VALIDATED",
+    "proof_state": "PROOF_NOT_SUPPLIED"
+   },
+   "SF.Opq.reflect": {
+    "status": "TRANSLATED_AND_CHECKED",
+    "target": "Rocq.SF.Opq.reflect",
+    "target_kind": "inductive",
+    "assembly": "VALIDATED",
+    "proof_state": ""
+   }
+  }
+ }
+}

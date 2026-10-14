@@ -61,7 +61,9 @@ def sha(b):
 # statement-only mode (docs/STATEMENT_ONLY_DESIGN.md): `Rocq2Lean ExportStatements` of the protected
 # roots, in their own chunk directories (export-statement-<fam>)
 MODE = os.environ.get("INVENTORY_EXPORT_MODE", "proof")
-SUFFIX = "" if MODE == "proof" else f"-{MODE}"
+SUFFIX = ("" if MODE == "proof" else f"-{MODE}") + (f"-{os.environ['INVENTORY_EXPORT_TAG']}" if os.environ.get("INVENTORY_EXPORT_TAG") else "")
+# (INVENTORY_EXPORT_TAG: a separate set of chunk directories, e.g. a re-export with a changed exporter
+# next to the earlier one, whose evidence other manifests still bind)
 COMMAND = {"proof": "Export", "statement": "ExportStatements"}[MODE]
 
 

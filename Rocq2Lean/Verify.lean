@@ -364,11 +364,16 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
       let ns := if isPending then `RocqPending else `Rocq
       unless ns.isPrefixOf tgt.toName do
         problems := note "namespaces" s!"{tgt}: {st} target outside {ns}" problems
-      if ["theorem", "opaque", "axiom"].contains (kindOf ci) then
+      -- (A′: a definition row may be an `opaque` constant — opaque data translated with its body —
+      -- never a theorem or an axiom, and never a statement)
+      if ["theorem", "axiom"].contains (kindOf ci) || (kindOf ci == "opaque" && st.startsWith "STATEMENT_") then
         problems := note "statements" s!"{tgt}: {kindOf ci} in a statement-mode library" problems
       let nh := ((r.getObjValAs? (Array Json) "pending_hypotheses").toOption.getD #[]).size
       if isPending == (nh == 0) then
         problems := note "statements" s!"{tgt}: status {st} with {nh} hypotheses" problems
+      if kind == "opaque" then
+        let bad ← liftTermElabM <| forallBoundedTelescope ci.type (some nh) fun _ body => isProp body
+        if bad then problems := note "statements" s!"{tgt}: opaque constant of a proposition (a proof)" problems
       if kind == "def" then
         let isStmt := st.startsWith "STATEMENT_"
         let bad ← liftTermElabM <| forallBoundedTelescope ci.type (some nh) fun _ body => do

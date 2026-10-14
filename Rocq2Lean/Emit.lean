@@ -396,7 +396,9 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     if delta && inlined.isEmpty then
       return { base with status := "UNSUPPORTED_FEATURE", message := "no Set-motive constant to inline" }
     let inlinedA := inlined.toArray.qsort (· < ·)
-    unless st == "transparent" || st == "opaque_present" || st == "sealed_implementation" do
+    -- (A′: `opaque_data` — an opaque Set/Type constant whose prepared body was exported — is
+    -- translated with its body as a Lean `opaque` constant: never unfolded, as Rocq never unfolds Qed)
+    unless st == "transparent" || st == "opaque_present" || st == "sealed_implementation" || st == "opaque_data" do
       return { base with status := "EXPORT_VALIDATION_FAILED", message := s!"unknown body state '{st}'" }
     let name := if hypsRef?.isSome then pendingTargetName c.name else targetName c.name
     if (← getEnv).contains name && !genv.reuseExisting then

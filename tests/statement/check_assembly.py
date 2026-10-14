@@ -13,8 +13,9 @@ Prosa/Classic/MathComp proofs.
    reported in the axioms of the assembled definitions), assembled definitions, an assembled pending
    inductive, an assembled statement whose generalized proof is reused (kernel-checked instantiation),
    a statement about the re-emitted inductive whose generalized proof is about the pending inductive
-   (ASSEMBLY_TRANSPORT_REQUIRED, never cast), opaque-data dependents held (OPAQUE_BINDING_PENDING) even
-   though a generalized proof over the data was verified.
+   (ASSEMBLY_TRANSPORT_REQUIRED, never cast), dependents of opaque data kept as an interface (pick_wf)
+   held (OPAQUE_BINDING_PENDING) even though a generalized proof over the data was verified; A′: opaque
+   data translated with its body (pick) needs no binding.
 6. Determinism and idempotence of assembly.
 7. Invalid claimed submissions are refused: altered after its check, missing, stale after a new
    validation.
@@ -34,7 +35,7 @@ from lib import ROOT, check, cli, finish  # noqa: E402
 OUT = {}
 P = ROOT / "tests" / "statement" / "proofs"
 RUN = ROOT / "runs" / "st-asm"
-ROOTS = ["SF.Asm." + n for n in ("double_zero", "zero_of_le", "is_zero_of_intro", "pick_succ_pos")]
+ROOTS = ["SF.Asm." + n for n in ("double_zero", "zero_of_le", "is_zero_of_intro", "pick_succ_pos", "pick_wf_succ_pos")]
 OBL = "SF.Asm.half_sig__rocq2lean_obligation_1"
 
 
@@ -78,21 +79,23 @@ check(all(t["lean"]["reserved_name"] == f"RocqProofTemplates.T{t['task_id']}.pro
           t["lean"]["final_name"] == "Rocq." + t["source"]["kernel_name"] for t in T.values()),
       "tasks: template name RocqProofTemplates.T<id>.proof; Rocq.<name> reserved for the final declaration")
 gen = {n: t["prerequisites"]["generalization"]["form"] for n, t in T.items()}
-check(gen.get("SF.Asm.zero_of_le") == "over_proof_prerequisites" and gen.get("SF.Asm.pick_succ_pos") == "over_data_prerequisites"
-      and gen.get("SF.Asm.double_zero") == "none", "tasks: generalization form recorded (none / over proofs / over data)")
-check(T["SF.Asm.pick"]["kind"] == "opaque_value" and T["SF.Asm.pick"]["accepts_submissions"] is False,
-      "tasks: the opaque-data value task accepts no submission")
+check(gen.get("SF.Asm.zero_of_le") == "over_proof_prerequisites" and gen.get("SF.Asm.pick_wf_succ_pos") == "over_data_prerequisites"
+      and gen.get("SF.Asm.double_zero") == "none" and gen.get("SF.Asm.pick_succ_pos") == "none",
+      "tasks: generalization form recorded (none / over proofs / over data)")
+check(T["SF.Asm.pick_wf"]["kind"] == "opaque_value" and T["SF.Asm.pick_wf"]["accepts_submissions"] is False
+      and "SF.Asm.pick" not in T, "tasks: no value task for pick (A′: translated body); the kept interface's "
+      "value task (pick_wf) accepts no submission")
 OUT["tasks"] = {n: {"kind": t["kind"], "generalization": gen[n], "accepts_submissions": t["accepts_submissions"]}
                 for n, t in sorted(T.items())}
 
 # 3. check-proof (refusals first)
-rc, res = submit(T["SF.Asm.pick"], "pick_value.lean")
+rc, res = submit(T["SF.Asm.pick_wf"], "pick_value.lean")
 check(rc == 2 and res["status"] == "PROOF_REJECTED" and res.get("stage") == "policy", "check-proof refuses an opaque-data value")
 rc, res = submit(T["SF.Asm.double_zero"], "neg_outside_namespace.lean")
 check(rc == 2 and any("outside" in p for p in res.get("problems") or []),
       "check-proof refuses a submission declaring a constant outside its template namespace")
 OUT["check_proof_refusals"] = {"opaque_value": res.get("problems")}
-shutil.rmtree(RUN / "proofs" / T["SF.Asm.pick"]["task_id"])
+shutil.rmtree(RUN / "proofs" / T["SF.Asm.pick_wf"]["task_id"])
 shutil.rmtree(RUN / "proofs" / T["SF.Asm.double_zero"]["task_id"])
 
 # 4. partial assembly without proofs
@@ -108,7 +111,7 @@ OUT["assembly_without_proofs"] = asm0["summary"] if asm0 else None
 accepted = {}
 for n, f in [("SF.Asm.double_zero", "double_zero.lean"), (OBL, "half_sig_obligation.lean"),
              ("SF.Asm.zero_of_le", "zero_of_le.lean"), ("SF.Asm.is_zero_of_intro", "is_zero_of_intro.lean"),
-             ("SF.Asm.pick_succ_pos", "pick_succ_pos.lean")]:
+             ("SF.Asm.pick_succ_pos", "pick_succ_pos.lean"), ("SF.Asm.pick_wf_succ_pos", "pick_wf_succ_pos.lean")]:
     rc, res = submit(T[n], f)
     accepted[n] = res
     check(rc == 0 and res["status"] == "LEAN_PROOF_KERNEL_VERIFIED", f"check-proof accepts the synthetic proof of {n}")
@@ -134,9 +137,12 @@ check(st("SF.Asm.zero_of_le") == ("ASSEMBLED", "PROOF_ASSEMBLED"),
 check(st("SF.Asm.is_zero_of_intro") == ("ASSEMBLED", "ASSEMBLY_TRANSPORT_REQUIRED") and not R["SF.Asm.is_zero_of_intro"].get("proof_target"),
       "a generalized proof about the pending inductive does not prove the statement about the re-emitted one: "
       "ASSEMBLY_TRANSPORT_REQUIRED, no final theorem")
-check(R["SF.Asm.pick"].get("proof_state") == "OPAQUE_BINDING_PENDING" and R["SF.Asm.pick_succ"]["assembly"] == "OPAQUE_BINDING_PENDING"
-      and R["SF.Asm.pick_succ_pos"]["assembly"] == "OPAQUE_BINDING_PENDING",
-      "opaque data is not bound; its dependents stay pending even with a verified generalized proof over it")
+check(R["SF.Asm.pick_wf"].get("proof_state") == "OPAQUE_BINDING_PENDING" and R["SF.Asm.pick_wf_succ"]["assembly"] == "OPAQUE_BINDING_PENDING"
+      and R["SF.Asm.pick_wf_succ_pos"]["assembly"] == "OPAQUE_BINDING_PENDING",
+      "opaque data kept as an interface is not bound; its dependents stay pending even with a verified generalized proof over it")
+check(R["SF.Asm.pick"]["assembly"] == "VALIDATED" and R["SF.Asm.pick"]["target"] == "Rocq.SF.Asm.pick"
+      and R["SF.Asm.pick_succ"]["assembly"] == "VALIDATED" and st("SF.Asm.pick_succ_pos") == ("VALIDATED", "PROOF_ASSEMBLED"),
+      "A′: the opaque constant pick (translated body) and its dependents need no binding; pick_succ_pos gets its final theorem")
 axb = asm["axioms_by_target"]
 check("propext" in axb.get("Rocq.SF.Asm.half_sig", []) and "propext" in axb.get("Rocq.SF.Asm.zero_of", []),
       "assembled definitions report the axioms of the proofs they contain (not labelled axiom-free)")

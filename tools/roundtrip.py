@@ -17,6 +17,7 @@
 Writes OUT_DIR/roundtrip.json; exits non-zero on any mismatch.
 """
 
+import hashlib
 import json
 import os
 import subprocess
@@ -275,7 +276,8 @@ def check_prepared(decls, out, loadpaths, requires):
     return {"results": results, "problems": problems}
 
 
-STATEMENT_STATES = ("statement_only", "obligation", "obligation_extraction_failed", "opaque_interface")
+STATEMENT_SAMPLE = 8         # constants re-derived alone, per export (request independence)
+STATEMENT_STATES = ("statement_only", "obligation", "obligation_extraction_failed", "opaque_interface", "opaque_data")
 
 
 def check_statement(decls, out, loadpaths, requires):
@@ -287,23 +289,34 @@ def check_statement(decls, out, loadpaths, requires):
         return {"results": {}, "problems": []}
     plugin = Path(__file__).resolve().parent.parent / "rocq" / "exporter"
     parents = [d for d in decls if d["body_state"] != "obligation"]
-    v = ["From Rocq2LeanExport Require Import Loader.", *[f"Require {r}." for r in requires]]
-    v += [f'Rocq2Lean CheckStatementPrepared "{d["name"]}".' for d in parents]
-    vfile = out / "RoundTripStatement.v"
-    vfile.write_text("\n".join(v) + "\n")
-    p = subprocess.run(["rocq", "compile", "-I", str(plugin / "src"), "-Q", str(plugin / "theories"), "Rocq2LeanExport",
-                        *loadpaths, str(vfile)], capture_output=True, text=True)
+    # every constant re-derived in one fresh process, the environment prepared once for all of them
+    # (as the export does: `CheckStatementsPrepared`); and, for request independence, a deterministic
+    # sample re-derived each alone in its own prepared environment (`CheckStatementPrepared`)
     (out / "logs").mkdir(exist_ok=True)
-    (out / "logs" / "roundtrip_statement.log").write_text(p.stdout + p.stderr)
-    got = {}
-    for line in (p.stdout + p.stderr).splitlines():
-        if line.startswith("STATEMENT "):
-            _, key, js = line.split(" ", 2)
-            got[key] = json.loads(js)
+    keys = out / "RoundTripStatement.keys"
+    keys.write_text("".join(d["name"] + "\n" for d in parents))
+    sample = sorted(parents, key=lambda d: hashlib.sha256(d["name"].encode()).hexdigest())[:STATEMENT_SAMPLE]
+
+    def run(name, cmds):
+        v = ["From Rocq2LeanExport Require Import Loader.", *[f"Require {r}." for r in requires], *cmds]
+        vfile = out / f"{name}.v"
+        vfile.write_text("\n".join(v) + "\n")
+        p = subprocess.run(["rocq", "compile", "-I", str(plugin / "src"), "-Q", str(plugin / "theories"), "Rocq2LeanExport",
+                            *loadpaths, str(vfile)], capture_output=True, text=True)
+        (out / "logs" / f"{name}.log").write_text(p.stdout + p.stderr)
+        got = {}
+        for line in (p.stdout + p.stderr).splitlines():
+            if line.startswith("STATEMENT "):
+                _, key, js = line.split(" ", 2)
+                got[key] = json.loads(js)
+        return p, got
+
+    p, got = run("RoundTripStatement", [f'Rocq2Lean CheckStatementsPrepared "{keys}".'])
+    p1, alone = run("RoundTripStatementAlone", [f'Rocq2Lean CheckStatementPrepared "{d["name"]}".' for d in sample])
     by_name = {d["name"]: d for d in decls}
     results, problems, confirmed = {}, [], set()
     want_state = {"statement_only": "statement_only", "obligation_extraction_failed": "obligation_extraction_failed",
-                  "opaque_interface": "opaque_interface"}
+                  "opaque_interface": "opaque_interface", "opaque_data": "opaque_data"}
     for d in parents:
         g = got.get(d["name"])
         if g is None:
@@ -311,7 +324,8 @@ def check_statement(decls, out, loadpaths, requires):
             continue
         ok = g["type"] == d["type"] and g["body"] == d["body"] and g["state"] == want_state.get(d["body_state"], "kept") \
             and [o["name"] for o in g["obligations"]] == (d.get("obligations") or []) \
-            and g.get("termination") == (d.get("termination") or {}).get("state")
+            and g.get("termination") == (d.get("termination") or {}).get("state") \
+            and (d["body_state"] != "opaque_data" or ((d.get("native") or {}).get("body_kind") == "opaque" and d["body"] is not None))
         for o in g["obligations"]:
             od = by_name.get(o["name"])
             if od is None or od["body_state"] != "obligation" or od["type"] != o["type"] or od["body"] is not None:
@@ -322,9 +336,14 @@ def check_statement(decls, out, loadpaths, requires):
     for d in decls:
         if d["body_state"] == "obligation":
             results[d["name"]] = "RT_OK" if d["name"] in confirmed else "RT_OBLIGATION_UNCONFIRMED"
+    for d in sample:
+        if alone.get(d["name"]) != got.get(d["name"]):
+            results[d["name"]] = "RT_STATEMENT_REQUEST_DEPENDENT"
     if p.returncode != 0:
         problems.append(f"statement-preparation process exited with {p.returncode}")
-    return {"results": results, "problems": problems}
+    if p1.returncode != 0:
+        problems.append(f"per-constant statement-preparation process exited with {p1.returncode}")
+    return {"results": results, "problems": problems, "request_independence_sample": [d["name"] for d in sample]}
 
 
 def check_universes(lines, out, loadpaths, requires):
@@ -466,10 +485,13 @@ def main(argv):
     results["__universe_facts__"] = universe["status"]
     report = {"schema": "rocq2lean-roundtrip/1", "status": "OK" if not problems else "EXPORT_VALIDATION_FAILED",
               "checked": len(decls), "results": results, "problems": problems,
+              "statement_request_independence_sample": sr.get("request_independence_sample", []),
               "method": "independent Python decoder -> MetaRocq Gallina; transparent structural equality "
                         "(rocq/roundtrip/RtEq.v: cb_eqb / mib_eqb) against a fresh quotation; native opacity check; "
                         "recomputed dependency edges; native universe facts re-checked pairwise in a fresh process "
-                        "(Rocq2Lean CheckRelation) and MetaRocq's constraints checked to be entailed by them"}
+                        "(Rocq2Lean CheckRelation) and MetaRocq's constraints checked to be entailed by them; statement "
+                        "preparation re-derived for every rewritten constant in one prepared environment "
+                        "(CheckStatementsPrepared), and alone for a deterministic sample (CheckStatementPrepared)"}
     (out / "roundtrip.json").write_text(json.dumps(report, indent=2) + "\n")
     print(report["status"], f"{len(decls)} declarations", *problems[:10], sep="\n  ")
     return 0 if not problems else 1

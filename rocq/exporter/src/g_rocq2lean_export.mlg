@@ -27,6 +27,14 @@ VERNAC COMMAND EXTEND Rocq2LeanCheckStatementPrepared CLASSIFIED AS QUERY STATE 
   }
 END
 
+(* Rocq2Lean CheckStatementsPrepared "keys.txt": the same for every listed constant, the environment
+   prepared once for all of them (as the export does). *)
+VERNAC COMMAND EXTEND Rocq2LeanCheckStatementsPrepared CLASSIFIED AS QUERY STATE opaque_access
+| [ "Rocq2Lean" "CheckStatementsPrepared" string(file) ] -> {
+    fun ~opaque_access -> R2l_export.check_statements_prepared ~opaque_access file
+  }
+END
+
 (* Rocq2Lean CheckRelation "a" "b" "lt|le|none|eq": native re-check of one universe fact. *)
 VERNAC COMMAND EXTEND Rocq2LeanCheckRelation CLASSIFIED AS QUERY
 | [ "Rocq2Lean" "CheckRelation" string(a) string(b) string(r) ] -> {

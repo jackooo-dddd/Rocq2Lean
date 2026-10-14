@@ -209,11 +209,22 @@ ft, rcs, v = pipeline("st-finishtime", ROOT / "fixtures" / "m6" / "manifest.json
 check(rcs == [0, 0, 0] and v.get("status") == "STATEMENT_VALIDATED", f"FinishTime statement pipeline validated ({rcs})")
 check(all(r["validation"] in ("DEFINITION_AUDITED_PENDING", "STATEMENT_AUDITED_PENDING", "DEFINITION_AUDITED", "STATEMENT_AUDITED")
           for r in v.get("roots", [])), "every FinishTime root is translated and audited (possibly pending)")
-check(all(set(r["pending_prerequisites"]) == {"mathcomp.boot.ssrnat.eqnP", "mathcomp.boot.ssrnat.find_ex_minn",
-                                               "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1"}
-          for r in v.get("roots", [])),
-      "FinishTime roots wait exactly for eqnP, a value of opaque find_ex_minn and finish_time's obligation "
-      "(local hypotheses are never extracted as obligations)")
+# A′: eqnP, iffP and idP are opaque data translated with their bodies (opaque constants), so the roots
+# wait for proof tasks only -- their bodies' obligations, the lemmas idP's body uses and finish_time's
+# obligation -- plus the value of find_ex_minn, whose body recurses on a proof (guard deferred) and
+# keeps the interface (local hypotheses are never extracted as obligations)
+FT_PRE = {"Corelib.ssr.ssrbool.is_true_true", "Corelib.ssr.ssrbool.not_false_is_true",
+          "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_1", "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_2",
+          "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_1", "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_2",
+          "prosa.analysis.definitions.finish_time.finish_time__rocq2lean_obligation_1", "mathcomp.boot.ssrnat.find_ex_minn"}
+check(all(set(r["pending_prerequisites"]) == FT_PRE for r in v.get("roots", [])),
+      "FinishTime roots wait exactly for proof tasks (eqnP's, iffP's and finish_time's obligations, two lemmas) "
+      "and the value of opaque find_ex_minn (kept as an interface: its body recurses on a proof)")
+fsrc = {d["name"]: d for d in map(json.loads, open(ft / "source.ndjson")) if d.get("kind") == "constant"}
+check(fsrc["mathcomp.boot.ssrnat.eqnP"]["body_state"] == "opaque_data"
+      and fsrc["mathcomp.boot.ssrnat.find_ex_minn"]["body_state"] == "opaque_interface"
+      and fsrc["mathcomp.boot.ssrnat.find_ex_minn"].get("opaque_body_refused", "").startswith("termination deferred"),
+      "A′: eqnP's body is exported; find_ex_minn's is refused (termination deferred), with the reason")
 fa, rcs, v = pipeline("st-fixture-a", ROOT / "fixtures" / "stmt" / "a" / "manifest.json", FX_ROOTS)
 check(rcs == [0, 0, 0] and v.get("status") == "STATEMENT_VALIDATED", f"fixture A statement pipeline validated ({rcs})")
 RA, _ = results(fa)
