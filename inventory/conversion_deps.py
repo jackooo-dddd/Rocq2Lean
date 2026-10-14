@@ -56,7 +56,12 @@ def main(run, jobs=2):
         return r
 
     dependents = sorted(n for n in decls if n not in lowered and reaches(n))
-    consts = [n for n in dependents if decls[n]["kind"] == "constant"]
+    # an extracted obligation exists only in the prepared environment: it is checked through its
+    # parent definition (re-preparing the parent re-checks its obligations' statements), and gets the
+    # parent's verdict
+    parent = {n: decls[n]["native"]["obligation"]["of"] for n in dependents
+              if decls[n].get("body_state") == "obligation" and ((decls[n].get("native") or {}).get("obligation") or {}).get("of")}
+    consts = sorted({parent.get(n, n) for n in dependents if decls[n]["kind"] == "constant"})
     out = run / "conversion_deps"
     out.mkdir(exist_ok=True)
     allreq = sorted({m for _, d, _, x in P.chunks() for m in P.requires(d, x)})
@@ -84,6 +89,10 @@ def main(run, jobs=2):
         for line in (f.read_text().splitlines() if f.exists() else []):
             tag, name = line.split(" ", 2)[:2]
             verdict[name] = (tag, line.split(" ", 2)[2] if line.count(" ") >= 2 else "")
+    for o, par in parent.items():
+        if par in verdict:
+            tag, why = verdict[par]
+            verdict[o] = (tag, f"through its parent {par}: {why}" if why else f"through its parent {par}")
     missing = [n for n in consts if n not in verdict]
     ok_st = ("TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED", "STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
     joined = {}
