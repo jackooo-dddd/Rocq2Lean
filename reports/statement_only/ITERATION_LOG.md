@@ -690,3 +690,63 @@ python3 -I inventory/rule_backlog.py runs/st-corpus-R2 --conversion …/CONVERSI
 Evidence: `coverage/{R2-binder,transitions-V-to-R2-binder}.json`, `RULE_BACKLOG.{md,json}`,
 `provenance/CORPUS_MANIFEST.json` (current; `-V` kept), `termination/CONVERSION_DEPENDENCE-R2.json`,
 `test_universe_r2.json`, `PROOF_TASKS.jsonl`.
+
+---
+
+## Entry 8 — P3: instance-aware prerequisite hypotheses (2026-10-14)
+
+Commit `1d45a15` (branch `rules-r2`); run worktree `r2l-run-R3`, run `runs/st-corpus-R3` (A′ export,
+chunk evidence reused, `SAME_TOOLS`).
+
+### (1) What was changed and why
+
+`mathcomp.boot.eqtype.pair_eqP__rocq2lean_obligation_1` (accepted, generic in two levels) was needed
+at two universe instances by 9 protected Prosa definitions (`TRANSLATION_FAILED`: "needed at two
+different types"); prerequisite hypotheses were keyed by leaf name only. Now (`Rocq2Lean/Translate.lean`
+`hypFor`, `Rocq2Lean/Emit.lean` `collapseHyps` + retry tier, `tools/audit.py`):
+
+* one hypothesis per *instance* (`h_<leaf>`, `h_<leaf>__k`); a hypothesis is reused only at its own
+  type, never at another; the default path compares the statement constant's universe arguments first
+  (no unfolding across instances);
+* retry tier (statement mode, after the other attempts fail): reuse only at a type equal without
+  assigning any level metavariable; after universe solving, hypotheses of one leaf at the same type
+  are collapsed into the first (otherwise eager unification across uses merges instances the source
+  keeps apart — the fixture `use2` pinned `B` to level 0);
+* audit: a leaf may occur once per instance in `pending_hypotheses`, never twice at the same type;
+  references resolve to any hypothesis of the right leaf (the kernel checked its type); tasks and
+  assembly unchanged (sets; each use re-translated against the generic final theorem).
+
+### (2) Coverage — FULL CORPUS, same 4,474 protected roots
+
+Unchanged: 673 / 2,175 / 1,520 / 106 (modern 446 / 1,276 / 745 / 37, Classic 227 / 899 / 775 / 69);
+4,474 protected rows unchanged. Consumer, audit, source instances (4), provenance: OK.
+
+All rows: no row newly claimed, none lost. The 9 `pair_eqP` rows now pass the prerequisite step and stop
+at their next blockers (8: residual levels the kernel does not justify generically — `hep_task`
+applied to a `RocqPending.…Task` at another level, the coupled-reference mechanism; 1: a coherence
+refusal); no claimed row uses per-instance hypotheses yet. P3 is validated on the fixture
+(`test-multi-instance`), **not** a measured corpus gain.
+
+### (3)–(4) Backlog and next
+
+`MULTI_INSTANCE_PREREQUISITE` removed; its members are now `UNIVERSE_OTHER`/`REFERENCE_COHERENCE`.
+`REFERENCE_COHERENCE` (389 / 226) diagnosed: `JobType`/`TaskType`'s R2F reading `max(u51+1, u58)`
+against a single-level sort `?a+1`; the bounded solver fixes the free level to 0, which the generality
+check refuses. The three largest families (`SOLUTION_FACT_VIOLATED`, `STATEMENT_FREE_LEVEL_PINNED`,
+`REFERENCE_COHERENCE`) and `COUPLED_BINDER_LEVELS` share one mechanism — one Lean universe parameter where
+Rocq's cumulativity instantiates several arguments independently — and need the representation decision
+(per-binder-sort universe parameters) before further work. `PROTECTED_RANGE_NARROWED` (379 / 211) and
+`PROP_TYPE_CUMULATIVITY` (102) need their own representation decisions. Without a decision, the next
+unblocked items are `INTERNAL_ERROR` (gcdn → clean refusal, 25 roots blocked only by it, but it stays
+blocked: it needs the unfolding) and `COINDUCTIVE` (13, Classic `extraction_tdma`).
+
+### (5) Regressions and validation
+
+`test-multi-instance` (new, 9), `test-universe-r2` 9, `test-statement` 30, `test-assembly` 34,
+`test-termination` 22, `test-opaque` 16, `test-universe-c` 22: OK; `test-all` 18/18 (`1d45a15`).
+
+### (6) Commands and evidence
+
+As entry 7 with `runs/st-corpus-R3`; evidence `coverage/{R3-multi,transitions-R2-to-R3-multi}.json`,
+`RULE_BACKLOG.{md,json}` (current), `provenance/CORPUS_MANIFEST.json` (current; `-R2` kept),
+`termination/CONVERSION_DEPENDENCE-R3.json`, `test_multi_instance.json`.

@@ -182,10 +182,11 @@
    "status": "exact blocker: awaiting a representation decision"
   },
   {
+   "acceptance": "-",
    "affected_roots": {
     "classic": 0,
-    "modern": 388,
-    "total": 388
+    "modern": 389,
+    "total": 389
    },
    "category": 1,
    "example_path": [
@@ -195,7 +196,8 @@
    ],
    "example_root": "prosa.analysis.abstract.ideal.cumulative_bounds.cumulative_interference_is_bounded_by_total_service",
    "family": "REFERENCE_COHERENCE",
-   "members": 25,
+   "mechanism": "an argument for a level shared with the referring declaration is not that level's (R2F) reading: JobType/TaskType's second level is read max(u51+1, u58); unification with a single-level sort `?a+1` makes the bounded solver set the free level to 0 (max(?a+1, ?x) = ?a+1 \u21d2 ?x := 0), which the generality check refuses (last tier).",
+   "members": 26,
    "members_sample": [
     "prosa.analysis.facts.delay_propagation.propagated_arrival_curve_valid",
     "prosa.implementation.definitions.generic_scheduler.schedule_up_to",
@@ -216,19 +218,20 @@
    "message_shapes": [
     [
      "reference to X: coherence: source level X is shared with the referring declaration, so its argument must be X,",
-     25
+     26
     ]
    ],
    "minimal_reproducer": "prosa.analysis.facts.delay_propagation.propagated_arrival_curve_valid",
-   "priority": "unranked",
-   "protected_members": 25,
+   "priority": "P2-adjacent",
+   "proposal": "the same coupled-reference representation question (a single-level occurrence vs a two-level R2F reading); not changed without approval.",
+   "protected_members": 26,
    "reproducer_closure": 59,
    "roots_blocked_only_by_this_family": {
     "classic": 0,
-    "modern": 225,
-    "total": 225
+    "modern": 226,
+    "total": 226
    },
-   "status": "open"
+   "status": "diagnosed"
   },
   {
    "acceptance": "-",
@@ -529,21 +532,20 @@
    "status": "open"
   },
   {
-   "acceptance": "translation, audit, tasks and assembly consistent; no hypothesis reused at a wrong type.",
    "affected_roots": {
     "classic": 0,
-    "modern": 36,
-    "total": 36
+    "modern": 35,
+    "total": 35
    },
    "category": 1,
    "example_path": [
     "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP"
    ],
    "example_root": "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP",
-   "family": "MULTI_INSTANCE_PREREQUISITE",
-   "mechanism": "a pending prerequisite statement is needed at two universe instances in one declaration; the hypothesis telescope has one binder per prerequisite name.",
+   "family": "UNIVERSE_OTHER",
    "members": 9,
    "members_sample": [
+    "Corelib.Classes.CMorphisms.iffT_flip_arrow_subrelation",
     "prosa.implementation.refinements.FP.fast_search_space.ohep_task",
     "prosa.implementation.refinements.FP.fast_search_space.blocking_bound_NP",
     "prosa.implementation.refinements.arrival_curve.task_rbf",
@@ -551,24 +553,34 @@
     "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP",
     "prosa.implementation.refinements.EDF.fast_search_space.correct_search_space",
     "prosa.implementation.refinements.FP.fast_search_space.total_hep_rbf",
-    "prosa.implementation.refinements.FP.fast_search_space.total_ohep_rbf",
-    "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
+    "prosa.implementation.refinements.FP.fast_search_space.total_ohep_rbf"
    ],
    "message_shapes": [
     [
-     "pending prerequisite X is needed at two different types",
-     9
+     "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3, u_residual_4, u_residual_",
+     3
+    ],
+    [
+     "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3] not justified: the declar",
+     3
+    ],
+    [
+     "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3, u_residual_4] not justifi",
+     2
+    ],
+    [
+     "reference to X: argument v_1 + 1 mentions v_1, which is not a parameter of the referring declaration",
+     1
     ]
    ],
-   "minimal_reproducer": "prosa.implementation.refinements.FP.fast_search_space.ohep_task",
-   "priority": "P3",
-   "proposal": "instance-aware prerequisite identities (one hypothesis per (prerequisite, instance)).",
-   "protected_members": 9,
-   "reproducer_closure": 100,
+   "minimal_reproducer": "Corelib.Classes.CMorphisms.iffT_flip_arrow_subrelation",
+   "priority": "unranked",
+   "protected_members": 8,
+   "reproducer_closure": 7,
    "roots_blocked_only_by_this_family": {
     "classic": 0,
-    "modern": 18,
-    "total": 18
+    "modern": 17,
+    "total": 17
    },
    "status": "open"
   },
@@ -717,40 +729,6 @@
    "priority": "unranked",
    "protected_members": 0,
    "reproducer_closure": 4,
-   "roots_blocked_only_by_this_family": {
-    "classic": 0,
-    "modern": 0,
-    "total": 0
-   },
-   "status": "open"
-  },
-  {
-   "affected_roots": {
-    "classic": 0,
-    "modern": 1,
-    "total": 1
-   },
-   "category": 1,
-   "example_path": [
-    "prosa.implementation.refinements.EDF.refinements.refine_total_rbf'",
-    "Corelib.Classes.CMorphisms.iffT_flip_arrow_subrelation"
-   ],
-   "example_root": "prosa.implementation.refinements.EDF.refinements.refine_total_rbf'",
-   "family": "UNIVERSE_OTHER",
-   "members": 1,
-   "members_sample": [
-    "Corelib.Classes.CMorphisms.iffT_flip_arrow_subrelation"
-   ],
-   "message_shapes": [
-    [
-     "reference to X: argument v_1 + 1 mentions v_1, which is not a parameter of the referring declaration",
-     1
-    ]
-   ],
-   "minimal_reproducer": "Corelib.Classes.CMorphisms.iffT_flip_arrow_subrelation",
-   "priority": "unranked",
-   "protected_members": 0,
-   "reproducer_closure": 7,
    "roots_blocked_only_by_this_family": {
     "classic": 0,
     "modern": 0,
@@ -46538,7 +46516,7 @@
   },
   "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP"
@@ -46547,11 +46525,11 @@
     "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP"
    ],
    "family": "modern",
-   "status": "TRANSLATION_FAILED"
+   "status": "UNIVERSE_REJECTED"
   },
   "prosa.implementation.refinements.EDF.fast_search_space.bound_on_total_hep_workload": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.arrival_curve.task_rbf"
@@ -46565,7 +46543,7 @@
   },
   "prosa.implementation.refinements.EDF.fast_search_space.check_point_FP": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.arrival_curve.task_rbf"
@@ -46580,7 +46558,7 @@
   },
   "prosa.implementation.refinements.EDF.fast_search_space.check_point_NP": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP",
@@ -46595,7 +46573,7 @@
   },
   "prosa.implementation.refinements.EDF.fast_search_space.correct_search_space": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.EDF.fast_search_space.correct_search_space"
@@ -46604,11 +46582,11 @@
     "prosa.implementation.refinements.EDF.fast_search_space.correct_search_space"
    ],
    "family": "modern",
-   "status": "TRANSLATION_FAILED"
+   "status": "UNIVERSE_REJECTED"
   },
   "prosa.implementation.refinements.EDF.fast_search_space.search_space_subset_EDF": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.EDF.fast_search_space.correct_search_space"
@@ -46858,10 +46836,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -46909,10 +46887,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -46960,10 +46938,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -47011,10 +46989,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -47062,10 +47040,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -47114,10 +47092,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -47259,7 +47237,6 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "POLYMORPHIC_INSTANCE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
@@ -47316,7 +47293,7 @@
   },
   "prosa.implementation.refinements.FP.fast_search_space.blocking_bound_NP": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.FP.fast_search_space.blocking_bound_NP"
@@ -47325,11 +47302,11 @@
     "prosa.implementation.refinements.FP.fast_search_space.blocking_bound_NP"
    ],
    "family": "modern",
-   "status": "TRANSLATION_FAILED"
+   "status": "UNIVERSE_REJECTED"
   },
   "prosa.implementation.refinements.FP.fast_search_space.check_point_FP": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.FP.fast_search_space.total_ohep_rbf",
@@ -47344,7 +47321,7 @@
   },
   "prosa.implementation.refinements.FP.fast_search_space.check_point_NP": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.FP.fast_search_space.blocking_bound_NP",
@@ -47360,7 +47337,7 @@
   },
   "prosa.implementation.refinements.FP.fast_search_space.correct_search_space": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.FP.fast_search_space.correct_search_space"
@@ -47369,11 +47346,11 @@
     "prosa.implementation.refinements.FP.fast_search_space.correct_search_space"
    ],
    "family": "modern",
-   "status": "TRANSLATION_FAILED"
+   "status": "UNIVERSE_REJECTED"
   },
   "prosa.implementation.refinements.FP.fast_search_space.ohep_task": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.FP.fast_search_space.ohep_task"
@@ -47382,11 +47359,11 @@
     "prosa.implementation.refinements.FP.fast_search_space.ohep_task"
    ],
    "family": "modern",
-   "status": "TRANSLATION_FAILED"
+   "status": "UNIVERSE_REJECTED"
   },
   "prosa.implementation.refinements.FP.fast_search_space.search_space_subset_FP": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.FP.fast_search_space.correct_search_space"
@@ -47400,7 +47377,7 @@
   },
   "prosa.implementation.refinements.FP.fast_search_space.total_hep_rbf": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.FP.fast_search_space.total_hep_rbf"
@@ -47409,11 +47386,11 @@
     "prosa.implementation.refinements.FP.fast_search_space.total_hep_rbf"
    ],
    "family": "modern",
-   "status": "TRANSLATION_FAILED"
+   "status": "UNIVERSE_REJECTED"
   },
   "prosa.implementation.refinements.FP.fast_search_space.total_ohep_rbf": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.FP.fast_search_space.total_ohep_rbf"
@@ -47422,7 +47399,7 @@
     "prosa.implementation.refinements.FP.fast_search_space.total_ohep_rbf"
    ],
    "family": "modern",
-   "status": "TRANSLATION_FAILED"
+   "status": "UNIVERSE_REJECTED"
   },
   "prosa.implementation.refinements.FP.nonpreemptive_sched.Job": {
    "blocker_families": [
@@ -47661,8 +47638,8 @@
    "blocker_families": [
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.hrel.fun_hrel",
@@ -47687,8 +47664,8 @@
    "blocker_families": [
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.hrel.fun_hrel",
@@ -47714,10 +47691,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -47766,10 +47743,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -47818,10 +47795,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -47871,10 +47848,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -47942,8 +47919,8 @@
   "prosa.implementation.refinements.FP.refinements.refine_ohep_task": {
    "blocker_families": [
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.hrel.fun_hrel",
@@ -48030,10 +48007,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -48082,10 +48059,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -48134,10 +48111,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -48605,10 +48582,10 @@
     "COUPLED_BINDER_LEVELS",
     "COURSE_OF_VALUES",
     "KERNEL_OTHER",
-    "MULTI_INSTANCE_PREREQUISITE",
     "PROP_TYPE_CUMULATIVITY",
     "REFERENCE_RAISING",
-    "SOLUTION_FACT_VIOLATED"
+    "SOLUTION_FACT_VIOLATED",
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
@@ -48691,7 +48668,7 @@
   },
   "prosa.implementation.refinements.arrival_curve.task_rbf": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.arrival_curve.task_rbf"
@@ -48700,11 +48677,11 @@
     "prosa.implementation.refinements.arrival_curve.task_rbf"
    ],
    "family": "modern",
-   "status": "TRANSLATION_FAILED"
+   "status": "UNIVERSE_REJECTED"
   },
   "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "REFERENCE_COHERENCE"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
@@ -48713,11 +48690,11 @@
     "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
    ],
    "family": "modern",
-   "status": "TRANSLATION_FAILED"
+   "status": "UNIVERSE_REJECTED"
   },
   "prosa.implementation.refinements.fast_search_space_computation.structure_of_correct_search_space": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.arrival_curve.task_rbf"
@@ -48731,7 +48708,7 @@
   },
   "prosa.implementation.refinements.fast_search_space_computation.task_search_space_subset": {
    "blocker_families": [
-    "MULTI_INSTANCE_PREREQUISITE"
+    "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
     "prosa.implementation.refinements.arrival_curve.task_rbf"
@@ -82336,7 +82313,7 @@
    "status": "BLOCKED_DEPENDENCY"
   }
  },
- "run": "/home/shunqwang4/research/r2l-run-R2/runs/st-corpus-R2",
+ "run": "/home/shunqwang4/research/r2l-run-R3/runs/st-corpus-R3",
  "schema": "rocq2lean-rule-backlog/1",
  "unclaimed_by_family": {
   "classic": 844,

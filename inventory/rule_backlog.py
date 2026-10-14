@@ -102,11 +102,16 @@ FAMILY_NOTES = {
         "unification.", "proposal": "analyse together with max coupling (the identification usually comes "
         "from max(...) arguments).", "acceptance": "-", "status": "open"},
     "MULTI_INSTANCE_PREREQUISITE": {
-        "category": 1, "priority": "P3", "mechanism": "a pending prerequisite statement is needed at two "
-        "universe instances in one declaration; the hypothesis telescope has one binder per prerequisite name.",
-        "proposal": "instance-aware prerequisite identities (one hypothesis per (prerequisite, instance)).",
-        "acceptance": "translation, audit, tasks and assembly consistent; no hypothesis reused at a wrong type.",
-        "status": "open"},
+        "category": 1, "priority": "P3 (done, entry 8)", "mechanism": "a pending prerequisite statement is needed "
+        "at two universe instances in one declaration.", "proposal": "implemented: one hypothesis per instance.",
+        "acceptance": "test-multi-instance; the 9 corpus rows now stop at their next blockers.", "status": "done"},
+    "REFERENCE_COHERENCE": {
+        "category": 1, "priority": "P2-adjacent", "mechanism": "an argument for a level shared with the referring "
+        "declaration is not that level's (R2F) reading: JobType/TaskType's second level is read max(u51+1, u58); "
+        "unification with a single-level sort `?a+1` makes the bounded solver set the free level to 0 "
+        "(max(?a+1, ?x) = ?a+1 ⇒ ?x := 0), which the generality check refuses (last tier).",
+        "proposal": "the same coupled-reference representation question (a single-level occurrence vs a two-level "
+                    "R2F reading); not changed without approval.", "acceptance": "-", "status": "diagnosed"},
     "PROP_TYPE_CUMULATIVITY": {
         "category": 1, "priority": "P4", "mechanism": "a Prop-valued term where Rocq expects Type (Prop <= Type "
         "cumulativity), mostly CoqEAL parametricity relations.", "proposal": "representation decision "
