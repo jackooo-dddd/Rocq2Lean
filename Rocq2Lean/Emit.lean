@@ -94,6 +94,9 @@ structure DeclResult where
   /-- R-SPLIT (docs/LEVEL_SPLIT.md): source levels translated through the split view — each level, the
   parameter binders (positions) whose sorts it was, and their copies (one universe parameter each). -/
   levelSplit : Array (String × Array Nat × Array String) := #[]
+  /-- R3G-F (docs/RESULT_SORT_LEVELS.md): implicit levels of an inductive block taken from references in
+  its constructor fields at a level that is result-sort-only in the referenced declaration. -/
+  resultSortImplicit : Array String := #[]
   /-- M6: constants δ-inlined in the body (`Set`-motive constants used at a `Prop` family). -/
   deltaInlined : Array String := #[]
   /-- R3↓: accepted with references instantiated below shared levels (cumulativity tier). -/
@@ -1036,7 +1039,7 @@ def templateBinding (i : IR.InductiveDecl) (globals : Array String) :
 
 def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
     (raw : Json) (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false)
-    (plain : Bool := false) :
+    (plain : Bool := false) (rsOwn : Array String := #[]) :
     MetaM (DeclResult × Option IndTarget) := do
   let base : DeclResult := { source := i.name, kind := "inductive", status := "" }
   let (missing, failed, pending) := blockedDeps results (i.typeDeps.filter (· != i.name))
@@ -1196,7 +1199,36 @@ where
           !globals.contains l && !picks.contains l && !genv.templateLevels.contains l &&
           cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) && (occ.filter (·.1 == l)).all (·.2.hasMVar)
         if let some l := pick then picks := picks.push l
-      return ({ base with status := "DISCOVERED", implicitLevels := picks.qsort (· < ·) }, none)
+      -- R3G-F (docs/RESULT_SORT_LEVELS.md): a class occurring only in constructor fields, at references
+      -- for a level that is result-sort-only in the referenced declaration and that the native facts
+      -- bound by a level of this block's result sort (so in Rocq the field fits the block's sort): that
+      -- level, rather than R3″'s 0
+      let resLv : Array String := if i.bodies.size == 1 then
+          match i.bodies[0]!.sort with
+          | .type u => u.filterMap fun e => match e.level with | .global n => some n | _ => none
+          | _ => #[]
+        else #[]
+      let mut occF : Array (Name × String × Level) := #[]
+      for c in ctors do
+        for (n, ls) in constOccurrences (← instLevelMVars c.type) do
+          if let some gs := genv.constGlobals[n]? then
+            let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
+            if gs.size == ls.length then
+              for l in gs, σ in ls do occF := occF.push (n, l, ← instantiateLevelMVars σ)
+      let mut rsPicks : Array String := #[]
+      if !isTemplate && !resLv.isEmpty then
+        for (_, _, σ) in occF do
+          unless σ.isMVar && !done.contains σ && !inArity.contains σ do continue
+          done := done.push σ
+          let occσ := occF.filter (·.2.2 == σ)
+          let cls := occσ.map (·.2.1)
+          let pick := cls.toList.eraseDups.find? fun l =>
+            !globals.contains l && !picks.contains l && !rsPicks.contains l && !genv.templateLevels.contains l &&
+            occσ.all (fun (n, l', _) => l' == l && ((genv.resultOnly[n]?).getD #[]).contains l) &&
+            resLv.any (fun s => entails genv.facts l s 0)
+          if let some l := pick then rsPicks := rsPicks.push l
+      return ({ base with status := "DISCOVERED", implicitLevels := (picks ++ rsPicks).qsort (· < ·),
+                          resultSortImplicit := rsPicks.qsort (· < ·) }, none)
     -- R3″: references inside the block (to generalized constants / level-parameter inductives) carry
     -- level metavariables; those not fixed by type-checking (nor taken by R3G) take their least
     -- R3-admissible value 0, and R3 is checked on every universe argument of the block.
@@ -1261,6 +1293,7 @@ where
                           universeLowered := lower, plainLevels := plain,
                           levelParams := lparams, paramLevels := globals, isTemplate, templateParams,
                           implicitLevels := extraOwn.filter (!(globalsOfInd i).contains ·),
+                          resultSortImplicit := rsOwn,
                           targetCtors := ctors.map fun c => (c.name, c.type) }, some tgt)
     | .rejected msg => return ({ base with status := "KERNEL_REJECTED", message := msg }, none)
 
@@ -1302,6 +1335,7 @@ def DeclResult.toJson (r : DeclResult) : Json :=
       Json.mkObj [("level", m), ("sigma", levelJson l), ("in_type", Json.bool (r.r2bpInType.contains m))])),
     ("sort_lowered_levels", Json.arr (r.sortLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
     ("result_sort_inherited", Json.bool r.resultSortInherited),
+    ("result_sort_implicit_levels", Json.arr (r.resultSortImplicit.map Json.str)),
     ("level_split", Json.arr (r.levelSplit.map fun (l, ps, cs) =>
       Json.mkObj [("level", Json.str l), ("params", Json.arr (ps.map fun (k : Nat) => Json.num k)), ("copies", Json.arr (cs.map Json.str))])),
     ("protected", Json.bool r.protectedIface),
@@ -1807,15 +1841,21 @@ where
         -- M6: each attempt first with plain universe parameters (more general: the R2F interpretation
         -- also bakes in facts that only uses elsewhere impose, e.g. Ring_theory.ring_morph's
         -- C ≥ R from IDmorph), then with the R2F interpretation
-        let run1 (eo : Array String) (lower : Bool) : MetaM (DeclResult × Option IndTarget) := do
-          let (a, ta) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (plain := true)
+        let run1 (eo : Array String) (lower : Bool) (rs : Array String := #[]) : MetaM (DeclResult × Option IndTarget) := do
+          let (a, ta) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (plain := true) (rsOwn := rs)
           if a.accepted then return (a, ta)
-          processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower)
+          processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (rsOwn := rs)
         let (r, t?) ← do
           let (d, _) ← processInductive genv results i src.rawDecls[i.name]! (discover := true)
           if d.status == "DISCOVERED" && !d.implicitLevels.isEmpty then
-            let (r1, t1) ← run1 d.implicitLevels false
-            if r1.accepted then pure (r1, t1) else run1 #[] false
+            let (r1, t1) ← run1 d.implicitLevels false d.resultSortImplicit
+            if r1.accepted then pure (r1, t1) else
+            -- (R3G-F levels refused by the kernel: the arity's implicit levels alone, as before)
+            let old := d.implicitLevels.filter (!d.resultSortImplicit.contains ·)
+            if !d.resultSortImplicit.isEmpty && !old.isEmpty then
+              let (r2, t2) ← run1 old false
+              if r2.accepted then pure (r2, t2) else run1 #[] false
+            else run1 #[] false
           else run1 #[] false
         -- R3↓ last (reported): references in the block instantiated below its shared levels
         let (r, t?) ← if r.accepted || !(r.status == "KERNEL_REJECTED" || r.status == "UNIVERSE_REJECTED") then pure (r, t?) else do
@@ -1828,6 +1868,10 @@ where
           if let some tn := r.target then
             for n in #[tn] ++ r.targetCtors.map (·.1) do
               genv := { genv with constGlobals := genv.constGlobals.insert n r.paramLevels }
+            -- R3G-F: the type's result-sort-only levels (source) and its own R3G-F levels
+            if !r.isTemplate then
+              let ro := Split.resultOnlyLevels i ++ r.resultSortImplicit
+              unless ro.isEmpty do genv := { genv with resultOnly := genv.resultOnly.insert tn ro }
             for (l, _) in r.templateParams do
               genv := { genv with templateLevels := genv.templateLevels.insert l }
         pure r

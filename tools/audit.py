@@ -1977,6 +1977,7 @@ class Facts:
         return any(self.rel.get((a, c)) == "lt" and self.entails(c, b, k - 1) for c in self.levels)
 
 
+RSI_CHECKED = [0]   # R3G-F rows' levels checked (check_result_sort_implicit)
 SPLIT_COPIES = {}    # R-SPLIT: copy level -> its source level (set by main_statement; read by Facts and R3)
 
 
@@ -2098,6 +2099,97 @@ def level_split_view(d):
         e = u[i]
         u[i:i + 1] = [{**e, "l": {**e["l"], "n": c}} for c in ren[q]]
     return v, infos
+
+
+def result_only_levels(d):
+    """R3G-F (docs/RESULT_SORT_LEVELS.md), independently: the global levels of a single-body inductive
+    every occurrence of which (anywhere in the exported declaration) lies in its result sort: the
+    arity's final sort or the body's `sort`."""
+    if d.get("kind") != "inductive" or len(d["bodies"]) != 1:
+        return set()
+    b = d["bodies"][0]
+    out = set()
+    for l in source_globals(b["type"], set()):
+        occ = _occ_paths(d, l)
+        res = set(_final_sort_paths(b["type"], ("bodies", 0, "type"), l))
+        if b["sort"].get("k") == "type":
+            res |= {("bodies", 0, "sort", "u", i, "l", "n") for i, e in enumerate(b["sort"]["u"])
+                    if e["l"].get("k") == "global" and e["l"].get("n") == l}
+        if res and occ == res:
+            out.add(l)
+    return out
+
+
+def _sort_params(e, acc):
+    """Universe parameters occurring inside a sort node of a Lean term (JSON), not in instances."""
+    st = [e]
+    while st:
+        x = st.pop()
+        if isinstance(x, dict):
+            if x.get("k") == "sort":
+                st2 = [x.get("l")]
+                while st2:
+                    y = st2.pop()
+                    if isinstance(y, dict):
+                        if y.get("k") == "param":
+                            acc.add(y["n"])
+                        st2.extend(v for v in y.values() if isinstance(v, (dict, list)))
+                continue
+            st.extend(v for v in x.values() if isinstance(v, (dict, list)))
+        elif isinstance(x, list):
+            st.extend(x)
+    return acc
+
+
+def _all_params(e, acc):
+    st = [e]
+    while st:
+        x = st.pop()
+        if isinstance(x, dict):
+            if x.get("k") == "param":
+                acc.add(x["n"])
+            st.extend(v for v in x.values() if isinstance(v, (dict, list)))
+        elif isinstance(x, list):
+            st.extend(x)
+    return acc
+
+
+def check_result_sort_implicit(facts, d, r, gen, ro_of):
+    """R3G-F, independently of the translator: every reported result-sort implicit level l of a block
+    (1) is an implicit level, not a level of the block's source, of a non-template block; (2) occurs in a
+    constructor field as the argument for l of a reference to a declaration in which l is result-sort-only
+    (`ro_of`, from that declaration's source, or that declaration's own R3G-F levels); (3) is bounded by a
+    level of the block's source result sort in the native graph; (4) changes no quantification range: its
+    parameter occurs in no binder domain of the arity, and as a sort nowhere in a constructor type (only
+    in universe arguments of references)."""
+    rsi = r.get("result_sort_implicit_levels") or []
+    if not rsi:
+        return 0
+    if template_binding(d) is not None or len(d["bodies"]) != 1:
+        raise Mismatch("R3G-F levels on a template or mutual block")
+    srt = d["bodies"][0]["sort"]
+    res_lv = {e["l"]["n"] for e in srt.get("u") or [] if e["l"].get("k") == "global"} if srt.get("k") == "type" else set()
+    imp = set(r.get("implicit_levels") or [])
+    ctors = [c["type"] for c in r.get("target_ctors") or []]
+    self_n = {r.get("target")} | {c["name"] for c in r.get("target_ctors") or []}
+    for l in rsi:
+        if l not in imp or l in ind_globals(d):
+            raise Mismatch(f"R3G-F level {l} is not an implicit level of the block")
+        if not any(nm not in self_n and nm in gen and l in ro_of(nm) and l in gen[nm]
+                   for c in ctors for nm, _ in const_occurrences(c, [])):
+            raise Mismatch(f"R3G-F level {l} is not result-sort-only in a declaration referenced by a field")
+        if not any(facts.entails(l, s_, 0) for s_ in res_lv):
+            raise Mismatch(f"R3G-F level {l} is not bounded by the block's result sort {sorted(res_lv)} in the source graph")
+        p = level_param(l)
+        x = r.get("target_type")
+        while x is not None and x.get("k") == "forall":
+            if p in _all_params(x["t"], set()):
+                raise Mismatch(f"R3G-F level {l} occurs in a parameter or index range of the block")
+            x = x["b"]
+        for c in ctors:
+            if p in _sort_params(c, set()):
+                raise Mismatch(f"R3G-F level {l} occurs as a sort in a constructor type (a field range)")
+    return len(rsi)
 
 
 def level_unsplit(v, infos):
@@ -2724,6 +2816,17 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                 TEMPLATE_LEVELS.update(tb_ or {})
                 for n_ in [r_["target"]] + [c["name"] for c in r_.get("target_ctors", [])]:
                     gen[n_] = params_
+    # R3G-F: the result-sort-only levels of each generated inductive type, from its source (and its own
+    # R3G-F levels, themselves checked when that row is audited)
+    t2s_ = {r_["target"]: s_ for s_, r_ in rows.items() if r_.get("status") == "TRANSLATED_AND_CHECKED"
+            and r_.get("target") and decls[s_]["kind"] == "inductive"}
+    ro_memo = {}
+
+    def ro_of(nm):
+        if nm not in ro_memo:
+            s_ = t2s_.get(nm)
+            ro_memo[nm] = (result_only_levels(decls[s_]) | set(rows[s_].get("result_sort_implicit_levels") or [])) if s_ else set()
+        return ro_memo[nm]
     # R-SPLIT: at references, a copy stands for its source level (an argument `a <= l`: R3)
     for n_ in gen:
         gen[n_] = [SPLIT_COPIES.get(x, x) for x in gen[n_]]
@@ -2830,6 +2933,7 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                     if tb_i is None and not r_.get("plain_levels"):
                         bl = own_level_interp(facts, params_i)     # explicit and implicit levels (R2F)
                     self_n = {r_.get("target")} | {c["name"] for c in r_.get("target_ctors", [])}
+                    RSI_CHECKED[0] += check_result_sort_implicit(facts, d_, r_, gen, ro_of)
                     for l in r_.get("implicit_levels") or []:
                         want = level_nf(bl[l]) if l in bl else level_nf({"k": "param", "n": level_param(l)})
                         if not any(nm not in self_n and len(us) - (poly or {}).get(nm, 0) == len(gen[nm]) and any(
@@ -3791,7 +3895,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
            "assembly": ({"proofs_assembled": len(proved), "by_assembly_state": dict(sorted(by_asm.items(), key=str))}
                         if assembly else None),
            "status": "OK" if not problems else "AUDIT_REJECTED",
-           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked, "level_split_checked": split_checked,
+           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked, "level_split_checked": split_checked, "result_sort_implicit_checked": RSI_CHECKED[0],
            "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
            "definition_type_specialization_candidates": {
                "note": "non-protected definitions only (protected ones are rejected): a binder-domain level of the "

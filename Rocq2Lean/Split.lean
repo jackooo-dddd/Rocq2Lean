@@ -241,4 +241,22 @@ def copiedRelations (facts : UniverseFacts) (infos : Array Info) : Array (String
       if a == inf.level && b != inf.level && (r == "le" || r == "lt") then acc ++ inf.names.map fun n => (n, r, b) else acc)
       (acc ++ inf.names.map fun n => (n, "le", inf.level))) #[]
 
+/-- R3G-F (docs/RESULT_SORT_LEVELS.md): the global levels of a single-body inductive that occur in its
+declaration only in its result sort (the arity's final sort and the body's `sort`): nowhere in a
+parameter, index, constructor, projection or the native metadata. -/
+def resultOnlyLevels (i : InductiveDecl) : Array String := Id.run do
+  unless i.bodies.size == 1 do return #[]
+  let b := i.bodies[0]!
+  let mut out := #[]
+  for l in globalsOfTerm b.type do
+    if inNative i.native l then continue
+    let res := finalSortCount l b.type + countSort l b.sort
+    let total := countLevel l b.type + countSort l b.sort + i.params.foldl (fun a p => a + countLevel l p.type) 0 +
+      b.indices.foldl (fun a p => a + countLevel l p.type) 0 +
+      b.ctors.foldl (fun a c => a + countLevel l c.type + c.args.foldl (fun a p => a + countLevel l p.type) 0 +
+        c.indices.foldl (fun a t => a + countLevel l t) 0) 0 +
+      b.projs.foldl (fun a (_, _, t) => a + countLevel l t) 0
+    if res > 0 && total == res then out := out.push l
+  return out
+
 end Rocq2Lean.Split

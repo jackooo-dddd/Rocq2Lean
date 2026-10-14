@@ -67,6 +67,9 @@ structure GEnv where
   constLevels : Std.HashMap String Nat := {}
   /-- Source global level of each universe parameter of each accepted constant, by target name. -/
   constGlobals : Std.HashMap Name (Array String) := {}
+  /-- R3G-F (docs/RESULT_SORT_LEVELS.md): for an accepted inductive type (by target name), the source
+  levels that occur in its declaration only in its result sort (and its own R3G-F implicit levels). -/
+  resultOnly : Std.HashMap Name (Array String) := {}
   /-- Template levels of the translated template inductives (R5, exempt from R3). -/
   templateLevels : Std.HashSet String := {}
   /-- Native universe facts of the export. -/

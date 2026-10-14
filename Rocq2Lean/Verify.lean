@@ -201,6 +201,20 @@ private def kindOf : ConstantInfo → String
 
 private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k).toOption.getD ""
 
+/-- R3G-F (docs/RESULT_SORT_LEVELS.md), on the imported inductive alone: the parameter `p` of a
+result-sort implicit level occurs in no binder domain of the arity (parameters and indices keep their
+ranges) but in its final sort, and as a sort in no constructor type (fields keep their ranges; it may
+occur in universe arguments of references). -/
+partial def resultImplicitOk (arity : Expr) (ctors : List Expr) (p : Name) : Bool :=
+  let hasP (e : Expr) := (collectLevelParams {} e).params.contains p
+  let asSort (e : Expr) := (e.find? fun x => match x with
+    | .sort u => (collectLevelParams {} (.sort u)).params.contains p
+    | _ => false).isSome
+  let rec arityOk : Expr → Bool
+    | .forallE _ d b _ => !hasP d && arityOk b
+    | e => hasP e
+  arityOk arity && ctors.all (!asSort ·)
+
 /-- R-SPLIT (docs/LEVEL_SPLIT.md), on the imported declaration's type alone: as a *sort*, the
 universe parameter `p` of a copy occurs only in the final sort of the domain of binder `pos` (after
 `nh` hypothesis binders) — nowhere else in that domain, in no other binder's domain — and otherwise
@@ -577,6 +591,18 @@ partial def splitPositionOk (ty : Expr) (nh pos : Nat) (p : Name) : Bool :=
           let p := levelParamName c
           unless ci.levelParams.contains p && splitPositionOk ci.type nh k p do
             problems := note "levels" s!"{s}: split level {c} is not exactly the sort of parameter binder {k}" problems
+  -- R3G-F (detector `levels`): result-sort implicit levels change no quantification range
+  for (s, r) in accepted do
+    let rsi := (r.getObjValAs? (Array String) "result_sort_implicit_levels").toOption.getD #[]
+    if rsi.isEmpty then continue
+    match env.find? (getStr r "target").toName with
+    | some (.inductInfo iv) =>
+      let ctys := iv.ctors.filterMap fun c => (env.find? c).map (·.type)
+      for l in rsi do
+        let p := levelParamName l
+        unless iv.levelParams.contains p && resultImplicitOk iv.type ctys p do
+          problems := note "levels" s!"{s}: result-sort implicit level {l} is not confined to the block's result sort and to universe arguments" problems
+    | _ => problems := note "levels" s!"{s}: result-sort implicit levels on a declaration that is not an imported inductive" problems
   for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)
   let dets := ["binding", "coverage", "roots", "presence", "kind", "safety", "levels", "type", "value", "ctors",
                "target_deps", "axioms", "rec_indices", "residual_levels", "instance_levels", "interface"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
