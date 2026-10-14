@@ -1,0 +1,78 @@
+{
+ "schema": "rocq2lean-conversion-dependence/1",
+ "run": "/home/shunqwang4/research/r2l-run-R2/runs/st-corpus-R2",
+ "translation_report_sha256": "c9959122ca5248ff32f78e22738f2d25ee158e4d0ba49720cd3fc170a6369f7f",
+ "lowered": [
+  "mathcomp.boot.div.edivn_rec",
+  "mathcomp.boot.div.modn_rec"
+ ],
+ "dependents": 887,
+ "constants_analyzed": 745,
+ "not_analyzed": [],
+ "processes": [
+  {
+   "part": 0,
+   "exit": 0,
+   "seconds": 10.6
+  },
+  {
+   "part": 1,
+   "exit": 0,
+   "seconds": 10.3
+  }
+ ],
+ "by_rocq_verdict": {
+  "CONV_OK": 886,
+  "CONV_NEEDS": 1
+ },
+ "needs_unfolding": [
+  {
+   "declaration": "mathcomp.boot.div.gcdn",
+   "rocq": "CONV_NEEDS",
+   "reason": "guard deferred",
+   "lean": "TRANSLATION_FAILED",
+   "lean_message": "internal error: unknown metavariable `?_uniq.422118`"
+  }
+ ],
+ "claimed_although_needing_unfolding": [],
+ "lean_kernel_failures_among_dependents": [
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_11",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_12",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_13",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_14",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_15",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_2",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_3",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_4",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_9",
+  "mathcomp.boot.div.gcdn",
+  "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP",
+  "prosa.implementation.refinements.EDF.fast_search_space.correct_search_space",
+  "prosa.implementation.refinements.FP.fast_search_space.correct_search_space",
+  "prosa.implementation.refinements.FP.fast_search_space.total_hep_rbf",
+  "prosa.implementation.refinements.FP.fast_search_space.total_ohep_rbf",
+  "prosa.implementation.refinements.arrival_curve.task_rbf",
+  "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
+ ],
+ "lean_kernel_failures_not_explained": [
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_11",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_12",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_13",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_14",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_15",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_2",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_3",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_4",
+  "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_9",
+  "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP",
+  "prosa.implementation.refinements.EDF.fast_search_space.correct_search_space",
+  "prosa.implementation.refinements.FP.fast_search_space.correct_search_space",
+  "prosa.implementation.refinements.FP.fast_search_space.total_hep_rbf",
+  "prosa.implementation.refinements.FP.fast_search_space.total_ohep_rbf",
+  "prosa.implementation.refinements.arrival_curve.task_rbf",
+  "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
+ ],
+ "status": "OK"
+}

@@ -599,3 +599,94 @@ Evidence: `coverage/{V-r2bv,transitions-AP-to-V-r2bv,transitions-A-to-V-r2bv}.js
 `provenance/CORPUS_MANIFEST.json` (current = R2B-V; `-AP`, `-C1`, `-B`, `-A` kept),
 `termination/CONVERSION_DEPENDENCE-V.json`, `PROOF_TASKS.jsonl`, `test_universe_c.json`,
 `docs/UNIVERSE_FAMILY_C.md` §4.
+
+---
+
+## Entry 7 — Rule round 2: binder-level independence (P1), jointly occurring level metavariables (P2), R2B-P validation parity (2026-10-14)
+
+Commit `d40a55c` (branch `rules-r2`, from `main` `64195dc`); run worktree `r2l-run-R2` (same commit),
+run `runs/st-corpus-R2` on the A′ export (chunk evidence reused, `SAME_TOOLS`). Backlog refreshed:
+`reports/statement_only/RULE_BACKLOG.{md,json}` (tool `inventory/rule_backlog.py`; every unclaimed
+protected root traced to its direct blockers; 0 UNCLASSIFIED).
+
+### (1) What was changed and why
+
+* **P1 — diagnosis first.** The six `refine_*` regressions of entry 4 were statement rows whose
+  defaulted level was absorbed by `max`. Since A′ they are opaque data with bodies; what blocks them now
+  are their *obligations*, whose residual levels are **not** irrelevant: CoqEAL's `list_R` has one level
+  (`Datatypes.190`) for both carriers and the relation, so the Lean translation identifies the
+  obligation's independent binder levels `1580`, `1581`, `1582` (`A : Type@{1580}`, `C : Type@{1581}`,
+  facts `1580 ≤ 1582`, `1581 ≤ 1582` only) — defaulting would narrow. The six roots are also blocked by
+  CoqEAL `all_R`/`map_R`/`last_R`/`cat_R`/`foldr_R` (course-of-values).
+* **P1 — rule implemented (translator `Rocq2Lean/Emit.lean` `binderIndependence`; independent audit
+  copy `tools/audit.py` `check_binder_independence`).** A statement's binder levels keep the source's
+  independence: a translated order between two binder levels (identification included) must be entailed
+  by the native facts; a binder level fixed at a closed level must be forced `≤ Set`. This source-derived
+  check **replaces** C-1's blanket refusal of defaulted statement levels (translator) and the
+  self-report-based rejection (audit): a residual default is acceptable exactly when the defaulted
+  statement passes binder independence and reference generality. Re-audit of the previous run
+  (`st-corpus-V`) with it: 0 problems (no hidden false acceptance of this kind).
+* **P2 (translator, statement rows).** Level metavariables that occur only jointly — summands of one
+  `max` with one offset in every level expression, the hypothesis telescope excluded — are identified
+  before R3G names classes (the statement depends only on their maximum). Restricted to statements
+  (for a definition the residual-default path stays: identifying there made `eqtype.Sub` fail R3).
+* **P2 diagnosis of the rest.** The other obligations of the `HB_unnamed_mixin_10x` family are not
+  max-coupled: their `Countable` carrier level is fixed to 0 *before* R3G by unification through
+  `ssrfun.pcancel` (one universe parameter for both type arguments, applied to `nat`/`option`), which
+  Rocq accepts by cumulativity: the coupled-reference mechanism of P1. Both need one representation
+  decision (below).
+* **Validation parity (found while testing).** The corpus check path lacked two CLI-validation rules:
+  pending artifacts with R2B-P levels (one was claimed: `mathcomp.boot.eqtype.insub`, non-protected, no
+  claimed protected dependent) and Rocq's instance re-check of accepted R2B-P rows (4 rows, all
+  `INSTANCE_OK` when re-checked against the previous run). Now: the translator refuses R2B-P on pending
+  artifacts; `statement_run.py instances` re-checks accepted R2B-P rows in the common environment; the
+  corpus manifest requires it (`checks.source_instances`).
+
+### (2) Coverage — FULL CORPUS, same 4,474 protected roots
+
+| run | family | Accepted | Audited Pending | Blocked Dependency | Direct Failure |
+|---|---|---|---|---|---|
+| R2B-V (`5922bc6`) | modern | 446 | 1,276 | 745 | 37 |
+| | Classic | 227 | 899 | 775 | 69 |
+| **round 2** (`d40a55c`) | modern | 446 | 1,276 | 745 | 37 |
+| | Classic | 227 | 899 | 775 | 69 |
+| | **total** | **673** | **2,175** | **1,520** | **106** |
+
+Consumer OK, audit OK, source instances OK (4), provenance bound (`checks` all OK), `check` OK.
+Per-declaration transitions (protected): **4,474 unchanged** (`coverage/transitions-V-to-R2-binder.json`).
+All rows: 23 newly claimed (MathComp `choice` `HB_unnamed_mixin_106/107/109` obligations, now generic
+statements), 1 no longer claimed (`eqtype.insub` — an unvalidated claim corrected), 16 rows changed
+refusal reason. No genuine regression. Direct failures 770 → 757.
+
+### (3)–(4) Backlog (refreshed) and next tasks
+
+Largest families (affected / only-this-family protected roots): `SOLUTION_FACT_VIOLATED` 917 / 31,
+`STATEMENT_FREE_LEVEL_PINNED` 885 / 48, `REFERENCE_COHERENCE` 388 / 225, `PROTECTED_RANGE_NARROWED`
+379 / 211, `PROP_TYPE_CUMULATIVITY` 102 / 0, `COUPLED_BINDER_LEVELS` 39 / 2, `MULTI_INSTANCE_PREREQUISITE`
+36 / 18, `INTERNAL_ERROR` (gcdn) 25 / 25, `COINDUCTIVE` 13 / 13. The roots formerly counted under the
+P1/P2 residual family (749 jointly with solution facts) are now blocked by `STATEMENT_FREE_LEVEL_PINNED`
+(the pcancel-coupled obligations). Representation decision needed: per-binder-sort universe parameters
+for declarations whose one source level covers several independently instantiated arguments.
+Next (unblocked): P3 (instance-aware prerequisite hypotheses).
+
+### (5) Regressions and validation
+
+`test-universe-r2` (new, 9: `pairR_intro` refused by binder independence; consistent narrowing
+forgeries — two binder levels identified, a binder level at 0, the P2 obligation narrowed at
+`choice.959` — kernel-accepted and audit-rejected; nonzero-universe positive control), `test-statement`
+30, `test-assembly` 34, `test-termination` 22, `test-opaque` 16, `test-universe-c` 22: OK;
+`test-all` 18/18 (frozen worktree, `d40a55c`).
+
+### (6) Commands and evidence
+
+```
+STATEMENT_EXPORT=export-statement-aprime STATEMENT_PROVENANCE=provenance-aprime STATEMENT_RUN=runs/st-corpus-R2 \
+  python3 -I inventory/statement_run.py translate && … check && … instances && … tasks
+python3 -I inventory/conversion_deps.py runs/st-corpus-R2 --jobs 2
+python3 -I inventory/coverage_delta.py snapshot runs/st-corpus-R2 reports/statement_only/coverage/R2-binder.json
+python3 -I inventory/statement_provenance.py manifest runs/st-corpus-R2 && … check
+python3 -I inventory/rule_backlog.py runs/st-corpus-R2 --conversion …/CONVERSION_DEPENDENCE.json
+```
+Evidence: `coverage/{R2-binder,transitions-V-to-R2-binder}.json`, `RULE_BACKLOG.{md,json}`,
+`provenance/CORPUS_MANIFEST.json` (current; `-V` kept), `termination/CONVERSION_DEPENDENCE-R2.json`,
+`test_universe_r2.json`, `PROOF_TASKS.jsonl`.

@@ -26,6 +26,7 @@ BLOCKED = ("BLOCKED_DEPENDENCY", "OBLIGATIONS_PENDING")
 
 # (family id, status regex, message regex) -- first match wins; message = before " [last tier"
 RULES = [
+    ("COUPLED_BINDER_LEVELS", "UNIVERSE_REJECTED", r"^statement specialization refused: binder level"),
     ("RESIDUAL_STATEMENT_LEVELS", "UNIVERSE_REJECTED", r"^statement specialization refused: \d+ universe level\(s\) of the statement are not determined"),
     ("STATEMENT_FREE_LEVEL_PINNED", "UNIVERSE_REJECTED", r"^statement specialization refused: \S+: the level of \S+ is free"),
     ("PROTECTED_RANGE_NARROWED", "UNIVERSE_REJECTED", r"^protected public declaration: universe specialization refused"),
@@ -49,6 +50,19 @@ RULES = [
 ]
 
 FAMILY_NOTES = {
+    "COUPLED_BINDER_LEVELS": {
+        "category": 1, "priority": "P1 (needs a representation decision)",
+        "mechanism": "a statement's independent binder levels would be identified (or one fixed) by the "
+                     "translation: a referenced declaration carries ONE Lean universe parameter for several "
+                     "arguments that Rocq instantiates at independent levels by cumulativity (CoqEAL list_R's "
+                     "shared template level: refine_* obligations; fixture SF.R2.pairR_intro). Refused by the "
+                     "round-2 binder-independence check (source-derived).",
+        "proposal": "representation rule (NOT adopted without approval): give such a referenced declaration "
+                    "one universe parameter per binder sort that shares the source level (a generalization "
+                    "of the translated declaration; the source is its special case).",
+        "acceptance": "refine_* obligations generic without identification; binder-independence and generality "
+                      "negative controls unchanged; corpus re-measured.",
+        "status": "exact blocker: awaiting a representation decision"},
     "RESIDUAL_STATEMENT_LEVELS": {
         "category": 1, "priority": "P1/P2",
         "mechanism": "a statement level left free after unification is not mapped to a source level by R3G "
@@ -62,16 +76,21 @@ FAMILY_NOTES = {
                     "coherently to parameters.",
         "acceptance": "refine_* restored; negative controls (real narrowing with every self-report hidden) "
                       "still rejected; full corpus re-measured.",
-        "status": "P1 in progress"},
+        "status": "round 2: the blanket refusal replaced by binder independence + generality; jointly "
+                  "occurring max metavariables identified (P2); the remaining members are coupled reference "
+                  "levels (pcancel-like single-level references), the COUPLED_BINDER_LEVELS mechanism"},
     "STATEMENT_FREE_LEVEL_PINNED": {
-        "category": 1, "priority": "P2 (re-ranked: largest family)",
-        "mechanism": "C-1 generality: a statement's reference argument for a source-free level is closed (mostly "
-                     "MathComp mixin levels eqtype.32 / choice.299 reached through a referenced definition "
-                     "whose level the translation fixed); translating it would specialize the statement.",
-        "proposal": "trace each to the referenced definition that pins the level; make that definition generic "
-                    "where its value allows (shared with the max-coupling analysis).",
+        "category": 1, "priority": "P2 (largest family after round 2; needs the representation decision)",
+        "mechanism": "C-1 generality: a statement's reference argument for a source-free level is closed. Round-2 "
+                     "diagnosis (HB_unnamed_mixin_106__obligation_2, reproduced): unification fixed the level "
+                     "BEFORE R3G through a referenced definition with ONE universe parameter for several "
+                     "arguments (ssrfun.pcancel: rT and aT at one level) applied to a Set-level argument "
+                     "(nat/option), which Rocq accepts by cumulativity; the translation would specialize the "
+                     "statement (refused, correctly). Same mechanism as COUPLED_BINDER_LEVELS.",
+        "proposal": "the per-binder-sort universe parameter representation (COUPLED_BINDER_LEVELS) — awaiting "
+                    "approval.",
         "acceptance": "statement generic, audit generality check passes; no protected range narrowed.",
-        "status": "diagnosed (this backlog)"},
+        "status": "exact blocker: awaiting a representation decision"},
     "PROTECTED_RANGE_NARROWED": {
         "category": 1, "priority": "P4", "mechanism": "a protected definition's only current translation narrows a "
         "quantification range (JobReady, ideal/overheads processor_state: unit's finType forces Job to level 0).",
@@ -227,10 +246,64 @@ def main(run, conv=None):
            "roots": per_root}
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "RULE_BACKLOG.json").write_text(json.dumps(res, indent=1, sort_keys=True) + "\n")
+    (OUT / "RULE_BACKLOG.md").write_text(render(res))
     print(json.dumps({k: res[k] for k in ("unclaimed_protected_roots", "unclaimed_by_family", "direct_failures")}))
     for x in out_f:
         print(f'{x["family"]:32} members {x["members"]:4} (prot {x["protected_members"]:3})  affected {x["affected_roots"]["total"]:4}  only {x["roots_blocked_only_by_this_family"]["total"]:4}  repro {x["minimal_reproducer"]} ({x["reproducer_closure"]})')
     return res
+
+
+CATEGORY = {1: "translation rule / implementation", 2: "pending proof task", 3: "assembly / representation barrier",
+            4: "validation / tooling gap"}
+GAPS = [  # category 4: validation and tooling gaps (curated; each with its evidence)
+    ("Request independence of the batched statement re-derivation is sampled (8 constants per export)",
+     "tools/roundtrip.py STATEMENT_SAMPLE; PROVENANCE.md §6", "open"),
+    ("Non-protected definition types: free-level pins are a diagnostic, not a rejection",
+     "audit.json definition_type_specialization_candidates", "open (by design; protected ones rejected)"),
+    ("Protected definitions are checked at their binder domains, not their result types (R2B-V aside)",
+     "docs/UNIVERSE_FAMILY_C.md §2", "open"),
+    ("Corpus path lacked the CLI's R2B-P checks (pending R2B-P claimed: eqtype.insub; accepted R2B-P rows not "
+     "re-checked at their instances)", "ITERATION_LOG entry 7; statement_run.py instances", "fixed in round 2"),
+    ("Corpus manifest bound runs whose consumer/audit were not OK", "ITERATION_LOG entry 6", "fixed (df09655)"),
+]
+
+
+def render(res):
+    L = ["# Rule backlog", "",
+         f"Generated by `inventory/rule_backlog.py` from `{res['run']}` (do not edit by hand; curated text lives in the",
+         "tool). Every unclaimed protected root is traced through its `blocked_by` chains to the direct failures",
+         "blocking it; every direct failure is assigned to a family by its mechanism (UNCLASSIFIED otherwise).",
+         "Machine-readable companion: `RULE_BACKLOG.json` (per-root blockers and example paths).", "",
+         f"Unclaimed protected roots: **{res['unclaimed_protected_roots']}** "
+         f"(modern {res['unclaimed_by_family'].get('modern', 0)}, Classic {res['unclaimed_by_family'].get('classic', 0)}); "
+         f"direct failures (all rows): {res['direct_failures']}.", "",
+         "## 1. Translation-rule / implementation families", "",
+         "| family | members (protected) | affected roots (modern / Classic) | only this family | priority | status |",
+         "|---|---|---|---|---|---|"]
+    for f in res["families"]:
+        a, o = f["affected_roots"], f["roots_blocked_only_by_this_family"]
+        L.append(f"| `{f['family']}` | {f['members']} ({f['protected_members']}) | {a['total']} ({a['modern']} / {a['classic']}) | "
+                 f"{o['total']} | {f.get('priority', '')} | {f.get('status', '')} |")
+    L += ["", "Per family (mechanism, reproducer, example path, proposal, acceptance):", ""]
+    for f in res["families"]:
+        L += [f"### `{f['family']}`", "",
+              f"* mechanism: {f.get('mechanism', 'see message shapes')}",
+              f"* minimal reproducer: `{f['minimal_reproducer']}` (closure {f['reproducer_closure']})",
+              f"* example path: {' → '.join('`' + x + '`' for x in (f['example_path'] or [])[:6])}",
+              f"* message shapes: " + "; ".join(f"{c}× {m}" for m, c in f["message_shapes"][:3]),
+              f"* proposal: {f.get('proposal', '—')}", f"* acceptance: {f.get('acceptance', '—')}", ""]
+    p = res["pending_proof_tasks"]
+    L += ["## 2. Pending proof tasks (for the proving agent; not translation work)", "",
+          f"Protected pending rows: {p['protected_pending_rows']}; tasks by kind: {p['tasks_by_kind']}.", "",
+          "Top prerequisites (pending protected rows needing them): " +
+          ", ".join(f"`{h}` {c}" for h, c in p["top_prerequisites"][:10]), "",
+          "## 3. Assembly / computational-representation barriers", ""]
+    for k, v in res["assembly_and_representation_barriers"].items():
+        L.append(f"* {k}: {v}")
+    L += ["", "## 4. Validation and tooling gaps", "", "| gap | evidence | status |", "|---|---|---|"]
+    for g, e, st in GAPS:
+        L.append(f"| {g} | {e} | {st} |")
+    return "\n".join(L) + "\n"
 
 
 if __name__ == "__main__":
