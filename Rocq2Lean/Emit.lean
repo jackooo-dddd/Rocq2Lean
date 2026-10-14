@@ -1675,7 +1675,7 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
         if let some thm := tr.proofTarget then
           genv := { genv with consts := genv.consts.insert k thm, constLevels := genv.constLevels.insert k tr.levelParams.length }
         if let some n := tr.target then
-          genv := { genv with leafStmt := genv.leafStmt.insert k (n, #[]) }
+          genv := { genv with leafStmt := genv.leafStmt.insert k (n, #[]), leafStmtTargets := genv.leafStmtTargets.insert n }
         results := results.insert k tr
         out := out.push tr
     -- assembly: a row that stays as validated is carried over without translation
@@ -1948,7 +1948,8 @@ where
         for x in r.synthetic do
           if let some n := x.target then
             if x.status == "STATEMENT_KERNEL_CHECKED" || x.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
-              genv := { genv with leafStmt := genv.leafStmt.insert x.source (n, x.pendingHyps) }
+              genv := { genv with leafStmt := genv.leafStmt.insert x.source (n, x.pendingHyps),
+                                  leafStmtTargets := genv.leafStmtTargets.insert n }
               unless x.levelParams.isEmpty do
                 genv := { genv with constGlobals := genv.constGlobals.insert n x.paramLevels }
         -- statement mode: register proof tasks (statements) and pending artifacts for later references
@@ -1957,7 +1958,8 @@ where
             if r.status == "PENDING_KERNEL_CHECKED" then
               genv := { genv with pendingDefs := genv.pendingDefs.insert c0.name (n, r.pendingHyps) }
             else
-              genv := { genv with leafStmt := genv.leafStmt.insert c0.name (n, r.pendingHyps) }
+              genv := { genv with leafStmt := genv.leafStmt.insert c0.name (n, r.pendingHyps),
+                                  leafStmtTargets := genv.leafStmtTargets.insert n }
             unless r.levelParams.isEmpty do
               genv := { genv with constGlobals := genv.constGlobals.insert n r.paramLevels }
         if r.ok then if let some n := r.target then

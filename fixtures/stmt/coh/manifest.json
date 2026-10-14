@@ -1,1 +1,1 @@
-{"name": "stmt-coh", "load_paths": [["-R", "../../../.work/prosa-0.6-rocq93", "prosa"], ["-Q", ".", "SF"]], "files": ["Coh.v"], "requires": ["SF.Coh", "mathcomp.boot.choice", "mathcomp.boot.fintype"]}
+{"name": "stmt-coh", "load_paths": [["-R", "../../../.work/prosa-0.6-rocq93", "prosa"], ["-Q", ".", "SF"]], "files": ["Coh.v"], "requires": ["SF.Coh", "mathcomp.boot.choice", "mathcomp.boot.fintype", "prosa.util.seqset"]}

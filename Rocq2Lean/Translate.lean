@@ -112,6 +112,8 @@ structure GEnv where
   data: their proof or value is a task for the Lean proving agent): source key ↦ (statement constant,
   the hypotheses of that constant when it is itself a pending artifact, as leaf keys). -/
   leafStmt : Std.HashMap String (Name × Array String) := {}
+  /-- Rule H: the targets of `leafStmt` (proof tasks' statements, the types of prerequisite hypotheses). -/
+  leafStmtTargets : Std.HashSet Name := {}
   /-- Statement mode: definitions validated as pending artifacts (`RocqPending.*`, abstracted over the
   unproved prerequisites they need): source key ↦ (artifact, its hypotheses as leaf keys, in order). -/
   pendingDefs : Std.HashMap String (Name × Array String) := {}
@@ -2520,7 +2522,11 @@ def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr)
         if genv.templateLevels.contains l then continue      -- R5, not R3
         let cAdmit := (genv.admitting[c]?.getD #[]).contains l
         -- R-CARRIER P2: at a copy position the shared-level coherence does not apply (R3 entailment does)
-        match checkInstantiation genv.facts own l σ body cAdmit ownAdmit allowLift allowLower (copyPos.getD k false) with
+        -- Rule H (docs/COHERENCE_READINGS.md §5): a reference to a proof task's statement (the type of a
+        -- generated prerequisite hypothesis) is instantiated where the prerequisite is used; its argument
+        -- for a shared level may lie below it (R3↓: no raising, checked below), on every tier
+        let hypArg := genv.leafStmtTargets.contains c
+        match checkInstantiation genv.facts own l σ body cAdmit ownAdmit allowLift (allowLower || hypArg) (copyPos.getD k false) with
         | .ok () => n := n + 1
         | .error msg => throw s!"reference to {c}: {msg}"
   return n

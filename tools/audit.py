@@ -1982,6 +1982,7 @@ class Facts:
 
 
 GEN_COPY_POS = {}    # R-CARRIER P2: target -> universe-parameter positions that are P2 copies
+HYP_STATEMENTS = set()  # rule H: the statement targets of the source's proof tasks (prerequisite hypotheses' types)
 P2_COPIES = set()    # R-CARRIER P2: the reported (checked) copies of implicit levels
 RSI_CHECKED = [0]   # R3G-F rows' levels checked (check_result_sort_implicit)
 CARRIER_SET = set()  # R-CARRIER P1: parameter carrier levels of the exported non-template blocks
@@ -2285,6 +2286,10 @@ def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None
             if len(us) != len(ls):
                 raise Mismatch(f"{name}: {len(us)} universe arguments for {len(ls)} parameters")
             cpos = GEN_COPY_POS.get(name, set())
+            # rule H (docs/COHERENCE_READINGS.md §5): at a proof task's statement (a prerequisite
+            # hypothesis's type, instantiated where the prerequisite is used), an argument for a shared
+            # level may lie below it: R3-down, checked below like any argument for another declaration
+            low = lower or name in HYP_STATEMENTS
             for idx, (l, sigma) in enumerate(zip(ls, us)):
                 if l in TEMPLATE_LEVELS:
                     continue                      # R5: instantiated from the arguments, checked by InstanceLevels
@@ -2299,10 +2304,10 @@ def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None
                 # summands pass the R3 check below equals l at every model of the source facts (an R2F
                 # reading, not a specialization); not for motive-level (R8) parameters
                 reading = not ca and not da and any(p == level_param(l) and k == 0 for p, k in ps)
-                if body and l in body and not (lower and (c, ps) != level_nf(bump(body[l]))):
+                if body and l in body and not (low and (c, ps) != level_nf(bump(body[l]))):
                     if (c, ps) != level_nf(bump(body[l])):
                         raise Mismatch(f"{name}: source level {l} is proof-local, argument must be its solution {body[l]}")
-                elif l in own_l and not (body and l in body) and not reading and not (lower and (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)}))):
+                elif l in own_l and not (body and l in body) and not reading and not (low and (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)}))):
                     if (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)})):
                         raise Mismatch(f"{name}: source level {l} is shared, argument must be {level_param(l)}")
                 else:
@@ -3698,6 +3703,8 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             views[n], suffix[n] = d, ""
     claimed = {n for n in list(decls) + list(syn) if st(n) in ACCEPTED_ST + PENDING_ST}
     leaves = {n for n in decls if is_leaf(decls[n])} | set(syn)
+    # rule H: a proof task's statement, under either target naming (its hypotheses' types)
+    HYP_STATEMENTS.update(f(n + ".statement") for n in leaves for f in (target_name, pending_target_name))
     pend_defs = {n for n in claimed if st(n) == "PENDING_KERNEL_CHECKED"}
     # assembly (docs/ASSEMBLY.md): the validated report the assembly started from, and the proof
     # tasks with final theorems; prerequisites are those of the validated library (a carried-over
