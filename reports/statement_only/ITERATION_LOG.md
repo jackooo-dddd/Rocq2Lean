@@ -393,3 +393,114 @@ Evidence: `reports/statement_only/coverage/{B-termination,C1-repair,transitions-
 (current = B + C-1; `CORPUS_PROVENANCE_BOUND`, `check` OK for all three),
 `reports/statement_only/termination/CONVERSION_DEPENDENCE-{B,C1}.json`, `PROOF_TASKS.jsonl` (B + C-1),
 `reports/statement_only/test_universe_c.json`.
+
+---
+
+## Entry 5 — A′: opaque data translated with its body (2026-10-14)
+
+Commits (branch `task-a-prime`, from `ec3409c`): `f786571` (A′), `01782c7` (conversion dependence
+through parent definitions), `2f1d5cb` (round trip: term-only quotation), `cedf425` (manifest records
+its evidence directories). Frozen run worktree `r2l-run-AP` at `2f1d5cb`/`cedf425` (tooling only
+differs; implementation tree of the run = `2f1d5cb`).
+
+### (1) What was added and why
+
+Opaque `Set`/`Type` constants (`Qed` data) were exported as interfaces only; their values were tasks
+that no submission may satisfy, so 1,588 of the 1,596 protected pending declarations of B + C-1 could
+never be assembled. A′ (`docs/OPAQUE_DATA.md`): the exporter prepares the body (proof subterms extracted
+as obligations, Rocq's kernel re-check) and exports it (`opaque_data`, native opacity kept); the
+translator emits a Lean `opaque` constant under the source name (never unfolded, as Rocq never unfolds
+`Qed`), pending on the obligations; consumer and audit require the `opaque` kind and audit the body as
+a definition. A body Rocq accepts only with the guard check deferred (a recursion on an extracted proof
+subterm) or not at all keeps the interface, with the reason (`opaque_body_refused`). No value is ever
+accepted in place of a source body; Rocq2Lean writes no corpus proof.
+
+Round trip: the statement re-derivation now prepares the environment once per export
+(`CheckStatementsPrepared`, as the export does) plus a deterministic per-constant sample (request
+independence), and quotes the term alone (`quote_term`; identical output measured on a corpus chunk).
+Cost: 135 chunk round trips in 25 min wall (3 jobs), against 16.7 CPU-hours for the 36 chunks of A.
+
+### (2) Coverage — same 4,474 protected roots, re-exported (A′ exporter), 10,966 merged records
+
+| run | family | Accepted | Audited Pending | Blocked Dependency | Direct Failure |
+|---|---|---|---|---|---|
+| B + C-1 (`3227883`) | modern | 340 | 987 | 1,140 | 37 |
+| | Classic | 185 | 609 | 1,126 | 50 |
+| | total | 525 | 1,596 | 2,266 | 87 |
+| **A′** (`2f1d5cb`) | modern | 338 | 989 | 1,146 | 31 |
+| | Classic | 182 | 612 | 1,126 | 50 |
+| | **total** | **520** | **1,601** | **2,272** | **81** |
+
+Consumer OK, audit OK (C-1 generality check included). The category totals barely move — a pending row
+stays pending — but **what the pending rows wait for changes**:
+
+| protected pending rows | B + C-1 | A′ |
+|---|---|---|
+| needing at least one opaque value (not assemblable) | 1,588 | **6** |
+| needing only opaque values | 1,342 | 0 |
+| needing only proof tasks (assemblable once proved) | 8 | **1,595** |
+
+The 6: dependents of `mathcomp.boot.ssrnat.find_ex_minn` (body recurses on an accessibility proof;
+interface kept). Opaque data in the closure: 167 translated with their bodies (5 accepted, 41 pending
+on obligations, 118 blocked, 3 direct failures), 1 interface.
+
+### (3) Transitions B + C-1 → A′ (`coverage/transitions-C1-to-AP-opaque.json`)
+
+4,463 unchanged; **no claimed row of B + C-1 (protected or not) becomes unclaimed**; 5 protected rows
+Accepted → Audited Pending (`Sustainability.eqlabelP`, `fixedpoint.iter_fixpoint_ind`, `list.mapP2`,
+`ideal_uni_exceed.eqn_exceedance_processor_state`, `tactics.neqP` — themselves opaque data: before,
+only their type interface was accepted, their value a task; now the definition with its body, pending
+on its obligations); 6 protected rows Direct Failure → Blocked Dependency. Newly supported: 0.
+A → A′ (`transitions-A-to-AP-opaque.json`): 258 newly supported, 1,189 false acceptances corrected,
+687 rejected, 27 collateral losses, 6 genuine regressions (the C-1 `refine_*`), as in entry 4.
+
+### (4) Remaining blockers and pending obligations
+
+* Proof tasks: 1,677 (474 obligations, 1,196 theorem statements, 2 termination obligations, 2
+  unfolding equations, 2 source assumptions, **1 opaque value** — `find_ex_minn`; B + C-1: 38).
+* Newly reached failures (rows not in B + C-1's closure; none protected): 45 — CoqEAL refinement
+  relations (`Prop ≤ Type` cumulativity at relation arguments, R2B/universe refusals), `Corelib.Classes`
+  morphisms, Prosa implementation helpers.
+* Blocked opaque bodies (118): mostly CoqEAL `refines_*` obligations (universe solving), the protected
+  `ArrivalCurvePrefix` (R2B-S refused), `hrel.fun_hrel` (kernel).
+* Conversion dependence: 887 dependents (extracted obligations now checked through their parent
+  definitions): 886 `CONV_OK`, 1 `CONV_NEEDS` (`gcdn`, not claimed); status OK. The 10 kernel-rejected
+  `Rnat_div_eucl` obligations do not need the unfolding (Rocq accepts them without the lowered bodies):
+  they are cumulativity failures.
+
+### (5) Regressions and validation
+
+`test-all` 18/18, `test-statement` 30, `test-assembly` 34, `test-termination` 22, `test-opaque` 16
+(new), `test-universe-c` 14, `test-provenance` OK — all on `2f1d5cb` (frozen worktree `r2l-B-test`).
+Test expectations changed by A′ (documented in the tests): FinishTime roots now wait for proof tasks and
+`find_ex_minn`'s value instead of `eqnP`'s value; the assembly fixture's `pick` is an accepted opaque
+constant and the value-task path is exercised by a new interface case (`pick_wf`); C's negative
+controls narrow an `opt_eqP` obligation statement (opt_eqP is now an opaque constant). Corpus: no
+claimed row lost.
+
+Provenance (`provenance/CORPUS_MANIFEST.json`, current = A′): 135 chunk snapshots (IRs match their
+export records), 135/135 round trips OK, merge re-derived (10,966 records), all 4,474 roots, union
+universe check 260,885 facts, 0 violated; `CORPUS_PROVENANCE_BOUND`, reuse `SAME_TOOLS`, `check` OK.
+The manifests of A, B and C-1 (`CORPUS_MANIFEST-{A,B,C1}.json`) check OK with their own tools (task-c)
+and are correctly rejected under A′'s (the round-trip tool changed): evidence is tool-relative.
+
+Validation gaps: the A′ round trip's request-independence evidence is a sample (8 constants per
+export), not every constant; opaque bodies blocked by universes or cumulativity keep their dependents
+blocked (now through the body, before through the interface).
+
+### (6) Commands and evidence
+
+```
+# r2l-run-AP; INVENTORY_EXPORT_MODE=statement INVENTORY_EXPORT_TAG=aprime
+python3 -I inventory/export.py modern 2 && python3 -I inventory/export.py classic 2
+export STATEMENT_EXPORT=export-statement-aprime STATEMENT_PROVENANCE=provenance-aprime STATEMENT_RUN=runs/st-corpus-AP
+python3 -I inventory/statement_run.py merge && … translate && … check && … tasks
+python3 -I inventory/conversion_deps.py runs/st-corpus-AP --jobs 2
+python3 -I inventory/coverage_delta.py snapshot runs/st-corpus-AP reports/statement_only/coverage/AP-opaque.json
+python3 -I inventory/statement_provenance.py snapshot && … roundtrip --jobs 3 && … union runs/st-corpus-AP --jobs 2
+python3 -I inventory/statement_provenance.py manifest runs/st-corpus-AP && … check; scripts/test-provenance
+python3 -I inventory/c1_transitions.py C1-repair.json C1_AUDIT AP-opaque.json runs/st-corpus-AP transitions-C1-to-AP-opaque.json
+```
+Evidence: `coverage/{AP-opaque,transitions-C1-to-AP-opaque,transitions-A-to-AP-opaque}.json`,
+`provenance/CORPUS_MANIFEST.json`, `termination/CONVERSION_DEPENDENCE-AP.json`, `PROOF_TASKS.jsonl`
+(A′), `test_opaque.json`, `docs/OPAQUE_DATA.md`.

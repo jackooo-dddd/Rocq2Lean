@@ -97,3 +97,18 @@ third batch's chunks (each placeholder was overwritten by that chunk's real resu
 duration of the three chunks the first batch was running when paused (`0001`, `0003`, `0006`)
 includes the pause. Commands: `python3 -I inventory/statement_provenance.py roundtrip --jobs 3
 [CHUNK …]`, then `manifest runs/st-corpus-A`, `check`, `scripts/test-provenance`.
+
+## 6. A′ re-export (2026-10-14)
+
+A′ changed the exporter (opaque data bodies), so the chunk IRs changed and the evidence was rebuilt, in
+separate directories (`.work/inventory/export-statement-aprime-*`, `.work/provenance-aprime`; the A,
+B and C-1 evidence is kept): 135 chunk exports (all 4,474 roots, 0 failures), 135 snapshots, 135/135
+round trips OK, merge re-derived (10,966 records), union check 260,885 facts with 0 violated, manifest
+`CORPUS_PROVENANCE_BOUND` (reuse `SAME_TOOLS`), `check` OK, `test-provenance` OK.
+
+The round trip's statement re-derivation is now batched (`CheckStatementsPrepared`: one prepared
+environment per export, as the export prepares it) with a deterministic sample of 8 constants per export
+re-derived alone (`CheckStatementPrepared`, request independence), and quotes the term only
+(`quote_term`, measured identical to the earlier quotation): 25 min wall for all 135 chunks. A manifest
+records its evidence and export directories; `check` recomputes reuse applicability against the tools
+it runs with, so the earlier manifests check OK at their own commits and are rejected under A′'s tools.

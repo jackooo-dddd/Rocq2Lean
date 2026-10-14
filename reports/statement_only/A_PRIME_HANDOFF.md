@@ -1,5 +1,8 @@
 # A′ handoff: translating the bodies of opaque Set/Type data
 
+**Status (2026-10-14): implemented** — `docs/OPAQUE_DATA.md`, `ITERATION_LOG.md` entry 5. The
+measurements below are the pre-A′ baseline.
+
 Decision (2026-10-13): A′ mechanically translates the data-producing bodies of the opaque `Set`/`Type`
 constants the corpus needs, keeps their source opacity, and extracts their genuine proof subterms as
 obligations. No submitted value is accepted in place of a source body, and uniqueness of an inhabitant

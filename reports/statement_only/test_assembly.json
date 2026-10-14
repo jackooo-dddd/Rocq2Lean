@@ -296,7 +296,7 @@
   },
   "compiled_evaluation": {
    "exit": 1,
-   "output": "/home/shunqwang4/research/r2l-B/runs/st-asm/assembly/ad8d68f0aa910475/lean/Probe_compiled_evaluation.lean:2:0: error: Failed to find LCNF signature for Rocq.SF.Asm.zero_of"
+   "output": "/home/shunqwang4/research/r2l-B-test/runs/st-asm/assembly/f4f68270a2d31c28/lean/Probe_compiled_evaluation.lean:2:0: error: Failed to find LCNF signature for Rocq.SF.Asm.zero_of"
   },
   "propositional_equations": "not applicable: the fixture has no recursion through a proof"
  },

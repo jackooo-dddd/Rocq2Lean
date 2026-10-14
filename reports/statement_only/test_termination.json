@@ -407,7 +407,7 @@
  "computation": {
   "definitional_reduction_elaborator_rfl": {
    "exit": 1,
-   "output": "/home/shunqwang4/research/r2l-B/runs/st-wf/assembly/b29261cd80898462/lean/Probe_definitional_reduction_elaborator_rfl.lean:2:0: error: Not a definitional equality: the left-hand side\n  Rocq.SF.Wf.divr 7 2\nis not definitionally equal to the right-hand side\n  3\n/home/shunqwang4/research/r2l-B/runs/st-wf/assembly/b29261cd80898462/lean/Probe_definitional_reduction_elaborator_rfl.lean:2:43: error: Type mismatch\n  rfl\nhas type\n  ?m.9 = ?m.9\nbut is expected to have type\n  Rocq.SF.Wf.divr 7 2 = 3"
+   "output": "/home/shunqwang4/research/r2l-B-test/runs/st-wf/assembly/5473c0d012cd94fc/lean/Probe_definitional_reduction_elaborator_rfl.lean:2:0: error: Not a definitional equality: the left-hand side\n  Rocq.SF.Wf.divr 7 2\nis not definitionally equal to the right-hand side\n  3\n/home/shunqwang4/research/r2l-B-test/runs/st-wf/assembly/5473c0d012cd94fc/lean/Probe_definitional_reduction_elaborator_rfl.lean:2:43: error: Type mismatch\n  rfl\nhas type\n  ?m.9 = ?m.9\nbut is expected to have type\n  Rocq.SF.Wf.divr 7 2 = 3"
   },
   "definitional_reduction_kernel_decide": {
    "exit": 0,
@@ -423,7 +423,7 @@
   },
   "compiled_evaluation": {
    "exit": 1,
-   "output": "/home/shunqwang4/research/r2l-B/runs/st-wf/assembly/b29261cd80898462/lean/Probe_compiled_evaluation.lean:2:0: error: Failed to find LCNF signature for Rocq.SF.Wf.divr"
+   "output": "/home/shunqwang4/research/r2l-B-test/runs/st-wf/assembly/5473c0d012cd94fc/lean/Probe_compiled_evaluation.lean:2:0: error: Failed to find LCNF signature for Rocq.SF.Wf.divr"
   }
  },
  "computation_summary": {

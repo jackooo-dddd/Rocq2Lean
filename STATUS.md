@@ -13,7 +13,13 @@
   rejected, 27 collateral losses, **6 genuine regressions** (`refine_*`). B-only is diagnostic (its new
   support is mostly narrowed). Details: `reports/statement_only/ITERATION_LOG.md` entry 4.
 - Not applied: any result-sort rule for `JLFP`/`FP`/`JLDP_policy` (unsupported by the current
-  representation and rules). Next: A′ (opaque data bodies).
+  representation and rules).
+
+**2026-10-14 — A′ (branch `task-a-prime`, on top of `task-c`; not merged).** Opaque data translated
+with its body as Lean `opaque` constants, proof subterms as obligations (`docs/OPAQUE_DATA.md`). Corpus
+(re-exported, 10,966 records; consumer, audit, provenance OK): 520 / 1,601 / 2,272 / 81; no claimed row
+lost; protected pending rows needing an opaque value **1,588 → 6** (1,595 now wait only for proof tasks).
+ITERATION_LOG entry 5.
 
 **Current phase: statement-only translation (direction change 2026-10-11).** Rocq2Lean translates
 the datatypes, definitions and theorem *statements* of Prosa v0.6 and Classic, plus what they need,
