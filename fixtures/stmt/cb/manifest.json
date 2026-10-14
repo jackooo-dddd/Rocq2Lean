@@ -1,0 +1,1 @@
+{"name": "stmt-cb", "load_paths": [["-R", "../../../.work/prosa-0.6-rocq93", "prosa"], ["-Q", ".", "SF"]], "files": ["Cb.v"], "requires": ["SF.Cb", "mathcomp.boot.choice", "mathcomp.boot.fintype"]}

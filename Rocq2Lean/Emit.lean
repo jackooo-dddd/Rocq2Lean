@@ -97,6 +97,9 @@ structure DeclResult where
   /-- R3G-F (docs/RESULT_SORT_LEVELS.md): implicit levels of an inductive block taken from references in
   its constructor fields at a level that is result-sort-only in the referenced declaration. -/
   resultSortImplicit : Array String := #[]
+  /-- R-CARRIER P2 (docs/CARRIER_LEVELS.md): implicit levels named per free class — each source level
+  and its copies (universe parameters `u_<l>__c<k>`, each standing for an argument `a ≤ l`). -/
+  levelCopies : Array (String × Array String) := #[]
   /-- M6: constants δ-inlined in the body (`Set`-motive constants used at a `Prop` family). -/
   deltaInlined : Array String := #[]
   /-- R3↓: accepted with references instantiated below shared levels (cumulativity tier). -/
@@ -303,6 +306,9 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
   for (p, σ) in lps.zip us do
     unless p.toString.startsWith "u_" do continue      -- (R6 universe variables, Lean's own constants)
     if own.contains p then continue                     -- (a level of the declaration: R3)
+    -- R-CARRIER P2: an own copy of the level (`u_l__c<k>`, one per independent class) is generic as well
+    if let .param q := σ then
+      if own.contains q && q.toString.startsWith (p.toString ++ "__c") then continue
     if !σ.hasParam then
       if let some l := facts.levels.find? (fun l => levelParamName l == p) then
         if entails facts l "Set" 0 then continue
@@ -627,6 +633,8 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     -- after unification: every own level still free that occurs in the (solved) type becomes a
     -- parameter — a type level, or a body level that a type level's solution now mentions
     let implicitRef ← IO.mkRef (#[] : Array String)
+    -- R-CARRIER P2: implicit levels named per class (source level, its copies)
+    let splitRef ← IO.mkRef (#[] : Array (String × Array String))
     let interpRef ← IO.mkRef (#[] : Array (String × Level))
     let keepParams : MetaM Unit := do
       -- R3G discovery pass: report the source levels of free metavariable classes of the *type* at
@@ -743,17 +751,45 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         -- (statement mode: an argument for `l` that unification already fixed to an expression, e.g. a
         -- referenced declaration's R2F reading of its own parameter, is left as is; R3 coherence, the
         -- kernel and the audit check it like every argument)
+        -- (R-CARRIER P2: an argument already named after a copy of `l` counts as free for `l`)
+        let isCopyOf (l : String) (x : Level) : Bool := match x with
+          | .param p => (p.toString.splitOn (toString (levelParamName l) ++ "__c")).length > 1
+          | _ => false
         let pick := tyCls.toList.eraseDups.find? fun l =>
           !own.contains l && !genv.templateLevels.contains l && cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) &&
-          (if genv.stmtMode then (cur.filter (·.1 == l)).any (·.2 == σ) && !ownCur.contains σ else (cur.filter (·.1 == l)).all (·.2.isMVar))
+          (if genv.stmtMode then (cur.filter (·.1 == l)).any (·.2 == σ) && !ownCur.contains σ
+           else (cur.filter (·.1 == l)).all (fun (_, x) => x.isMVar || isCopyOf l x))
         if let some l := pick then
+          -- R-CARRIER P2 (docs/CARRIER_LEVELS.md): the distinct free classes of arguments for `l` in the
+          -- type (operands typing does not relate) are named separately, `l__c<k>`; with one class, `u_l`
+          let mut tyClasses : Array Level := #[]
+          for (l', σ') in inTy do
+            if l' == l then
+              let x ← instCollapse σ'
+              if (x.isMVar || isCopyOf l x) && !tyClasses.contains x then tyClasses := tyClasses.push x
+          let split := genv.carrierSplit && !interp && tyClasses.size ≥ 2
+          let k := (tyClasses.idxOf? σ).getD 0
+          let name := if split then s!"{l}__c{k}" else l
+          if split then
+            splitRef.modify fun a =>
+              let cs := (List.range tyClasses.size).toArray.map (s!"{l}__c{·}")
+              if a.any (·.1 == l) then a else a.push (l, cs)
           let mut ms : Array LMVarId := #[]
           for (l', σ') in cur do
             if l' == l then
               if let .mvar r ← instCollapse σ' then
-                if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName l))
+                -- (split: only this class; arguments of other type classes get their own copy, and
+                -- classes of the value alone join the first copy below)
+                if !split || (.mvar r) == σ then
+                  if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName name))
           if interp then chosen := chosen.push (l, ms)
-          implicitRef.modify fun a => if a.contains l then a else a.push l
+          implicitRef.modify fun a => if a.contains name then a else a.push name
+      -- R-CARRIER P2: free arguments for a split level outside the type's classes (the value's) take
+      -- the first copy
+      for (l, cs) in ← splitRef.get do
+        for (l', σ') in all do
+          if l' == l then
+            if let .mvar r ← instCollapse σ' then assignLevelMVar r (.param (levelParamName cs[0]!))
       -- R2F-c: the explicit type levels and the chosen implicit levels are the declaration's own
       -- levels, each read as ι l = max (u_l, ι m + k) over the native facts m (+1) ≤ l among them
       -- (`ownLevelInterp`, as for inductives): every own fact holds for every parameter value,
@@ -768,7 +804,8 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         let ownI := (freeT ++ chosen.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
         -- (R3G-F levels are minimal only where they are implicit: not levels of this declaration's source)
         let explicitLv := globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)
-        let ι := ownLevelInterp genv.facts ownI ((genv.rsOfDeps (c.typeDeps ++ c.bodyDeps)).fold (fun acc l => if explicitLv.contains l then acc else acc.insert l) {})
+        let ι := ownLevelInterp genv.facts ownI (genv.carrierSet.fold (·.insert ·)
+          ((genv.rsOfDeps (c.typeDeps ++ c.bodyDeps)).fold (fun acc l => if explicitLv.contains l then acc else acc.insert l) {}))
         interpRef.set (ownI.map fun l => (l, ι[l]!))
         for (m, v) in ownMVars do
           if ownI.contains m then
@@ -787,6 +824,12 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         pure (minimalModelLevel genv.facts cur m)
       | none => pure .zero
     let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt keepParams (solve := lower || joint)
+    -- R-CARRIER P2: the copies lie below their level and inherit its upper bounds (as R-SPLIT's copies)
+    let splits ← splitRef.get
+    let genv := if splits.isEmpty then genv else
+      { genv with facts := genv.facts.extend (splits.foldl (· ++ ·.2) #[]) (splits.foldl (fun acc (l, cs) =>
+          acc ++ Split.copiedRelations genv.facts #[{ level := l, params := #[], names := cs }]) #[]) }
+    let backCopy : String → String := fun x => ((splits.find? (·.2.contains x)).map (·.1)).getD x
     -- P3 retry tier: hypotheses of one leaf that ended at the same type are collapsed into the first
     let (ty, val, hyps) ← if !hypExact || hyps.isEmpty then pure (ty, val, hyps) else do
       unless resid.isEmpty do
@@ -939,7 +982,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       synth := synth.push { source := leaf, kind := "constant", status := "STATEMENT_KERNEL_CHECKED",
                             rule := "termination/statement", target := some sname, targetKind := "statement",
                             targetType := some (mkSort .zero), targetValue := some p, levelParams := slps,
-                            paramLevels := globals.filter fun g => slps.contains (levelParamName g),
+                            paramLevels := (globals.filter fun g => slps.contains (levelParamName g)).map backCopy,
                             synthesizedFrom := c.name, syntheticKind := "termination" }
     -- (B: a definition translated with a termination hypothesis that assembly resolved to a final
     -- theorem has no hypothesis left: it is the accepted declaration)
@@ -979,7 +1022,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
             synth := synth.push { source := leafU, kind := "constant",
                                   status := if upend then "STATEMENT_PENDING_KERNEL_CHECKED" else "STATEMENT_KERNEL_CHECKED",
                                   rule := "termination/unfolding_equation", target := some un, targetKind := "statement",
-                                  targetType := some uty, targetValue := some eqV, levelParams := lparams, paramLevels := globals,
+                                  targetType := some uty, targetValue := some eqV, levelParams := lparams, paramLevels := globals.map backCopy,
                                   pendingHyps := uh.map (·.2), synthesizedFrom := c.name, syntheticKind := "unfolding_equation",
                                   }
           | .rejected msg =>
@@ -992,7 +1035,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       return { base with status := if isPending then "PENDING_KERNEL_CHECKED" else "TRANSLATED_AND_CHECKED",
                                       synthetic := synth,
                                       pendingHyps := hyps.map (·.2), targetType := ty, targetValue := val,
-                                      levelParams := lparams, paramLevels := globals, polyParams := polyNames.length,
+                                      levelParams := lparams, paramLevels := globals.map backCopy, levelCopies := splits, polyParams := polyNames.length,
                                       factReduced := factReduce, implicitLevels, levelInterp,
                                       admittingLevels := admitLv, cumulativity := cumul, r2bpLevels := r2bp, sortLevels := sortLv, resultSortInherited := inherited,
                                       r2bpInType := (r2bp.map (·.1)).filter (globalsOf c.type).contains,
@@ -1044,7 +1087,9 @@ def templateBinding (i : IR.InductiveDecl) (globals : Array String) :
 its dependency closure, where they are implicit (not levels of this block's source). -/
 def rsMinimalFor (genv : GEnv) (i : IR.InductiveDecl) (rsOwn : Array String) : Std.HashSet String :=
   let expl := globalsOfInd i
-  (rsOwn.foldl (·.insert ·) (genv.rsOfDeps i.typeDeps)).fold (fun acc l => if expl.contains l then acc else acc.insert l) {}
+  let base := (rsOwn.foldl (·.insert ·) (genv.rsOfDeps i.typeDeps)).fold (fun acc l => if expl.contains l then acc else acc.insert l) {}
+  -- R-CARRIER P1: parameter carrier levels are read minimally as well
+  genv.carrierSet.fold (·.insert ·) base
 
 def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
     (raw : Json) (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false)
@@ -1345,6 +1390,7 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("sort_lowered_levels", Json.arr (r.sortLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
     ("result_sort_inherited", Json.bool r.resultSortInherited),
     ("result_sort_implicit_levels", Json.arr (r.resultSortImplicit.map Json.str)),
+    ("level_copies", Json.arr (r.levelCopies.map fun (l, cs) => Json.mkObj [("level", Json.str l), ("copies", Json.arr (cs.map Json.str))])),
     ("level_split", Json.arr (r.levelSplit.map fun (l, ps, cs) =>
       Json.mkObj [("level", Json.str l), ("params", Json.arr (ps.map fun (k : Nat) => Json.num k)), ("copies", Json.arr (cs.map Json.str))])),
     ("protected", Json.bool r.protectedIface),
@@ -1541,7 +1587,12 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     | .constant c => if irBodies.contains c.name && c.type.hasSetMotive then m.insert c.name else m
     | _ => m
   let stmtMode := ((src.header.getObjVal? "mode").toOption.bind (fun m => (m.getObjValAs? String "name").toOption)) == some "statement"
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, protectedNames, stmtMode, reuseExisting := asm?.isSome }
+  -- R-CARRIER P1: parameter carrier levels of every exported block, once, from the source
+  let carrierSet : Std.HashSet String := src.decls.foldl (fun acc d => match d with
+    | .inductive i => if (i.native.getObjValAs? Bool "template").toOption == some true then acc
+                      else (Split.carrierLevels i).foldl (·.insert ·) acc
+    | _ => acc) {}
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   let opaqueData : Std.HashSet String := src.decls.foldl (init := {}) fun m d => match d with

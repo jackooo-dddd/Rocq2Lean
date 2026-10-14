@@ -259,4 +259,23 @@ def resultOnlyLevels (i : InductiveDecl) : Array String := Id.run do
     if res > 0 && total == res then out := out.push l
   return out
 
+/-- R-CARRIER (docs/CARRIER_LEVELS.md, P1): the carrier levels of a block — global levels occurring as the
+final sort of a parameter binder's type in its arity (an operand's carrier, e.g. `SubType`'s
+`T : Type@{573}`). Each stands for the argument level of its operand at a use (R3), so its R2F reading
+is minimal: it is not raised by its lower bounds (it still raises the levels above it). -/
+def carrierLevels (i : InductiveDecl) : Array String := Id.run do
+  let mut out := #[]
+  for b in i.bodies do
+    let (ps, _) := prods b.type i.npars
+    for (_, ty) in ps do
+      let rec fin : Term → Option SortIR
+        | .prod _ _ c => fin c
+        | .sort s => some s
+        | _ => none
+      if let some (.type u) := fin ty then
+        for e in u do
+          if let .global n := e.level then
+            unless out.contains n do out := out.push n
+  return out
+
 end Rocq2Lean.Split

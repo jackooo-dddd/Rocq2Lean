@@ -74,6 +74,11 @@ structure GEnv where
   dependency closure (itself included). A declaration reads these minimally where they are implicit;
   the set depends only on the declaration's own dependencies, never on unrelated blocks. -/
   rsClosure : Std.HashMap String (Std.HashSet String) := {}
+  /-- R-CARRIER P1 (docs/CARRIER_LEVELS.md): the parameter carrier levels of every exported block
+  (`Split.carrierLevels`), computed once from the source; read minimally in every R2F reading. -/
+  carrierSet : Std.HashSet String := {}
+  /-- R-CARRIER P2: implicit levels with several free classes in a declaration's type are named per class. -/
+  carrierSplit : Bool := true
   /-- Template levels of the translated template inductives (R5, exempt from R3). -/
   templateLevels : Std.HashSet String := {}
   /-- Native universe facts of the export. -/

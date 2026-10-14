@@ -255,7 +255,7 @@ def own_level_interp(facts, own, explicit=(), minimal=frozenset()):
         acc = {"k": "param", "n": level_param(l)}
         # R3G-F (docs/RESULT_SORT_LEVELS.md §2): a result-sort implicit level is not read through the levels
         # below it (it stands for an argument a <= l); it still raises the levels above it
-        if fuel == 0 or (l in minimal and l not in explicit):
+        if fuel == 0 or (l in minimal and l not in explicit) or l in CARRIER_SET:
             return acc
         for m in own:
             if m == l or not leq(m, l):
@@ -1980,6 +1980,29 @@ class Facts:
 
 
 RSI_CHECKED = [0]   # R3G-F rows' levels checked (check_result_sort_implicit)
+CARRIER_SET = set()  # R-CARRIER P1: parameter carrier levels of the exported non-template blocks (minimal in R2F)
+
+
+def carrier_levels(d):
+    """R-CARRIER (docs/CARRIER_LEVELS.md), independently: the global levels occurring as the final sort of a
+    parameter binder's type in the arity of a non-template inductive block."""
+    if d.get("kind") != "inductive" or template_binding(d) is not None:
+        return set()
+    out = set()
+    for b in d["bodies"]:
+        t = b["type"]
+        for _ in range(d["npars"]):
+            if t.get("k") != "prod":
+                break
+            ty = t["ty"]
+            while ty.get("k") == "prod":
+                ty = ty["b"]
+            if ty.get("k") == "sort" and ty["s"]["k"] == "type":
+                out |= {e["l"]["n"] for e in ty["s"]["u"] if e["l"].get("k") == "global"}
+            t = t["b"]
+    return out
+
+
 DECL_SRC = {}        # source name -> exported declaration (its dependency lists), set with RS_CLOSURE
 RS_CLOSURE = {}      # R3G-F: source name -> result-sort implicit levels in its dependency closure (itself included)
 
@@ -2423,6 +2446,10 @@ def check_statement_generality(facts, own, gen, exprs, poly, types):
             for l, sigma, p in zip(gen[name], us_, lps_):
                 if l in own or l in TEMPLATE_LEVELS:
                     continue                      # (own levels: their parameter, checked by R3; R5)
+                # R-CARRIER P2: an own copy of l (one per independent class) is a parameter for l as well
+                if sigma.get("k") == "param" and any(level_param(cp) == sigma.get("n") and SPLIT_COPIES.get(cp) == l
+                                                     for cp in own):
+                    continue
                 c, ps = level_nf(sigma)
                 if not ps and facts.entails(l, "Set", 0):
                     continue
@@ -2808,6 +2835,9 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
         problem("universe", "source IR has no native universe facts")
     gen, poly, gen_admit = {}, {}, {}
     # R3G-F: closures in source order (a declaration's dependencies precede it in the merged IR)
+    CARRIER_SET.clear()
+    for x in lines:
+        CARRIER_SET.update(carrier_levels(x))
     RS_CLOSURE.clear()
     DECL_SRC.clear()
     DECL_SRC.update({x["name"]: x for x in lines if x.get("kind") in ("constant", "inductive")})
@@ -2960,7 +2990,7 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                     for l in r_.get("implicit_levels") or []:
                         want = level_nf(interp_[l] if l in interp_ else {"k": "param", "n": level_param(l)})
                         if not any(len(us) - (poly or {}).get(nm, 0) == len(gen[nm]) and any(
-                                g == l and level_nf(u) == want
+                                g == SPLIT_COPIES.get(l, l) and level_nf(u) == want
                                 for g, u in zip(gen[nm], us[(poly or {}).get(nm, 0):]))
                                 for e_ in exprs if e_ is not None for nm, us in const_occurrences(e_, []) if nm in gen):
                             raise Mismatch(f"implicit level {l} is not the argument of a reference for that level")
@@ -3566,6 +3596,40 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             for c in x["copies"]:
                 SPLIT_COPIES[c] = x["level"]
         split_checked += 1
+    # R-CARRIER P2 (docs/CARRIER_LEVELS.md): implicit levels named per independent class. Each reported
+    # copy must be a fresh level l__c<k> (k = 0, 1, ...) of an implicit level l of the row (not a level of its
+    # source), reported among its implicit levels, and occur in its target type (it stands for an operand
+    # class there). Copies then read as l at references (R3), lie below l and inherit l's upper bounds.
+    copies_checked = 0
+    for n, r in sorted(rows.items()):
+        lc = r.get("level_copies") or []
+        if not lc:
+            continue
+        try:
+            if n not in decls or decls[n]["kind"] != "constant":
+                raise Mismatch("level copies on a row that is not an exported constant")
+            src_g = set(source_globals(decls[n]["type"], set())) | source_globals(decls[n].get("body"), set())
+            imp = set(r.get("implicit_levels") or [])
+            # (a statement row's statement is its value: its type is Prop)
+            ty_params = _all_params(r.get("target_value") if str(r.get("status", "")).startswith("STATEMENT_")
+                                    else r.get("target_type"), set())
+            for x in lc:
+                l, cs = x["level"], x["copies"]
+                if l in src_g or l not in src_levels:
+                    raise Mismatch(f"copied level {l} is not an implicit source level of the row")
+                if cs != [f"{l}__c{k}" for k in range(len(cs))] or len(cs) < 2:
+                    raise Mismatch(f"copies {cs} of {l} are not l__c0 .. l__c(k-1)")
+                for c in cs:
+                    if c in src_levels or SPLIT_COPIES.get(c, l) != l or c not in imp:
+                        raise Mismatch(f"copy {c} is not a fresh implicit level standing for {l}")
+                    if level_param(c) not in ty_params:
+                        raise Mismatch(f"copy {c} does not occur in the target type (no operand class)")
+            for x in lc:
+                for c in x["copies"]:
+                    SPLIT_COPIES[c] = x["level"]
+            copies_checked += 1
+        except Mismatch as e:
+            problem("level_copies", f"{n}: {e}")
     # interface protection (as in proof mode, for every claimed row)
     root_dir = Path(__file__).resolve().parent.parent
     iface_checked = 0
@@ -3935,7 +3999,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
            "assembly": ({"proofs_assembled": len(proved), "by_assembly_state": dict(sorted(by_asm.items(), key=str))}
                         if assembly else None),
            "status": "OK" if not problems else "AUDIT_REJECTED",
-           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked, "level_split_checked": split_checked, "result_sort_implicit_checked": RSI_CHECKED[0],
+           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked, "level_split_checked": split_checked, "result_sort_implicit_checked": RSI_CHECKED[0], "level_copies_checked": copies_checked,
            "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
            "definition_type_specialization_candidates": {
                "note": "non-protected definitions only (protected ones are rejected): a binder-domain level of the "
