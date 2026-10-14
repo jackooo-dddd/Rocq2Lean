@@ -343,6 +343,9 @@ def manifest(run):
                     "consumer_result.json", "audit.json", "conversion_deps/joined.json", "conversion_deps/result.json")
                    if (run / k).exists()},
          "reuse": reuse_section(),
+         # (only a validated run is bound: its fresh-process consumer and independent audit are OK)
+         "checks": {k: (json.loads((run / f).read_text()).get("status") if (run / f).exists() else None)
+                    for k, f in (("consumer", "consumer_result.json"), ("audit", "audit.json"))},
          "provenance_dir": str(PV), "export_dirs": EXPORT,
          "tools": {"impl_tree_sha256": R.impl_tree_sha256(), "translator_build_sha256": R.lean_build_sha256(),
                    "toolchains_lock_sha256": R.lock_sha(), "toolchain_fingerprint": R.toolchain_fingerprint()["digest"],
@@ -350,7 +353,8 @@ def manifest(run):
     ok = (all(v["roundtrip_status"] == "OK" for v in chunk_entries.values()) and m["merge"]["status"] == "OK"
           and m["root_coverage"]["in_merged_roots"] == len(prot) and uni["status"] == "OK"
           and all(v["ir_matches_export_record"] for v in snaps.values())
-          and m["reuse"]["status"] in ("SAME_TOOLS", "APPLICABLE"))
+          and m["reuse"]["status"] in ("SAME_TOOLS", "APPLICABLE")
+          and m["checks"]["consumer"] == "OK" and m["checks"]["audit"] == "OK")
     m["status"] = "CORPUS_PROVENANCE_BOUND" if ok else "CORPUS_PROVENANCE_INCOMPLETE"
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "CORPUS_MANIFEST.json").write_text(json.dumps(m, indent=1) + "\n")
@@ -374,6 +378,9 @@ def check(manifest_path=None):
 
     if m.get("status") != "CORPUS_PROVENANCE_BOUND":
         problems.append(f"manifest status {m.get('status')}")
+    for k, f in (("consumer", "consumer_result.json"), ("audit", "audit.json")):
+        if k in (m.get("checks") or {}) and Path(m["run"], f).exists() and json.loads(Path(m["run"], f).read_text()).get("status") != "OK":
+            problems.append(f"the run's {k} is not OK")
     for c, e in m["chunks"].items():
         bound(e["ir"], e["ir_sha256"], f"chunk {c} IR")
         bound(e["snapshot"], e["snapshot_sha256"], f"chunk {c} snapshot")
