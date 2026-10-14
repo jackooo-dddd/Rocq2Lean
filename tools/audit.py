@@ -244,7 +244,7 @@ def ind_globals(d):
     return sorted(source_globals([[b["type"], [c["type"] for c in b["ctors"]]] for b in d["bodies"]], set()))
 
 
-def own_level_interp(facts, own):
+def own_level_interp(facts, own, explicit=()):
     """Independent copy of rule R2F: the Lean level standing for each own level l of a non-template
     inductive block is max(u_l, interp(m) + k) over native facts m <= l (k = 0) / m < l (k = 1)
     between own levels; mutually <= (equal) levels contribute their parameter directly."""
@@ -255,7 +255,7 @@ def own_level_interp(facts, own):
         acc = {"k": "param", "n": level_param(l)}
         # R3G-F (docs/RESULT_SORT_LEVELS.md §2): a result-sort implicit level is not read through the levels
         # below it (it stands for an argument a <= l); it still raises the levels above it
-        if fuel == 0 or l in RS_MINIMAL:
+        if fuel == 0 or (l in RS_MINIMAL and l not in explicit):
             return acc
         for m in own:
             if m == l or not leq(m, l):
@@ -2671,7 +2671,7 @@ def own_partition_full(d, r):
             raise Mismatch("level interpretation without native facts")
         if not set(interp) <= tl or set(interp) & set(sol):
             raise Mismatch(f"interpreted levels {sorted(interp)} must be type or implicit levels {sorted(tl)}, not solved ones")
-        want = own_level_interp(FACTS, sorted(interp))
+        want = own_level_interp(FACTS, sorted(interp), set(source_globals(d["type"], set())) | source_globals(d["body"], set()))
         for l, x in interp.items():
             if level_nf(x) != level_nf(want[l]):
                 raise Mismatch(f"interpretation of {l} is {x}, the R2F interpretation is {want[l]}")
@@ -2938,7 +2938,7 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                     params_i, bl, tb_i = ind_params(d_, r_)
                     own = set(params_i)
                     if tb_i is None and not r_.get("plain_levels"):
-                        bl = own_level_interp(facts, params_i)     # explicit and implicit levels (R2F)
+                        bl = own_level_interp(facts, params_i, set(ind_globals(d_)))     # explicit and implicit levels (R2F)
                     self_n = {r_.get("target")} | {c["name"] for c in r_.get("target_ctors", [])}
                     RSI_CHECKED[0] += check_result_sort_implicit(facts, d_, r_, gen, ro_of)
                     for l in r_.get("implicit_levels") or []:
@@ -3201,7 +3201,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
                 if tb is None and r.get("plain_levels"):
                     aud.body = None               # M6: plain parameters (u_l itself for every level)
                 elif tb is None:
-                    aud.body = own_level_interp(FACTS, params0) if FACTS is not None else None   # explicit and implicit levels
+                    aud.body = own_level_interp(FACTS, params0, set(ind_globals(d))) if FACTS is not None else None   # explicit and implicit levels
                 else:
                     if FACTS is not None:
                         check_body_levels(FACTS, d, sol0, params0)
@@ -3773,7 +3773,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 if tb is None and r.get("plain_levels"):
                     aud.body = None
                 elif tb is None:
-                    aud.body = own_level_interp(FACTS, params0) if FACTS is not None else None
+                    aud.body = own_level_interp(FACTS, params0, set(ind_globals(d))) if FACTS is not None else None
                 else:
                     aud.body = sol0
                 try:

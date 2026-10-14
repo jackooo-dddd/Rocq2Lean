@@ -99,7 +99,7 @@ def forge(label, edit, srcs):
 
 # (a forged structure whose dependents were built against the real one: only the forged row itself must
 # be kernel-accepted; its dependents' rejection is recorded)
-OWN_ONLY = {"typeE-carrier-range"}
+OWN_ONLY = {"typeE-carrier-range", "axE-field-level"}
 P = lambda l: "u_" + l.replace(".", "_")
 par = lambda l: {"k": "param", "n": P(l)}
 # (1) a genuine carrier level claimed as result-sort-only
@@ -120,13 +120,13 @@ def field(rows):
             if not isinstance(j, dict):
                 return j
             if j.get("k") == "const" and j["n"] == R["SF.Rs.hasDec"]["target"]:
-                return dict(j, u=[j["u"][0], par(hd32)])
+                return dict(j, u=[j["u"][0], {"k": "max", "a": par(hd32), "b": par(ax55)}])
             return {k_: go(x) for k_, x in j.items()}
         c["type"] = go(c["type"])
 
 
 k, rc, probs, _ = forge("axE-field-level", field, ["SF.Rs.axE"])
-check(k and rc == 2 and probs, "axE's field at a level that is not its interpretation: kernel-accepted, audit-rejected")
+check(k and rc == 2 and probs, "axE's field at a level that is not its interpretation: the forged axE kernel-accepted, audit-rejected")
 
 
 # (3) typeE's carrier range changed: the sort field raised by the new level

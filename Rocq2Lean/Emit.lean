@@ -766,7 +766,9 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
           if typeLevels.contains m then
             if (← instantiateLevelMVars v).isMVar then freeT := freeT.push m
         let ownI := (freeT ++ chosen.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
-        let ι := ownLevelInterp genv.facts ownI genv.rsMinimal
+        -- (R3G-F levels are minimal only where they are implicit: not levels of this declaration's source)
+        let explicitLv := globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)
+        let ι := ownLevelInterp genv.facts ownI (genv.rsMinimal.fold (fun acc l => if explicitLv.contains l then acc else acc.insert l) {})
         interpRef.set (ownI.map fun l => (l, ι[l]!))
         for (m, v) in ownMVars do
           if ownI.contains m then
@@ -1038,6 +1040,12 @@ def templateBinding (i : IR.InductiveDecl) (globals : Array String) :
     unless (out.filter (·.1 == d)).size == 1 do throw ("UNSUPPORTED_FEATURE", s!"template level {d} is not bound by exactly one parameter")
   return out
 
+/-- R3G-F: the levels read minimally in a block's R2F interpretation — its own R3G-F levels and those of
+earlier blocks, where they are implicit (not levels of this block's source). -/
+def rsMinimalFor (genv : GEnv) (i : IR.InductiveDecl) (rsOwn : Array String) : Std.HashSet String :=
+  let expl := globalsOfInd i
+  (rsOwn.foldl (·.insert ·) genv.rsMinimal).fold (fun acc l => if expl.contains l then acc else acc.insert l) {}
+
 def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
     (raw : Json) (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false)
     (plain : Bool := false) (rsOwn : Array String := #[]) :
@@ -1110,7 +1118,7 @@ where
     let plain := plain && !isTemplate
     let mut gl : Std.HashMap String Level :=
       if isTemplate || plain then globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
-      else ownLevelInterp genv.facts globals (rsOwn.foldl (·.insert ·) genv.rsMinimal)
+      else ownLevelInterp genv.facts globals (rsMinimalFor genv i rsOwn)
     let mut extraMVars : Array (String × Level) := #[]
     for m in extra do
       let v ← mkFreshLevelMVar
@@ -1245,7 +1253,7 @@ where
     -- R3 coherence: an argument for an own level of a non-template block must be the level standing
     -- for it, its R2F interpretation ι l (u_l itself when no fact constrains l)
     let interpMap : Std.HashMap String Level :=
-      if isTemplate || plain then {} else (ownLevelInterp genv.facts globals (rsOwn.foldl (·.insert ·) genv.rsMinimal))
+      if isTemplate || plain then {} else (ownLevelInterp genv.facts globals (rsMinimalFor genv i rsOwn))
     for e in #[ty] ++ ctors.map (·.type) do
       match checkUniverseObligations genv globals e interpMap (allowLower := lower) with
       | .ok n => nchecks := nchecks + n
