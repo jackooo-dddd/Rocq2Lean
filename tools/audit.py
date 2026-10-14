@@ -253,7 +253,9 @@ def own_level_interp(facts, own):
 
     def go(l, fuel):
         acc = {"k": "param", "n": level_param(l)}
-        if fuel == 0:
+        # R3G-F (docs/RESULT_SORT_LEVELS.md §2): a result-sort implicit level is not read through the levels
+        # below it (it stands for an argument a <= l); it still raises the levels above it
+        if fuel == 0 or l in RS_MINIMAL:
             return acc
         for m in own:
             if m == l or not leq(m, l):
@@ -1978,6 +1980,7 @@ class Facts:
 
 
 RSI_CHECKED = [0]   # R3G-F rows' levels checked (check_result_sort_implicit)
+RS_MINIMAL = set()  # R3G-F: the reported result-sort implicit levels (each row's checked independently)
 SPLIT_COPIES = {}    # R-SPLIT: copy level -> its source level (set by main_statement; read by Facts and R3)
 
 
@@ -2793,6 +2796,10 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
     if facts is None:
         problem("universe", "source IR has no native universe facts")
     gen, poly, gen_admit = {}, {}, {}
+    RS_MINIMAL.clear()
+    for r_ in rows.values():
+        if r_.get("status") == "TRANSLATED_AND_CHECKED":
+            RS_MINIMAL.update(r_.get("result_sort_implicit_levels") or [])
     for s_, r_ in rows.items():
         if r_.get("status") == "TRANSLATED_AND_CHECKED" and r_.get("level_params"):
             d_ = decls[s_]

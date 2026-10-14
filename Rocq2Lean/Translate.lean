@@ -70,6 +70,8 @@ structure GEnv where
   /-- R3G-F (docs/RESULT_SORT_LEVELS.md): for an accepted inductive type (by target name), the source
   levels that occur in its declaration only in its result sort (and its own R3G-F implicit levels). -/
   resultOnly : Std.HashMap Name (Array String) := {}
+  /-- R3G-F: the result-sort implicit levels of the accepted blocks (minimal in every R2F reading). -/
+  rsMinimal : Std.HashSet String := {}
   /-- Template levels of the translated template inductives (R5, exempt from R3). -/
   templateLevels : Std.HashSet String := {}
   /-- Native universe facts of the export. -/
@@ -2441,13 +2443,18 @@ block is `ι l = max (u_l, ι m + k …)` over the native facts `m ≤ l` (k = 0
 between own levels (facts with `Set` are not used, as in R2). Every such fact then holds for all
 values of the parameters. Mutually `≤` levels (equal in the source) contribute their parameters
 directly; the remaining strict/one-way edges form a DAG, so the recursion terminates. -/
-partial def ownLevelInterp (f : IR.UniverseFacts) (own : Array String) : Std.HashMap String Level := Id.run do
+partial def ownLevelInterp (f : IR.UniverseFacts) (own : Array String) (minimal : Std.HashSet String := {}) :
+    Std.HashMap String Level := Id.run do
   let leq (a b : String) := f.rel a b == "le" || f.rel a b == "lt"
   let rec go (fuel : Nat) (l : String) : Level :=
     match fuel with
     | 0 => .param (levelParamName l)
     | fuel + 1 => Id.run do
       let mut acc : Level := .param (levelParamName l)
+      -- R3G-F (docs/RESULT_SORT_LEVELS.md §2): a result-sort implicit level stands for an argument
+      -- `a ≤ l` (R3 at every use); it keeps the levels above it raised but is not itself read through
+      -- the levels below it (its lower bounds, as R-SPLIT's copies)
+      if minimal.contains l then return acc
       for m in own do
         if m == l || !leq m l then continue
         let k := if f.rel m l == "lt" then 1 else 0

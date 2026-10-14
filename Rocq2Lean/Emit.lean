@@ -513,7 +513,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
     (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
-    (hypExact : Bool := false) :
+    (hypExact : Bool := false) (joint : Bool := false) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
@@ -665,7 +665,8 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         return
       -- (P2: jointly occurring metavariables are one class — in statements, where no level may be
       -- defaulted away; a definition keeps the residual-default path, R3↓ at 0)
-      if stmt then
+      -- (definitions: only on the retry tier `joint`, when the first accepted translation defaulted levels)
+      if stmt || joint then
         -- (the hypothesis telescope is not scanned: its instances are the translator's choice, set to
         -- match the uses; the kernel re-checks them)
         discard <| identifyJointMVars #[peelBinders ty hyps.size, peelBinders val hyps.size]
@@ -765,7 +766,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
           if typeLevels.contains m then
             if (← instantiateLevelMVars v).isMVar then freeT := freeT.push m
         let ownI := (freeT ++ chosen.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
-        let ι := ownLevelInterp genv.facts ownI
+        let ι := ownLevelInterp genv.facts ownI genv.rsMinimal
         interpRef.set (ownI.map fun l => (l, ι[l]!))
         for (m, v) in ownMVars do
           if ownI.contains m then
@@ -783,7 +784,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
           if typeLevels.contains t then cur := cur.insert t (← instantiateLevelMVars v)
         pure (minimalModelLevel genv.facts cur m)
       | none => pure .zero
-    let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt keepParams (solve := lower)
+    let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt keepParams (solve := lower || joint)
     -- P3 retry tier: hypotheses of one leaf that ended at the same type are collapsed into the first
     let (ty, val, hyps) ← if !hypExact || hyps.isEmpty then pure (ty, val, hyps) else do
       unless resid.isEmpty do
@@ -1109,7 +1110,7 @@ where
     let plain := plain && !isTemplate
     let mut gl : Std.HashMap String Level :=
       if isTemplate || plain then globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
-      else ownLevelInterp genv.facts globals
+      else ownLevelInterp genv.facts globals (rsOwn.foldl (·.insert ·) genv.rsMinimal)
     let mut extraMVars : Array (String × Level) := #[]
     for m in extra do
       let v ← mkFreshLevelMVar
@@ -1244,7 +1245,7 @@ where
     -- R3 coherence: an argument for an own level of a non-template block must be the level standing
     -- for it, its R2F interpretation ι l (u_l itself when no fact constrains l)
     let interpMap : Std.HashMap String Level :=
-      if isTemplate || plain then {} else (ownLevelInterp genv.facts globals)
+      if isTemplate || plain then {} else (ownLevelInterp genv.facts globals (rsOwn.foldl (·.insert ·) genv.rsMinimal))
     for e in #[ty] ++ ctors.map (·.type) do
       match checkUniverseObligations genv globals e interpMap (allowLower := lower) with
       | .ok n => nchecks := nchecks + n
@@ -1733,11 +1734,29 @@ where
         -- P0: a tier that would only succeed by specializing a protected statement
         let mut iface : Option DeclResult := none
         for eo in exts do
+          let sBefore ← saveState
           let r0 ← if (motiveLevels c.type).isEmpty then processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (extraOwn := eo) else do
               let a ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (admit := true) (extraOwn := eo)
               if a.accepted then pure a else processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (extraOwn := eo)
           first := some r0          -- the diagnosis kept is that of the last (earlier-behaviour) attempt
           r := r0
+          -- P2 for definitions (ITERATION_LOG entry 10): a definition accepted only with defaulted levels is
+          -- retried with jointly occurring level metavariables identified (as for statements) and the M6
+          -- bounded solver on postponed `max` constraints (`max(?a, X) = max(?b, X)` ↦ `?a := ?b`: the
+          -- two references at one instance, as in the source); the retry is kept only when it is accepted
+          -- with fewer defaulted levels
+          if r.accepted && !isStmt && genv.stmtMode && r.levelDefaults > 0 then
+            let sAcc ← saveState
+            let mut better := false
+            for it in [false, true] do
+              sBefore.restore
+              let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+                (interp := it) (extraOwn := eo) (joint := true)
+              if r'.accepted && r'.levelDefaults < r.levelDefaults then
+                r := { r' with levelDiagnostics := r'.levelDiagnostics.push s!"P2-def: {r.levelDefaults} defaulted level(s) reduced to {r'.levelDefaults} (joint identification, bounded solver)" }
+                better := true
+                break
+            unless better do sAcc.restore
           if r.accepted then break
           -- Universe retry ladder (docs/UNIVERSE_TRANSLATION.md): a kernel or universe rejection under
           -- R2 is retried with fact-reduced universes (R2⁺), then with the fact interpretation of the
@@ -1872,6 +1891,7 @@ where
             if !r.isTemplate then
               let ro := Split.resultOnlyLevels i ++ r.resultSortImplicit
               unless ro.isEmpty do genv := { genv with resultOnly := genv.resultOnly.insert tn ro }
+              genv := { genv with rsMinimal := r.resultSortImplicit.foldl (·.insert ·) genv.rsMinimal }
             for (l, _) in r.templateParams do
               genv := { genv with templateLevels := genv.templateLevels.insert l }
         pure r

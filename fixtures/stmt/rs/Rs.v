@@ -27,3 +27,8 @@ Record holder : Type@{rh} := Hold { held : typeE }.
 Universe rw.
 Record wrapA (e : typeE) : Type@{rw} := WA { w : sort e -> bool }.
 
+(* fax : a definition over the structure and its projection (MathComp fintype.finite_axiom's shape) *)
+Definition fax (T : typeE) (e : list (sort T)) : Prop := forall x : sort T, x = x.
+(* eqop / pr1 : MathComp eqtype.eq_op and pred1's shapes (a definition through a definition) *)
+Definition eqop (s : typeE) : sort s -> sort s -> bool := op (sort s) (mix (sort s) (cls s)).
+Definition pr1 (T : typeE) (a1 : sort T) : sort T -> bool := fun x => eqop T x a1.
