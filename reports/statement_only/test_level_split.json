@@ -1,0 +1,196 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   2,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "level_split_checked": 2
+ },
+ "rows": {
+  "SF.Split.pR": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "level_params": [
+    "u_SF_Split_21__s0",
+    "u_SF_Split_21__s1",
+    "u_SF_Split_21__s2",
+    "u_SF_Split_22"
+   ],
+   "level_split": [
+    {
+     "params": [
+      0,
+      1,
+      2
+     ],
+     "level": "SF.Split.21",
+     "copies": [
+      "SF.Split.21__s0",
+      "SF.Split.21__s1",
+      "SF.Split.21__s2"
+     ]
+    }
+   ]
+  },
+  "SF.Split.pR_intro": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "level_params": [
+    "u_SF_Split_22",
+    "u_SF_Split_33",
+    "u_SF_Split_34",
+    "u_SF_Split_35"
+   ],
+   "level_split": []
+  },
+  "SF.Split.fun_R": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "level_params": [
+    "u_SF_Split_26__s0",
+    "u_SF_Split_26__s1",
+    "u_SF_Split_26__s2",
+    "u_SF_Split_27",
+    "u_SF_Split_28",
+    "u_SF_Split_29"
+   ],
+   "level_split": [
+    {
+     "params": [
+      0,
+      1,
+      2
+     ],
+     "level": "SF.Split.26",
+     "copies": [
+      "SF.Split.26__s0",
+      "SF.Split.26__s1",
+      "SF.Split.26__s2"
+     ]
+    }
+   ]
+  },
+  "SF.Split.fun_R_id": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "level_params": [
+    "u_SF_Split_40",
+    "u_SF_Split_41",
+    "u_SF_Split_42"
+   ],
+   "level_split": []
+  },
+  "SF.Split.qR": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "level_params": [
+    "u_SF_Split_45",
+    "u_SF_Split_46"
+   ],
+   "level_split": []
+  },
+  "SF.Split.qR_intro": {
+   "status": "UNIVERSE_REJECTED",
+   "level_params": [],
+   "level_split": []
+  },
+  "SF.Split.gR": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "level_params": [
+    "u_SF_Split_55"
+   ],
+   "level_split": []
+  }
+ },
+ "gR": {
+  "type": {
+   "t": {
+    "l": {
+     "l": {
+      "n": "u_SF_Split_55",
+      "k": "param"
+     },
+     "k": "succ"
+    },
+    "k": "sort"
+   },
+   "n": "A1",
+   "k": "forall",
+   "b": {
+    "t": {
+     "l": {
+      "l": {
+       "n": "u_SF_Split_55",
+       "k": "param"
+      },
+      "k": "succ"
+     },
+     "k": "sort"
+    },
+    "n": "A2",
+    "k": "forall",
+    "b": {
+     "l": {
+      "l": {
+       "l": {
+        "n": "u_SF_Split_55",
+        "k": "param"
+       },
+       "k": "succ"
+      },
+      "k": "succ"
+     },
+     "k": "sort"
+    }
+   }
+  },
+  "level_params": [
+   "u_SF_Split_55"
+  ]
+ },
+ "negative": {
+  "gR-split": {
+   "kernel": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Split.gR: reported split [{'level': 'SF.Split.55', 'params': [0, 1], 'copies': ['SF.Split.55__s0', 'SF.Split.55__s1']}] is not the split derived from the source []",
+    "SF.Split.gR: universe parameters ['u_SF_Split_55', 'u_SF_Split_55__s0', 'u_SF_Split_55__s1'] are not parameters for source levels",
+    "SF.Split.gR: universe parameters ['u_SF_Split_55', 'u_SF_Split_55__s0', 'u_SF_Split_55__s1'] are not parameters for source levels"
+   ],
+   "consumer_problems": []
+  },
+  "gR-split-hidden": {
+   "kernel": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Split.gR: universe parameters ['u_SF_Split_55', 'u_SF_Split_55__s0', 'u_SF_Split_55__s1'] are not parameters for source levels",
+    "SF.Split.gR: universe parameters ['u_SF_Split_55', 'u_SF_Split_55__s0', 'u_SF_Split_55__s1'] are not parameters for source levels"
+   ],
+   "consumer_problems": []
+  },
+  "funR-swapped": {
+   "kernel": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Split.fun_R: ['type', 'prod.ty']: sort mismatch"
+   ],
+   "consumer_problems": [
+    "SF.Split.fun_R: split level SF.Split.26__s0 is not exactly the sort of parameter binder 0",
+    "SF.Split.fun_R: split level SF.Split.26__s1 is not exactly the sort of parameter binder 1"
+   ]
+  },
+  "funRid-diagonal": {
+   "kernel": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Split.fun_R_id: Rocq.SF.Split.fun_R: SF.Split.40 + 0 <= SF.Split.28 not entailed by the source universe graph"
+   ],
+   "consumer_problems": []
+  }
+ },
+ "positive": {
+  "exit": 0,
+  "output": ""
+ },
+ "correspondence": {
+  "exit": 0,
+  "output": "'SplitCorrespondence.up' does not depend on any axioms\n'SplitCorrespondence.down' does not depend on any axioms\n'SplitCorrespondence.down_up' does not depend on any axioms\n'SplitCorrespondence.up_down' does not depend on any axioms\n'SplitCorrespondence.fup' does not depend on any axioms\n'SplitCorrespondence.fdown' does not depend on any axioms\n'SplitCorrespondence.fdown_fup' does not depend on any axioms\n'SplitCorrespondence.fup_fdown' does not depend on any axioms\n"
+ }
+}

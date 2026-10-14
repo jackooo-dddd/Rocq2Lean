@@ -2,6 +2,7 @@ import Lean
 import Rocq2Lean.IR
 import Rocq2Lean.Kernel
 import Rocq2Lean.Translate
+import Rocq2Lean.Split
 import Rocq2Lean.Bootstrap
 
 /-!
@@ -90,6 +91,9 @@ structure DeclResult where
   sortLevels : Array (String × Level) := #[]
   /-- R2B-V: the result sort is the sort of the value (its lowered levels are `sortLevels`). -/
   resultSortInherited : Bool := false
+  /-- R-SPLIT (docs/LEVEL_SPLIT.md): source levels translated through the split view — each level, the
+  parameter binders (positions) whose sorts it was, and their copies (one universe parameter each). -/
+  levelSplit : Array (String × Array Nat × Array String) := #[]
   /-- M6: constants δ-inlined in the body (`Set`-motive constants used at a `Prop` family). -/
   deltaInlined : Array String := #[]
   /-- R3↓: accepted with references instantiated below shared levels (cumulativity tier). -/
@@ -1298,6 +1302,8 @@ def DeclResult.toJson (r : DeclResult) : Json :=
       Json.mkObj [("level", m), ("sigma", levelJson l), ("in_type", Json.bool (r.r2bpInType.contains m))])),
     ("sort_lowered_levels", Json.arr (r.sortLevels.map fun (m, l) => Json.mkObj [("level", m), ("sigma", levelJson l)])),
     ("result_sort_inherited", Json.bool r.resultSortInherited),
+    ("level_split", Json.arr (r.levelSplit.map fun (l, ps, cs) =>
+      Json.mkObj [("level", Json.str l), ("params", Json.arr (ps.map fun (k : Nat) => Json.num k)), ("copies", Json.arr (cs.map Json.str))])),
     ("protected", Json.bool r.protectedIface),
     ("pending_hypotheses", Json.arr (r.pendingHyps.map Json.str))]
   let rest : List (String × Json) := [
@@ -1545,7 +1551,7 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     -- evaluate the translated normalizers on concrete data during the checks
     let limits := fun (c : Core.Context) => { c with maxRecDepth := 8192, maxHeartbeats := c.maxHeartbeats * 5 }
     let r? ← tryCatchRuntimeEx (Sum.inl <$> withTheReader Core.Context limits
-        (withCurrHeartbeats (translateDecl genv results d))) fun e => do
+        (withCurrHeartbeats (translateSplit genv results d))) fun e => do
       saved.restore
       pure (Sum.inr (e.isRuntime, ← e.toMessageData.toString))
     let (r, genv?) := match r? with
@@ -1610,6 +1616,31 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
       out := out.push x
   return out
 where
+  /-- R-SPLIT (docs/LEVEL_SPLIT.md, experimental): a declaration with an eligible level is first
+  translated through its split view (each copy a universe parameter; the copies inherit the level's
+  upper bounds); if that view is not accepted, the declaration is translated as before. References
+  read every copy as the source level itself (R3 at references: an argument `a ≤ l`). -/
+  translateSplit (genv0 : GEnv) (results : Std.HashMap String DeclResult) (d : IR.Decl) : MetaM (DeclResult × GEnv) := do
+    let some (d', infos) := Split.view d | translateDecl genv0 results d
+    let copies := infos.foldl (fun a inf => a ++ inf.names) #[]
+    let back : String → String := fun x => (infos.find? (·.names.contains x)).map (·.level) |>.getD x
+    let facts' := genv0.facts.extend copies (Split.copiedRelations genv0.facts infos)
+    let saved ← saveState
+    let (r, genv) ← translateDecl { genv0 with facts := facts' } results d'
+    if r.ok || r.status == "PENDING_KERNEL_CHECKED" || r.status == "STATEMENT_KERNEL_CHECKED" ||
+        r.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
+      -- references: each copy stands for the source level
+      let mut cg := genv.constGlobals
+      for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
+        if let some gs := cg[n]? then cg := cg.insert n (gs.map back)
+      let note := s!"R-SPLIT: {infos.map fun i => (i.level, i.params)}"
+      return ({ r with levelSplit := infos.map fun i => (i.level, i.params, i.names),
+                       levelDiagnostics := r.levelDiagnostics.push note },
+              { genv with constGlobals := cg })
+    saved.restore
+    let (r0, g0) ← translateDecl genv0 results d
+    return ({ r0 with levelDiagnostics := r0.levelDiagnostics.push s!"R-SPLIT view not accepted ({r.status}: {r.message.take 300}); unsplit translation" }, g0)
+
   /-- One declaration (the attempts and retry tiers), with the environment it extends. -/
   translateDecl (genv0 : GEnv) (results : Std.HashMap String DeclResult) (d : IR.Decl) : MetaM (DeclResult × GEnv) := do
     let mut genv := genv0

@@ -3,8 +3,9 @@
 occurring level metavariables (P2), through the real CLI on fixtures/stmt/r2 (synthetic R2.v + the
 MathComp obligation HB_unnamed_mixin_106__rocq2lean_obligation_1).
 
-1. pairR_intro (CoqEAL list_R's shape: one level for two carriers) is refused with the source-derived
-   binder-independence reason (its carriers would be identified); `two` keeps two independent levels;
+1. pairR_intro (CoqEAL list_R's shape: one level for two carriers) was refused with the source-derived
+   binder-independence reason (its carriers would be identified); since R-SPLIT (entry 9) pairR is
+   split and pairR_intro accepted with independent carriers; `two` keeps two independent levels;
    the P2 obligation is generic (its max-coupled class named after choice.959), nothing defaulted; no
    pending artifact claims an R2B-P level.
 2. Negative controls, kernel-accepted, audit-rejected, every self-report hidden: two independent
@@ -41,8 +42,14 @@ OUT["pipeline"] = {"exit_codes": rcs, "validation": v.get("status"), "reason": v
 check(rcs[0] == 0 and rcs[2] == 0 and v.get("status") == "STATEMENT_VALIDATED", "fixture: export/translate/validate")
 pi = R["SF.R2.pairR_intro"]
 OUT["pairR_intro"] = {"status": pi["status"], "message": pi.get("message", "")[:400]}
-check(pi["status"] == "UNIVERSE_REJECTED" and "binder levels" in pi.get("message", ""),
-      "pairR_intro (list_R's shape) refused: the translation would identify its independent carrier levels")
+# (R-SPLIT, ITERATION_LOG entry 9: pairR's level `ul` is eligible — the sort of its three parameters and
+# of its result only — so pairR is translated through the split view and pairR_intro keeps its independent
+# carrier levels; the refusal of an ineligible coupled level is tested on qR_intro, check_level_split.py)
+pr = R["SF.R2.pairR"]
+OUT["pairR"] = {"status": pr["status"], "level_split": pr.get("level_split"), "level_params": pr.get("level_params")}
+check(pi["status"] == "STATEMENT_KERNEL_CHECKED" and len(pi.get("level_params") or []) >= 3
+      and pr["status"] == "TRANSLATED_AND_CHECKED" and (pr.get("level_split") or [{}])[0].get("params") == [0, 1, 2],
+      "pairR_intro (list_R's shape) accepted through pairR's split view, carriers at independent levels (R-SPLIT)")
 two = R["SF.R2.two"]
 check(two["status"] == "STATEMENT_KERNEL_CHECKED" and len(two["level_params"]) == 2, "two: two independent binder levels")
 o = R[OBL]

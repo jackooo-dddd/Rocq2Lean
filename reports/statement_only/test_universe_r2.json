@@ -9,8 +9,31 @@
   "reason": null
  },
  "pairR_intro": {
-  "status": "UNIVERSE_REJECTED",
-  "message": "statement specialization refused: binder levels SF.R2.25 \u2264 SF.R2.26 would be forced by the translation (u_SF_R2_25 \u2264 u_SF_R2_25), not by the source [last tier: UNIVERSE_REJECTED: statement specialization refused: binder levels SF.R2.25 \u2264 SF.R2.26 would be forced by the translation (u_SF_R2_25 \u2264 u_SF_R2_25), not by the source]"
+  "status": "STATEMENT_KERNEL_CHECKED",
+  "message": ""
+ },
+ "pairR": {
+  "status": "TRANSLATED_AND_CHECKED",
+  "level_split": [
+   {
+    "params": [
+     0,
+     1,
+     2
+    ],
+    "level": "SF.R2.21",
+    "copies": [
+     "SF.R2.21__s0",
+     "SF.R2.21__s1",
+     "SF.R2.21__s2"
+    ]
+   }
+  ],
+  "level_params": [
+   "u_SF_R2_21__s0",
+   "u_SF_R2_21__s1",
+   "u_SF_R2_21__s2"
+  ]
  },
  "obligation": {
   "status": "STATEMENT_KERNEL_CHECKED",

@@ -161,6 +161,13 @@ def UniverseFacts.indexed (levels : Array String) (relations : Array (String × 
     if r == "lt" then m.insert a ((m.getD a #[]).push b) else m
   { levels, relations, index, ltSucc }
 
+/-- New levels with the given relations added to an indexed fact table (R-SPLIT copies). -/
+def UniverseFacts.extend (f : UniverseFacts) (levels : Array String) (relations : Array (String × String × String)) : UniverseFacts :=
+  let index := relations.foldl (init := f.index) fun m (a, r, b) => m.insert (a, b) r
+  let ltSucc := relations.foldl (init := f.ltSucc) fun m (a, r, b) =>
+    if r == "lt" then m.insert a ((m.getD a #[]).push b) else m
+  { levels := f.levels ++ levels, relations := f.relations ++ relations, index, ltSucc }
+
 def UniverseFacts.rel (f : UniverseFacts) (a b : String) : String :=
   if a == b then "eq" else
   if f.index.isEmpty then

@@ -201,6 +201,27 @@ private def kindOf : ConstantInfo → String
 
 private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k).toOption.getD ""
 
+/-- R-SPLIT (docs/LEVEL_SPLIT.md), on the imported declaration's type alone: as a *sort*, the
+universe parameter `p` of a copy occurs only in the final sort of the domain of binder `pos` (after
+`nh` hypothesis binders) — nowhere else in that domain, in no other binder's domain — and otherwise
+only in the type's final sort. (Universe arguments of references may carry it: those are the
+references' instances, R3-checked by the audit.) -/
+partial def splitPositionOk (ty : Expr) (nh pos : Nat) (p : Name) : Bool :=
+  let has (e : Expr) := (e.find? fun x => match x with
+    | .sort u => (collectLevelParams {} (.sort u)).params.contains p
+    | _ => false).isSome
+  let rec finalOnly : Expr → Bool
+    | .forallE _ d b _ => !has d && finalOnly b
+    | .sort _ => true
+    | e => !has e
+  let rec go (j : Nat) (sawOwn : Bool) : Expr → Bool
+    | .forallE _ d b _ =>
+      if j == nh + pos then finalOnly d && has d && go (j + 1) true b
+      else !has d && go (j + 1) sawOwn b
+    | .sort _ => sawOwn
+    | e => sawOwn && !has e
+  go 0 false ty
+
 @[command_elab rocqVerify] def elabRocqVerify : CommandElab := fun stx => do
   let some conPath := stx[1].isStrLit? | throwError "expected a contract path"
   let some repPath := stx[2].isStrLit? | throwError "expected a report path"
@@ -539,6 +560,23 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
         unless (sl.isEmpty || inhOk) && pin.isEmpty do
           problems := note "interface" s!"{s}: protected public declaration translated with a specialized statement ({sl.size} R2B-S, {pin.size} R2B-P statement level(s))" problems
   | _ => problems := note "interface" "the contract carries no protection binding" problems
+  -- R-SPLIT (detector `levels`): every copy's universe parameter sits at its binder's sort only
+  for (s, r) in accepted do
+    let ls := (r.getObjValAs? (Array Json) "level_split").toOption.getD #[]
+    if ls.isEmpty then continue
+    let nh := ((r.getObjValAs? (Array Json) "pending_hypotheses").toOption.getD #[]).size
+    match env.find? (getStr r "target").toName with
+    | none => problems := note "levels" s!"{s}: split declaration not imported" problems
+    | some ci =>
+      for x in ls do
+        let ps := (x.getObjValAs? (Array Nat) "params").toOption.getD #[]
+        let cs := (x.getObjValAs? (Array String) "copies").toOption.getD #[]
+        if ps.size != cs.size || ps.size < 2 then
+          problems := note "levels" s!"{s}: malformed split {x.compress}" problems
+        for k in ps, c in cs do
+          let p := levelParamName c
+          unless ci.levelParams.contains p && splitPositionOk ci.type nh k p do
+            problems := note "levels" s!"{s}: split level {c} is not exactly the sort of parameter binder {k}" problems
   for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)
   let dets := ["binding", "coverage", "roots", "presence", "kind", "safety", "levels", "type", "value", "ctors",
                "target_deps", "axioms", "rec_indices", "residual_levels", "instance_levels", "interface"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))

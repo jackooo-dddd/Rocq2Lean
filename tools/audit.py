@@ -28,6 +28,7 @@ compared; universe levels are compared through a semantic normal form max(c, u_i
 Anything outside these rules (case, fix, proj, ...) is reported as UNAUDITABLE, which fails.
 """
 
+import copy
 import json
 import sys
 from pathlib import Path
@@ -1958,6 +1959,12 @@ class Facts:
     def __init__(self, rec):
         self.levels = ["Set"] + list(rec["levels"])
         self.rel = {(x["l"], x["r"]): x["rel"] for x in rec["relations"]}
+        # R-SPLIT: a copy of a level inherits its upper bounds (l <= m, l < m), never its lower bounds
+        for c, l in SPLIT_COPIES.items():
+            self.levels.append(c)
+            for (a, b), r in list(self.rel.items()):
+                if a == l and b != l and r in ("le", "lt"):
+                    self.rel[(c, b)] = r
 
     def entails(self, a, b, k):
         """a + k <= b in the source universe graph."""
@@ -1966,6 +1973,151 @@ class Facts:
         if k == 1:
             return self.rel.get((a, b)) == "lt"
         return any(self.rel.get((a, c)) == "lt" and self.entails(c, b, k - 1) for c in self.levels)
+
+
+SPLIT_COPIES = {}    # R-SPLIT: copy level -> its source level (set by main_statement; read by Facts and R3)
+
+
+def _occ_paths(j, name, path=()):
+    """Every path at which the string `name` occurs in the JSON value j (as a value)."""
+    out = []
+    stack = [(j, path)]
+    while stack:
+        x, pth = stack.pop()
+        if isinstance(x, dict):
+            stack.extend((v, pth + (k,)) for k, v in x.items())
+        elif isinstance(x, list):
+            stack.extend((v, pth + (i,)) for i, v in enumerate(x))
+        elif x == name:
+            out.append(pth)
+    return set(out)
+
+
+def _at(j, path):
+    for k in path:
+        j = j[k]
+    return j
+
+
+def _final_sort_paths(t, base, l):
+    """Paths of `l` in the final sort of a term `forall ..., Sort s` (base: the term's path)."""
+    pth = base
+    while t.get("k") == "prod":
+        t, pth = t["b"], pth + ("b",)
+    if t.get("k") != "sort" or t["s"]["k"] != "type":
+        return set()
+    return {pth + ("s", "u", i, "l", "n") for i, e in enumerate(t["s"]["u"]) if e["l"].get("k") == "global" and e["l"].get("n") == l}
+
+
+def _binders(t, base, kind, n):
+    """(path of the binder type, binder type) of the first n `kind` binders of t, and the rest."""
+    out = []
+    pth = base
+    while len(out) < n and t.get("k") == kind:
+        out.append((pth + ("ty",), t["ty"]))
+        t, pth = t["b"], pth + ("b",)
+    return out, (pth, t)
+
+
+def level_split_view(d):
+    """R-SPLIT (docs/LEVEL_SPLIT.md), independently of the translator, by occurrence paths: a source
+    global level `l` of a monomorphic declaration splits when every occurrence of the string `l` in
+    the whole exported declaration lies in the final sort of a parameter binder (constants: the type's
+    binder and the body's lambda at the same position; inductives: the arity's, the parameter
+    context's and every constructor's binder at that position) whose binder type mentions `l` only
+    there — at least two such binders — or in the declaration's final result sort. Returns
+    (view, [{"level", "params", "copies"}]) or (None, [])."""
+    if (d.get("universes") or {}).get("k") != "monomorphic":
+        return None, []
+    if d["kind"] == "constant":
+        if d.get("body") is None:
+            return None, []
+        tb, (trp, trest) = _binders(d["type"], ("type",), "prod", 10 ** 9)
+        bb, _ = _binders(d["body"], ("body",), "lam", 10 ** 9)
+        np_ = min(len(tb), len(bb))
+        tb, bb = tb[:np_], bb[:np_]
+        trp, trest = ("type",) + ("b",) * np_, _at(d, ("type",) + ("b",) * np_)
+        positions = [[tb[i], bb[i]] for i in range(np_)]
+        results = [(trp, trest)]
+    else:
+        if len(d["bodies"]) != 1 or d["npars"] < 2 or (d.get("native") or {}).get("template"):
+            return None, []
+        np_ = d["npars"]
+        b = d["bodies"][0]
+        ab, (arp, arest) = _binders(b["type"], ("bodies", 0, "type"), "prod", np_)
+        if len(ab) != np_:
+            return None, []
+        positions = []
+        for k in range(np_):
+            pos = [ab[k], (("params", np_ - 1 - k, "ty"), d["params"][np_ - 1 - k]["ty"])]
+            for ci, c in enumerate(b["ctors"]):
+                cb, _ = _binders(c["type"], ("bodies", 0, "ctors", ci, "type"), "prod", np_)
+                if len(cb) != np_:
+                    return None, []
+                pos.append(cb[k])
+            positions.append(pos)
+        results = [(arp, arest)]
+    levels = sorted(source_globals(d, set()))
+    infos, ren = [], {}
+    for l in levels:
+        occ = _occ_paths(d, l)
+        groups, allowed = [], set()
+        for k, binders in enumerate(positions):
+            fs = [_final_sort_paths(ty, pth, l) for pth, ty in binders]
+            # a group: l in the final sort of every binder at this position, and nowhere else in them
+            if all(f and f == {q for q in occ if q[:len(pth)] == pth} for f, (pth, _) in zip(fs, binders)):
+                groups.append(k)
+                allowed |= set().union(*fs)
+        if len(groups) < 2:
+            continue
+        res = set().union(*(_final_sort_paths(t, pth, l) for pth, t in results))
+        if d["kind"] == "inductive":
+            srt = d["bodies"][0]["sort"]
+            if srt.get("k") == "type":
+                res |= {("bodies", 0, "sort", "u", i, "l", "n") for i, e in enumerate(srt["u"])
+                        if e["l"].get("k") == "global" and e["l"].get("n") == l}
+        if occ != allowed | res:
+            continue
+        copies = [f"{l}__s{k}" for k in groups]
+        infos.append({"level": l, "params": groups, "copies": copies})
+        for k, c in zip(groups, copies):
+            for pth, ty in positions[k]:
+                for q in _final_sort_paths(ty, pth, l):
+                    ren[q] = [c]
+        for q in res:
+            ren[q] = copies
+    if not infos:
+        return None, []
+    v = copy.deepcopy(d)
+    # result sorts: an entry for l becomes one entry per copy (max of the copies), in place
+    for q in sorted(ren, key=lambda q: (len(q), [str(x) for x in q]), reverse=True):
+        u = _at(v, q[:-3])          # the sort's level list
+        i = q[-3]
+        e = u[i]
+        u[i:i + 1] = [{**e, "l": {**e["l"], "n": c}} for c in ren[q]]
+    return v, infos
+
+
+def level_unsplit(v, infos):
+    """The diagonal: every copy renamed back to its level (a max of equal summands collapsed)."""
+    back = {c: x["level"] for x in infos for c in x["copies"]}
+
+    def go(j):
+        if isinstance(j, list):
+            return [go(x) for x in j]
+        if not isinstance(j, dict):
+            return j
+        if j.get("k") == "type" and isinstance(j.get("u"), list):
+            u = []
+            for e in j["u"]:
+                e = go(e)
+                if e not in u:
+                    u.append(e)
+            return {**{k: go(x) for k, x in j.items() if k != "u"}, "u": u}
+        if j.get("k") == "global" and j.get("n") in back:
+            return {**j, "n": back[j["n"]]}
+        return {k: go(x) for k, x in j.items()}
+    return go(v)
 
 
 def const_occurrences(e, acc):
@@ -2570,6 +2722,9 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                 TEMPLATE_LEVELS.update(tb_ or {})
                 for n_ in [r_["target"]] + [c["name"] for c in r_.get("target_ctors", [])]:
                     gen[n_] = params_
+    # R-SPLIT: at references, a copy stands for its source level (an argument `a <= l`: R3)
+    for n_ in gen:
+        gen[n_] = [SPLIT_COPIES.get(x, x) for x in gen[n_]]
     # assembly: a final theorem `Rocq.<leaf>` has the universe parameters of its accepted statement
     for t_, src_ in aliases:
         st_ = (rows.get(src_) or {}).get("target")
@@ -3230,6 +3385,35 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     if [(r.get("requested"), r.get("name")) for r in rep_roots] != [(r["requested"], r["name"]) for r in src_roots] \
             or any(r.get("status") != st(r.get("name")) for r in rep_roots):
         problem("coverage", "report root records disagree with the contract or with the result rows")
+    # R-SPLIT (docs/LEVEL_SPLIT.md): a row translated through the split view is audited against the
+    # split view derived here from the source: the reported split must be exactly that one, its copies
+    # fresh levels, and the diagonal (every copy renamed back) must give back the source declaration
+    SPLIT_COPIES.clear()
+    split_checked = 0
+    src_levels = set(lines[4].get("levels") or []) if lines[4].get("kind") == "universe_facts" else set()
+    for n, r in sorted(rows.items()):
+        ls = r.get("level_split") or []
+        if not ls:
+            continue
+        if n not in decls:
+            problem("level_split", f"{n}: split reported on a generated row")
+            continue
+        v, infos = level_split_view(decls[n])
+        if v is None or ls != infos:
+            problem("level_split", f"{n}: reported split {ls} is not the split derived from the source {infos}")
+            continue
+        cs = [c for x in infos for c in x["copies"]]
+        if len(set(cs)) != len(cs) or any(c in src_levels or c in SPLIT_COPIES or _occ_paths(decls[n], c) for c in cs):
+            problem("level_split", f"{n}: split copies {cs} are not fresh levels")
+            continue
+        if level_unsplit(v, infos) != decls[n]:
+            problem("level_split", f"{n}: the diagonal of the split view is not the source declaration")
+            continue
+        decls[n] = v
+        for x in infos:
+            for c in x["copies"]:
+                SPLIT_COPIES[c] = x["level"]
+        split_checked += 1
     # interface protection (as in proof mode, for every claimed row)
     root_dir = Path(__file__).resolve().parent.parent
     iface_checked = 0
@@ -3599,7 +3783,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
            "assembly": ({"proofs_assembled": len(proved), "by_assembly_state": dict(sorted(by_asm.items(), key=str))}
                         if assembly else None),
            "status": "OK" if not problems else "AUDIT_REJECTED",
-           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked,
+           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked, "level_split_checked": split_checked,
            "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
            "definition_type_specialization_candidates": {
                "note": "non-protected definitions only (protected ones are rejected): a binder-domain level of the "
