@@ -77,8 +77,13 @@ structure GEnv where
   /-- R-CARRIER P1 (docs/CARRIER_LEVELS.md): the parameter carrier levels of every exported block
   (`Split.carrierLevels`), computed once from the source; read minimally in every R2F reading. -/
   carrierSet : Std.HashSet String := {}
+  /-- R-CARRIER P1 (narrowed): (carrier, other level of the same block) pairs (`Split.decoupledPairs`). -/
+  decoupled : Std.HashSet (String × String) := {}
   /-- R-CARRIER P2: implicit levels with several free classes in a declaration's type are named per class. -/
   carrierSplit : Bool := true
+  /-- R-CARRIER P2: per target, the universe-parameter positions that are copies (`l__c<k>`): an argument
+  there stands for an argument `a ≤ l`, never for a shared `l` itself (R3 entailment, no coherence). -/
+  copyPositions : Std.HashMap Name (Array Bool) := {}
   /-- Template levels of the translated template inductives (R5, exempt from R3). -/
   templateLevels : Std.HashSet String := {}
   /-- Native universe facts of the export. -/
@@ -2363,7 +2368,7 @@ partial def levelNF : Level → Option (Nat × List (Name × Nat))
 universe argument `σ` for the referenced constant's parameter standing for source level `l`. -/
 def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) (σ : Level)
     (body : Std.HashMap String Level := {}) (cAdmit : Bool := false) (ownAdmit : Array String := #[])
-    (allowLift : Bool := false) (allowLower : Bool := false) : Except String Unit := do
+    (allowLift : Bool := false) (allowLower : Bool := false) (copyArg : Bool := false) : Except String Unit := do
   -- R8: a motive-level parameter stands for (image of the source level) + 1; `shift` converts the
   -- referring declaration's level for `l` into the referenced parameter's convention
   let dAdmit := ownAdmit.contains l
@@ -2375,7 +2380,8 @@ def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) 
     -- R3↓: as for a shared level, a lower argument (checked below not to raise)
     unless allowLower do
       throw s!"coherence: source level {l} is a proof-local level of the referring declaration, solved as {s}; the argument must be the same, not {σ}"
-  else if own.contains l then
+  -- (R-CARRIER P2: an argument for a copy of `l` stands for an argument `a ≤ l`, not for a shared `l`)
+  else if own.contains l && !copyArg then
     if σ.normalize == (shift (.param (levelParamName l))).normalize then return
     -- R3↓ (cumulativity tier only, reported per declaration): a lower argument, checked below not to
     -- raise (Set + c ≤ l and m + k ≤ l entailed): Rocq used the reference at l with arguments of
@@ -2454,7 +2460,8 @@ block is `ι l = max (u_l, ι m + k …)` over the native facts `m ≤ l` (k = 0
 between own levels (facts with `Set` are not used, as in R2). Every such fact then holds for all
 values of the parameters. Mutually `≤` levels (equal in the source) contribute their parameters
 directly; the remaining strict/one-way edges form a DAG, so the recursion terminates. -/
-partial def ownLevelInterp (f : IR.UniverseFacts) (own : Array String) (minimal : Std.HashSet String := {}) :
+partial def ownLevelInterp (f : IR.UniverseFacts) (own : Array String) (minimal : Std.HashSet String := {})
+    (decoupled : Std.HashSet (String × String) := {}) :
     Std.HashMap String Level := Id.run do
   let leq (a b : String) := f.rel a b == "le" || f.rel a b == "lt"
   let rec go (fuel : Nat) (l : String) : Level :=
@@ -2468,6 +2475,8 @@ partial def ownLevelInterp (f : IR.UniverseFacts) (own : Array String) (minimal 
       if minimal.contains l then return acc
       for m in own do
         if m == l || !leq m l then continue
+        -- R-CARRIER P1: a parameter carrier is not raised by its own block's other levels
+        if decoupled.contains (l, m) then continue
         let k := if f.rel m l == "lt" then 1 else 0
         if leq l m then acc := mkLevelMax' acc ((Level.param (levelParamName m)).addOffset k)   -- equal levels
         else acc := mkLevelMax' acc ((go fuel m).addOffset k)
@@ -2498,10 +2507,12 @@ def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr)
       -- R6: the first universe arguments of a polymorphic constant are its instance, not R3 obligations
       let ls := ls.drop (genv.polyByTarget[c]?.getD 0)
       unless globals.size == ls.length do throw s!"{c}: {ls.length} universe arguments for {globals.size} parameters"
-      for l in globals, σ in ls do
+      let copyPos := (genv.copyPositions[c]?).getD #[]
+      for l in globals, σ in ls, k in List.range globals.size do
         if genv.templateLevels.contains l then continue      -- R5, not R3
         let cAdmit := (genv.admitting[c]?.getD #[]).contains l
-        match checkInstantiation genv.facts own l σ body cAdmit ownAdmit allowLift allowLower with
+        -- R-CARRIER P2: at a copy position the shared-level coherence does not apply (R3 entailment does)
+        match checkInstantiation genv.facts own l σ body cAdmit ownAdmit allowLift allowLower (copyPos.getD k false) with
         | .ok () => n := n + 1
         | .error msg => throw s!"reference to {c}: {msg}"
   return n

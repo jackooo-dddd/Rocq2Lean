@@ -255,10 +255,12 @@ def own_level_interp(facts, own, explicit=(), minimal=frozenset()):
         acc = {"k": "param", "n": level_param(l)}
         # R3G-F (docs/RESULT_SORT_LEVELS.md §2): a result-sort implicit level is not read through the levels
         # below it (it stands for an argument a <= l); it still raises the levels above it
-        if fuel == 0 or (l in minimal and l not in explicit) or l in CARRIER_SET:
+        if fuel == 0 or (l in minimal and l not in explicit):
             return acc
         for m in own:
             if m == l or not leq(m, l):
+                continue
+            if (l, m) in DECOUPLED:           # R-CARRIER P1: not raised by its own block's other levels
                 continue
             base = {"k": "param", "n": level_param(m)} if leq(l, m) else go(m, fuel - 1)
             if rel(m, l) == "lt":
@@ -1979,8 +1981,11 @@ class Facts:
         return any(self.rel.get((a, c)) == "lt" and self.entails(c, b, k - 1) for c in self.levels)
 
 
+GEN_COPY_POS = {}    # R-CARRIER P2: target -> universe-parameter positions that are P2 copies
+P2_COPIES = set()    # R-CARRIER P2: the reported (checked) copies of implicit levels
 RSI_CHECKED = [0]   # R3G-F rows' levels checked (check_result_sort_implicit)
-CARRIER_SET = set()  # R-CARRIER P1: parameter carrier levels of the exported non-template blocks (minimal in R2F)
+CARRIER_SET = set()  # R-CARRIER P1: parameter carrier levels of the exported non-template blocks
+DECOUPLED = set()    # R-CARRIER P1: (carrier, other level of the same block) pairs, not raising the carrier in R2F
 
 
 def carrier_levels(d):
@@ -2279,9 +2284,12 @@ def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None
             c_adm = (admit or {}).get(name, set())
             if len(us) != len(ls):
                 raise Mismatch(f"{name}: {len(us)} universe arguments for {len(ls)} parameters")
-            for l, sigma in zip(ls, us):
+            cpos = GEN_COPY_POS.get(name, set())
+            for idx, (l, sigma) in enumerate(zip(ls, us)):
                 if l in TEMPLATE_LEVELS:
                     continue                      # R5: instantiated from the arguments, checked by InstanceLevels
+                # R-CARRIER P2: at a copy position, l is not shared (R3 entailment below, not coherence)
+                own_l = own - {l} if idx in cpos else own
                 c, ps = level_nf(sigma)
                 ca, da = l in c_adm, l in own_admit      # R8: motive-level parameters (one above the image)
                 if da and not ca:
@@ -2290,7 +2298,7 @@ def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None
                 if body and l in body and not (lower and (c, ps) != level_nf(bump(body[l]))):
                     if (c, ps) != level_nf(bump(body[l])):
                         raise Mismatch(f"{name}: source level {l} is proof-local, argument must be its solution {body[l]}")
-                elif l in own and not (body and l in body) and not (lower and (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)}))):
+                elif l in own_l and not (body and l in body) and not (lower and (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)}))):
                     if (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)})):
                         raise Mismatch(f"{name}: source level {l} is shared, argument must be {level_param(l)}")
                 else:
@@ -2836,8 +2844,13 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
     gen, poly, gen_admit = {}, {}, {}
     # R3G-F: closures in source order (a declaration's dependencies precede it in the merged IR)
     CARRIER_SET.clear()
+    DECOUPLED.clear()
     for x in lines:
-        CARRIER_SET.update(carrier_levels(x))
+        cs_ = carrier_levels(x)
+        CARRIER_SET.update(cs_)
+        if cs_:
+            g_ = set(ind_globals(x))
+            DECOUPLED.update((l_, m_) for l_ in cs_ for m_ in g_ if m_ != l_)
     RS_CLOSURE.clear()
     DECL_SRC.clear()
     DECL_SRC.update({x["name"]: x for x in lines if x.get("kind") in ("constant", "inductive")})
@@ -2897,7 +2910,11 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                 ro_memo[nm] = own_ro | (rs_deps(d0) - expl)
         return ro_memo[nm]
     # R-SPLIT: at references, a copy stands for its source level (an argument `a <= l`: R3)
+    # R-CARRIER P2: the positions of P2 copies (level_copies) are recorded: there the shared-level coherence
+    # does not apply (an argument a <= l, R3 entailment)
+    GEN_COPY_POS.clear()
     for n_ in gen:
+        GEN_COPY_POS[n_] = {k for k, x in enumerate(gen[n_]) if x in P2_COPIES}
         gen[n_] = [SPLIT_COPIES.get(x, x) for x in gen[n_]]
     # assembly: a final theorem `Rocq.<leaf>` has the universe parameters of its accepted statement
     for t_, src_ in aliases:
@@ -3627,6 +3644,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             for x in lc:
                 for c in x["copies"]:
                     SPLIT_COPIES[c] = x["level"]
+                    P2_COPIES.add(c)
             copies_checked += 1
         except Mismatch as e:
             problem("level_copies", f"{n}: {e}")

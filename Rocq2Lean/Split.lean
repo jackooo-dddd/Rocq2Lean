@@ -278,4 +278,18 @@ def carrierLevels (i : InductiveDecl) : Array String := Id.run do
             unless out.contains n do out := out.push n
   return out
 
+/-- R-CARRIER P1 (narrowed): the pairs `(l, m)` where `l` is a parameter carrier of the block and `m` another
+global level of the same block (a field sort, its result sort, …). In every R2F reading a source fact
+`m ≤ l` (or `m < l`) for such a pair does not raise `l`: the operand's carrier is not tied to the block's own
+other levels (SubType's base carrier 573 and its sub sort 577). Other lower bounds still apply. -/
+def decoupledPairs (i : InductiveDecl) : Array (String × String) := Id.run do
+  let cs := carrierLevels i
+  if cs.isEmpty then return #[]
+  let all := i.bodies.foldl (fun acc b => b.ctors.foldl (fun acc c => acc ++ globalsOfTerm c.type) (acc ++ globalsOfTerm b.type)) #[]
+  let mut out := #[]
+  for l in cs do
+    for m in all do
+      if m != l && !out.contains (l, m) then out := out.push (l, m)
+  return out
+
 end Rocq2Lean.Split

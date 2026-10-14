@@ -767,7 +767,10 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
           -- R-CARRIER P2 (docs/CARRIER_LEVELS.md): the distinct free classes of arguments for `l` in the
           -- type (operands typing does not relate) are named separately, `l__c<k>`; with one class, `u_l`
           let mut tyClasses : Array Level := #[]
-          for (l', σ') in inTy do
+          -- Count operand classes in the source interface, excluding generated prerequisite binders.
+          -- Their universe instances are chosen by the translator (as for joint identification),
+          -- and must not create extra independent classes beside the declaration's own operands.
+          for (l', σ') in ← argsFor (← instLevelMVars (peelBinders (if stmt then val else ty) hyps.size)) do
             if l' == l then
               let x ← instCollapse σ'
               if (x.isMVar || isCopyOf l x) && !tyClasses.contains x then tyClasses := tyClasses.push x
@@ -808,8 +811,9 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         let ownI := (freeT ++ chosen.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
         -- (R3G-F levels are minimal only where they are implicit: not levels of this declaration's source)
         let explicitLv := globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)
-        let ι := ownLevelInterp genv.facts ownI (genv.carrierSet.fold (·.insert ·)
-          ((genv.rsOfDeps (c.typeDeps ++ c.bodyDeps)).fold (fun acc l => if explicitLv.contains l then acc else acc.insert l) {}))
+        let ι := ownLevelInterp genv.facts ownI
+          ((genv.rsOfDeps (c.typeDeps ++ c.bodyDeps)).fold (fun acc l => if explicitLv.contains l then acc else acc.insert l) {})
+          genv.decoupled
         interpRef.set (ownI.map fun l => (l, ι[l]!))
         for (m, v) in ownMVars do
           if ownI.contains m then
@@ -828,8 +832,42 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         pure (minimalModelLevel genv.facts cur m)
       | none => pure .zero
     let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt keepParams (solve := lower || joint)
-    -- R-CARRIER P2: the copies lie below their level and inherit its upper bounds (as R-SPLIT's copies)
-    let splits ← splitRef.get
+    -- R-CARRIER P2 post-pass: a remaining `u_l` of a split level (e.g. own-level hypothesis types) is its
+    -- first copy; copies that no longer occur in the type (a statement: its value) are merged into one that
+    -- does; a level left with one copy is `u_l` again; the remaining copies are renumbered l__c0, l__c1, …
+    let mut ren : Std.HashMap Name Name := {}
+    let mut finalSplits : Array (String × Array String) := #[]
+    let tyHere := if stmt then val else ty
+    for (l, cs) in ← splitRef.get do
+      let pu := levelParamName l
+      let firstC := levelParamName cs[0]!
+      let occ0 := (collectLevelParams {} ((tyHere.replaceLevel fun x => match x with
+        | .param n => if n == pu then some (.param firstC) else none
+        | _ => none))).params
+      let occurring := cs.filter fun c => occ0.contains (levelParamName c)
+      if occurring.size ≤ 1 then
+        for c in cs do ren := ren.insert (levelParamName c) pu
+      else
+        let keep := occurring.mapIdx fun k _ => s!"{l}__c{k}"
+        ren := ren.insert pu (levelParamName keep[0]!)
+        for c in cs do
+          match occurring.idxOf? c with
+          | some k => ren := ren.insert (levelParamName c) (levelParamName keep[k]!)
+          | none => ren := ren.insert (levelParamName c) (levelParamName keep[0]!)
+        finalSplits := finalSplits.push (l, keep)
+    let rn (e : Expr) : Expr := if ren.isEmpty then e else e.replaceLevel fun x => match x with
+      | .param n => (ren[n]?).map (.param ·)
+      | _ => none
+    let (ty, val, gty, gval) := (rn ty, rn val, rn gty, rn gval)
+    unless ren.isEmpty do
+      -- implicit levels: every renamed copy / level replaced by its final name (source spelling)
+      let finals : Array String := finalSplits.foldl (· ++ ·.2) #[]
+      let split0 ← splitRef.get
+      implicitRef.modify fun a =>
+        let a := a.filter fun x => !split0.any (fun (l, cs) => x == l || cs.contains x)
+        let collapsed := split0.filter (fun (l, _) => !finalSplits.any (·.1 == l)) |>.map (·.1)
+        (a ++ finals ++ collapsed).toList.eraseDups.toArray
+    let splits := finalSplits
     let genv := if splits.isEmpty then genv else
       { genv with facts := genv.facts.extend (splits.foldl (· ++ ·.2) #[]) (splits.foldl (fun acc (l, cs) =>
           acc ++ Split.copiedRelations genv.facts #[{ level := l, params := #[], names := cs }]) #[]) }
@@ -1092,8 +1130,7 @@ its dependency closure, where they are implicit (not levels of this block's sour
 def rsMinimalFor (genv : GEnv) (i : IR.InductiveDecl) (rsOwn : Array String) : Std.HashSet String :=
   let expl := globalsOfInd i
   let base := (rsOwn.foldl (·.insert ·) (genv.rsOfDeps i.typeDeps)).fold (fun acc l => if expl.contains l then acc else acc.insert l) {}
-  -- R-CARRIER P1: parameter carrier levels are read minimally as well
-  genv.carrierSet.fold (·.insert ·) base
+  base
 
 def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
     (raw : Json) (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false)
@@ -1167,7 +1204,7 @@ where
     let plain := plain && !isTemplate
     let mut gl : Std.HashMap String Level :=
       if isTemplate || plain then globals.foldl (fun m n => m.insert n (.param (levelParamName n))) {}
-      else ownLevelInterp genv.facts globals (rsMinimalFor genv i rsOwn)
+      else ownLevelInterp genv.facts globals (rsMinimalFor genv i rsOwn) genv.decoupled
     let mut extraMVars : Array (String × Level) := #[]
     for m in extra do
       let v ← mkFreshLevelMVar
@@ -1302,7 +1339,7 @@ where
     -- R3 coherence: an argument for an own level of a non-template block must be the level standing
     -- for it, its R2F interpretation ι l (u_l itself when no fact constrains l)
     let interpMap : Std.HashMap String Level :=
-      if isTemplate || plain then {} else (ownLevelInterp genv.facts globals (rsMinimalFor genv i rsOwn))
+      if isTemplate || plain then {} else (ownLevelInterp genv.facts globals (rsMinimalFor genv i rsOwn) genv.decoupled)
     for e in #[ty] ++ ctors.map (·.type) do
       match checkUniverseObligations genv globals e interpMap (allowLower := lower) with
       | .ok n => nchecks := nchecks + n
@@ -1596,7 +1633,11 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     | .inductive i => if (i.native.getObjValAs? Bool "template").toOption == some true then acc
                       else (Split.carrierLevels i).foldl (·.insert ·) acc
     | _ => acc) {}
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet }
+  let decoupled : Std.HashSet (String × String) := src.decls.foldl (fun acc d => match d with
+    | .inductive i => if (i.native.getObjValAs? Bool "template").toOption == some true then acc
+                      else (Split.decoupledPairs i).foldl (·.insert ·) acc
+    | _ => acc) {}
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   let opaqueData : Std.HashSet String := src.decls.foldl (init := {}) fun m d => match d with
@@ -1963,6 +2004,12 @@ where
             for (l, _) in r.templateParams do
               genv := { genv with templateLevels := genv.templateLevels.insert l }
         pure r
+    -- R-CARRIER P2: the copy positions of the declaration's universe parameters, for references to it
+    unless r.levelCopies.isEmpty do
+      let copies := r.levelCopies.foldl (· ++ ·.2) #[]
+      let mask := (r.levelParams.drop r.polyParams).toArray.map fun p => copies.any (levelParamName · == p)
+      for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
+        genv := { genv with copyPositions := genv.copyPositions.insert n mask }
     -- R3G-F: the declaration's closure of result-sort implicit levels (its dependencies' and its own)
     let deps := match d with
       | .constant c => c.typeDeps ++ c.bodyDeps
