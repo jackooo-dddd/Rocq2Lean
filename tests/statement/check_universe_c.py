@@ -38,7 +38,7 @@ DOWN = [PRI + "definitions.hep_job", PRI + "coercion.JLFP_to_JLDP", PRI + "edf.E
         PRI + "coercion.reflexive_priorities_JLFP_implies_JLDP", "prosa.analysis.facts.priority.classes.hp_trans"]
 ROOTS = ["mathcomp.boot.eqtype.opt_eqP", "prosa.model.processor.ideal.processor_state",
          PRI + "definitions.JLFP_policy", PRI + "definitions.FP_policy", PRI + "definitions.JLDP_policy",
-         "prosa.behavior.job.job_cost"] + DOWN
+         "prosa.behavior.job.job_cost", "SF.R2bv.Rprop"] + DOWN
 
 shutil.rmtree(RUN, ignore_errors=True)
 rcs = [cli("export", "--mode", "statement", "--manifest", ROOT / "fixtures/stmt/c/manifest.json",
@@ -88,6 +88,9 @@ for n in ("JLFP_policy", "FP_policy", "JLDP_policy"):
           and "u_mathcomp_boot_eqtype_51" in jl["level_params"]
           and {x["level"] for x in jl["sort_lowered_levels"]} >= {"Corelib.ssr.ssrbool.1105"},
           f"{n} (protected): translated under R2B-V, generic in the job's level, result sort lowered from rel's level")
+rp_ = R["SF.R2bv.Rprop"]
+OUT["Rprop"] = {k: rp_.get(k) for k in ("status", "result_sort_inherited", "message")}
+check(not rp_.get("result_sort_inherited"), "R2B-V never declares a Prop-valued body (Prop ≤ Type cumulativity) as a proposition")
 dn = {n: R[n]["status"] for n in DOWN}
 OUT["downstream"] = {n: {"status": R[n]["status"], "message": (R[n].get("message") or "")[:300]} for n in DOWN}
 check(all(st in ("TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED", "STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")

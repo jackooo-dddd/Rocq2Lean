@@ -2583,6 +2583,16 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                             t_ = t_["b"]
                         if t_["k"] != "sort":
                             raise Mismatch("R2B-V on a definition whose source type does not end in a sort")
+                        # the target result sort is a Type (never Prop: Prop ≤ Type cumulativity is
+                        # not a level lowering)
+                        tt_ = r_.get("target_type")
+                        while tt_ is not None and tt_.get("k") == "forall":
+                            tt_ = tt_["b"]
+                        if tt_ is None or tt_.get("k") != "sort":
+                            raise Mismatch("R2B-V: the target type does not end in a sort")
+                        c0_, ps0_ = level_nf(tt_["l"])
+                        if not ((c0_ or 0) >= 1 or any(k >= 1 for _, k in ps0_)):
+                            raise Mismatch("R2B-V: the target result sort may be Prop (not a level lowering)")
                         back_ = {level_param(g): g for g in params}
                         res_lv = source_globals(t_, set())
                         for x in r_.get("sort_lowered_levels") or []:

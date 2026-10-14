@@ -9,7 +9,7 @@
   "by_validation": {
    "DEFINITION_AUDITED": 112,
    "DEFINITION_AUDITED_PENDING": 48,
-   "NOT_TRANSLATED": 1,
+   "NOT_TRANSLATED": 2,
    "STATEMENT_AUDITED": 33,
    "STATEMENT_AUDITED_PENDING": 3
   }
@@ -104,6 +104,11 @@
    "result_sort_inherited": true,
    "message": ""
   }
+ },
+ "Rprop": {
+  "status": "KERNEL_REJECTED",
+  "result_sort_inherited": false,
+  "message": "(kernel) declaration type mismatch, 'Rocq.SF.R2bv.Rprop' has type\n  Nat \u2192 Nat \u2192 Prop\nbut it is expected to have type\n  Nat \u2192 Nat \u2192 Type u_SF_R2bv_21 [last tier: KERNEL_REJECTED: (kernel) declaration type mismatch, 'Rocq.SF.R2bv.Rprop' has type\n  Nat \u2192 Nat \u2192 Prop\nbut it is expected to have type\n  Nat \u2192 Nat \u2192 Type u_SF_R2bv_21]"
  },
  "downstream": {
   "prosa.model.priority.definitions.hep_job": {

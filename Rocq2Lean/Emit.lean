@@ -478,6 +478,9 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
           Meta.check b
           let s ← whnf (← instantiateMVars (← inferType b))
           unless s.isSort do throwError "the value is not a type"
+          -- (a lowering of a universe level only: the value must be a type, never a proposition —
+          -- Rocq places a Prop-valued body in Type by Prop ≤ Type cumulativity; Prop is not a level)
+          unless s.sortLevel!.isNeverZero do throwError "the value is a proposition (Prop ≤ Type cumulativity), not a type"
           mkForallFVars xs s
       catch e => return { base with status := "UNSUPPORTED_FEATURE", message := s!"R2B-V: {← e.toMessageData.toString}" }
     -- after unification: every own level still free that occurs in the (solved) type becomes a

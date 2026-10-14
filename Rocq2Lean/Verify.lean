@@ -533,7 +533,7 @@ private def getStr (j : Json) (k : String) : String := (j.getObjValAs? String k)
                 match ← whnf cod with
                 | .sort l =>
                   match ← whnf (← inferType (mkAppN v xs)) with
-                  | .sort l' => pure (l.normalize == l'.normalize)
+                  | .sort l' => pure (l.normalize == l'.normalize && l.isNeverZero)
                   | _ => pure false
                 | _ => pure false
         unless (sl.isEmpty || inhOk) && pin.isEmpty do
