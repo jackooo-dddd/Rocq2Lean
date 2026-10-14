@@ -1760,7 +1760,12 @@ where
               sBefore.restore
               let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
                 (interp := it) (extraOwn := eo) (joint := true)
-              if r'.accepted && r'.levelDefaults < r.levelDefaults then
+              -- (only parameters of the type: a level of the value alone generalizes nothing a use can see,
+              -- and its argument at uses is then undetermined — e.g. ssrnat.leq inside fintype.ordinal)
+              let tyPs := match r'.targetType with
+                | some t => (collectLevelParams {} t).params
+                | none => #[]
+              if r'.accepted && r'.levelDefaults < r.levelDefaults && r'.levelParams.all tyPs.contains then
                 r := { r' with levelDiagnostics := r'.levelDiagnostics.push s!"P2-def: {r.levelDefaults} defaulted level(s) reduced to {r'.levelDefaults} (joint identification, bounded solver)" }
                 better := true
                 break
