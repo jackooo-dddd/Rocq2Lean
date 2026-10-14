@@ -1,0 +1,292 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   0,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 78,
+   "DEFINITION_AUDITED_PENDING": 17,
+   "STATEMENT_AUDITED": 22,
+   "STATEMENT_AUDITED_PENDING": 7
+  },
+  "level_copies_checked": 14
+ },
+ "rows": {
+  "SF.Cb.pair_nat_refl": {
+   "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+   "level_params": [
+    "u_mathcomp_boot_eqtype_32__c0",
+    "u_mathcomp_boot_eqtype_32__c1",
+    "u_mathcomp_boot_eqtype_32__c2",
+    "u_mathcomp_boot_eqtype_51",
+    "u_mathcomp_boot_eqtype_55__c0",
+    "u_mathcomp_boot_eqtype_55__c1",
+    "u_mathcomp_boot_eqtype_55__c2",
+    "u_mathcomp_boot_eqtype_58__c0",
+    "u_mathcomp_boot_eqtype_58__c1",
+    "u_mathcomp_boot_eqtype_58__c2"
+   ],
+   "level_copies": [
+    {
+     "level": "mathcomp.boot.eqtype.32",
+     "copies": [
+      "mathcomp.boot.eqtype.32__c0",
+      "mathcomp.boot.eqtype.32__c1",
+      "mathcomp.boot.eqtype.32__c2"
+     ]
+    },
+    {
+     "level": "mathcomp.boot.eqtype.55",
+     "copies": [
+      "mathcomp.boot.eqtype.55__c0",
+      "mathcomp.boot.eqtype.55__c1",
+      "mathcomp.boot.eqtype.55__c2"
+     ]
+    },
+    {
+     "level": "mathcomp.boot.eqtype.58",
+     "copies": [
+      "mathcomp.boot.eqtype.58__c0",
+      "mathcomp.boot.eqtype.58__c1",
+      "mathcomp.boot.eqtype.58__c2"
+     ]
+    }
+   ],
+   "solved_levels": []
+  },
+  "SF.Cb.pair_nat_in": {
+   "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+   "level_params": [
+    "u_mathcomp_boot_eqtype_32__c0",
+    "u_mathcomp_boot_eqtype_32__c1",
+    "u_mathcomp_boot_eqtype_32__c2",
+    "u_mathcomp_boot_eqtype_51",
+    "u_mathcomp_boot_eqtype_55__c0",
+    "u_mathcomp_boot_eqtype_55__c1",
+    "u_mathcomp_boot_eqtype_55__c2",
+    "u_mathcomp_boot_eqtype_58__c0",
+    "u_mathcomp_boot_eqtype_58__c1",
+    "u_mathcomp_boot_eqtype_58__c2"
+   ],
+   "level_copies": [
+    {
+     "level": "mathcomp.boot.eqtype.32",
+     "copies": [
+      "mathcomp.boot.eqtype.32__c0",
+      "mathcomp.boot.eqtype.32__c1",
+      "mathcomp.boot.eqtype.32__c2"
+     ]
+    },
+    {
+     "level": "mathcomp.boot.eqtype.55",
+     "copies": [
+      "mathcomp.boot.eqtype.55__c0",
+      "mathcomp.boot.eqtype.55__c1",
+      "mathcomp.boot.eqtype.55__c2"
+     ]
+    },
+    {
+     "level": "mathcomp.boot.eqtype.58",
+     "copies": [
+      "mathcomp.boot.eqtype.58__c0",
+      "mathcomp.boot.eqtype.58__c1",
+      "mathcomp.boot.eqtype.58__c2"
+     ]
+    }
+   ],
+   "solved_levels": []
+  },
+  "mathcomp.boot.choice.HB_unnamed_mixin_107": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "level_params": [
+    "u_mathcomp_boot_choice_299",
+    "u_mathcomp_boot_choice_938",
+    "u_mathcomp_boot_choice_959",
+    "u_mathcomp_boot_choice_965",
+    "u_mathcomp_boot_choice_968",
+    "u_mathcomp_boot_eqtype_32__c0",
+    "u_mathcomp_boot_eqtype_32__c1",
+    "u_mathcomp_boot_eqtype_533",
+    "u_mathcomp_boot_eqtype_55",
+    "u_mathcomp_boot_eqtype_577",
+    "u_mathcomp_boot_eqtype_58",
+    "u_mathcomp_boot_eqtype_583",
+    "u_mathcomp_boot_eqtype_588"
+   ],
+   "level_copies": [
+    {
+     "level": "mathcomp.boot.eqtype.32",
+     "copies": [
+      "mathcomp.boot.eqtype.32__c0",
+      "mathcomp.boot.eqtype.32__c1"
+     ]
+    }
+   ],
+   "solved_levels": []
+  },
+  "mathcomp.boot.eqtype.insub": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "level_params": [
+    "u_mathcomp_boot_eqtype_533",
+    "u_mathcomp_boot_eqtype_577",
+    "u_mathcomp_boot_eqtype_583",
+    "u_mathcomp_boot_eqtype_588",
+    "u_mathcomp_boot_eqtype_695"
+   ],
+   "level_copies": [],
+   "solved_levels": []
+  },
+  "mathcomp.boot.fintype.HB_unnamed_factory_57": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "level_params": [
+    "u_Corelib_ssr_ssrbool_1169",
+    "u_mathcomp_boot_eqtype_533",
+    "u_mathcomp_boot_eqtype_542"
+   ],
+   "level_copies": [],
+   "solved_levels": [
+    {
+     "sigma": {
+      "n": "u_mathcomp_boot_eqtype_542",
+      "k": "param"
+     },
+     "level": "mathcomp.boot.eqtype.551"
+    }
+   ]
+  },
+  "SF.CbSyn.prod_nat_refl": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "level_params": [
+    "u_SF_CbSyn_21",
+    "u_SF_CbSyn_22__c0",
+    "u_SF_CbSyn_22__c1",
+    "u_SF_CbSyn_22__c2"
+   ],
+   "level_copies": [
+    {
+     "level": "SF.CbSyn.22",
+     "copies": [
+      "SF.CbSyn.22__c0",
+      "SF.CbSyn.22__c1",
+      "SF.CbSyn.22__c2"
+     ]
+    }
+   ],
+   "solved_levels": []
+  },
+  "SF.CbSyn.insub_some": {
+   "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+   "level_params": [
+    "u_SF_CbSyn_34",
+    "u_SF_CbSyn_35",
+    "u_SF_CbSyn_36"
+   ],
+   "level_copies": [],
+   "solved_levels": []
+  },
+  "SF.CbSyn.prod_same": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "level_params": [
+    "u_SF_CbSyn_21",
+    "u_SF_CbSyn_22__c0",
+    "u_SF_CbSyn_22__c1"
+   ],
+   "level_copies": [
+    {
+     "level": "SF.CbSyn.22",
+     "copies": [
+      "SF.CbSyn.22__c0",
+      "SF.CbSyn.22__c1"
+     ]
+    }
+   ],
+   "solved_levels": []
+  }
+ },
+ "eqT_levels": {
+  "carrier": "SF.CbSyn.21",
+  "structure": "SF.CbSyn.22"
+ },
+ "negative": {
+  "pinned-carrier": {
+   "kernel_all": true,
+   "forged_rows_kernel_accepted": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.CbSyn.prod_nat_refl: Rocq.SF.CbSyn.eqT: source level SF.CbSyn.21 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_SF_CbSyn_21: the statement is specialized (R3G)"
+   ],
+   "consumer_problems": [],
+   "forged_rows_kernel": {
+    "SF.CbSyn.prod_nat_refl": [
+     "ACCEPTED",
+     ""
+    ]
+   }
+  },
+  "misidentified-copy": {
+   "kernel_all": true,
+   "forged_rows_kernel_accepted": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.CbSyn.prodEq: universe parameters ['u_SF_CbSyn_21__c0', 'u_SF_CbSyn_21__c1', 'u_SF_CbSyn_22__c0', 'u_SF_CbSyn_22__c1', 'u_SF_CbSyn_21__c2'] are not in source-level order",
+    "SF.CbSyn.prodEq: universe parameters ['u_SF_CbSyn_21__c0', 'u_SF_CbSyn_21__c1', 'u_SF_CbSyn_22__c0', 'u_SF_CbSyn_22__c1', 'u_SF_CbSyn_21__c2'] are not in source-level order"
+   ],
+   "consumer_problems": [],
+   "forged_rows_kernel": {
+    "SF.CbSyn.prodEq": [
+     "ACCEPTED",
+     ""
+    ]
+   }
+  },
+  "split-dependency": {
+   "kernel_all": false,
+   "forged_rows_kernel_accepted": false,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.CbSyn.prod_same: universe parameters ['u_SF_CbSyn_21', 'u_SF_CbSyn_22__c0', 'u_SF_CbSyn_22__c1', 'u_SF_CbSyn_21__c9'] are not parameters for source levels",
+    "SF.CbSyn.prod_same: universe parameters ['u_SF_CbSyn_21', 'u_SF_CbSyn_22__c0', 'u_SF_CbSyn_22__c1', 'u_SF_CbSyn_21__c9'] are not parameters for source levels"
+   ],
+   "consumer_problems": [
+    "SF.CbSyn.prod_same: declaration with level copies not imported"
+   ],
+   "forged_rows_kernel": {
+    "SF.CbSyn.prod_same": [
+     "REJECTED",
+     "(kernel) application type mismatch\n  T1 = T2\nargument has type\n  Rocq.SF.CbSyn.eqT\nbut function has type\n  Rocq.SF.CbSyn.eqT \u2192 Prop"
+    ]
+   }
+  },
+  "subT-coupled": {
+   "kernel_all": false,
+   "forged_rows_kernel_accepted": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.CbSyn.subT: ['arity', 'prod.ty']: sort mismatch"
+   ],
+   "consumer_problems": [],
+   "forged_rows_kernel": {
+    "SF.CbSyn.subT": [
+     "ACCEPTED",
+     ""
+    ]
+   }
+  }
+ },
+ "subT_levels": {
+  "base_carrier": "u_SF_CbSyn_34",
+  "sub_sort": "u_SF_CbSyn_35"
+ },
+ "positive": {
+  "exit": 0,
+  "output": "PositiveControl.lean:18:67: warning: `Lean.levelZero` has been deprecated: Use `Lean.Level.zero` instead\n\nNote: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.levelZero` to `Level.zero x`).\n"
+ },
+ "correspondence": {
+  "exit": 0,
+  "theorems_without_axioms": 17,
+  "output": "'CarrierCorrespondence.eq_down_up' does not depend on any axioms\n'CarrierCorrespondence.eq_up_down' does not depend on any axioms\n'CarrierCorrespondence.liftEq_eqop' does not depend on any axioms\n'CarrierCorrespondence.prod_down_up' does not depend on any axioms\n'CarrierCorrespondence.prod_up_down' does not depend on any axioms\n'CarrierCorrespondence.prod_eqop' does not depend on any axioms\n'CarrierCorrespondence.prod_nat_down_up' does not depend on any axioms\n'CarrierCorrespondence.prod_nat_up_down' does not depend on any axioms\n'CarrierCorrespondence.prod_nat_eqop' does not depend on any axioms\n'CarrierCorrespondence.sub_down_up' does not depend on any axioms\n'CarrierCorrespondence.sub_up_down' does not depend on any axioms\n'CarrierCorrespondence.liftSub_value' does not depend on any axioms\n'CarrierCorrespondence.liftSub_ssub' does not depend on any axioms\n'CarrierCorrespondence.fromOption_toOption' does not depend on any axioms\n'CarrierCorrespondence.toOption_fromOption' does not depend on any axioms\n'CarrierCorrespondence.insub_lift' does not depend on any axioms\n'CarrierCorrespondence.insub_lift_map' does not depend on any axioms\n"
+ }
+}
