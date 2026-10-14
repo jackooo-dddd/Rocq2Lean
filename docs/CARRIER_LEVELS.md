@@ -23,16 +23,20 @@ fourth row's mechanism.)
 
 All three parts are derived mechanically from the source and from typing, without names or whitelists.
 
-**P1: parameter carriers are read minimally.**
-* The *carrier levels* are the global levels occurring as the final sort of a parameter binder's type
-  in the arity of a non-template block (`Split.carrierLevels`, audit `carrier_levels`). They are
-  computed once from the whole exported source.
-* In every R2F reading (blocks and constants), a carrier level `l` is read `ι l = u_l`: it is not raised
-  by its lower bounds, but still raises the levels above it.
-* This is the principle already approved for R-SPLIT's copies and R3G-F's levels: a parameter level
-  stands for its operand's argument `a ≤ l`, and R3 checks that at every use.
-* Effect: `SubType.type : (T : Type u573) → … ` with `ssort : Type u577` independent, as in the source;
-  `SubType.sort`, `Sub` and `insub` keep both carriers generic.
+**P1: a parameter carrier is not raised by its own block's other levels.**
+* The *carrier levels* of a non-template block are the global levels occurring as the final sort of a
+  parameter binder's type in its arity (`Split.carrierLevels`, audit `carrier_levels`).
+* For each such carrier `l` and each other global level `m` of the *same* block (a field sort, the result
+  sort, …), a source fact `m ≤ l` does not raise `l` in any R2F reading, of the block or of a constant.
+  These pairs (`Split.decoupledPairs`, audit `DECOUPLED`) are computed once from the source.
+* Every other lower bound still applies, as do all upper bounds.
+* Rationale: in `SubType`, the fact `577 ≤ 573` (sub sort ≤ base carrier) made the reading
+  `T : Type (max u573 u577)`, which tied the operand's carrier to the structure's own field. A parameter
+  level stands for its operand's argument `a ≤ l`, R3-checked at every use (the R-SPLIT/R3G-F principle).
+* Effect: `SubType.type : (T : Type u573) → …` with `ssort : Type u577` independent; `SubType.sort`, `Sub`
+  and `insub` keep both carriers generic.
+* (Corpus run 1 used a broader P1, every carrier level minimal everywhere. It dropped bounds such as
+  `task_T`'s `t ≤ a` and changed readings across MathComp and Prosa, so it was narrowed; entry 11.)
 
 **P2: implicit operand split.**
 * When a declaration's type (a statement's statement) contains several *distinct* free classes of
@@ -47,6 +51,21 @@ All three parts are derived mechanically from the source and from typing, withou
   rejects a forged split of such a dependency.
 * `nat_eqType`'s carrier stays `Nat`. Nothing is lifted, and no `ULift` occurs anywhere in the
   translation.
+* **Refinements found on the corpus (entry 11):**
+  1. Classes are counted after peeling off the generated prerequisite-hypothesis binders. Their
+     instances are the translator's choice, so they must not create operands.
+  2. A post-pass after solving maps a remaining `u_l` of a split level to its first copy, merges copies
+     that no longer occur in the type, and returns a level left with one copy to `u_l`.
+  3. At a reference, an argument at a copy position stands for an argument `a ≤ l`. It is R3-checked
+     (no raising), but not held to the shared-level coherence rule.
+  4. In the generality check, a declaration owning a copy of a level owns the level, as an own level
+     does.
+  5. In the generality check, an argument `max (u_a, u_b, …)` of own parameters for a referenced level
+     `l` is accepted when every `a`, `b`, … is *equal* to `l` in the source graph (`a ≤ l` and `l ≤ a`).
+     Such an argument is a referenced declaration's R2F reading of equal levels, not a specialization:
+     the source has one level there. Found at `HB_unnamed_mixin_109`'s obligation 13 (`SubType`'s 577
+     at `max (u1053, u959)`, with 1053 = 959 = 577 in the source). Translator (`freeLevelRef`) and
+     audit (`check_statement_generality`) implement it independently.
 
 **P3: a proof-local level never represents a class.** In statement mode, only own *type* levels represent
 the class of reference arguments they belong to. A proof-local level is solved and fact-checked by R2S
@@ -101,3 +120,14 @@ These proofs support the rule; they are not a complete cross-language correctnes
   * a block whose *field* has a carrier level defaulted by R3″ (fixture `holder`, entry 10);
   * coherence refusals from R2F `max` readings of non-carrier levels (REFERENCE_COHERENCE);
   * protected ranges narrowed by other mechanisms (`JobReady`).
+  * R2F readings of *source-equal* levels. Where the source makes two own levels equal, R2F reads both
+    as `max (u_l, u_m)`. A referring declaration then sees arguments `max (?a, ?b)` that R3G cannot name.
+    A definition defaults them (fixing e.g. `choice`'s sub-type Countable instance at carrier 0), and
+    the specialization reaches a later statement as a refusal (`fintype.HB_unnamed_factory_66`'s
+    obligation 1: `ordinal`'s 1169 at 0). Two repairs were tried and not kept:
+    * one parameter per source-equal class at the definition (R2F-eq);
+    * identifying the summands of such a `max` at the use (P4).
+    In the corpus-wide facts these classes are large (one class has 232 levels, including `eqtype.51`,
+    `choice.959`, `eqtype.577`, `ssrbool.1169` and `fintype.101`). Both repairs therefore merged
+    independent Prosa carriers, which lost protected `schedule`/`service` rows to coherence refusals.
+    Entry 11 records this as the next frontier.

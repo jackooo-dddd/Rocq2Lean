@@ -311,6 +311,15 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
     -- parameter may itself be a copy of the same source level)
     let base (x : Name) : String := (x.toString.splitOn "__c").head!
     if own.any (fun q => q != p && base q == base p && (q.toString.splitOn "__c").length > 1) then continue
+    -- (an argument max(q₁, …) of own parameters (or copies) whose source levels are all *equal* to the
+    -- referenced level in the source graph (≤ both ways) is that level's reading, not a specialization)
+    let srcOf (x : Name) : Option String := facts.levels.find? (fun l => levelParamName l == Name.mkSimple (base x))
+    if let some lp := srcOf p then
+      if let some (c, ps) := levelNF σ.normalize then
+        if c == 0 && !ps.isEmpty && ps.all (fun (q, k) => k == 0 && own.contains q &&
+            match srcOf q with
+            | some m => entails facts m lp 0 && entails facts lp m 0
+            | none => false) then continue
     if !σ.hasParam then
       if let some l := facts.levels.find? (fun l => levelParamName l == p) then
         if entails facts l "Set" 0 then continue

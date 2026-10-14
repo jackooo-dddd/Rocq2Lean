@@ -2459,6 +2459,14 @@ def check_statement_generality(facts, own, gen, exprs, poly, types):
                 if any(SPLIT_COPIES.get(cp) == l and cp in P2_COPIES for cp in own):
                     continue
                 c, ps = level_nf(sigma)
+                # (an argument max of own parameters whose source levels are all equal to l in the source graph,
+                # <= both ways, is l's reading, not a specialization)
+                own_by_param = {level_param(g): g for g in own}
+                if (c in (None, 0)) and ps and all(k == 0 and p_ in own_by_param and
+                                                   facts.entails(SPLIT_COPIES.get(own_by_param[p_], own_by_param[p_]), l, 0) and
+                                                   facts.entails(l, SPLIT_COPIES.get(own_by_param[p_], own_by_param[p_]), 0)
+                                                   for p_, k in ps):
+                    continue
                 if not ps and facts.entails(l, "Set", 0):
                     continue
                 if any(mentions_param(b, p) for b in binders):

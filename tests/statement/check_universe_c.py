@@ -5,8 +5,9 @@ on a small Prosa probe (fixtures/stmt/c: opt_eqP, ideal processor_state, JLFP_po
 1. C-1 (R3G for statements): MathComp's opt_eqP (A′: an opaque constant, its body's proof subterms
    statements) keeps its reference levels as parameters (eqtype.51, eqtype.58), so option's canonical
    eqType is generic; no statement row has a
-   defaulted level. The ideal processor_state was refused (it narrowed Job to level 0); since R-CARRIER
-   (entry 11) it is claimed with Job generic.
+   defaulted level. The ideal processor_state is refused, never claimed narrowed: before R-CARRIER its
+   translation narrowed Job to level 0; since R-CARRIER (entry 11) it is refused earlier, by the
+   shared-level coherence rule (REFERENCE_COHERENCE, outside R-CARRIER).
 2. Negative controls, the target itself narrowed with every self-reported trace removed (no
    `universe_level_defaults`, no residual record, no implicit level): opt_eqP's first obligation
    statement at closed levels {0,0}, {0,1}, {2,2}
@@ -76,13 +77,13 @@ check(set(map(_eq_base, oe.get("level_params") or [])) == set(EQ_LPS) and "u_mat
 ps = R["prosa.model.processor.ideal.processor_state"]
 OUT["processor_state"] = {"status": ps["status"], "message": ps.get("message", "")[:400]}
 # correction (2026-10-14): with opt_eqP generic, the ideal processor_state was still narrowed: `unit`'s
-# finType (level 0) forced Job : JobType.{0, _} through one carrier level -- refused. R-CARRIER (entry 11):
-# the concrete instance's carrier and Job's are independent classes, so the protected definition is
-# claimed with Job generic (its carrier eqtype.51 a parameter); the protection checks (translator, audit,
-# consumer) accept its ranges
-check(ps["status"] in ("TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED") and ps.get("protected")
-      and "u_mathcomp_boot_eqtype_51" in ps.get("level_params", []) and v.get("status") == "STATEMENT_VALIDATED",
-      "ideal processor_state (protected) is claimed with Job generic (R-CARRIER), validated by the independent checks")
+# finType (level 0) forced Job : JobType.{0, _} through one carrier level -- refused, never claimed.
+# R-CARRIER (entry 11) separates the instance's carrier from Job's, but the definition is still refused,
+# now at a reference whose shared level gets an R2F `max` argument (REFERENCE_COHERENCE; RULE_BACKLOG).
+# (Corpus run 1's broad P1 claimed it; the narrowed P1 does not. The check states the actual result.)
+check(ps["status"] == "UNIVERSE_REJECTED" and ("coherence" in ps.get("message", "")
+                                               or "universe specialization refused" in ps.get("message", "")),
+      "ideal processor_state (protected) is refused, never claimed narrowed (since R-CARRIER: the coherence rule)")
 claimed = [r for r in rep["results"] if r["status"] in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED",
                                                          "TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED")]
 stmt_rows = [r for r in claimed if r["status"].startswith("STATEMENT_")]
