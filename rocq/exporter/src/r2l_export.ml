@@ -1231,7 +1231,9 @@ let check_statement_prepared ?env ~opaque_access key =
   (* only this constant: stop the closure walk after it *)
   let env' = statement_env_one ~opaque_access st env c in
   let sigma = Evd.from_env env' in
-  let q t = term_json (snd (Ast_quoter.quote_term_rec ~bypass:true ~opaque_access env' sigma t)) in
+  (* (the term alone: quote_term_rec would also quote the term's whole environment closure, the
+     dominant cost of a batched re-derivation; the term part is the same quotation) *)
+  let q t = term_json (Ast_quoter.quote_term env' sigma t) in
   let cb = Environ.lookup_constant c env' in
   let body = match cb.Declarations.const_body with Declarations.Def b -> q b | _ -> J.Null in
   let obls =
