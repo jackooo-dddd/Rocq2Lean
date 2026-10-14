@@ -50,11 +50,11 @@ def sha(p):
     return R.sha256_file(p)
 
 
-def chunks():
+def chunks(export=None):
     """(family, chunk dir, result, ir record) for every chunk IR of the statement exports."""
     out = []
     for fam in ("modern", "classic"):
-        for rp in sorted((W / f"{EXPORT}-{fam}").glob("chunk-*/result.json")):
+        for rp in sorted((W / f"{export or EXPORT}-{fam}").glob("chunk-*/result.json")):
             r = json.loads(rp.read_text())
             for x in r["irs"]:
                 out.append((fam, rp.parent, r, x))
@@ -147,7 +147,7 @@ EXPORTER_SOURCES = ["rocq/exporter/src/*.ml", "rocq/exporter/src/*.mli", "rocq/e
                     "rocq/exporter/src/*.mllib", "rocq/exporter/theories/*.v", "rocq/exporter/_RocqProject"]
 
 
-def reuse_section():
+def reuse_section(pv=None):
     """Whether the chunk evidence (round trips made with the tools they record) applies to the current
     implementation. Applicable when the round-trip tool and RtEq.v are unchanged and the exporter
     plugin's sources differ from those of the plugin the round trips used only by added lines (new
@@ -156,7 +156,7 @@ def reuse_section():
     the Rocq libraries (snapshots). The base (`ROUNDTRIP_TOOLS_BASE.json`) records which commit's
     exporter sources built the round trips' plugin."""
     cur = rt_tools()
-    rts = json.loads((PV / "roundtrip.json").read_text())
+    rts = json.loads((Path(pv or PV) / "roundtrip.json").read_text())
     used = {json.dumps(v["tools"], sort_keys=True) for v in rts.values()}
     out = {"round_trip_tools": None, "current_tools": cur, "problems": []}
     if len(used) != 1:
@@ -274,12 +274,12 @@ def union(run, jobs=4):
     print(json.dumps({k: v for k, v in summary.items() if k != "parts"}), [(p["exact"], p["entailed_by_stronger"], p["violated_or_unknown"], p["seconds"]) for p in res])
 
 
-def _merge_rederive(run):
+def _merge_rederive(run, export=None):
     """Re-derive the merge from the chunk IRs: every merged declaration record byte-identical to each
     chunk copy; merged universe facts = union of the chunks' relations; merged levels = union."""
     store, problems = {}, []
     rels, flevels = set(), set()
-    for fam, d, r, x in chunks():
+    for fam, d, r, x in chunks(export):
         with open(ROOT / x["ir"]) as fh:
             for i, line in enumerate(fh):
                 if i == 4:
@@ -343,6 +343,7 @@ def manifest(run):
                     "consumer_result.json", "audit.json", "conversion_deps/joined.json", "conversion_deps/result.json")
                    if (run / k).exists()},
          "reuse": reuse_section(),
+         "provenance_dir": str(PV), "export_dirs": EXPORT,
          "tools": {"impl_tree_sha256": R.impl_tree_sha256(), "translator_build_sha256": R.lean_build_sha256(),
                    "toolchains_lock_sha256": R.lock_sha(), "toolchain_fingerprint": R.toolchain_fingerprint()["digest"],
                    "exporter_plugin_sha256": sha(R.EXPORTER / "src" / "rocq2lean_export_plugin.cmxs")}}
@@ -383,13 +384,13 @@ def check(manifest_path=None):
     for k, e in m["files"].items():
         bound(e["path"], e["sha256"], f"run file {k}")
     # the chunk evidence must still apply to the implementation the check runs with
-    ru = reuse_section()
+    ru = reuse_section(m.get("provenance_dir"))
     if ru["status"] not in ("SAME_TOOLS", "APPLICABLE"):
         problems += [f"chunk evidence not applicable to the current tools: {p}" for p in ru["problems"]]
     if "reuse" in m and m["reuse"].get("status") not in ("SAME_TOOLS", "APPLICABLE"):
         problems.append(f"manifest reuse status {m['reuse'].get('status')}")
     if not problems:
-        mr = _merge_rederive(m["run"])
+        mr = _merge_rederive(m["run"], m.get("export_dirs"))
         if mr["status"] != "OK":
             problems += mr["problems"]
     res = {"manifest": str(mp), "status": "OK" if not problems else "PROVENANCE_REJECTED", "problems": problems[:30]}
