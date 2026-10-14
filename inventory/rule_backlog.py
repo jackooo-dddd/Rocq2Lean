@@ -51,18 +51,18 @@ RULES = [
 
 FAMILY_NOTES = {
     "COUPLED_BINDER_LEVELS": {
-        "category": 1, "priority": "P1 (needs a representation decision)",
+        "category": 1, "priority": "P1 (R-SPLIT experimental, entry 9)",
         "mechanism": "a statement's independent binder levels would be identified (or one fixed) by the "
                      "translation: a referenced declaration carries ONE Lean universe parameter for several "
                      "arguments that Rocq instantiates at independent levels by cumulativity (CoqEAL list_R's "
-                     "shared template level: refine_* obligations; fixture SF.R2.pairR_intro). Refused by the "
-                     "round-2 binder-independence check (source-derived).",
-        "proposal": "representation rule (NOT adopted without approval): give such a referenced declaration "
-                    "one universe parameter per binder sort that shares the source level (a generalization "
-                    "of the translated declaration; the source is its special case).",
+                     "single level 190 for both carriers and the relation: refine_* obligations; fixtures "
+                     "SF.R2.pairR_intro, SF.Split.pR_intro). Refused by the round-2 binder-independence check.",
+        "proposal": "R-SPLIT (approved as an experimental rule, branch rules-split, docs/LEVEL_SPLIT.md): a level "
+                    "that is the sort of >= 2 parameter binders and occurs nowhere else but the result sort gets "
+                    "one universe parameter per binder; 13 CoqEAL declarations (17 levels) are eligible.",
         "acceptance": "refine_* obligations generic without identification; binder-independence and generality "
                       "negative controls unchanged; corpus re-measured.",
-        "status": "exact blocker: awaiting a representation decision"},
+        "status": "R-SPLIT implemented (not merged); see ITERATION_LOG entry 9 for the corpus measurement"},
     "RESIDUAL_STATEMENT_LEVELS": {
         "category": 1, "priority": "P1/P2",
         "mechanism": "a statement level left free after unification is not mapped to a source level by R3G "
@@ -77,20 +77,25 @@ FAMILY_NOTES = {
         "acceptance": "refine_* restored; negative controls (real narrowing with every self-report hidden) "
                       "still rejected; full corpus re-measured.",
         "status": "round 2: the blanket refusal replaced by binder independence + generality; jointly "
-                  "occurring max metavariables identified (P2); the remaining members are coupled reference "
-                  "levels (pcancel-like single-level references), the COUPLED_BINDER_LEVELS mechanism"},
+                  "occurring max metavariables identified (P2). (Entry 9 correction: the remaining members were "
+                  "attributed to pcancel-like single-level references; ssrfun.pcancel's two carriers are at "
+                  "separate levels, so that attribution was wrong.)"},
     "STATEMENT_FREE_LEVEL_PINNED": {
-        "category": 1, "priority": "P2 (largest family after round 2; needs the representation decision)",
-        "mechanism": "C-1 generality: a statement's reference argument for a source-free level is closed. Round-2 "
-                     "diagnosis (HB_unnamed_mixin_106__obligation_2, reproduced): unification fixed the level "
-                     "BEFORE R3G through a referenced definition with ONE universe parameter for several "
-                     "arguments (ssrfun.pcancel: rT and aT at one level) applied to a Set-level argument "
-                     "(nat/option), which Rocq accepts by cumulativity; the translation would specialize the "
-                     "statement (refused, correctly). Same mechanism as COUPLED_BINDER_LEVELS.",
-        "proposal": "the per-binder-sort universe parameter representation (COUPLED_BINDER_LEVELS) — awaiting "
-                    "approval.",
-        "acceptance": "statement generic, audit generality check passes; no protected range narrowed.",
-        "status": "exact blocker: awaiting a representation decision"},
+        "category": 1, "priority": "P2 (largest universe family; needs a semantic decision)",
+        "mechanism": "C-1 generality: a statement's reference argument for a source-free level is closed. "
+                     "Entry 9 diagnosis (R3 report, replacing the wrong round-2 pcancel attribution: pcancel's "
+                     "rT and aT are separate levels): 280 of 340 members pin the RESULT-SORT-ONLY level of an "
+                     "HB structure, hasDecEq.axioms_ (T : Type@{eqtype.29}) : Type@{eqtype.32} (144) and "
+                     "hasChoice.axioms_ at choice.299 (136); 50 more at Equality.type. The level occurs in the "
+                     "referenced declaration only as its result sort (R2F reading max(u, u29)); the Lean use "
+                     "context (an expected Type 0) fixes it to 0, where Rocq leaves it free by cumulativity.",
+        "proposal": "candidate (NOT adopted; needs approval): an independently checked irrelevance criterion "
+                    "for a reference level that occurs only in the referenced declaration's result sort (any "
+                    "value gives a ULift-isomorphic instance), instead of refusing the pin.",
+        "acceptance": "statement generic or the pin proved irrelevant by an independent check; generality "
+                      "negative controls unchanged; no protected range narrowed.",
+        "status": "diagnosed (lead confirmed on 280/340 members by message head; mechanism per member not yet "
+                  "checked); awaiting a decision"},
     "PROTECTED_RANGE_NARROWED": {
         "category": 1, "priority": "P4", "mechanism": "a protected definition's only current translation narrows a "
         "quantification range (JobReady, ideal/overheads processor_state: unit's finType forces Job to level 0).",
@@ -110,8 +115,9 @@ FAMILY_NOTES = {
         "declaration is not that level's (R2F) reading: JobType/TaskType's second level is read max(u51+1, u58); "
         "unification with a single-level sort `?a+1` makes the bounded solver set the free level to 0 "
         "(max(?a+1, ?x) = ?a+1 ⇒ ?x := 0), which the generality check refuses (last tier).",
-        "proposal": "the same coupled-reference representation question (a single-level occurrence vs a two-level "
-                    "R2F reading); not changed without approval.", "acceptance": "-", "status": "diagnosed"},
+        "proposal": "a representation question of its own (a single-level occurrence vs a two-level R2F "
+                    "reading; entry 9: not the COUPLED_BINDER_LEVELS mechanism); not changed without approval.",
+        "acceptance": "-", "status": "diagnosed"},
     "PROP_TYPE_CUMULATIVITY": {
         "category": 1, "priority": "P4", "mechanism": "a Prop-valued term where Rocq expects Type (Prop <= Type "
         "cumulativity), mostly CoqEAL parametricity relations.", "proposal": "representation decision "

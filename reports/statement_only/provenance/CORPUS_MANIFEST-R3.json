@@ -1,0 +1,1303 @@
+{
+ "schema": "rocq2lean-corpus-manifest/1",
+ "evidence": "retrospective revalidation: created after the chunk exports, from the files present now; it is not a record that existed at export time",
+ "created": "2026-10-14T14:42:05+0800",
+ "run": "/home/shunqwang4/research/r2l-run-R3/runs/st-corpus-R3",
+ "chunks": {
+  "modern-chunk-0000-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0000/source-00.ndjson",
+   "ir_sha256": "64cb45c5cfe8383a20c8916309782aa8a0d5351d161f3a7568bc7cd8842e9a0b",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0000-00.json",
+   "snapshot_sha256": "7071a2efa24bca58133832675411080fa1d3a55abdef20181f45695276d1a312",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0000-00/roundtrip.json",
+   "roundtrip_sha256": "08482d18bc2caf3384225b9876d6c05d6918dd56ebf6d761fac2b6d1acc8dc53",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0001-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0001/source-00.ndjson",
+   "ir_sha256": "98ffe184ef9d587254d40a9a4e4b3ed2aa2312733413f9b86fe5e350d8106512",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0001-00.json",
+   "snapshot_sha256": "8e16087c247ddbacf4e2ee52f145959e32ae285b187de9c50b50a3ee21f24a28",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0001-00/roundtrip.json",
+   "roundtrip_sha256": "19247ccd5dd8df1f92cd49f1bd181b59491c0a90442c6155feee09b5f9feb23c",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0002-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0002/source-00.ndjson",
+   "ir_sha256": "d13c087bf9fcf42a60451b9270318d0ce3d76a7346ebce5ee84efa79386ee8b8",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0002-00.json",
+   "snapshot_sha256": "0f4a24898b9918ed38ad0cfa6d739f635b83a31a88dfbd592ebaa879b50aec20",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0002-00/roundtrip.json",
+   "roundtrip_sha256": "316992983e7d300ad2be3f215329b41b74d8367b82f08f985c70e4fb1320bf15",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0003-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0003/source-00.ndjson",
+   "ir_sha256": "1c79f8729b037d068b7734ebb01a6d6d86fa541ea0cf95ecf5530fc1a34d0ba4",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0003-00.json",
+   "snapshot_sha256": "09355860ba75a241389f9200be944a7d3dcecbe7c1240d5f5cefacbd5df8f846",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0003-00/roundtrip.json",
+   "roundtrip_sha256": "4f804e2599a4c276258026b2cf961e9efc62a8fd53596e60f69e81f837b58603",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0004-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0004/source-00.ndjson",
+   "ir_sha256": "cda6a13ae768e6670843cbf1bc179d52798deccdba7cf874d2aab4762b6b2c21",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0004-00.json",
+   "snapshot_sha256": "f69286d8dc43b98e3f78ac6fad6ec46d3fc5b5bfdbc96e6aeaf205b1198470bb",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0004-00/roundtrip.json",
+   "roundtrip_sha256": "ac3825655956b9450365ff45f1f942efab857793be9d243465f83a7bb464567d",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0005-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0005/source-00.ndjson",
+   "ir_sha256": "d66255f9e2e56d6a23df298442ec4c9e7fec630fc77dccf6f4bbd55076f9e303",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0005-00.json",
+   "snapshot_sha256": "ca59bd61c079cb247aef81b38d49c22fc6e9a5ae1e738010e3993224ef815fcd",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0005-00/roundtrip.json",
+   "roundtrip_sha256": "e0a22cec9319853c3a03b457028c2f52a6dd747f4ada603845d2771bb522398b",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0006-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0006/source-00.ndjson",
+   "ir_sha256": "57d716835733c9a054f779f104144337a899eb547f69aeebfb18539771d94555",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0006-00.json",
+   "snapshot_sha256": "a928a595fc94e00ff377542abae24103a0e51294329bb1bfa08931813caa962a",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0006-00/roundtrip.json",
+   "roundtrip_sha256": "bb4efd15a8616c66ce3236b3cd6ca16ddbe4fd56909c649c89d8716a9d4cfca2",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0007-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0007/source-00.ndjson",
+   "ir_sha256": "e3de690767316ee8232924b92c625646795d8d51b52e9c70c4c2185364ec0921",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0007-00.json",
+   "snapshot_sha256": "6dcebbebcfc7556eea21ff9d7435311e630f42d6fc2050823bbdf48530f2da33",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0007-00/roundtrip.json",
+   "roundtrip_sha256": "03cb6d8eb93d4738da8db46e1ca5034e475e7d149fa73130ba08dca763db0146",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0008-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0008/source-00.ndjson",
+   "ir_sha256": "f08f5bddf93d7274ac0f341f85eac7b3e9473e2bc7cbdfa07f04c2f57fcf64c7",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0008-00.json",
+   "snapshot_sha256": "b0d3a59cd973059b14706bd1cb147a5075df2eac2420f863b8e80335086bf2ee",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0008-00/roundtrip.json",
+   "roundtrip_sha256": "987fa9e97676b58ab1cf1767da7ec6d680b7de36b8e56e0fe517830ab89ca735",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0009-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0009/source-00.ndjson",
+   "ir_sha256": "468b615ab6308e5829ef55f3d5e413fc1cabfa8de9866f3c02d0b456ceb9d5e5",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0009-00.json",
+   "snapshot_sha256": "93b8c26e251e13774fc548658c96e78c2f41e3c3464731b862c37a657058fc76",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0009-00/roundtrip.json",
+   "roundtrip_sha256": "c17d6eef557fcc3c8bb9a4eb8b97e3cdc85b81c89c3af60065dd789763030b50",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0010-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0010/source-00.ndjson",
+   "ir_sha256": "cdb951e8a8f245603943c6149d75a8178f68e257b9d2903d3e1ed94293fce2b9",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0010-00.json",
+   "snapshot_sha256": "b10677366fbd35c3c1f08887f419a0f99c3f20649a5451c8b206626fe57dae1e",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0010-00/roundtrip.json",
+   "roundtrip_sha256": "2453138572c916a8c5b3195aa8884d3b5da53fd610eec310f96f4dd9b0cdb4e7",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0011-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0011/source-00.ndjson",
+   "ir_sha256": "0fe67e9f30b1b4022829278c7766c24e7635a1ae2b2e3cd3a218c8b90c4315fb",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0011-00.json",
+   "snapshot_sha256": "c46fcd0c981e07470e18acf78349b6dce715eea5344f07b4d0e2ec4447722ca4",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0011-00/roundtrip.json",
+   "roundtrip_sha256": "8718a9415a24b093b534ea597afa143856d4e960a02e562df9e816b5ad8e3ee5",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0012-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0012/source-00.ndjson",
+   "ir_sha256": "0c4ce791ea33ca5bb293c25ed4e2e762ed144a0ef570438f691d3c5c31f524f1",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0012-00.json",
+   "snapshot_sha256": "785eaf660477a85605e6c8a5fa9cba8b07a864ae51ba619f5264ae3399ff82da",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0012-00/roundtrip.json",
+   "roundtrip_sha256": "b0d7a44ebef9c99599660f3d82743b0367635786f75f9e8a38c3182a31879c75",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0013-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0013/source-00.ndjson",
+   "ir_sha256": "ab41742b3efb549604c101b36af4f0c5af4a39cfd1073e5d247baf900ba6b099",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0013-00.json",
+   "snapshot_sha256": "2720870ae8f0ed36a87174357053f74a8203affe81454431e659b65e1205d081",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0013-00/roundtrip.json",
+   "roundtrip_sha256": "784bc1f804cccb9be3acfd191088e6a28e0d3805ccb8d1e98e7c75b6ecc683a1",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0014-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0014/source-00.ndjson",
+   "ir_sha256": "bdfb0e56eabd816da7bf981838d5b3865a92123fe5daaa96265af5e229aa3e4f",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0014-00.json",
+   "snapshot_sha256": "2c30fe753716b920926bc5daab0bb2585e42dbab2009b17acbbb87d8befa555c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0014-00/roundtrip.json",
+   "roundtrip_sha256": "0ff74a49bebdd61ab0d21a758233958710ad00ab222d99651ced7c28e0a39744",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0015-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0015/source-00.ndjson",
+   "ir_sha256": "b652274adadf45e88b94cde906781beff211f364abdaf55397bd182e43e386c9",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0015-00.json",
+   "snapshot_sha256": "ed114d50d6cc268ce4a28a2bc8466917465eaabcb34970dd7d77cbbcc1f64ce5",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0015-00/roundtrip.json",
+   "roundtrip_sha256": "4ed5c923c30db4a928c4574da1e18c2baf620bce32621f31db7ba1fd777400af",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0016-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0016/source-00.ndjson",
+   "ir_sha256": "4b4d0a98f97fea4a539c58e21d0f7d85aa63f645efb21f43e66cfe565323677f",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0016-00.json",
+   "snapshot_sha256": "a163372445eaab0c4650013825fd664ba476060adbeadc3b7048ea97c219b622",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0016-00/roundtrip.json",
+   "roundtrip_sha256": "513a895171ac29407095d38342c088761f5103340bd3f516cb019f2b224a67cf",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0017-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0017/source-00.ndjson",
+   "ir_sha256": "eafd183a9c26477226458a8f1de71052e2623d89eb8e5e44a69ce513c8499c1f",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0017-00.json",
+   "snapshot_sha256": "230e5cc20e98a84d2f6c72790546056f305c075a76a0b70312ee5ec22519bbc4",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0017-00/roundtrip.json",
+   "roundtrip_sha256": "e82e0d315e21614901de6846bd3d7e9c404fe0ff69d48b3f913338b01750b637",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0018-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0018/source-00.ndjson",
+   "ir_sha256": "0e812a5531a8ec81cf74f8ee21cff52412ded3b0c9267ed851844f2e5e3a68b5",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0018-00.json",
+   "snapshot_sha256": "8dfd9c9a9246efc3f1f4f9bbe64610d0abba3dc0e0bc5d3431e236e2fb0e1e24",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0018-00/roundtrip.json",
+   "roundtrip_sha256": "ae66ae79de53d887283666c6f9226c4630df930657290b28887e0f5a41d9934f",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0019-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0019/source-00.ndjson",
+   "ir_sha256": "3ab0e3d19f182cd422761b37d677ad864111b013a01c9304c9dd220b8f8cb42f",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0019-00.json",
+   "snapshot_sha256": "7c9a571120f1cf79eebe1969138f9c84899b1f3194ea071c10aa9c54538da1b6",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0019-00/roundtrip.json",
+   "roundtrip_sha256": "68f52aeb429d77a8dc41b03f438548565b7ee5a524be44c7534eea40b1591825",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0020-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0020/source-00.ndjson",
+   "ir_sha256": "25e5f9d662c774534d1b04643070e893f1c3c39e9c1cadd6747aa888291aa543",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0020-00.json",
+   "snapshot_sha256": "479a920b227eab304f764a1d6f1dd8518ee369c41c8d614a0c5d76c8b6694cc9",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0020-00/roundtrip.json",
+   "roundtrip_sha256": "ae59d963f7a6f9a51d7f3e90eb0ddbb2d7cf22d18894c20936086cfdc90b3ca0",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0021-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0021/source-00.ndjson",
+   "ir_sha256": "efe570558b9df92796767bf42365ed1bd3c464306c7a96349844fc35000ca96e",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0021-00.json",
+   "snapshot_sha256": "a66862d6339803687627beef3cd8f679814bfce5590db958f79e1c94a2876b0b",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0021-00/roundtrip.json",
+   "roundtrip_sha256": "ebcd3ae1c0750ad6c33197639b4fa3b7f06320f2c58ca8b05dce222012ce6b19",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0022-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0022/source-00.ndjson",
+   "ir_sha256": "f1587638089d169432ea92be964aeaa5018e8c93e59abe01b6a0fa38062a5014",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0022-00.json",
+   "snapshot_sha256": "0679e4af7ce43a35f18848bedf32de0c9872d266bab7241e13e2573388be1571",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0022-00/roundtrip.json",
+   "roundtrip_sha256": "0b2216f9daeef714acc005a209275685821d95f4ec3e9d1ee2c520d6ff1cabff",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0023-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0023/source-00.ndjson",
+   "ir_sha256": "af0e7356f396ed5339a7b4cf232071bd67862e2f9d477cb91543da12b3db077b",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0023-00.json",
+   "snapshot_sha256": "503c7c48f85304798d45094cae61866c162659d4f1479e83323bf19a7f7505e0",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0023-00/roundtrip.json",
+   "roundtrip_sha256": "15b880c415e280f4b4b59ead3912c00184cdf5823ba8c0fa3b6b68492446524f",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0024-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0024/source-00.ndjson",
+   "ir_sha256": "8a9eaaf1be46fe8bf57eb063c18f6e7adf24c8e14eb66da7acb1530290d2351f",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0024-00.json",
+   "snapshot_sha256": "95543e4df5cff3c24b1e9aec1d4e507c36103ee09418e51081151845a0f01c48",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0024-00/roundtrip.json",
+   "roundtrip_sha256": "6f8eeba7be6df6109be542cc710c9f7be73b6c6964a288bd271fd35d684453df",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0025-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0025/source-00.ndjson",
+   "ir_sha256": "beaa9c86b9d245ed30eaebed73fed78b89c0dfef438873f6c03072bc254e59ac",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0025-00.json",
+   "snapshot_sha256": "9eab176b97f28aab7a3b09d10e5e0e836652e55270f3aefc08e3cd358ed93823",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0025-00/roundtrip.json",
+   "roundtrip_sha256": "9c76cf526d3e8a17c91274a136b79b41d7e4161ed5a0c1496a81b64dbccc73cc",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0026-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0026/source-00.ndjson",
+   "ir_sha256": "6db177e019ef7d3d5913533b73898b967dea080d362dd60cf2524295633b07cc",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0026-00.json",
+   "snapshot_sha256": "380a5564cbe4049117ca189fceca164e6709c0197da5d86458aa4acf16aba51c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0026-00/roundtrip.json",
+   "roundtrip_sha256": "a724eba43ad8bab60bf6cc7bff98d4b3d5594ee7df2ba514464cb277ba3f84cd",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0027-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0027/source-00.ndjson",
+   "ir_sha256": "45f918ed4669fe5fd029d6496e4324cd72381883e7cb71de94af82c1cb6b7cae",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0027-00.json",
+   "snapshot_sha256": "f934aad145c04084420ca7e3a86f70d174cb17ac1f0e9e9b58507b03324b67dd",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0027-00/roundtrip.json",
+   "roundtrip_sha256": "b55b5daef67393933990325f07f023a78e8300418a8a1dd9261942aeb515dfc7",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0028-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0028/source-00.ndjson",
+   "ir_sha256": "e537fd8b6eb9103be89b2d0bf11acbac561545648945f78396804009f8eda394",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0028-00.json",
+   "snapshot_sha256": "7a5ac6096faff2cc5b106265785247d3e0a3ad2ff3315f5a10c32779bc3c7f5c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0028-00/roundtrip.json",
+   "roundtrip_sha256": "63f5e3c8a88b8acddda61da101159789660759a6cc8f2bf90fcb2aab05b69131",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0029-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0029/source-00.ndjson",
+   "ir_sha256": "3930215b30636013a33ecc155b5b58ff2d737cb7e8e92d9c538c35168cc88bb5",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0029-00.json",
+   "snapshot_sha256": "baf572420c1aeb699ebaad149580aab1b365f066396203982bb43b7b23726d26",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0029-00/roundtrip.json",
+   "roundtrip_sha256": "840037590828f95182d91f46e36d6caa93631febccf51b410aa26df37711b3fa",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0030-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0030/source-00.ndjson",
+   "ir_sha256": "69fbff9110db828caae8f9af55320ec8aa7ea91bc368f1b4ec1437dab7caadb1",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0030-00.json",
+   "snapshot_sha256": "177fe84ff3680b45014a98d3d89782046c1e216c056351da725b64cbc4c4b777",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0030-00/roundtrip.json",
+   "roundtrip_sha256": "585bb453e4b189dd7edc9de48e4f29dac9ddfddf5c7331336a9f368e08c34d8e",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0031-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0031/source-00.ndjson",
+   "ir_sha256": "e80afc959b913d979c803f469f62f7f7e217ad0fc013513b407160097ccda25c",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0031-00.json",
+   "snapshot_sha256": "766f1ff1cfc4161d777a26583fd61b9e214463384c07235bd8ad5b804c2ed73c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0031-00/roundtrip.json",
+   "roundtrip_sha256": "00a99ea7e4458f922ec052a384af2a2aabe168d26c644ac51eb69cf093f0b517",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0032-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0032/source-00.ndjson",
+   "ir_sha256": "a15c2a62ca2cac39108897c9c49e47ea3c93967598e8801de852985a905089e1",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0032-00.json",
+   "snapshot_sha256": "3e2f8397ae2b4d7ebd3175db531d2bc36daa3b762ad18c7c0587d6a165301d41",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0032-00/roundtrip.json",
+   "roundtrip_sha256": "ef0324d329b767f480067ecef5cf0ec70090d0ada0f742c60dcc89e669fd8849",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0033-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0033/source-00.ndjson",
+   "ir_sha256": "80ebf1f04707b5d2005ca2dbfecd12d53326e0be2b5b902fc49043f3d01a9d62",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0033-00.json",
+   "snapshot_sha256": "c8033f43de3ae87441cccc8615b36ca7ee6b710aab10cbc4ab2ae54563b94fbe",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0033-00/roundtrip.json",
+   "roundtrip_sha256": "4d148fc75017a24ae38c010a85c93a2c5f6ca8582c22d135fd5fc75f01744f6c",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0034-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0034/source-00.ndjson",
+   "ir_sha256": "b62211affb84da5912e10ef454a2b6f9dead379af77f93ee7f0e49dd7380844a",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0034-00.json",
+   "snapshot_sha256": "151f2a91a2440157331d7026657472450fc56ad3259e609f6d3d066e37b2b91e",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0034-00/roundtrip.json",
+   "roundtrip_sha256": "b6f8516312b67d23132541a6ce1ee62588719f31e70be2fddf0841d5051ec22f",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0035-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0035/source-00.ndjson",
+   "ir_sha256": "76b9addbfbf65ee8ffe8e099df907b322d7fed31b52574042826702e5dd88f47",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0035-00.json",
+   "snapshot_sha256": "2677954e64cfa6331a26c70c0568baed84b34100363880f5ff9d04fc60b40c38",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0035-00/roundtrip.json",
+   "roundtrip_sha256": "923e16b2ab72169aa1b7b6b190ff7e9c1f67d4afe0f1dca8e3e1ee0867a4aef5",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0036-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0036/source-00.ndjson",
+   "ir_sha256": "17093cdc2652efefc96054b2af3b88405455763ccbc897df4e8d7d3683f4d438",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0036-00.json",
+   "snapshot_sha256": "d7165b1135d7037838d7058b2c3f61671c456110bcda7b271a0b8ff6f4063910",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0036-00/roundtrip.json",
+   "roundtrip_sha256": "a305e06beddb0d730438cba080ac48873bf914b24f6372aaf2bd09478001a2fe",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0037-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0037/source-00.ndjson",
+   "ir_sha256": "79154872ae9b301426cd60680da9045ad6cce9775ab1e49220b789a15c1f1f47",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0037-00.json",
+   "snapshot_sha256": "1bda62eda929b232e15d8de4cb87ceddd12866c67c2c145b044139e3a8d80cd2",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0037-00/roundtrip.json",
+   "roundtrip_sha256": "c555bd26cae4798bcfaf0cc4ce0f7b9a283e6cce0ba205b8e945509422a24c19",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0038-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0038/source-00.ndjson",
+   "ir_sha256": "6ddadeb91b69c4fd9dc13cc2edef5d10bbcd3737fbee13efae8fb4832dca7396",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0038-00.json",
+   "snapshot_sha256": "05af41f1f1a5e22cc35320bbbce320ac7b3409b7fd130b2c5154999c6ee4e29c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0038-00/roundtrip.json",
+   "roundtrip_sha256": "f4c0a58ff67dfacb4addeefbe793ab76c41010e8a82c6744d056d1961081e848",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0039-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0039/source-00.ndjson",
+   "ir_sha256": "e1927087e4ae611269ffefc2bdaec2a9fd8eebf80c4c3085a23a092e1678bac6",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0039-00.json",
+   "snapshot_sha256": "83d0421ee7ff89a68c644a2c0278f1a2f229f231d98574812a9664963adf205e",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0039-00/roundtrip.json",
+   "roundtrip_sha256": "3ce8ba57f58c4511fef4e76ce6a3c0db55479eead171a88f1a3274f5dce838d0",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0040-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0040/source-00.ndjson",
+   "ir_sha256": "4e3c8bbd90b7f7b98c66dac403aa6638f8fd35911fe6d855d3aa9bc8cfc3e02e",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0040-00.json",
+   "snapshot_sha256": "369700df0691b0aecdc74719fe0a539f49543fc0d69a0ce1eed50640597adacb",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0040-00/roundtrip.json",
+   "roundtrip_sha256": "00801e94c48f8596ac37dd7d084d989ee94ba38a9e95f428ae514a23b62e2951",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0041-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0041/source-00.ndjson",
+   "ir_sha256": "30b192580d26197aa4569c3babe94fd108d0b3430b7c02dea3d3ccbbbbdec215",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0041-00.json",
+   "snapshot_sha256": "2bc052017fe8fa2cf8b386e5b00ff92ee5ba2e1fbba35e30e1a13e3bd710f871",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0041-00/roundtrip.json",
+   "roundtrip_sha256": "6eb93c10ff1c9742b26030b62e66dabc63b3e1136448779281a6e477d7de5bca",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0042-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0042/source-00.ndjson",
+   "ir_sha256": "28cdf765597e01487ca62bcb57b7e9873fd8c00078552cec0fb1de39f263b519",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0042-00.json",
+   "snapshot_sha256": "ee49ee7a54ff1bba413701e8959474c755061d84552db270d85522bddcb12521",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0042-00/roundtrip.json",
+   "roundtrip_sha256": "dbc65b7fd488d7713597747446946a41f2dff3510eff908684e28934f52b80ca",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0043-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0043/source-00.ndjson",
+   "ir_sha256": "c20dd58cb0147cb28f0bc764221d2e196c8868ba6d2fac2c0ce499df1dba1875",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0043-00.json",
+   "snapshot_sha256": "3e3f5df35e4eec234edf8df547da40009d89cc461f963e69790e40e79968b977",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0043-00/roundtrip.json",
+   "roundtrip_sha256": "84394b33dd0636767a544bd83aa6e17caec6e2b4aef4716077b7364f242f1068",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0044-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0044/source-00.ndjson",
+   "ir_sha256": "af84e9c3185d324c40c1aa2962f3702b52bf06f9372cff3cd47c17c972f40372",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0044-00.json",
+   "snapshot_sha256": "34bf781f4b77a783749571175a0a0a818ad11e86b40ed94583de7e88c51f55e6",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0044-00/roundtrip.json",
+   "roundtrip_sha256": "672a688bde7207d9e67e1561885fc4c673c0a931d22374484a3376676701a0e1",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0045-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0045/source-00.ndjson",
+   "ir_sha256": "221e4c81b02ea5e394d60b9703d0c7073506f9e521fa7ff83e4153697ba5bb94",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0045-00.json",
+   "snapshot_sha256": "abdecb00efe340e92595541ab4d8f15ec6fad91a541e3ac4f6a95601d2be5378",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0045-00/roundtrip.json",
+   "roundtrip_sha256": "f90b7ee1389a2191747033532c24305aa07c83a4eadce745322f03e089d2504d",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0046-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0046/source-00.ndjson",
+   "ir_sha256": "10b42c6be31969d381fe5c1e7d6dacb6d590c9f5349bf98cf1ccd602baaf745f",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0046-00.json",
+   "snapshot_sha256": "41950b1b64bde02a01580b9b9bb55d24490ea45eb303195f70d899558352c664",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0046-00/roundtrip.json",
+   "roundtrip_sha256": "37050d090818c216339914501631b5d4bb76e2f55fbddbcc48b694f28654cefc",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0047-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0047/source-00.ndjson",
+   "ir_sha256": "8dfbb721fa012a05fb3d91395b080f6a02f9d45c1b2385e4f1a7d0674db4bf0c",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0047-00.json",
+   "snapshot_sha256": "92df27045d883a308265f10bda961b852ef74c1d1f70086da3f800537d6fa23f",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0047-00/roundtrip.json",
+   "roundtrip_sha256": "4ce10a944a11db5d658b5a034d2f88b9fe1a613b961c2fd04c1ff310d5e447eb",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0048-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0048/source-00.ndjson",
+   "ir_sha256": "5d08652648989507b93d350d307d5756760848de8279382dbeefa1b786e6257c",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0048-00.json",
+   "snapshot_sha256": "81f63d5848d67d6131677747224ec045e046c3c3ee3bfdd8777124405bc6b8b4",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0048-00/roundtrip.json",
+   "roundtrip_sha256": "dc050d77eac42d39d49329f9c04efd86d3b6fe6bab12e26eb78b243b2dbe8e23",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0049-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0049/source-00.ndjson",
+   "ir_sha256": "1363a87731adeba601b45ab45115ab65ffba26fd285d9b136e0c1e856590823b",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0049-00.json",
+   "snapshot_sha256": "dda1be15fe128ee2ce5321ed0cfec63b3e5a3ce1aa13186769b86c9c609c53d3",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0049-00/roundtrip.json",
+   "roundtrip_sha256": "8279924dbb1ee3017fdd928cc94665caa5916bc9c38d1324b741de171db1c787",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0050-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0050/source-00.ndjson",
+   "ir_sha256": "a13478909f09294611c2f5ba8954bf25eb2ddf8bf0f8ca7ab2e2b2e5c70057fe",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0050-00.json",
+   "snapshot_sha256": "b238c22e843960f3451121000c0dcdc0c1bb4303900d509768ec71482ce6e3b9",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0050-00/roundtrip.json",
+   "roundtrip_sha256": "b10ce874837bc18558b504eb80a16fde08bdd8f1bedfff983a630879e3000753",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0051-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0051/source-00.ndjson",
+   "ir_sha256": "7882aa75cfc8c88358adc04cf3f35ddba130f528bd9d5b52b47763bbc00e1c8b",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0051-00.json",
+   "snapshot_sha256": "86d5f1e512648b34172a62a95c073f7e8caac6793f12e691e7f7c0719c0bf5de",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0051-00/roundtrip.json",
+   "roundtrip_sha256": "1dcddba1d1c948e5806dba66bfde04f59f40aab5edc843bc0a6affda88ee841f",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0052-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0052/source-00.ndjson",
+   "ir_sha256": "27b323bfed6d9448881778b5209a31fdfd95add69d988d39cd9ee85af8f5af91",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0052-00.json",
+   "snapshot_sha256": "de3b596959b5c5806956d70ac3383dad833c21a6d80297640409424adcb81b67",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0052-00/roundtrip.json",
+   "roundtrip_sha256": "08426049fb07844a48f26732d52e11c3a0f31009b3030a56bedd3646b914606d",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0053-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0053/source-00.ndjson",
+   "ir_sha256": "a742c594764111a460970166600c16ad609f6fb5d3a77c604834967cb0e48649",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0053-00.json",
+   "snapshot_sha256": "dc36ade6b492676b92c4a638c0b9e273ef2662506ef73883e656adef2e9bf034",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0053-00/roundtrip.json",
+   "roundtrip_sha256": "6c90f5ae1eb9a364318acd6ba10fa123fc854f80c82e001ee302661959c977c7",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0054-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0054/source-00.ndjson",
+   "ir_sha256": "febc395d47104cc81a3f3ad45bdba6d69359c435ace705a1dfec526c144707ab",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0054-00.json",
+   "snapshot_sha256": "74a9660ca70216d697a26232ccab9c57324336c907a877465f9612496565e7e0",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0054-00/roundtrip.json",
+   "roundtrip_sha256": "9c6f057ff68fd0e509f41b9d1f49e2b85bd2b5a2524b52b9fcf8d16a3c98a528",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0055-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0055/source-00.ndjson",
+   "ir_sha256": "a7dde1253185a69dc594e96b30ef3d158398c09db3db0706fd0276ca84410ab5",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0055-00.json",
+   "snapshot_sha256": "77e3120006cfd085f23ca6a1425aea5f8902b23bf7cbff6f94ebb780a78ddc71",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0055-00/roundtrip.json",
+   "roundtrip_sha256": "10001670855eb6e6cf8d1241a55fc15ecf2fee46c2048394855edcb89e36ad77",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0056-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0056/source-00.ndjson",
+   "ir_sha256": "13783b19a7a5e40013b2f7580dcf473e55ad4cac1810f34a615f2d40b4865c36",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0056-00.json",
+   "snapshot_sha256": "dd6dcd05b19a865bfe24bdf92178a4043777035edabf7d892d52994416958c87",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0056-00/roundtrip.json",
+   "roundtrip_sha256": "19eaec58a0c57b4472df2f072902a9e23ad8d98bb0cf92f85be0078a49ba3424",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0057-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0057/source-00.ndjson",
+   "ir_sha256": "b3aad751f110786313fd1a9a2172b8785efc78932017d9b32ca9552fde0e4791",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0057-00.json",
+   "snapshot_sha256": "7a5aeb51145fef9ca825eaac031913584ba268513a9e9aa042a3bc180622c274",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0057-00/roundtrip.json",
+   "roundtrip_sha256": "c544372ebe106dba894af146abb163b85254e3e08f70a4c5b0ee35c00152eaac",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0058-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0058/source-00.ndjson",
+   "ir_sha256": "b832cf2d69b3b55e0163ff4b70a6cea3d8d10025686762c03c447d8391f207ef",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0058-00.json",
+   "snapshot_sha256": "b12dbf3c7e16840f461e03bbedbe31fc1e634c13b6efd945d241daa0992b9ca1",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0058-00/roundtrip.json",
+   "roundtrip_sha256": "fa3e1209febb0f91d9f5bd2e8a476e60fcf20cdea8e42ac92c2bcd6f9d2cf022",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0059-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0059/source-00.ndjson",
+   "ir_sha256": "c4126892c9ad5ccc940e57fb21a1bf3edc7e2dbaa48fdf5aae9dfc581d829d3e",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0059-00.json",
+   "snapshot_sha256": "a04493611191ce6d9434b4a83c5afbf51e7cd636e93a05352d760a05c35c559c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0059-00/roundtrip.json",
+   "roundtrip_sha256": "e6bd6f0f9369729f6b9e3cf3c00113c7e4115328680b5afe099bd5266dd58c4c",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0060-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0060/source-00.ndjson",
+   "ir_sha256": "1cb9d7fc12409d77497cab72295c69e5088fb254828ee1e24173d36a0c7a321f",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0060-00.json",
+   "snapshot_sha256": "245ba1aa2f9b3cdf9a6edd9a4d2425de5409ee286fa167f9677f9f14242cf688",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0060-00/roundtrip.json",
+   "roundtrip_sha256": "329219d083772452aadec4725ee7ce17f37341f8b8a9d84a4c101a4aaff52612",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0061-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0061/source-00.ndjson",
+   "ir_sha256": "3331777730b7d98852ac7fa219f3b9ee5e9cf6832e168045646ad9b8c79333dd",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0061-00.json",
+   "snapshot_sha256": "f43790101049336b2adcbdd9522362e4f04d1253f18da2fe6f13a45583744ca4",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0061-00/roundtrip.json",
+   "roundtrip_sha256": "fc3e9035325c4ea30ed44bc152e16aa3fc339312190b0c9b4e217a9077afcf7e",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0062-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0062/source-00.ndjson",
+   "ir_sha256": "47e9924d8a972de94a74db8044aab8ea2e724909b443201b271dea9a1a9eb50c",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0062-00.json",
+   "snapshot_sha256": "77be215d3b494ab1c3683179a59493a04ac780c41b1eed455748cf0fe88fe27a",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0062-00/roundtrip.json",
+   "roundtrip_sha256": "ab1e4f1cf7c76eeb6122600f27b01f5ec0ff57d401c996e56d8a047b8546b9d2",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0063-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0063/source-00.ndjson",
+   "ir_sha256": "d4f9ff53c841241eb6ed078ccfa570bfa8112f9dc299ff3558a8372031dadd5d",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0063-00.json",
+   "snapshot_sha256": "b2e511d4303ca9fec543d5c642ab5c43278d2cd20dcc55293a71d4728d73e141",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0063-00/roundtrip.json",
+   "roundtrip_sha256": "aaf5207e664f5f7f5acf42c7a71bd47f78101dce999cbb9e2a29bfe82dec492b",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0064-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0064/source-00.ndjson",
+   "ir_sha256": "0f62e93c69cd1ba49163aee420ff1e915841b59c22d881a4ab87a73c14f821ad",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0064-00.json",
+   "snapshot_sha256": "10a527061f8cdbe0e378435d9778cc779e272ba9f2042fbf5a80df43116fcf98",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0064-00/roundtrip.json",
+   "roundtrip_sha256": "e674b2bc432edcab7a3463d85b77886355d484bb95eb16445105d83875d5bd7e",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0065-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0065/source-00.ndjson",
+   "ir_sha256": "3a5dfd6f232145d5ba9d499725315b996e9a0d995672f19db30d4b205696d3d9",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0065-00.json",
+   "snapshot_sha256": "f6a34c9f0c38c5a0d74af57355dabe68d8963f5dfbcf6b41446828a6b9fd221d",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0065-00/roundtrip.json",
+   "roundtrip_sha256": "58f4cd39ed7c22a2c6ee887bf7cd2ba9b79c411b6cef4ae58e1217f89810a725",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0066-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0066/source-00.ndjson",
+   "ir_sha256": "64e6de47badd093afc45d5559ddeadf7b394e048b5ddb07b455876023f33127b",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0066-00.json",
+   "snapshot_sha256": "9e30a3efc41a1bf4a8c364969e8284cad03811e58175a16c4d58f3ab1a90984d",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0066-00/roundtrip.json",
+   "roundtrip_sha256": "68863377c32d61824232fa16f64030d3241e87e91016e0dea52476287a9e6559",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0067-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0067/source-00.ndjson",
+   "ir_sha256": "ab734d173a6cd8ccd9fe8693108ae1d7fafa3ba42b19ff5d65e3f2c3cb51dfa4",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0067-00.json",
+   "snapshot_sha256": "4b0f66be40b8b49beba0bcd3a33479bc69873a582c8f079148259206da88448d",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0067-00/roundtrip.json",
+   "roundtrip_sha256": "b06a47bdcb4dde9988f90445e9d203182833600cf882017122ae2c23915c946b",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0068-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0068/source-00.ndjson",
+   "ir_sha256": "b07199143f06d266c6b08c549981c24917d7ca27a30e7f02fc2dfe8a6b9b6771",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0068-00.json",
+   "snapshot_sha256": "181dade852b23988f17f6a24d42e387a393bd8091a1cbdb4441d901aa254c33d",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0068-00/roundtrip.json",
+   "roundtrip_sha256": "bbbc055ef1edd67d930bb2771140e8a1a7cca99352665cdd668ac2bab8c9566c",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0069-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0069/source-00.ndjson",
+   "ir_sha256": "98df406ba840cd485e4ebfa11b6193a02d453c34fed1bfe0ae2d1cd886153ba3",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0069-00.json",
+   "snapshot_sha256": "f00b911827f0304b255d7f8585eae699806fdf208fe0874d65bce2b5ea47800a",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0069-00/roundtrip.json",
+   "roundtrip_sha256": "3039385580938c584c91cb97d9a74a2ae41467021f3e7586ccd7951a102fd69e",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0070-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0070/source-00.ndjson",
+   "ir_sha256": "9a59e2894231f86a5cd5ae7aa14fe92f5eb29ff9d57d6e2de26903dd811084a6",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0070-00.json",
+   "snapshot_sha256": "f1ab313e83c26a8f350db5027963b311833bee4a02ce9b8b05176a3487fc28a5",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0070-00/roundtrip.json",
+   "roundtrip_sha256": "3aae04e69a5dd0875953b2787da79fc11c928e34e021dd8eeaf85fef92313aad",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0071-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0071/source-00.ndjson",
+   "ir_sha256": "7755c9352a4b1919daf2f1999a607997385ad25f60962735eb280f703933fee6",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0071-00.json",
+   "snapshot_sha256": "49d0faa126619805a98763ef7e90fb4c2bdd2569411339770fd4d1e87b76d2e9",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0071-00/roundtrip.json",
+   "roundtrip_sha256": "81d88a080d8d1536208db9946ede84609fc249905cba12a4f87180fa6bb3cab3",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0072-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0072/source-00.ndjson",
+   "ir_sha256": "4d99b7afb1a448940bda590a03985357c337552e550a11fb193bc9144fa590f2",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0072-00.json",
+   "snapshot_sha256": "f4f4568cfc2ae12c7613f5ed40863c6601a8963d94d8ff37a9f0021e50b92b6c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0072-00/roundtrip.json",
+   "roundtrip_sha256": "e514d7bc5447fb5110e1e1a34f87c9aa3cc6e79de41f653192dbab42df2f07ae",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0073-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0073/source-00.ndjson",
+   "ir_sha256": "511bce40a16c9392eb9112cd3b6616be9ed251a847e4cd464ba11b4d6da9ca69",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0073-00.json",
+   "snapshot_sha256": "4b4b54bc19a43330c38f0e4657aeb50dc52ea3425abce16130cefe08e95bc3cd",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0073-00/roundtrip.json",
+   "roundtrip_sha256": "ee05eed2f835ba670e090d1b78a7b06545c0f9e5a1845f4fe31ad70d58000142",
+   "roundtrip_status": "OK"
+  },
+  "modern-chunk-0074-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-modern/chunk-0074/source-00.ndjson",
+   "ir_sha256": "460079d9cc42200f609a276efa0bb26d8fa08906954ad704b13427b042430d48",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/modern-chunk-0074-00.json",
+   "snapshot_sha256": "9491cd32f37b9e066bdb1579abb154b0f23d2eee84ab6fa35ecd159a649bb592",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/modern-chunk-0074-00/roundtrip.json",
+   "roundtrip_sha256": "e5f53ea15724ec06e340127edfe69b55646a9f58706290f4a5372cef9c9d3458",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0000-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0000/source-00.ndjson",
+   "ir_sha256": "76b2e464d96b7247cc0e07ed6fe9f572dc95f469a096aeb91324957c9456b5c0",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0000-00.json",
+   "snapshot_sha256": "8560e5a1ce12bbfff279355d431458281783987be6ce8dc5620924746e4fffa1",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0000-00/roundtrip.json",
+   "roundtrip_sha256": "aba3091ce770c69f9ef20a8d16f4f0a2021f916f1d81b75285fa0cb8c32fc7a3",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0001-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0001/source-00.ndjson",
+   "ir_sha256": "d5340a9e3ac5de427548692838a4350c0d34242fa55d752d5f3c2082dfca24a6",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0001-00.json",
+   "snapshot_sha256": "4ab3da2b23e5a10f5eb85bca8d6847823d282acfb68d48a7665a139739b4f309",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0001-00/roundtrip.json",
+   "roundtrip_sha256": "373e69153e5e3a278caece7ecf85dff4879a0b7cf1679afa3388e14a2019fb76",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0002-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0002/source-00.ndjson",
+   "ir_sha256": "8b244a7415abd44f50eadd8ca0b95044d3613fb988e4b485dd84e2e4f11bc74a",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0002-00.json",
+   "snapshot_sha256": "a33db4c03e7ec70e62ea648b27568d3e80ade6e91ec04c09b0b3e54784c8f864",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0002-00/roundtrip.json",
+   "roundtrip_sha256": "3bcf208981a3b33da58302b5e5d235d653900fcd667af0e2b719961d893108cb",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0003-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0003/source-00.ndjson",
+   "ir_sha256": "ef73adcd6f5e2438d153147d7c5cfc21a2cea2cd4461b6b9781b20e942303229",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0003-00.json",
+   "snapshot_sha256": "d6787dac050eb3004fb1d87181a62cb88f4275ca7516b2d5317e084d4af979b7",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0003-00/roundtrip.json",
+   "roundtrip_sha256": "85cb7a7e3e0f23c7217cf7a98a690340e9c24044e797ad489ca50ba2e4b166a0",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0004-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0004/source-00.ndjson",
+   "ir_sha256": "a0133e0bf9e3b37809e586003137938152b9c3e6ca7cbfd1b33c30f0ffeb76d2",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0004-00.json",
+   "snapshot_sha256": "45ed5040e1e677db8377dd87dac21bbce6a784f07f4eb8c54bd31c11777af3a0",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0004-00/roundtrip.json",
+   "roundtrip_sha256": "0a4f631cfe66d71db4795ba48ab33290cdededf08e0f7280624aef6de5bb2d45",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0005-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0005/source-00.ndjson",
+   "ir_sha256": "9da5b8577143a5b266d3da09d3125548762d7d2aa0d1f4f69318b59a9a77a48c",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0005-00.json",
+   "snapshot_sha256": "68a2cb3542a95b2148f6368b5e5bf4fb38f5781495d51f0eb930e585a5f976ed",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0005-00/roundtrip.json",
+   "roundtrip_sha256": "fcb9f8d7a1fe8e251a1ce2e0c4651fe22c5896e01b9e8853493e0c655dbb03b7",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0006-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0006/source-00.ndjson",
+   "ir_sha256": "7487dd8f4df4ca06bad1adb57bd0b356c2bf6d97f411f515150e85a6ce3c86ad",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0006-00.json",
+   "snapshot_sha256": "70eb0123a4a8eb3ca0d7a6829ba5a5085f75522340395a5c3a8f360eed6ee688",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0006-00/roundtrip.json",
+   "roundtrip_sha256": "5d28b1eb36ea080154b96bf8423f8ef289268e3d2859905e3015988f77d8d58f",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0007-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0007/source-00.ndjson",
+   "ir_sha256": "cf05702d0edb10958976f8e4ef050a2617e7ce66174cd984951c7a1cde64c331",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0007-00.json",
+   "snapshot_sha256": "165d107c615e67d9d673b25e0f1bad02d0975ef66168a4b03dcf0d391affd17c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0007-00/roundtrip.json",
+   "roundtrip_sha256": "080059977e2438efc373b9b818b8bdc1d2a0e31d60b2bb87e9c22f0013ce9a59",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0008-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0008/source-00.ndjson",
+   "ir_sha256": "d6823cdff8be9318abe87e6bce18ffb8703d371ccb12afe182b78f4675f129bb",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0008-00.json",
+   "snapshot_sha256": "6c4d55088beb5f09539f0550b60cdbbcaf22bfc0de0b7d63817557818fb730f9",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0008-00/roundtrip.json",
+   "roundtrip_sha256": "579e5e7eeca1fd01972ecf70e1474d30d6aacfa428ae517a2640f040a9235d4f",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0009-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0009/source-00.ndjson",
+   "ir_sha256": "d76091d25b5ab0b6239a47e02edaaa9f8aeded3adbf6ce374881ca3370dd0e5d",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0009-00.json",
+   "snapshot_sha256": "9dd9312987eb549cefb03cf924567b11761384e9ea3d9a5c9a7fcebeaa316025",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0009-00/roundtrip.json",
+   "roundtrip_sha256": "aed7a0bdee0c63656258b8a9dc8c865344880e76db910817dd23d0f092caa13b",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0010-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0010/source-00.ndjson",
+   "ir_sha256": "b65038072e2c4cbd7539302fc93094e864e2e525022864374be48d2b751b580d",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0010-00.json",
+   "snapshot_sha256": "bbe37d1b8b04129ed3c4ee5f363ae055afd2dc17a1737d7620086876e5bc6a9f",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0010-00/roundtrip.json",
+   "roundtrip_sha256": "1aa3fcb16bc3b46339df68ccc16546aae7894d0f967dfe6e96b8fb9b8333089f",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0011-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0011/source-00.ndjson",
+   "ir_sha256": "6036dff5ace7564b8f3ced1fcbda63c2c812833527816a759832804bc2ef1c1c",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0011-00.json",
+   "snapshot_sha256": "3af39d2a59332334e8d8d59fc64ad0de7a12e6cb11716440c4379908d017a63d",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0011-00/roundtrip.json",
+   "roundtrip_sha256": "362e38ff93a9d61f42270666062751d2899caeb49179794c50d4192bd4c22786",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0012-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0012/source-00.ndjson",
+   "ir_sha256": "66aa08399f6de1f135fff1b09e1e44dca214ac2b5e064f253ef9e081e22b65e2",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0012-00.json",
+   "snapshot_sha256": "900a0133a89afdf4fed9cca7108589a731435ae8b5b921f0a19143acfe8cd6d8",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0012-00/roundtrip.json",
+   "roundtrip_sha256": "025ecbf99172a08361e57ed86fcdf51b9f9f2eb2714c86f3f3c7f3baaa391b07",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0013-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0013/source-00.ndjson",
+   "ir_sha256": "82da4b1ef68a6c53b8ea31eb039e5fbdca41f972892e8436d291f2a8b8ab4498",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0013-00.json",
+   "snapshot_sha256": "a01ae5347fe3d7b66efdc4e2324a7eaa78cf2ffea4ecb0a56342272094463d3e",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0013-00/roundtrip.json",
+   "roundtrip_sha256": "f276d6ec7698ace5700292caad00159e1bf15ffdca4d48bfcb51feb1ed63a858",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0014-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0014/source-00.ndjson",
+   "ir_sha256": "db70ace1236241f4dd0c441ade06ce52d71abf2f61f2420c44250f69f16d7490",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0014-00.json",
+   "snapshot_sha256": "8b7282c4ca4bc156f4f4172dfbc6fa6f33ddc67b840312ec0c4491603b012fc8",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0014-00/roundtrip.json",
+   "roundtrip_sha256": "c6b226a9ac85433b508a30e23a9d6ecb7779eed2373ad24036daa1fe46accbb5",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0015-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0015/source-00.ndjson",
+   "ir_sha256": "13201b0a33b0307ccd68c8e4d24ee83039dfb43465f517f6f0b1153780a5c646",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0015-00.json",
+   "snapshot_sha256": "18f105380a1533a69cd6e8ee6791902c0d129289c68dd2ba66e3f29f14e59d98",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0015-00/roundtrip.json",
+   "roundtrip_sha256": "295ba5947c32de999a1dcf23044f74248b796427a3e8ba473f3a2eb45d70c0dc",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0016-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0016/source-00.ndjson",
+   "ir_sha256": "bd7af4bbdccca55c94a0f756c5aba248821611fb78b022c29f26639512987174",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0016-00.json",
+   "snapshot_sha256": "d8609f3571a9b37e684553dada65ec98bfaa02cac1580cf0476dc9ea19d0d895",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0016-00/roundtrip.json",
+   "roundtrip_sha256": "f0d6bb7b12a6612e54432ef5747fe0b98ab3bb25fb4adff5aa07df89fc2e77eb",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0017-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0017/source-00.ndjson",
+   "ir_sha256": "d59fc95fc78da0d84c658199669b256ef15b713ac0d9fdea3afa8463d72068d2",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0017-00.json",
+   "snapshot_sha256": "908443cf7efddd26410aea80975081fc0158877a98fa6fceed0130ef7836c75f",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0017-00/roundtrip.json",
+   "roundtrip_sha256": "d760a3caecae61b4e2188dc07c9a262833330d9ee4d283cc0afe1631fe6a3cc1",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0018-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0018/source-00.ndjson",
+   "ir_sha256": "d93e1e8436a8da53a3bf9f4a6163328050b596aefe1f67489bd009788be8a735",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0018-00.json",
+   "snapshot_sha256": "d4730ac8ba3a16b7b0f1985dccc536df562619789bc5573869bdfc9768087821",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0018-00/roundtrip.json",
+   "roundtrip_sha256": "06f9e8a9d79966e6a1f2013764e6e1a263b782685dc9c5c8d889f0886c926f6e",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0019-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0019/source-00.ndjson",
+   "ir_sha256": "ca6926ff456f958aa549f442a18f4cbb9567e3b7b8a1286e58a54cbd312964ad",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0019-00.json",
+   "snapshot_sha256": "7771bac199c95a07ea96cbb4d334e8a23bbc3640a847b889a4101bc064f113a4",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0019-00/roundtrip.json",
+   "roundtrip_sha256": "c49d5780aac309c6244f52c1a277e1a8f2d80f67e638500ed87327405d5e1507",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0020-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0020/source-00.ndjson",
+   "ir_sha256": "58fbbff93e15189eac0755b2c97028b647f083f2a6826a274267be50d53fc754",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0020-00.json",
+   "snapshot_sha256": "23a2c36ebf04868a245d46af958ca6a871e74d3de90cb0157b3e13ec6349998a",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0020-00/roundtrip.json",
+   "roundtrip_sha256": "f2fd4992d230150799c80a9fd886b548dd4f5b63db7ca54a7eee3402119ca937",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0021-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0021/source-00.ndjson",
+   "ir_sha256": "a5cd404e11465737b91551dffafd60ea3ab2202685260bb038dd8ffb5d0b598d",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0021-00.json",
+   "snapshot_sha256": "e6504f8ad8e799c85c6a626d2fec7f265b180aace5dbf44bec7aefaf57dabc47",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0021-00/roundtrip.json",
+   "roundtrip_sha256": "0889eb17917b80a062946e5259a0781ddd0ebac4e5e5dc4cf79a6ca94070d711",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0022-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0022/source-00.ndjson",
+   "ir_sha256": "b6ca9ad3a60f1f6b24bc2b8e23e600b710c4f4b8348dc3b4daf20f8adbdcd8b7",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0022-00.json",
+   "snapshot_sha256": "8ef96c8c52a624adede5605385ca034e99856ddc422b8b4f190c0970f86346d1",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0022-00/roundtrip.json",
+   "roundtrip_sha256": "37ede35851cf1f25f73993bb87a6e5aebe1fb6f962140a6dd1511734cdf3fcb0",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0023-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0023/source-00.ndjson",
+   "ir_sha256": "9ea92dd84f2927923bf186dfbc9bd3bf33f8498a8f0f467fc3c2e470568b8600",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0023-00.json",
+   "snapshot_sha256": "60ed9ce42c647689b9ce09a1370dbcb554b783c5cda2dbd7c5938e3298267a1d",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0023-00/roundtrip.json",
+   "roundtrip_sha256": "32e835c19f737210c295d380b29227aba463b7c4e7ccf0cabd12c6707dbce18d",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0024-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0024/source-00.ndjson",
+   "ir_sha256": "d0dadd5144af8e851a951a0acc7443a16df406d8472b88e60d5ebfb8b78b14e2",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0024-00.json",
+   "snapshot_sha256": "bcaa4325c21020a20d162f4a454bb18138a039e5f090f760a1486419877fe79d",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0024-00/roundtrip.json",
+   "roundtrip_sha256": "e0e5e4ccd4941c2b3289c3794e0ac0ac93db553c2f85044fea13d4ab28ab0107",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0025-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0025/source-00.ndjson",
+   "ir_sha256": "a145b972c434a72ab169f9a57ce2639692d3b962ca58983ae3dffc380abde55a",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0025-00.json",
+   "snapshot_sha256": "0e38df13cc0ddbc349d03a6fba0d54b47dc6280c186f21709d399277f43beff6",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0025-00/roundtrip.json",
+   "roundtrip_sha256": "7a3173e13ff8baffc8cd0c3671275407f1d113dc846d861ac99f7625cda970e9",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0026-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0026/source-00.ndjson",
+   "ir_sha256": "6eaa5198dfa9b56d3e1d2d7ee55c056443f1f39b5f74ec39e89d90c08060527e",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0026-00.json",
+   "snapshot_sha256": "193c26c7f37c1d80a4c274b17db831e701636580b5ec35775c8d87a68a041a68",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0026-00/roundtrip.json",
+   "roundtrip_sha256": "dffa215a3a6b35c14733a10301bb41fb1888db7b1deec29f3be6707caba95eb4",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0027-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0027/source-00.ndjson",
+   "ir_sha256": "f5aca65ea80ef865ac433eda5131fa342479161f315c3e624c9cff6b32a5e693",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0027-00.json",
+   "snapshot_sha256": "b13a1d62d32008502a6bf50767fc1fb5615b2f2098ff750ac13a34eee9ab4d53",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0027-00/roundtrip.json",
+   "roundtrip_sha256": "24ece9ec4c071fdf63d1d34b0c112c442184baaa3c97ad35039a261682c6d98f",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0028-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0028/source-00.ndjson",
+   "ir_sha256": "0fc2e74b2a7e4c64922e0db98400716e401307b01d274061d2c7f6e6b66bf514",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0028-00.json",
+   "snapshot_sha256": "83dbdbe261667960ba75a4d68e97f2ac19f8370f70a6076fa1378e1bc77adeb0",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0028-00/roundtrip.json",
+   "roundtrip_sha256": "4a015d05b6b4b1cdf712688c3e8aa6b292614f7492338f39ea22a3f5ad1e3f5f",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0029-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0029/source-00.ndjson",
+   "ir_sha256": "5a16ae91b2927473aa6eccd4a55b4f9a5743bcdccc900c8f5de58553c5688ddc",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0029-00.json",
+   "snapshot_sha256": "fe1dd6d3ae6bb11d337da6a4125bcf6569dd5f1715ffbce58f5a19857082baf0",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0029-00/roundtrip.json",
+   "roundtrip_sha256": "134822f47c7fdd89358abef9ff902d6d757a3db5d90e27db7431b068c453a641",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0030-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0030/source-00.ndjson",
+   "ir_sha256": "501980905202c99dcb286327a911bf17a83fd37d70464598d5d7534b7b5af8ce",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0030-00.json",
+   "snapshot_sha256": "3f992c3a209958f9df3c3aeaf8a4f026fc5cbc83ad7e6e97c0d61512d061c338",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0030-00/roundtrip.json",
+   "roundtrip_sha256": "6d613f22ad1a053acf66c9831e366f80e69364470bd875565d12a71eb6e7c4fe",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0031-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0031/source-00.ndjson",
+   "ir_sha256": "66c7cef04e0bf5126b5a26de90bd38d66cabef154828803e123207aa94b51177",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0031-00.json",
+   "snapshot_sha256": "b6540ed576b30688e61a89d74e5dc36a9f0697e80fe31d5e2048016fd7e86beb",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0031-00/roundtrip.json",
+   "roundtrip_sha256": "d870ca9e0429b7f575e1f9f810d533f2b71adb218fd2e5dd052af7c439bddbc9",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0032-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0032/source-00.ndjson",
+   "ir_sha256": "3b0591b003c2a605e4f9d4252a86d680e0509caedbf5752931f1872cbd630477",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0032-00.json",
+   "snapshot_sha256": "3bd88ff8820b1a84b47791b5c629ec08f5a048df082780fc32828e1dc6f6d70a",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0032-00/roundtrip.json",
+   "roundtrip_sha256": "dcb0c5266a25dcb6d2c98c817c6f538a9e0e788d1104ed2fc389e442b9bc385d",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0033-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0033/source-00.ndjson",
+   "ir_sha256": "1ab117b93afb1e5c4037eeffd9df43d7d64643882b33c1c63c027460fae58ab3",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0033-00.json",
+   "snapshot_sha256": "f4a28508304f7c532eb2df23474fab3a3c28129ea0347de609ec1997eee645c5",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0033-00/roundtrip.json",
+   "roundtrip_sha256": "97bb2600f0ca2ffcefef68543f8732c6d517ee3f1e40fc0a2b20201817ab334b",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0034-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0034/source-00.ndjson",
+   "ir_sha256": "22c7172eca410abfc55e1eed8e4b32aba2eaf2f02d37cd1928e4c463325601e0",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0034-00.json",
+   "snapshot_sha256": "57f999865d122457bc07a3c7a1160c008f648de03ebdc71f5f4e24d9f8da27fb",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0034-00/roundtrip.json",
+   "roundtrip_sha256": "31ba4bd9724c3df479b5dc3d0fa10f7c49816bb53cad26fa088a072ad8a5c2ee",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0035-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0035/source-00.ndjson",
+   "ir_sha256": "6f98a8e9a461212f5bb94a3442bffe108136c0e370a16c18388f02740a5d9190",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0035-00.json",
+   "snapshot_sha256": "d9c11a96f4cf661309658a5b4ca498f8b6f887607b875082c70892324799fee0",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0035-00/roundtrip.json",
+   "roundtrip_sha256": "c54ffd35f945906bcbdc1778b43e2409c0fa8628ed1c5428f59829f6b0515c9d",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0036-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0036/source-00.ndjson",
+   "ir_sha256": "ae7a68ff51dc175356c2f7a270f64058d33d5f5f850bdd34539c2873cd59dc51",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0036-00.json",
+   "snapshot_sha256": "1220ee852ef4f9e1d9a55ecac40976de9d577799c1c7a81472fef6dc393d914c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0036-00/roundtrip.json",
+   "roundtrip_sha256": "6c003fe981a7b301b7d3b188d7389ae4abe200a10417c5a03d536bab065dbbff",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0037-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0037/source-00.ndjson",
+   "ir_sha256": "15be22073b4e1b16e2df67c94fddfe73b6635f9ad2fcfd98d069ebcbb56a0a3e",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0037-00.json",
+   "snapshot_sha256": "e53223821f6ebb189ce1bf542ba4df35d17074822316a141bbac22a833dd8eeb",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0037-00/roundtrip.json",
+   "roundtrip_sha256": "0305bccbcf978b9717d22cfafde0656252bee3a3079cc6518e3c5b81e437d576",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0038-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0038/source-00.ndjson",
+   "ir_sha256": "283973cdb28e3bda15f94891741b47bfe8eccce9e47fc98c098baff611d16d25",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0038-00.json",
+   "snapshot_sha256": "0931d333af5c5fc17b44b27c818d2be8cfd864cf59fdee75afc5dfa47738e753",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0038-00/roundtrip.json",
+   "roundtrip_sha256": "121349d732f7a46100bfe8df6f1f895b4e8ba9ac887ff137435eb8d9ea20e18f",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0039-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0039/source-00.ndjson",
+   "ir_sha256": "a9766386b4a78799bd8ee3e16298b37ee9d35b34617b4431312fe8ea9d632f11",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0039-00.json",
+   "snapshot_sha256": "3eeeca63e6147ff149712b946641d8e376e959d6effa2c4cf9061b95f4d2cc3c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0039-00/roundtrip.json",
+   "roundtrip_sha256": "bef4a10572e2bf3431c0af24dd4f3d263a436cd5ceaf91d4151091804b16f7a7",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0040-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0040/source-00.ndjson",
+   "ir_sha256": "669832cc7fd80fba911b4f56c05c41ae6263419a00b11dcba0506016f39f58b6",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0040-00.json",
+   "snapshot_sha256": "9e5ad66ed0bd983192579649e10939cad5ef1444abe30654756b736c042eb820",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0040-00/roundtrip.json",
+   "roundtrip_sha256": "2166a2a175ee9d749295a57f2986a03adf18799e2c5056b2b731c04e3e62b4ba",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0041-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0041/source-00.ndjson",
+   "ir_sha256": "ff2cb3bfc76fef1630285d277da3ac433a4c70157f03147499c6e2b7b2a6fc3c",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0041-00.json",
+   "snapshot_sha256": "03cd0efe95c1f5571c69c34b5b9c7b2ed65678535f4497c715fad15c30cda20c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0041-00/roundtrip.json",
+   "roundtrip_sha256": "0a03c050409da6453cf9e12c7f358312cc3b78e9e7ab93c0bb42125977f05226",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0042-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0042/source-00.ndjson",
+   "ir_sha256": "04406001968324ce3b300a174ae2991fbab415566735d8e10e246c11dfa41e93",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0042-00.json",
+   "snapshot_sha256": "7276bbb61b5c6e759fcf9817132c06a840ad716d7241f56c6a5a8c5e316043e1",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0042-00/roundtrip.json",
+   "roundtrip_sha256": "7b27cc150e30edd9050e67f4f84896e4c949be4c29c315eb51620b5df7cbaf84",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0043-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0043/source-00.ndjson",
+   "ir_sha256": "08d9a5a3c4be8e6479d013135a62ed52f55d56d4204952da58836fc7578d41e1",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0043-00.json",
+   "snapshot_sha256": "e376f1d61f3044d89e09b6a364d5dc859ba6715338a3ce684ff28c3a5251e813",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0043-00/roundtrip.json",
+   "roundtrip_sha256": "cda0aa32c8ed52865e497be7f21fbb1050982db93d7fc831e6c1d2951eccf703",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0044-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0044/source-00.ndjson",
+   "ir_sha256": "2aab5086c797c640250a788d4303b85f62e37b0ad38dd1c4cb63e13712abe79e",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0044-00.json",
+   "snapshot_sha256": "d75be1d33127accad1557fd2caa7de87a59e112e1d548d378d4d3dbe13e78eef",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0044-00/roundtrip.json",
+   "roundtrip_sha256": "51f02854c284a442e9ab179b32e92615eab7985f775daefc0ee28f39f291c169",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0045-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0045/source-00.ndjson",
+   "ir_sha256": "a524c9adcb30e8bdb9a8c6e4fbaf29eb78c1516579135397a5687255abba9d6c",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0045-00.json",
+   "snapshot_sha256": "e704cd538a65f64f2eab3df2011982ef15520880b33d8466169234ebdcad8577",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0045-00/roundtrip.json",
+   "roundtrip_sha256": "6a5fd381200b9979fe0296aca5e69129028edb94c5fa0aa252be3890c6c7f9f8",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0046-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0046/source-00.ndjson",
+   "ir_sha256": "d13c96741251b630f8d19f9a8ea4429fe2b702be18a88b9784e0351ec5c96a81",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0046-00.json",
+   "snapshot_sha256": "a5bd09334d0ca9db68781d855eeb5fa29415c85c6120a371b7dc02b3e079c27d",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0046-00/roundtrip.json",
+   "roundtrip_sha256": "cf04a79131c880352b44445353ac1c9d542c029502419709624d76630a05749d",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0047-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0047/source-00.ndjson",
+   "ir_sha256": "eaa6aafb68c9208fa73feb5345c3cd360afd5803fe65bd1376da62139c6153b6",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0047-00.json",
+   "snapshot_sha256": "f2cac1e577e1a31013ddea7bcd55c711d51ce847c429a26a6b4dae2838668e0c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0047-00/roundtrip.json",
+   "roundtrip_sha256": "833f233a67709cd281d7b9223d1db80a5bf89ce5a8f41658fe81b2f0c676e440",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0048-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0048/source-00.ndjson",
+   "ir_sha256": "d578ad0810d26fbf0ce78d9e51e8be3e6c9b27b3ab60bf0c5f8682541d27e9f8",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0048-00.json",
+   "snapshot_sha256": "56a713f47b74d625cc1ffb5644df3e7f5371abff438dcfc70038ed5fa85cc80d",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0048-00/roundtrip.json",
+   "roundtrip_sha256": "27ed1aa9f7883ac31f353626efb6cad744ec18886ead8dfd4880ccf9b9c8c817",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0049-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0049/source-00.ndjson",
+   "ir_sha256": "603b4ca0af2e48f87a81e8cdaa44e512ed7baf2e364a9e4f8594a1aa829003c9",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0049-00.json",
+   "snapshot_sha256": "134a3f55208537e16d0b30eecf7a9d68f387db22d03841f17bae3e73d061c643",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0049-00/roundtrip.json",
+   "roundtrip_sha256": "99bbd088648c251e2bb3ae56bef5cbfc91386c3f97672532ff14af318316bdb6",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0050-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0050/source-00.ndjson",
+   "ir_sha256": "f77aa04e5f2fc4d7b8047c9a79c12a3b2a461b46b4433e7aa01b83a4e88e16b2",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0050-00.json",
+   "snapshot_sha256": "cfb24128b67a06a4e495f70ce62bf17b476e4e215860103aa459b54cf41f4da4",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0050-00/roundtrip.json",
+   "roundtrip_sha256": "81d9f36efea6a63ad0281dd326eeac24f6e82b078b8ee152cf5429a4a34a1d41",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0051-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0051/source-00.ndjson",
+   "ir_sha256": "e2d4fd1755181837aa370c910c8dfad9590268929e3810c569d2bb7812720c42",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0051-00.json",
+   "snapshot_sha256": "f953385540c64ec496855b2d16547f410ecb471f22c7a771e44b80da6ec5d5fe",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0051-00/roundtrip.json",
+   "roundtrip_sha256": "76ccef28afad0b63aa84e6f99215d4530eff2627ff667bf5ecd6be0c9c1926ca",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0052-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0052/source-00.ndjson",
+   "ir_sha256": "6e35d344ebd2c6e9484390286a787f4bc377a1d224391583e7b2d0c0b9172a41",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0052-00.json",
+   "snapshot_sha256": "5d513533f15053059108007ce3546c583773107b74f7c61fa29e9372ab1f4874",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0052-00/roundtrip.json",
+   "roundtrip_sha256": "5777d9c528adbdfeb2c41a2435cb1454de6c04fdcd996a0a389ffcc518bb3525",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0053-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0053/source-00.ndjson",
+   "ir_sha256": "c5411e6f224846d5e631b9d2a8cff6e13ebe77fdaf300d579f22539281232150",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0053-00.json",
+   "snapshot_sha256": "e747dae152e205c3ab8d4139c7b237c82b009e01b9b797f17f41838a96f63b0c",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0053-00/roundtrip.json",
+   "roundtrip_sha256": "ebe973f6a07443c3ef7ba4840608c70995a627d6d9b85ab1a17bc159ecd9ab64",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0054-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0054/source-00.ndjson",
+   "ir_sha256": "ca595c7048a7a57acb72971d93eb9c45633ccaf304a34ec25010dfb25897fa49",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0054-00.json",
+   "snapshot_sha256": "702985f0cdfb7f8f9f1b3bd0c291037f2a8d2d925c0c2997fe8d069dc49cd735",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0054-00/roundtrip.json",
+   "roundtrip_sha256": "721d8ac1b3185ed2a6ff7df596e6ff4a7ee003aa3658c2cb9685272915f85101",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0055-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0055/source-00.ndjson",
+   "ir_sha256": "03355d3b5d0602973d094f38867b009aa88fd40e5b7fe00db3f5ecf9151f943d",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0055-00.json",
+   "snapshot_sha256": "0a9c8460e0c70097dc6674868c33bfa2ce6da9883904a89e66593286ad8fd608",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0055-00/roundtrip.json",
+   "roundtrip_sha256": "a24f4d05cc1ee189cd67541066484c7405ca5f69f8b363ec4bbe0d61ce0dc451",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0056-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0056/source-00.ndjson",
+   "ir_sha256": "dd874a1c5e9075109dff236552dd983ad841e56916299b92ca3fb5ea074adc4a",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0056-00.json",
+   "snapshot_sha256": "ac19950ddfafa369d23fdfe3ee1410da31bfe9ee4ad03bb3eff2a8a851d73a15",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0056-00/roundtrip.json",
+   "roundtrip_sha256": "aca67003df54a8aed2f5cc8608b97517de21acb7dc018d9f84c762a1b102d755",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0057-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0057/source-00.ndjson",
+   "ir_sha256": "617656c48e276db13ebb323aed3c48d521a5ff464b24c9206a8c9ea7e19fcef4",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0057-00.json",
+   "snapshot_sha256": "0747fe9a557d45b31ada64e70ca883b6909464be14be7ee2cf102a77be837128",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0057-00/roundtrip.json",
+   "roundtrip_sha256": "780d29910b039c162d8d304e6417c83223bfeeb65d89feba62c0ee6d7b65fa83",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0058-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0058/source-00.ndjson",
+   "ir_sha256": "bd32e7a36d308360181a5b39076548b4f2f62f4403b5bbc0da4eea285d364ad7",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0058-00.json",
+   "snapshot_sha256": "9b21d1085fe92bd9b46089546413409fe3ff8911ce5da442f74eb30ee0489334",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0058-00/roundtrip.json",
+   "roundtrip_sha256": "a31176888c16969c8bf4e49a408a88548b7ef9380ba993a5b46e5c043b69e17c",
+   "roundtrip_status": "OK"
+  },
+  "classic-chunk-0059-00": {
+   "ir": "/home/shunqwang4/research/r2l-run-R3/.work/inventory/export-statement-aprime-classic/chunk-0059/source-00.ndjson",
+   "ir_sha256": "2746899c5d42f900b3cf497fb86993115027071ab6c93c31d35b52644fe3dbf6",
+   "snapshot": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/snapshots/classic-chunk-0059-00.json",
+   "snapshot_sha256": "9270cb0648b8c5fe3dd91dd9d8c1817f3117ec62a97034c9a1481a9242c2bf3e",
+   "roundtrip": "/home/shunqwang4/research/r2l-run-AP/.work/provenance-aprime/roundtrip/classic-chunk-0059-00/roundtrip.json",
+   "roundtrip_sha256": "9d3eee46dc6b15ae23697002e34daed6b416d151fe92545b03c0937626ee74dd",
+   "roundtrip_status": "OK"
+  }
+ },
+ "merge": {
+  "declarations": 10966,
+  "chunk_declarations": 10966,
+  "universe_relations": 260885,
+  "problems": [],
+  "status": "OK"
+ },
+ "root_coverage": {
+  "protected": 4474,
+  "in_merged_roots": 4474,
+  "missing": []
+ },
+ "union_universes": {
+  "file": "/home/shunqwang4/research/r2l-run-R3/.work/provenance-aprime/union.json",
+  "sha256": "4812fbd11ef160ae871fbe25144c469e4372905a49693ad95228983d8bebdde9",
+  "status": "OK"
+ },
+ "files": {
+  "source.ndjson": {
+   "path": "/home/shunqwang4/research/r2l-run-R3/runs/st-corpus-R3/source.ndjson",
+   "sha256": "8eaf2da49843bdaf8a38030da52630a1b95127b7ce5abb3cc60624c05caaffb5"
+  },
+  "contract.json": {
+   "path": "/home/shunqwang4/research/r2l-run-R3/runs/st-corpus-R3/contract.json",
+   "sha256": "381c0a8a99dfe559cf8b4abfd74192f71421a6ec138ada8009a28a62fbf1e364"
+  },
+  "translation_report.json": {
+   "path": "/home/shunqwang4/research/r2l-run-R3/runs/st-corpus-R3/translation_report.json",
+   "sha256": "5200ea536bbaee1a010cf0c756e11d7710d79f2f7eef3da5cc958f69cd7035d2"
+  },
+  "translation_manifest.json": {
+   "path": "/home/shunqwang4/research/r2l-run-R3/runs/st-corpus-R3/translation_manifest.json",
+   "sha256": "add8951887157e0e14dc0a0632cfb115da9eeded974b9e342f2e419153d734e7"
+  },
+  "consumer_result.json": {
+   "path": "/home/shunqwang4/research/r2l-run-R3/runs/st-corpus-R3/consumer_result.json",
+   "sha256": "2558c118c795c078827b37c3ed0f662109dff6a717ad99be266497ec55c35e65"
+  },
+  "audit.json": {
+   "path": "/home/shunqwang4/research/r2l-run-R3/runs/st-corpus-R3/audit.json",
+   "sha256": "7e6ff3da5a940e27e2ea2e1e4226f70d18aa1f8ed82a7ae8cd6c05e1e31bff05"
+  },
+  "conversion_deps/joined.json": {
+   "path": "/home/shunqwang4/research/r2l-run-R3/runs/st-corpus-R3/conversion_deps/joined.json",
+   "sha256": "ddd50a2ce61c663386365c286c0394568b29862899a4595db3b2641b9ac59921"
+  },
+  "source_instances.json": {
+   "path": "/home/shunqwang4/research/r2l-run-R3/runs/st-corpus-R3/source_instances.json",
+   "sha256": "fcc31b2b6cd40a5fc102ee783d4f1e831a908382036cee2d83b07335bcd1ec2c"
+  }
+ },
+ "reuse": {
+  "round_trip_tools": {
+   "exporter_plugin": "44a8c6acb9774d87522a46061f5b2f521cd6e47e207598df30ce8e525f105372",
+   "roundtrip_py": "689f29834d3b4dc4c8e4671a0d228eda57c446efa3fd120ba20a5f6f2d173816",
+   "rteq_v": "6e90ef2ce03c406e892c6fe8b04b96748cacd3766c9909024c9072032ed36478"
+  },
+  "current_tools": {
+   "roundtrip_py": "689f29834d3b4dc4c8e4671a0d228eda57c446efa3fd120ba20a5f6f2d173816",
+   "exporter_plugin": "44a8c6acb9774d87522a46061f5b2f521cd6e47e207598df30ce8e525f105372",
+   "rteq_v": "6e90ef2ce03c406e892c6fe8b04b96748cacd3766c9909024c9072032ed36478"
+  },
+  "problems": [],
+  "status": "SAME_TOOLS"
+ },
+ "checks": {
+  "consumer": "OK",
+  "audit": "OK",
+  "source_instances": "OK"
+ },
+ "provenance_dir": "/home/shunqwang4/research/r2l-run-R3/.work/provenance-aprime",
+ "export_dirs": "export-statement-aprime",
+ "tools": {
+  "impl_tree_sha256": "15befa227f4b2bf76b9cc8367c3da8235da3bb9dbfb473e071bd9b19d7102674",
+  "translator_build_sha256": "f75db76c4d8144dbcebc6b139f838a21ced3b8a6db08d9e9a995d50e1e17b52a",
+  "toolchains_lock_sha256": "9fd40a1d021c990e7062abc958e5ebb4719d21ebb556a35ecb3fedf715b9d573",
+  "toolchain_fingerprint": "b3abee0cf3aaa40a9cf2cb36f1a1f93e35bd435cf13707eb9ba496880bc42922",
+  "exporter_plugin_sha256": "44a8c6acb9774d87522a46061f5b2f521cd6e47e207598df30ce8e525f105372"
+ },
+ "status": "CORPUS_PROVENANCE_BOUND"
+}

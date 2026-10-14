@@ -1,0 +1,43 @@
+{
+ "schema": "rocq2lean-conversion-dependence/1",
+ "run": "/home/shunqwang4/research/r2l-run-SPLIT2/runs/st-corpus-SPLIT2",
+ "translation_report_sha256": "6aa8cab2e64e0d07a4d6fef60f5e5b8446f44766b3f4ffb12a6e8af1d0f85877",
+ "lowered": [
+  "mathcomp.boot.div.edivn_rec",
+  "mathcomp.boot.div.modn_rec"
+ ],
+ "dependents": 887,
+ "constants_analyzed": 745,
+ "not_analyzed": [],
+ "processes": [
+  {
+   "part": 0,
+   "exit": 0,
+   "seconds": 9.2
+  },
+  {
+   "part": 1,
+   "exit": 0,
+   "seconds": 8.9
+  }
+ ],
+ "by_rocq_verdict": {
+  "CONV_OK": 886,
+  "CONV_NEEDS": 1
+ },
+ "needs_unfolding": [
+  {
+   "declaration": "mathcomp.boot.div.gcdn",
+   "rocq": "CONV_NEEDS",
+   "reason": "guard deferred",
+   "lean": "TRANSLATION_FAILED",
+   "lean_message": "internal error: unknown metavariable `?_uniq.496192`"
+  }
+ ],
+ "claimed_although_needing_unfolding": [],
+ "lean_kernel_failures_among_dependents": [
+  "mathcomp.boot.div.gcdn"
+ ],
+ "lean_kernel_failures_not_explained": [],
+ "status": "OK"
+}

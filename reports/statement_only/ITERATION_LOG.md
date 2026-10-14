@@ -750,3 +750,154 @@ blocked: it needs the unfolding) and `COINDUCTIVE` (13, Classic `extraction_tdma
 As entry 7 with `runs/st-corpus-R3`; evidence `coverage/{R3-multi,transitions-R2-to-R3-multi}.json`,
 `RULE_BACKLOG.{md,json}` (current), `provenance/CORPUS_MANIFEST.json` (current; `-R2` kept),
 `termination/CONVERSION_DEPENDENCE-R3.json`, `test_multi_instance.json`.
+
+## Entry 9 — R-SPLIT (experimental): one source level shared by several parameter sorts (2026-10-14)
+
+Branch `rules-split` (from `rules-r2` `97ffe00`), commits `f79144d` and `a28c4b3`, **not merged, not
+pushed**. Approved as a controlled experimental rule (Option A); held for review.
+Run worktree `r2l-run-SPLIT2` (`a28c4b3`), run `runs/st-corpus-SPLIT2`. Inputs: the A′ export with its
+chunk evidence reused; the merged source is byte-identical to R3's (`8eaf2da4…`); the exporter plugin is
+byte-identical (`44a8c6ac…`). `docs/LEVEL_SPLIT.md`.
+
+### (1) What was changed and why
+
+COUPLED_BINDER_LEVELS: a monomorphic declaration such as CoqEAL `list_R` uses one level (`Datatypes.190`)
+for both carriers and the relation. Rocq instantiates them independently by cumulativity. One Lean
+universe parameter identifies them, so P1 refused the statements that use them at independent
+levels (`refine_*` obligations).
+
+**Translator** (`Rocq2Lean/Split.lean`, `translateSplit` in `Emit.lean`):
+* A level that is the final sort of at least 2 parameter binders and occurs nowhere else except the
+  result sort (counted over the type, body, constructors, instances, primitives and native metadata)
+  gets one copy `l__s<i>` per binder.
+* The result sort becomes the join of the copies.
+* Copies satisfy `l__s<i> ≤ l` and inherit the upper bounds of `l`, never its lower bounds.
+* References read every copy as `l` (R3: argument `a ≤ l`).
+* The split view is kept only if the kernel accepts it and every copy stays a universe parameter.
+  Otherwise the declaration is translated unsplit.
+
+**Audit** (independent): its own split view by occurrence paths, then three checks:
+* the reported split equals the derived one;
+* the copies are fresh;
+* the diagonal recovers the source exactly.
+
+The row is then audited against the view by all existing checks (R3 with copies mapped back, binder
+independence, generality); the audit output records this as `level_split_checked`.
+
+**Consumer** (detector `levels`): each copy's parameter occurs as a sort only at its binder's final
+sort and at the type's final sort.
+
+**Correspondence** (`docs/LEVEL_SPLIT.md` §3):
+1. The diagonal recovers the source exactly. The auditor checks this per row and over the whole
+   corpus source (13/13 eligible declarations).
+2. Each off-diagonal use is justified by the source fact `a ≤ l`, checked by R3 at every reference.
+3. `tests/statement/proofs/split_correspondence.lean` is a synthetic proof on the fixture's own
+   declarations, checked axiom-free. It shows every off-diagonal instance of `pR` / `fun_R` is
+   isomorphic to the diagonal instance at the `ULift`ed carriers.
+
+### (2) Coverage — FULL CORPUS, same 4,474 protected roots (validated)
+
+| | Accepted | Audited Pending | Blocked | Direct Failure |
+|---|---|---|---|---|
+| R3 (entry 8) | 673 | 2,175 | 1,520 | 106 |
+| **R-SPLIT** | **673** | **2,177** | **1,518** | **106** |
+
+By family: modern 446 / 1,278 / 743 / 37, Classic 227 / 899 / 775 / 69 (unchanged).
+
+Consumer, audit (`level_split_checked` 3), source instances (4) and provenance (`CORPUS_PROVENANCE_BOUND`):
+all OK.
+
+Protected transitions: 2 newly supported, 4,472 unchanged, 0 regressions, no old false acceptance.
+The 2 newly supported roots are `prosa.implementation.refinements.refinements.refine_cons` and
+`refine_nil` (blocked → audited pending).
+
+All rows (10,970): 42 changed.
+* 3 split declarations: `prod_R` (two levels), `list_R`, `pred_R`. All are more general; `pred_R`'s
+  level 1105 was not a parameter before.
+* `list_R_rect`: its split was not kept (one copy was defaulted, so the guard applies). Unsplit, it
+  now keeps 190 generic (0 defaulted levels, previously 1).
+* 16 statements newly accepted (`UNIVERSE_REJECTED` → `STATEMENT_KERNEL_CHECKED`):
+  * 13 refine obligations: `refine_last` ×5, `refine_map` ×3, and one each for `refine_cons`,
+    `refine_nil`, `refine_flatten`, `refine_all` and `refine_size`;
+  * `refines_fst_R`, `refines_snd_R` and `refines_pair_R` obligations.
+* 11 rows newly unblocked (`BLOCKED` → pending): six `refine_last` obligations; `refines_fst_R`,
+  `refines_snd_R` and `refines_pair_R`; and `refine_cons` and `refine_nil` (protected).
+* 11 `CoqEAL.refinements.binnat.Rnat_div_eucl` obligations remain failures with a new blocker:
+  `KERNEL_REJECTED` (type mismatch at `prod_R`) → `UNIVERSE_REJECTED` (residual defaults not justified
+  generically). PROP_TYPE_CUMULATIVITY drops from 20 to 9 members and UNIVERSE_OTHER rises from 9 to
+  20. These are not regressions: the rows were failures before and remain failures.
+
+No row lost its class.
+
+**Remaining blockers.**
+* The refinement roots are blocked by COURSE_OF_VALUES: `map_R`, `all_R`, `last_R`, `zip_R`, `cat_R`
+  and `foldr_R` are eligible but unsupported, and `flatten_R` depends on them.
+* The CoqEAL `Rnat` chain also blocks them (SOLUTION_FACT_VIOLATED).
+* COUPLED_BINDER_LEVELS is gone from the backlog (it had 13 members, 39 affected, 2 blocked only by it).
+
+**First corpus run (`r2l-run-SPLIT`, `f79144d`): NOT validated, kept as evidence.**
+* `list_R_rect`'s split kept a defaulted copy (`s2 := 0`); the consumer rejected it.
+* The audit refused the copy names `list_R_rect` shares with `list_R`.
+* Fixed in `a28c4b3`:
+  * a guard: every copy must stay a parameter;
+  * a fact `l__s<i> ≤ l`;
+  * a shared copy name is allowed only for the same level;
+  * new fixture case `pR_tail` and a degenerate-split negative control.
+
+### (3) Corrections to entries 7–8
+
+The round-2/entry-8 claim was that SOLUTION_FACT_VIOLATED, STATEMENT_FREE_LEVEL_PINNED,
+REFERENCE_COHERENCE and COUPLED_BINDER_LEVELS share one mechanism (`pcancel`-like single-level
+references). **That claim is wrong.** `ssrfun.pcancel`'s two carriers are separate levels.
+
+Re-diagnosis of STATEMENT_FREE_LEVEL_PINNED from the R3 report:
+* 280 of its 340 members pin the **result-sort-only** level of an HB structure:
+  * `eqtype.hasDecEq.axioms_ (T : Type@{29}) : Type@{32}`: 144 members;
+  * `choice.hasChoice.axioms_` (level `choice.299`): 136 members.
+* 50 more are at `Equality.type`.
+* Lean's use context fixes that level to 0, where Rocq leaves it free.
+* A rule (irrelevance of a result-sort-only reference level, up to `ULift`) needs a semantic decision.
+  It is recorded as a lead, not adopted.
+
+REFERENCE_COHERENCE is a question of its own (a single-level occurrence against a two-level R2F
+reading). Entry 8 also listed `test-multi-instance` with 9 checks; the suite has 8.
+
+### (4) Backlog
+
+`RULE_BACKLOG.{md,json}` was regenerated from `st-corpus-SPLIT2` with the corrected family notes:
+* COUPLED_BINDER_LEVELS: R-SPLIT implemented, not merged;
+* STATEMENT_FREE_LEVEL_PINNED: re-diagnosed;
+* REFERENCE_COHERENCE and RESIDUAL_STATEMENT_LEVELS: the `pcancel` attribution withdrawn.
+
+Next, pending decisions:
+* review and merge of R-SPLIT;
+* a semantic decision on result-sort-only reference levels (STATEMENT_FREE_LEVEL_PINNED, 885 affected).
+
+### (5) Regressions and validation
+
+* `test-level-split` (new): 18 checks.
+  * Validated fixture: `pR`, `fun_R` and `pR_tail` split; `pR_intro` and `fun_R_id` accepted; `qR`
+    and `gR` not split; `qR_intro` still refused.
+  * Negative controls, each kernel-accepted and then rejected:
+    * forged split of the ineligible `gR`, reported and hidden: audit;
+    * copies exchanged between binders: consumer and audit;
+    * a degenerate split: consumer and audit;
+    * statement narrowed to the diagonal: audit.
+  * Positive control at off-diagonal nonzero universes.
+  * Correspondence proofs: 8 declarations, no axioms.
+* `test-universe-r2`: 9. Its `pairR_intro` check now expects acceptance through `pairR`'s split; the
+  refusal case moved to `qR_intro`.
+* Other suites: `test-statement` 30, `test-assembly` 34, `test-termination` 22, `test-opaque` 16,
+  `test-universe-c` 22, `test-multi-instance` 8, `test-provenance` 5: all OK.
+* `test-all`: 18/18 (`a28c4b3`).
+
+### (6) Commands and evidence
+
+As in entry 8, with `runs/st-corpus-SPLIT2`.
+
+Evidence:
+* `coverage/{SPLIT2,transitions-R3-to-SPLIT2}.json`;
+* `RULE_BACKLOG.{md,json}`;
+* `provenance/CORPUS_MANIFEST.json` (current: SPLIT2; `-R3` kept);
+* `termination/CONVERSION_DEPENDENCE-SPLIT2.json`;
+* `test_level_split.json`.
