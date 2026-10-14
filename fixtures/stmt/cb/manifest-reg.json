@@ -1,0 +1,1 @@
+{"name": "stmt-cb-reg", "load_paths": [["-R", "../../../.work/prosa-0.6-rocq93", "prosa"], ["-R", "../../../.work/coqeal-ce3d1d6", "CoqEAL"], ["-Q", ".", "SF"]], "files": ["Cb.v", "CbSyn.v"], "requires": ["prosa.model.processor.overheads", "prosa.analysis.facts.model.scheduled", "prosa.implementation.definitions.task", "prosa.implementation.refinements.task"]}
