@@ -157,6 +157,54 @@ def check():
     print("audit", p2.returncode, a.get("status"), a.get("coverage"))
 
 
+def instances():
+    """CLI parity (tools/rocq2lean.py `_validate_finish`): every accepted row with an R2B-P level is
+    re-checked by Rocq's kernel at its instance (`Rocq2Lean CheckInstance`), in the common source
+    environment (all modules of both families, as the union universe check); a pending row with an
+    R2B-P level is not validated (the translator refuses it). Writes RUN/source_instances.json."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    sys.path.insert(0, str(ROOT / "inventory"))
+    import rocq2lean as R
+    import statement_provenance as P
+    rep = json.loads((RUN / "translation_report.json").read_text())
+    rows = [r for r in rep["results"] if r.get("status") in ("TRANSLATED_AND_CHECKED", "STATEMENT_KERNEL_CHECKED") and r.get("r2bp_levels")]
+    pend = [r["source"] for r in rep["results"] if r.get("status") in ("PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
+            and r.get("r2bp_levels")]
+    levels = json.loads(open(RUN / "source.ndjson").readlines()[4])["levels"]
+    back = {"u_" + l.replace(".", "_"): l for l in levels}
+    cmds, problems = [], []
+    for r in rows:
+        subst = []
+        for x in r["r2bp_levels"]:
+            sg = x["sigma"]
+            if sg == {"k": "zero"}:
+                subst.append(f"{x['level']}=Set")
+            elif sg.get("k") == "param" and sg["n"] in back:
+                subst.append(f"{x['level']}={back[sg['n']]}")
+            else:
+                problems.append(f"{r['source']}: solution {sg} of {x['level']} denotes no Rocq level")
+        cmds.append(f'Rocq2Lean CheckInstance "{r["source"]}" "{";".join(subst)}".')
+    got = {}
+    if cmds:
+        allreq = sorted({m for _, d, _, x in P.chunks() for m in P.requires(d, x)})
+        lp = json.loads((P.W / f"{P.EXPORT}-classic" / "chunk-0000" / "result.json").read_text())["exporter"]["load_paths"]
+        v = RUN / "SourceInstances.v"
+        v.write_text("\n".join(["From Rocq2LeanExport Require Import Loader."] + [f"Require {m}." for m in allreq] + cmds) + "\n")
+        p = subprocess.run(["rocq", "compile", "-I", str(R.EXPORTER / "src"), "-Q", str(R.EXPORTER / "theories"), "Rocq2LeanExport",
+                            *lp, str(v)], capture_output=True, text=True, env=R.opam_env())
+        (RUN / "source_instances.log").write_text(p.stdout + p.stderr)
+        for line in (p.stdout + p.stderr).splitlines():
+            if line.startswith("INSTANCE "):
+                _, key, res = line.split(" ", 2)
+                got[key] = res
+    bad = [f"{r['source']}: {got.get(r['source'], 'not checked')}" for r in rows if got.get(r["source"]) != "INSTANCE_OK"]
+    res = {"schema": "rocq2lean-source-instances/1", "checked": {r["source"]: got.get(r["source"]) for r in rows},
+           "pending_with_r2bp": pend, "problems": problems + bad,
+           "status": "OK" if not (problems or bad or pend) else "REJECTED"}
+    (RUN / "source_instances.json").write_text(json.dumps(res, indent=1) + "\n")
+    print("source instances", res["status"], len(rows), "checked;", "pending R2B-P:", pend, (problems + bad)[:5])
+
+
 def summary():
     """reports/statement_only/TRANSLATION_RESULTS.json: outcomes by family and for the protected
     interface, audited (consumer + audit) where they ran; failure mechanisms; prerequisites ranked by
@@ -354,4 +402,4 @@ if __name__ == "__main__":
         subset(sys.argv[2].split(","), sys.argv[3])
         sys.exit(0)
     {"merge": merge, "translate": translate, "check": check, "summary": summary, "tasks": tasks,
-     "assemble-dry": assemble_dry}[sys.argv[1]]()
+     "assemble-dry": assemble_dry, "instances": instances}[sys.argv[1]]()

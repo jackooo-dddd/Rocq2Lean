@@ -1,0 +1,58 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   2,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "reason": null
+ },
+ "pairR_intro": {
+  "status": "UNIVERSE_REJECTED",
+  "message": "statement specialization refused: binder levels SF.R2.25 \u2264 SF.R2.26 would be forced by the translation (u_SF_R2_25 \u2264 u_SF_R2_25), not by the source [last tier: UNIVERSE_REJECTED: R2F-c: own level SF.R2.26 was identified with another own level by unification; it is not its own reading]"
+ },
+ "obligation": {
+  "status": "STATEMENT_KERNEL_CHECKED",
+  "level_params": [
+   "u_mathcomp_boot_choice_342",
+   "u_mathcomp_boot_choice_959",
+   "u_mathcomp_boot_choice_968",
+   "u_mathcomp_boot_eqtype_588"
+  ],
+  "implicit_levels": [
+   "mathcomp.boot.choice.342",
+   "mathcomp.boot.choice.959",
+   "mathcomp.boot.choice.968",
+   "mathcomp.boot.eqtype.588"
+  ],
+  "universe_level_defaults": 0
+ },
+ "negative": {
+  "two-identified": {
+   "kernel": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.R2.two: statement specialized: binder levels SF.R2.32 <= SF.R2.33 forced by the translation, not by the source"
+   ]
+  },
+  "two-closed": {
+   "kernel": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.R2.two: proof-local level solution violates the native fact Set lt SF.R2.32"
+   ]
+  },
+  "obligation-narrowed": {
+   "kernel": true,
+   "validate_exit": 2,
+   "audit_problems": [
+    "mathcomp.boot.choice.HB_unnamed_mixin_106__rocq2lean_obligation_1: Rocq.mathcomp.boot.choice.Countable.type: source level mathcomp.boot.choice.959 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the paramet"
+   ]
+  }
+ },
+ "positive": {
+  "exit": 0,
+  "output": ""
+ }
+}

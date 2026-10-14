@@ -2085,6 +2085,47 @@ def mentions_param(j, p):
     return isinstance(j, list) and any(mentions_param(v, p) for v in j)
 
 
+def binder_levels(t):
+    """Levels in the binder domains of the ∀-telescope of a source statement."""
+    out = set()
+    while t.get("k") == "prod":
+        out |= source_globals(t["ty"], set())
+        t = t["b"]
+    return out
+
+
+def dominated(s1, s2):
+    """s1 <= s2 for every value of the parameters (normal forms)."""
+    c1, p1 = level_nf(s1)
+    c2, p2 = level_nf(s2)
+    if not all(any(q == p and k <= k2 for q, k2 in p2) for p, k in p1):
+        return False
+    return not c1 or (c2 is not None and c1 <= c2) or any(c1 <= k2 for _, k2 in p2)
+
+
+def check_binder_independence(facts, d, params, sol, interp):
+    """Statements, independently of the translator: the translated levels of the source binder levels
+    (quantification ranges) keep the source's independence — a translated order between two binder
+    levels (identification included) must be entailed by the native facts, and a binder level
+    translated to a closed level must be forced <= Set. No self-reported default is consulted."""
+    def sigma(b):
+        if b in interp:
+            return interp[b]
+        if b in params:
+            return {"k": "param", "n": level_param(b)}
+        return sol.get(b)
+    tr = [(b, sigma(b)) for b in sorted(binder_levels(d["body"]))]
+    tr = [(b, x) for b, x in tr if x is not None]
+    for b, x in tr:
+        c, ps = level_nf(x)
+        if not ps and not facts.entails(b, "Set", 0):
+            raise Mismatch(f"statement specialized: binder level {b} translated to the closed level {x}")
+    for b1, x1 in tr:
+        for b2, x2 in tr:
+            if b1 != b2 and dominated(x1, x2) and not facts.entails(b1, b2, 0):
+                raise Mismatch(f"statement specialized: binder levels {b1} <= {b2} forced by the translation, not by the source")
+
+
 def check_statement_generality(facts, own, gen, exprs, poly, types):
     """Task C, independently of the translator's own reports (no `universe_level_defaults`/residual
     record is consulted): a statement — or a definition's type — is never specialized at a universe
@@ -2657,6 +2698,8 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                         if s_ in protected:
                             raise Mismatch(f"protected public declaration with a narrowed quantification range: {e}")
                         DEF_TYPE_CANDIDATES.append({"declaration": s_, "message": str(e)})
+                if s_ in statements:
+                    check_binder_independence(facts, d_, set(params), sol_only, interp_)
                 if s_ in statements or (d_["kind"] == "constant" and s_ in definitions):
                     # a statement: all of it; a definition: the binder domains of its type (its
                     # quantification ranges). The hypothesis telescope (prerequisite statements at the
@@ -3440,10 +3483,9 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 v["verdict"] = "MATCH"
                 verdicts.append(v)
                 continue
-            # C: a statement (proof task, opaque-data interface) is never specialized by a defaulted
-            # universe level (every level of a statement is a level of the statement)
-            if s_ in leaves and (r.get("universe_level_defaults") or r.get("universe_residuals")):
-                raise Mismatch(f"statement specialized by {r.get('universe_level_defaults')} defaulted universe level(s)")
+            # C: a statement is never specialized; that is checked from the source (binder-level
+            # independence, reference generality — universe checks), not from the translator's report of
+            # defaulted levels, whose record is checked for consistency (check_residuals)
             want_t = (pending_target_name if pending else target_name)(s_ + suffix[s_])
             if r["target"] != want_t:
                 raise Mismatch(f"target name {r['target']} is not {want_t}")

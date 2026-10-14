@@ -350,6 +350,109 @@ private def typeDomains (t : Expr) : Array Expr := Id.run do
     | _ => break
   return out
 
+/-! ### Binder-level independence (statements; independent copy in tools/audit.py)
+
+The quantification ranges of a statement are the sorts of its binders. The translation must keep the
+binder levels as independent as the source keeps them: if, for every value of the universe
+parameters, the translated level of binder level `b₁` is at most that of `b₂` (for instance the two
+are identified by unification through a reference whose parameters share one level), the source must
+entail `b₁ ≤ b₂`; a binder level translated to a closed level must be forced `≤ Set` by the source.
+Otherwise the statement ranges over fewer types than the source (narrowing). -/
+
+/-- The levels occurring in the binder domains of the ∀-telescope of a source statement. -/
+partial def binderLevelsIR : IR.Term → Array String
+  | .prod _ a b => ((globalsOf a).toArray ++ binderLevelsIR b).toList.eraseDups.toArray
+  | _ => #[]
+
+/-! ### Jointly occurring level metavariables (P2, ITERATION_LOG entry 7)
+
+After unification, a few level metavariables may occur only together, as the summands (with equal
+offsets) of one `max` in every level expression of the declaration (Lean's unifier cannot invert
+`max`, so a reference's level class is left as `max ?a ?b`). The declaration then depends only on
+their maximum: identifying them loses no generality (every value of the maximum is reached with
+`?a = ?b`), and the class becomes one metavariable that R3G names after its source level. Nothing
+else is identified; the reference-generality and binder-independence checks validate the result. -/
+
+partial def collectLevelsOf (e : Expr) (acc : Array Level) : Array Level :=
+  match e with
+  | .sort l => acc.push l
+  | .const _ ls => acc ++ ls.toArray
+  | .app f a => collectLevelsOf a (collectLevelsOf f acc)
+  | .lam _ t b _ | .forallE _ t b _ => collectLevelsOf b (collectLevelsOf t acc)
+  | .letE _ t v b _ => collectLevelsOf b (collectLevelsOf v (collectLevelsOf t acc))
+  | .mdata _ b | .proj _ _ b => collectLevelsOf b acc
+  | _ => acc
+
+/-- The metavariable summands `?m + k` of a level, and whether it contains `imax` (then none of its
+metavariables is identified). -/
+partial def mvarSummands : Level → Array (LMVarId × Nat) × Bool
+  | .mvar m => (#[(m, 0)], false)
+  | .succ l => let (a, b) := mvarSummands l; (a.map fun (m, k) => (m, k + 1), b)
+  | .max a b => let (x, f) := mvarSummands a; let (y, g) := mvarSummands b; (x ++ y, f || g)
+  | .imax a b => let (x, _) := mvarSummands a; let (y, _) := mvarSummands b; (x ++ y, true)
+  | _ => (#[], false)
+
+/-- `l` instantiated; a `max` of one metavariable with itself (after identification) is that
+metavariable. -/
+def instCollapse (l : Level) : MetaM Level := do
+  let v ← instantiateLevelMVars l
+  let n := v.normalize
+  return if n.isMVar then n else v
+
+/-- Identify the metavariables of every jointly occurring group; returns the groups identified. -/
+def identifyJointMVars (es : Array Expr) : MetaM (Array (Array LMVarId)) := do
+  let mut groups : Array (Array (LMVarId × Nat) × Bool) := #[]
+  for e in es do
+    for l in collectLevelsOf (← instantiateMVars e) #[] do
+      let (g, im) := mvarSummands (← instantiateLevelMVars l)
+      unless g.isEmpty do groups := groups.push (g, im)
+  let setOf (g : Array (LMVarId × Nat)) : Array LMVarId := (g.map (·.1)).toList.eraseDups.toArray
+  let mut done : Array LMVarId := #[]
+  let mut out := #[]
+  for (g, im) in groups do
+    let S := setOf g
+    if im || S.size < 2 || S.any done.contains then continue
+    -- every expression mentioning a member mentions exactly S, each member with one common offset
+    let ok := groups.all fun (g', im') =>
+      let S' := setOf g'
+      !(S'.any S.contains) || (!im' && S'.size == S.size && S'.all S.contains &&
+        (g'.map (·.2)).toList.eraseDups.length == 1)
+    if ok then
+      for m in S[1:] do assignLevelMVar m (.mvar S[0]!)
+      done := done ++ S
+      out := out.push S
+  return out
+
+/-- A normalized level as (constant, summands `p + k`); none outside the fragment (imax, mvars). -/
+partial def levelParts : Level → Option (Nat × Array (Name × Nat))
+  | .zero => some (0, #[])
+  | .succ l => (levelParts l).map fun (c, ps) => (c + 1, ps.map fun (p, k) => (p, k + 1))
+  | .param p => some (0, #[(p, 0)])
+  | .max a b => do
+    let (c1, p1) ← levelParts a
+    let (c2, p2) ← levelParts b
+    pure (max c1 c2, p1 ++ p2)
+  | _ => none
+
+/-- `σ₁ ≤ σ₂` for every value of the parameters. -/
+def levelDominated (σ₁ σ₂ : Level) : Bool :=
+  match levelParts σ₁.normalize, levelParts σ₂.normalize with
+  | some (c1, p1), some (c2, p2) =>
+    p1.all (fun (p, k) => p2.any fun (q, k') => q == p && k ≤ k') &&
+      (c1 == 0 || c1 ≤ c2 || p2.any fun (_, k') => c1 ≤ k')
+  | _, _ => false
+
+def binderIndependence (facts : IR.UniverseFacts) (binders : Array String) (σ : String → Option Level) : Option String := Id.run do
+  let tr := binders.filterMap fun b => (σ b).map (b, ·)
+  for (b, l) in tr do
+    if !l.hasParam && !(entails facts b "Set" 0) then
+      return some s!"binder level {b} would be fixed at {l} (the source does not force it to Set)"
+  for (b1, l1) in tr do
+    for (b2, l2) in tr do
+      if b1 != b2 && levelDominated l1 l2 && !(entails facts b1 b2 0) then
+        return some s!"binder levels {b1} ≤ {b2} would be forced by the translation ({l1} ≤ {l2}), not by the source"
+  return none
+
 private partial def irEndsInSort : IR.Term → Bool
   | .prod _ _ b => irEndsInSort b
   | .sort _ => true
@@ -501,7 +604,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
             if let some gs := genv.constGlobals[n]? then
               let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
               if gs.size == ls.length then
-                for l in gs, σ in ls do out := out.push (l, ← instantiateLevelMVars σ)
+                for l in gs, σ in ls do out := out.push (l, ← instCollapse σ)
           return out
         let inTy ← argsFor tyI
         let all := inTy ++ (← argsFor valI)
@@ -522,6 +625,12 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
           if let some l := pick then picks := picks.push l
         implicitRef.set picks
         return
+      -- (P2: jointly occurring metavariables are one class — in statements, where no level may be
+      -- defaulted away; a definition keeps the residual-default path, R3↓ at 0)
+      if stmt then
+        -- (the hypothesis telescope is not scanned: its instances are the translator's choice, set to
+        -- match the uses; the kernel re-checks them)
+        discard <| identifyJointMVars #[peelBinders ty hyps.size, peelBinders val hyps.size]
       -- type levels first, so that a class of levels identified by unification is represented by
       -- a type level (its source level is what R3 checks at references)
       unless interp do
@@ -539,7 +648,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
             if let some gs := genv.constGlobals[n]? then
               let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
               if gs.size == ls.length then
-                for l in gs, σ in ls do tyRefArgs := tyRefArgs.push (l, ← instantiateLevelMVars σ)
+                for l in gs, σ in ls do tyRefArgs := tyRefArgs.push (l, ← instCollapse σ)
         for (m, v) in ownMVars do
           if let .mvar r ← instantiateLevelMVars v then
             if tyMVars.contains r then
@@ -574,7 +683,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
           if let some gs := genv.constGlobals[n]? then
             let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
             if gs.size == ls.length then
-              for l in gs, σ in ls do out := out.push (l, ← instantiateLevelMVars σ)
+              for l in gs, σ in ls do out := out.push (l, ← instCollapse σ)
         return out
       let inTy ← argsFor tyI
       let all := inTy ++ (← argsFor valI)
@@ -591,7 +700,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         let tyCls := ((if interp then all else inTy).filter (·.2 == σ)).map (·.1)
         -- every argument for `l` anywhere must still be free: they all become `u_l` (coherence)
         let mut cur : Array (String × Level) := #[]
-        for (l', σ') in all do cur := cur.push (l', ← instantiateLevelMVars σ')
+        for (l', σ') in all do cur := cur.push (l', ← instCollapse σ')
         -- (statement mode: an argument for `l` that unification already fixed to an expression, e.g. a
         -- referenced declaration's R2F reading of its own parameter, is left as is; R3 coherence, the
         -- kernel and the audit check it like every argument)
@@ -602,7 +711,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
           let mut ms : Array LMVarId := #[]
           for (l', σ') in cur do
             if l' == l then
-              if let .mvar r ← instantiateLevelMVars σ' then
+              if let .mvar r ← instCollapse σ' then
                 if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName l))
           if interp then chosen := chosen.push (l, ms)
           implicitRef.modify fun a => if a.contains l then a else a.push l
@@ -642,9 +751,9 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     -- C (docs/UNIVERSE_FAMILY_C.md): every level of a statement is a level of the statement; one left
     -- free after unification and R3G would be fixed by its default, specializing the statement
     -- (narrowing): refused, never defaulted
-    if stmt && !resid.isEmpty then
-      return { base with status := "UNIVERSE_REJECTED", levelDiagnostics := diags,
-                         message := s!"statement specialization refused: {resid.length} universe level(s) of the statement are not determined by its references (R3G found no source level) and would be defaulted" }
+    -- (P1, ITERATION_LOG entry 7: a statement level left free is defaulted like any residual level,
+    -- and the defaulted statement must then pass the binder-independence and generality checks below
+    -- — it may not narrow a quantification range; the residual record is kernel-justified as usual)
     let base := { base with levelDiagnostics := diags, levelDefaults := resid.length }
     let mut sol : Std.HashMap String Level := {}
     let mut paramLevels : Array String := #[]
@@ -698,6 +807,11 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
             return { base with status := "UNIVERSE_REJECTED", message := s!"R2B-V: result-sort level {m} would be raised to {σ}" }
           unless sortLv.any (·.1 == m) do sortLv := sortLv.push (m, σ)
     let inherited := inheritSort && !sortLv.isEmpty && sortLv.all (resultLv.contains ·.1)
+    -- R2B-P on a pending artifact: its source instance cannot be re-checked by Rocq (the pending
+    -- artifact is the prepared declaration with hypotheses); refused, as the CLI validation requires
+    if !r2bp.isEmpty && !hyps.isEmpty then
+      return { base with status := "UNIVERSE_REJECTED",
+                         message := s!"R2B-P levels {r2bp.map (·.1)} on a pending artifact: the source instance is not checkable" }
     -- P0 interface protection: a protected public declaration keeps its source statement. A
     -- statement specialization (R2B-S lowers the result sort; R2B-P fixes a level of the type) is
     -- refused for it, as root or as dependency; there is no approved representation change.
@@ -723,6 +837,14 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     let base := { base with universeChecks := nchecks }
     -- C: a statement (anywhere) and a protected definition (its quantification ranges) are never
     -- specialized at a level the source leaves free (refused, as R2B-P/R2B-S are: no narrowing)
+    -- binder-level independence of a statement (its quantification ranges)
+    if stmt then
+      let σ (b : String) : Option Level :=
+        match levelInterp.find? (·.1 == b) with
+        | some (_, x) => some x
+        | none => if paramLevels.contains b then some (.param (levelParamName b)) else sol[b]?
+      if let some m := binderIndependence genv.facts (binderLevelsIR body) σ then
+        return { base with status := "UNIVERSE_REJECTED", message := s!"statement specialization refused: {m}" }
     let env ← getEnv
     let pinned : Option String :=
       if stmt then
