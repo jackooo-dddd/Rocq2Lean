@@ -1264,3 +1264,48 @@ Evidence:
 * `termination/CONVERSION_DEPENDENCE{,-CB2,-CB3}.json`;
 * `carrier/{pre_fixture_report,case_b_status}.json`;
 * the `test_*.json` reports from the frozen runs.
+
+### (9) Proposal awaiting a decision: coherence modulo an R2F reading (measured, NOT adopted)
+
+A measurement only. The experiment patch is kept as `r2l-run-CR/EXP_COHERENCE_R.patch`; it is off
+by default (`R2L_EXP_READ`) and is not on this branch.
+
+**Rule R.** At a reference, consider an argument for a source level `l` that is *shared* with the
+referring declaration. Today it must be exactly `u_l`. Under R it may also be
+`max(u_l, s₁, …)`, provided each other summand passes R3 (`m + k ≤ l` and `Set + c ≤ l` are entailed
+by the source graph). At every model of the source facts this argument equals `l`. That is the
+justification already used for R2F readings: the referring declaration keeps `u_l` as a parameter,
+so nothing is narrowed. The translator (`checkInstantiation`) and the audit (`check_universe_args`)
+implement it independently.
+
+**Corpus `r2l-run-CR`** (impl `c77dd68` + patch; validated: consumer, audit with the rule, source
+instances and `CORPUS_PROVENANCE_BOUND` all OK):
+
+| | Accepted | Audited Pending | Blocked | Direct Failure |
+|---|---|---|---|---|
+| CB3 | 673 | 2,260 | 1,494 | 47 |
+| CB3 + R | 673 | **2,834** | **933** | **34** |
+
+**By family:** modern 446 / 1,302 / 736 / 20; Classic 227 / 1,532 / 197 / 14.
+
+**Protected transitions:** 575 newly supported (554 Classic, 21 modern), 3 moved between unclaimed
+categories, **1 genuine regression**.
+* The regression is Classic `Affinity.task_affinity`. Its dependencies become more general under R
+  (`eqtype_sub_type` Countable instance: 13 → 19 parameters, 4 → 0 defaulted levels), which exposes a
+  concrete instance at its own shared carrier level 51 in its body. Coherence then refuses it, as for
+  `processor_state`.
+
+**All rows:** 589 gained, 1 lost (the same row); no accepted row became pending.
+
+STATEMENT_FREE_LEVEL_PINNED falls to 6 members (3 roots alone). The `factory_66` chain is fixed.
+
+**Not addressed by R:** the remaining REFERENCE_COHERENCE family (7 members, 355 roots alone), with
+ideal `processor_state` and `task_affinity` among them.
+* There, a concrete instance in the *body* (unit's finType, carrier 0) references a level that the
+  declaration shares with its binder (`Job`'s carrier 51).
+* References to shared levels use one level variable ("coherence by construction"), so the instance
+  pins `Job`'s carrier; the protection check refuses that.
+* Handling it needs per-occurrence instantiation of shared levels in bodies (a P2-like split of own
+  levels), which is a further representation decision.
+* A second variant measured on subsets (H: copy semantics at prerequisite-statement hypotheses) gained
+  nothing on its own.
