@@ -2341,7 +2341,9 @@ where
           -- to their defaults (`refines`' relation level forced to 0 below `Set < l`; Classic `job_eqdef`'s
           -- carrier pinned to 0). Only declarations that fail without it: no accepted row, hence no dependant,
           -- changes (the reason the pass is not used in place)
-          if !r.accepted && !isStmt && genv.stmtMode && (retry r.status || r.status == "INTERFACE_REJECTED") then
+          -- (not for a declaration with phantom checks: Q-a lowers those, and the constant discovery pass recursed
+          -- without bound on HB's `BaseAddMagma_isAddMagma.phant_Build`, aborting a whole run — S15)
+          if !r.accepted && !isStmt && genv.stmtMode && gone.isEmpty && (retry r.status || r.status == "INTERFACE_REJECTED") then
             let sD ← saveState
             let dsc ← budgeted c.name "constant" <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
               (discover := true)
