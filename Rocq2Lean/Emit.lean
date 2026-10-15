@@ -2343,6 +2343,26 @@ where
                     r := { r' with phantomLowered := gone }
                     iface := none
                     break
+          -- R-CARRIER without the P2 operand split (entry 16), last resort for unprotected declarations: the
+          -- carriers of independent operands identified again, the translation before P2 (docs/CARRIER_LEVELS.md).
+          -- A proof-local level solved through one operand copy cannot satisfy the copied bound of another
+          -- (`BaseAddMagma_isAddMagma.phant_Build`: `25__c1 ≤ 158` against `158 := max (25__c0, …)`); with one
+          -- carrier the source fact holds. Never for a protected declaration; a protected dependant is still held to
+          -- the generality check. Reported (`level_diagnostics`: no-split).
+          if !r.accepted && !genv.protectedNames.contains c0.name && (retry r.status) then
+            let genvNS := { genv with carrierSplit := false }
+            for (ph, p3, lo) in [(true, false, false), (true, true, false), (true, true, true), (false, false, false), (false, true, false)] do
+              if ph && gone.isEmpty then continue
+              let r' ← budgeted c.name "constant" <| processConstant genvNS results (if ph then cQ else c) (stmt := isStmt)
+                (inferSort := c0.bodyState == "opaque_interface") (extraOwn := if ph then eo.filter (!gone.contains ·) else eo)
+                (hypExact := p3) (lower := lo) (phantom := ph)
+              if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[no-split] {r'.message}" }
+              if r'.status == "RESOURCE_LIMIT" then break
+              if r'.accepted then
+                r := if ph then { r' with phantomLowered := gone, levelDiagnostics := r'.levelDiagnostics.push "no-split" } else
+                  { r' with levelDiagnostics := r'.levelDiagnostics.push "no-split" }
+                iface := none
+                break
           -- R3G for definitions, last resort (entry 15): a failing definition is retried with the implicit levels
           -- of its references (discovery pass) as its own levels, instead of leaving those references' levels
           -- to their defaults (`refines`' relation level forced to 0 below `Set < l`; Classic `job_eqdef`'s

@@ -4527,4 +4527,13 @@ if __name__ == "__main__":
         print("usage: audit.py SOURCE.ndjson CONTRACT.json TRANSLATION_REPORT.json AUDIT_OUT.json [TARGET_METADATA.json] "
               "[--assembly PROOFS.json --validated VALIDATED_REPORT.json]", file=sys.stderr)
         sys.exit(2)
-    sys.exit(main(*args, **opts))
+    # (deep target terms: the structural walks recurse once per term node; run in a thread with a large
+    # stack so a deep but finite term is audited instead of aborting with RecursionError)
+    import threading
+    sys.setrecursionlimit(200000)
+    threading.stack_size(1 << 30)
+    res = []
+    t = threading.Thread(target=lambda: res.append(main(*args, **opts)))
+    t.start()
+    t.join()
+    sys.exit(res[0] if res else 3)
