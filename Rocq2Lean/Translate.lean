@@ -220,6 +220,9 @@ structure TCtx where
   /-- P3 retry tier: a prerequisite hypothesis is reused only at a type equal *without* assigning any
   level metavariable (each other use gets its own hypothesis; duplicates are collapsed after solving). -/
   hypExact : Bool := false
+  /-- Rule P, term level (docs/PROP_LIFT.md §3): where a cast or an application argument mismatches
+  only by a lift, `PULift.up` / `PULift.down` is inserted (counted here; `none` outside rule P's tier). -/
+  propCoerce : Option (IO.Ref Nat) := none
 
 abbrev TransM := ReaderT TCtx (ExceptT TransError MetaM)
 
@@ -1312,6 +1315,40 @@ def restoreTrans (s : TransSaved) : TransM Unit := do
   if let some r := (← read).hyps then r.modify (·.take s.hyps)
   if let some r := (← read).sharedFresh then r.modify (·.take s.shared)
 
+/-- Rule P, term level: `e : act` used at `exp`, where the two differ only by a lift of a proposition.
+`exp ≡ PULift.{r,0} P` with `act ≡ P` gives `PULift.up e`; `act ≡ PULift.{r,0} P` with `exp ≡ P` (a
+proposition) gives `PULift.down e`. Only `PULift.{_, 0}`: the lifted type is a proposition. -/
+def liftCoerce (e act exp : Expr) : MetaM (Option Expr) := do
+  let exp' ← whnf exp
+  if exp'.isAppOfArity ``PULift 1 then
+    if let [r, u] := exp'.getAppFn.constLevels! then
+      if u.isZero && (← isDefEq act exp'.appArg!) then
+        return some (mkApp2 (mkConst ``PULift.up [r, .zero]) exp'.appArg! e)
+  let act' ← whnf act
+  if act'.isAppOfArity ``PULift 1 then
+    if let [r, u] := act'.getAppFn.constLevels! then
+      if u.isZero && (← isProp exp) && (← isDefEq act'.appArg! exp) then
+        return some (mkApp2 (mkConst ``PULift.down [r, .zero]) act'.appArg! e)
+  return none
+
+/-- Rule P, term level: the arguments of `f a₁ … aₙ`, each coerced by `liftCoerce` where its type is not
+the function's domain at it (counted in `cnt`). -/
+def coerceArgs (f : Expr) (args : Array Expr) (cnt : IO.Ref Nat) : MetaM (Array Expr) := do
+  let mut fty ← inferType f
+  let mut out := #[]
+  for a in args do
+    fty ← whnf fty
+    let .forallE _ d b _ := fty | return out ++ args.extract out.size args.size
+    let a' ← do
+      let aty ← inferType a
+      if ← isDefEq aty d then pure a else
+        match ← liftCoerce a aty d with
+        | some c => cnt.modify (· + 1); pure c
+        | none => pure a
+    out := out.push a'
+    fty := b.instantiate1 a'
+  return out
+
 mutual
 
 partial def trans (t : IR.Term) : TransM Expr := do
@@ -1331,6 +1368,9 @@ partial def trans (t : IR.Term) : TransM Expr := do
     -- M6: a proof whose cast needs a fixpoint's unfolding at open arguments (castRepair)
     if ← liftMeta (isProp ty') then
       if let some r ← liftMeta (castRepair c' (← inferType c') ty' 3) then return r
+    if let some cnt := (← read).propCoerce then
+      if let some r ← liftMeta (liftCoerce c' (← inferType c') ty') then
+        cnt.modify (· + 1); return r
     failT "TRANSLATION_FAILED" s!"{kind} cast annotation is not convertible in Lean"
   | .prod n ty b => withPath "prod" do
     checkRelevant n
@@ -1360,6 +1400,9 @@ partial def trans (t : IR.Term) : TransM Expr := do
         if i < ls.size && ls[ls.size - 1 - i]!.isFVarOf ac.f then
           return ← accCallSite ac args'
     let f' ← withPath "f" (transHead f args')
+    let args' ← match (← read).propCoerce with
+      | some cnt => liftMeta (coerceArgs f' args' cnt)
+      | none => pure args'
     let e := mkAppN f' args'
     -- Universe arguments left as metavariables at a reference (generalized constants, generated
     -- inductives with level parameters) are solved here from the argument types when possible,
@@ -2344,9 +2387,10 @@ def runTrans {α} (genv : GEnv) (x : TransM α) (globalLevels : Std.HashMap Stri
     (polyLevels : Array Level := #[]) (factReduce : Bool := false) (admitLevels : Array String := #[])
     (lowerShared : Bool := false) (hyps : Option (IO.Ref (Array (MVarId × String))) := none)
     (declKey : String := "") (hypExact : Bool := false)
-    (sharedFresh : Option (IO.Ref (Array (LMVarId × String))) := none) :
+    (sharedFresh : Option (IO.Ref (Array (LMVarId × String))) := none)
+    (propCoerce : Option (IO.Ref Nat) := none) :
     MetaM (Except TransError α) :=
-  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact, sharedFresh }).run
+  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact, sharedFresh, propCoerce }).run
 
 /-- Pending validation: the hypothesis metavariables (in creation order) become binders of the
 declaration, `∀ hs, e` (`lam := false`) or `fun hs => e` (Lean's binding abstraction handles their

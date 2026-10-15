@@ -513,6 +513,13 @@ class Auditor:
         C = lambda s2, e2, seg, env2=env: self.check(s2, e2, path + [seg], env2)
         if e["k"] == "mdata":
             raise Mismatch(f"{path}: unexpected metadata node in target")
+        # rule P, term level (docs/PROP_LIFT.md §3): in a row reporting coercions, `PULift.up X t` /
+        # `PULift.down X t` with `PULift.{_, 0}` (X a proposition: the kernel checks t's type against it)
+        # stands for t, the source term at that position (C1: up/down are the two sides of PULift X ≃ X)
+        if COERCE[0]:
+            inner = peel_lift_coercion(e)
+            if inner is not None:
+                return self.check(s, inner, path + ["lift"], env)
         if k == "cast":
             # the cast's term as is; otherwise a cast repair around it (a source convoy match has the
             # same outer shape as a repair, so the direct comparison comes first)
@@ -1782,6 +1789,59 @@ def anon(e):
     if isinstance(e, list):
         return [anon(v) for v in e]
     return e
+
+
+COERCE = [False]      # whether the row being audited reports rule P coercions
+
+
+def peel_lift_coercion(e):
+    """`PULift.up X t` or `PULift.down X t` with universe instance [r, 0] -> t; otherwise None."""
+    if e.get("k") != "app" or e["f"].get("k") != "app":
+        return None
+    h = e["f"]["f"]
+    if h.get("k") != "const" or h.get("n") not in ("PULift.up", "PULift.down") or len(h.get("u") or []) != 2:
+        return None
+    if level_nf(h["u"][1]) != level_nf({"k": "zero"}):
+        raise Mismatch(f"rule P: {h['n']} at a non-Prop universe {h['u'][1]}")
+    return e["a"]
+
+
+def strip_prop_lift(r, tv, src_type, body):
+    """Rule P (docs/PROP_LIFT.md, approved), independently: a row reporting `prop_lift = k` has,
+    under its first k value binders, exactly `PULift.{r, 0} X`, where the source type after k binders is a
+    sort `Type@{l}` and r is that sort's image (so `PULift.{r,0} X : Sort r` is exactly the declared
+    type); the kernel checks that X is a proposition (`PULift.{_, 0}`). Returns the value with the wrapper
+    replaced by X, for the structural check against the source."""
+    k = r.get("prop_lift")
+    if k is None:
+        return tv
+    if not isinstance(k, int) or k < 0:
+        raise Mismatch(f"rule P: invalid lift depth {k}")
+    st = src_type
+    for _ in range(k):
+        if st.get("k") != "prod":
+            raise Mismatch("rule P: the source type has fewer binders than the lift depth")
+        st = st["b"]
+    if st.get("k") != "sort" or st["s"].get("k") != "type":
+        raise Mismatch("rule P: the source type does not end in a Type at the lift depth")
+    tv = copy.deepcopy(tv)
+    holder, key, cur = None, None, tv
+    for _ in range(k):
+        if cur.get("k") != "lam":
+            raise Mismatch("rule P: the value has fewer binders than the lift depth")
+        holder, key, cur = cur, "b", cur["b"]
+    if not (cur.get("k") == "app" and cur["f"].get("k") == "const" and cur["f"]["n"] == "PULift"
+            and len(cur["f"]["u"]) == 2):
+        raise Mismatch("rule P: no PULift at the lift depth")
+    lv_r, lv_s = cur["f"]["u"]
+    if level_nf(lv_s) != level_nf({"k": "zero"}):
+        raise Mismatch("rule P: the lifted term is not lifted from Prop")
+    if level_nf(lv_r) != source_sort_nf(st["s"], body):
+        raise Mismatch(f"rule P: the lift's level {lv_r} is not the image of the source sort")
+    if holder is None:
+        return cur["a"]
+    holder[key] = cur["a"]
+    return tv
 
 
 def src_has_univ_var(t):
@@ -3374,6 +3434,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
     aud = Auditor(decls, list(rows.values()), recursors)
     for s in sorted(decls):
         r, d = rows.get(s), decls[s]
+        COERCE[0] = bool(r and r.get("prop_lift_coercions"))
         v = {"source": s, "status": r.get("status") if r else None,
              "role": "root" if s in canon else ("required" if s in closure else "extra_not_required")}
         try:
@@ -3455,7 +3516,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
                             if n_ not in aud.ir_bodies or not has_set_motive(decls[n_]["type"]):
                                 raise Mismatch(f"inlined {n_} is not a transparent constant with a Set-motive binder")
                         body_s = inline_consts(body_s, set(m6), aud.ir_bodies)
-                    aud.check(body_s, r["target_value"], ["body"])
+                    aud.check(body_s, strip_prop_lift(r, r["target_value"], d["type"], aud.body), ["body"])
                 finally:
                     aud.body = None
                     REDUCE[0] = False
@@ -3729,6 +3790,50 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     # inlined source; the inlined names must be erasing definitions (recomputed here from the source), and
     # each must actually occur in the block
     ERASED.clear()
+    # rule P, statements (docs/PROP_LIFT.md §3.3): a statement translated with a lifted codomain stated as
+    # its proposition; the reported chain is recomputed here from the source (the head-δ chain of the
+    # codomain, transparent monomorphic constants, ending at a definition translated with a lifted value),
+    # never for a protected declaration, and the statement is audited against the source with the chain
+    # δβ-inlined (Rocq conversion)
+    prot_pin = PROTECTED_PIN()
+    for n, r in sorted(rows.items()):
+        ch = r.get("prop_lift_unfold") or []
+        if not ch:
+            continue
+        try:
+            d = decls.get(n)
+            if d is None or d["kind"] != "constant" or d.get("body_state") not in ("statement_only", "obligation"):
+                raise Mismatch("rule P unfolding reported for a row that is not a statement")
+            if n in prot_pin:
+                raise Mismatch("rule P unfolding reported for a protected declaration")
+            t = d["type"]
+            while t.get("k") == "prod":
+                t = t["b"]
+            want = []
+            for _ in range(8):
+                hd, args = (t["f"], t["args"]) if t.get("k") == "app" else (t, [])
+                c_ = hd.get("c") if hd.get("k") == "const" else None
+                if c_ is None:
+                    break
+                want.append(c_)
+                if (rows.get(c_) or {}).get("prop_lift") is not None and st(c_) in ("TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED"):
+                    break
+                dc = decls.get(c_)
+                if not (dc and dc["kind"] == "constant" and dc.get("body_state") == "transparent" and dc.get("body")
+                        and (dc.get("universes") or {}).get("k") == "monomorphic"):
+                    break
+                t = src_flatten_apps(beta_app(dc["body"], args))
+            if want != ch or (rows.get(ch[-1]) or {}).get("prop_lift") is None:
+                raise Mismatch(f"rule P unfolding {ch} is not the source codomain's head chain to a lifted definition {want}")
+            bodies = {c_: decls[c_]["body"] for c_ in ch[:-1]}
+            bodies[ch[-1]] = decls[ch[-1]]["body"]
+            def pre(x, k, bodies=bodies):
+                if x.get("k") == "app" and x["f"].get("k") == "const" and x["f"]["c"] in bodies:
+                    return src_flatten_apps(beta_app(bodies[x["f"]["c"]], x["args"]))
+                return None
+            decls[n] = dict(d, type=src_rewrite(d["type"], pre))
+        except Mismatch as e:
+            problem("structure", f"{n}: {e}")
     for n, r in sorted(rows.items()):
         di = r.get("delta_inlined") or []
         if not di or n not in decls:
@@ -4050,6 +4155,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     wf_users = {}
     for s_ in sorted(decls):
         r, d = rows.get(s_), views[s_]
+        COERCE[0] = bool(r and r.get("prop_lift_coercions"))
         v = {"source": s_, "status": r.get("status") if r else None, "leaf": s_ in leaves,
              "role": "root" if s_ in canon else ("required" if s_ in closure else "extra_not_required")}
         try:
@@ -4177,7 +4283,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                         if n_ not in aud.ir_bodies or not has_set_motive(decls[n_]["type"]):
                             raise Mismatch(f"inlined {n_} is not a transparent constant with a Set-motive binder")
                     body_s = inline_consts(body_s, set(m6), aud.ir_bodies)
-                aud.check(body_s, val, ["body"], env)
+                aud.check(body_s, strip_prop_lift(r, val, decls[s_]["type"], aud.body), ["body"], env)
                 # B: its termination lowerings use exactly its own termination obligations
                 want_wf = sorted(x for x, rx in syn.items() if rx["synthesized_from"] == s_ and rx["synthetic_kind"] == "termination")
                 if sorted(aud.wf_used) != want_wf:
