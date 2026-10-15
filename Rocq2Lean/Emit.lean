@@ -2127,6 +2127,27 @@ where
                 if r'.accepted then
                   r := r'
                   break
+          -- δβ-inlining of erasing polymorphic definitions for constants (entry 15, last tier): the constant's
+          -- type and value with those applications δβ-reduced (definitional; the audit re-derives the names
+          -- and audits the row against the inlined source), when the attempts above failed
+          if !r.accepted && (retry r.status) && !genv.erasingPoly.isEmpty then
+            let names : Std.HashSet String := genv.erasingPoly.fold (fun acc k _ => acc.insert k) {}
+            let (tyE, u1) := inlineConsts genv.erasingPoly names c.type
+            let (bdE, u2) := match c.body with
+              | some b => let (b', u) := inlineConsts genv.erasingPoly names b; (some b', u)
+              | none => (none, {})
+            let used := (u1.insertMany u2).toArray.qsort (· < ·)
+            unless used.isEmpty do
+              let cE := { c with type := tyE, body := bdE }
+              for (it, cu, lo, un) in [(false, false, false, false), (true, false, false, false), (false, false, false, true),
+                                       (true, false, false, true), (false, true, true, false), (false, true, true, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results cE (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (unify := un)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                if r'.accepted then
+                  r := { r' with deltaInlined := used }
+                  iface := none
+                  break
           -- P3 (ITERATION_LOG entry 8): per-instance prerequisite hypotheses (no level unified across uses;
           -- duplicates collapsed after solving), when the attempts above failed
           if !r.accepted && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then

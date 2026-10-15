@@ -2089,6 +2089,7 @@ def carrier_levels(d):
 
 
 DECL_SRC = {}        # source name -> exported declaration (its dependency lists), set with RS_CLOSURE
+ERASED = {}          # entry 15: constant -> erasing definitions δβ-inlined in its type and value
 RS_CLOSURE = {}      # R3G-F: source name -> result-sort implicit levels in its dependency closure (itself included)
 
 
@@ -3447,12 +3448,13 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
                 try:
                     aud.check(d["type"], r["target_type"], ["type"])
                     body_s = d["body"]
-                    if r.get("delta_inlined"):
+                    m6 = [n_ for n_ in (r.get("delta_inlined") or []) if n_ not in ERASED.get(s_, ())]
+                    if m6:
                         # M6: Set-motive constants used at a Prop family, inlined (definitional)
-                        for n_ in r["delta_inlined"]:
+                        for n_ in m6:
                             if n_ not in aud.ir_bodies or not has_set_motive(decls[n_]["type"]):
                                 raise Mismatch(f"inlined {n_} is not a transparent constant with a Set-motive binder")
-                        body_s = inline_consts(body_s, set(r["delta_inlined"]), aud.ir_bodies)
+                        body_s = inline_consts(body_s, set(m6), aud.ir_bodies)
                     aud.check(body_s, r["target_value"], ["body"])
                 finally:
                     aud.body = None
@@ -3726,9 +3728,33 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     # entry 14: a block translated with erasing polymorphic definitions δβ-inlined is audited against its
     # inlined source; the inlined names must be erasing definitions (recomputed here from the source), and
     # each must actually occur in the block
+    ERASED.clear()
     for n, r in sorted(rows.items()):
         di = r.get("delta_inlined") or []
-        if not di or n not in decls or decls[n]["kind"] != "inductive":
+        if not di or n not in decls:
+            continue
+        if decls[n]["kind"] == "constant":
+            # entry 15: a constant translated with erasing definitions δβ-inlined in its type and value (the
+            # other reported names are M6 Set-motive constants, checked where the value is audited)
+            bodies = {n_: erasing_poly_body(decls[n_]) for n_ in di if n_ in decls}
+            bodies = {k: v for k, v in bodies.items() if v is not None}
+            if not bodies:
+                continue
+            def pre(x, k, bodies=bodies):
+                if x.get("k") == "app" and x["f"].get("k") == "const" and x["f"]["c"] in bodies:
+                    return src_flatten_apps(beta_app(bodies[x["f"]["c"]], x["args"]))
+                return None
+            d2 = copy.deepcopy(decls[n])
+            d2["type"] = src_rewrite(d2["type"], pre)
+            if d2.get("body") is not None:
+                d2["body"] = src_rewrite(d2["body"], pre)
+            txt = json.dumps([d2["type"], d2.get("body")])
+            if d2 == decls[n] or any(f'"c": "{n_}"' in txt for n_ in bodies):
+                problem("structure", f"{n}: the reported inlining does not remove the definitions {sorted(bodies)}")
+            decls[n] = d2
+            ERASED[n] = set(bodies)
+            continue
+        if decls[n]["kind"] != "inductive":
             continue
         bodies = {}
         for n_ in di:
@@ -4145,11 +4171,12 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 else:
                     aud.check(d["type"], ty, ["type"], env)
                 body_s = d["body"]
-                if r.get("delta_inlined"):
-                    for n_ in r["delta_inlined"]:
+                m6 = [n_ for n_ in (r.get("delta_inlined") or []) if n_ not in ERASED.get(s_, ())]
+                if m6:
+                    for n_ in m6:
                         if n_ not in aud.ir_bodies or not has_set_motive(decls[n_]["type"]):
                             raise Mismatch(f"inlined {n_} is not a transparent constant with a Set-motive binder")
-                    body_s = inline_consts(body_s, set(r["delta_inlined"]), aud.ir_bodies)
+                    body_s = inline_consts(body_s, set(m6), aud.ir_bodies)
                 aud.check(body_s, val, ["body"], env)
                 # B: its termination lowerings use exactly its own termination obligations
                 want_wf = sorted(x for x, rx in syn.items() if rx["synthesized_from"] == s_ and rx["synthetic_kind"] == "termination")
