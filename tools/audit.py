@@ -3610,7 +3610,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
                 try:
                     aud.check(d["type"], r["target_type"], ["type"])
                     body_s = d["body"]
-                    m6 = [n_ for n_ in (r.get("delta_inlined") or []) if n_ not in ERASED.get(s_, ())]
+                    m6 = [n_ for n_ in (r.get("delta_inlined") or []) if n_ not in ERASED.get(s, ())]
                     if m6:
                         # M6: Set-motive constants used at a Prop family, inlined (definitional)
                         for n_ in m6:

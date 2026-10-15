@@ -1656,7 +1656,7 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     let lbl := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
       ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom)] extraOwn.size
     -- (a refused attempt's reason, abbreviated: diagnostics only, the timing file is not the report)
-    let st := if r.accepted || r.status == "UNSUPPORTED_FEATURE" then r.status else s!"{r.status} | {r.message.take 240}"
+    let st := if r.accepted || r.status == "UNSUPPORTED_FEATURE" then r.status else s!"{r.status} | {r.message.take 600}"
     ref.modify (·.push (lbl, (← IO.monoMsNow) - t0, st))
   return r
 
@@ -2285,11 +2285,16 @@ where
           -- occurrence; levels occurring only there are no longer the declaration's (no parameter, no fact)
           if !r.accepted && (retry r.status || r.status == "INTERFACE_REJECTED") && !gone.isEmpty then
                 let eoQ := eo.filter (!gone.contains ·)
-                for (it, cu, lo, un) in [(true, false, false, false), (false, false, false, true),
-                                         (true, false, false, true), (false, true, false, false), (false, true, true, false)] do
+                -- (with per-instance prerequisite hypotheses, P3: a proof of a phantom check, HB's `id_phant`,
+                -- is a prerequisite used at a different lowered sort at each occurrence)
+                for (it, cu, lo, un, p3) in [(true, false, false, false, false), (false, false, false, true, false),
+                                             (true, false, false, true, false), (false, true, false, false, false),
+                                             (false, true, true, false, false), (false, false, false, false, true),
+                                             (true, false, false, false, true), (false, false, true, false, true),
+                                             (false, false, false, true, true)] do
                   let r' ← budgeted c.name "constant" <| processConstant genv results cQ (stmt := isStmt)
                     (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eoQ)
-                    (lower := lo) (unify := un) (phantom := true)
+                    (lower := lo) (unify := un) (hypExact := p3) (phantom := true)
                   if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
                   if r'.accepted then
                     r := { r' with phantomLowered := gone }
