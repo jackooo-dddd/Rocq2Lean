@@ -112,6 +112,9 @@ structure DeclResult where
   /-- M6: a non-template inductive with plain universe parameters (`u_l` for each level, no R2F
   fact interpretation; tried first, the more general translation). -/
   plainLevels : Bool := false
+  /-- Coherence by unification for blocks (docs/COHERENCE_READINGS.md §6): plain parameters, with the
+  arity's final sort read through the R2F interpretation. -/
+  sortInterp : Bool := false
   /-- Assembly (docs/ASSEMBLY.md): the row's assembly state (empty outside assembly), a note, the
   pending artifact an assembled row replaces, and — for a proof task whose verified proof template
   was instantiated — the final theorem `Rocq.<leaf>` with its template, type and value. -/
@@ -320,6 +323,12 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
             match srcOf q with
             | some m => entails facts m lp 0 && entails facts lp m 0
             | none => false) then continue
+      -- (rule R, general form: an argument over own levels equal to the referenced level at every model
+      -- of the source facts, e.g. a referenced definition's R2F reading `max (u_l, u_m, …)` with `m ≤ l`, is
+      -- that level, not a specialization)
+      let ownSrc : Array String := own.toArray.filterMap fun q =>
+        if (q.toString.splitOn "__c").length > 1 then none else facts.levels.find? (levelParamName · == q)
+      if (p.toString.splitOn "__c").length == 1 && σ.hasParam && equalAtModels facts (ownSrc.push lp) σ (.param p) then continue
     if !σ.hasParam then
       if let some l := facts.levels.find? (fun l => levelParamName l == p) then
         if entails facts l "Set" 0 then continue
@@ -530,7 +539,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
     (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
-    (hypExact : Bool := false) (joint : Bool := false) :
+    (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
@@ -607,14 +616,16 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       let v ← mkFreshLevelMVar
       gl := gl.insert m v
       ownMVars := ownMVars.push (m, v)
-    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact with
+    -- coherence by unification (docs/COHERENCE_READINGS.md §6): per-occurrence shared levels
+    let sharedRef? : Option (IO.Ref (Array (LMVarId × String))) ← if unify then some <$> IO.mkRef #[] else pure none
+    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact with
+    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? with
       | .ok e => pure e
       | .error e =>
         if e.msg.startsWith "termination obligation required" && !wfTerm && genv.stmtMode then
-          return ← processConstant genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact)
+          return ← processConstant genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify)
         return fromTransError base e
     -- pending validation: the hypotheses become the artifact's leading binders *before* universe
     -- solving, so that the levels of their types (references to prerequisite statements) are
@@ -647,6 +658,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     -- R-CARRIER P2: implicit levels named per class (source level, its copies)
     let splitRef ← IO.mkRef (#[] : Array (String × Array String))
     let interpRef ← IO.mkRef (#[] : Array (String × Level))
+    let cycleRef ← IO.mkRef (#[] : Array String)
     let keepParams : MetaM Unit := do
       -- R3G discovery pass: report the source levels of free metavariable classes of the *type* at
       -- references (a level below every other level of its class, not own, not template, whose
@@ -814,9 +826,16 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         -- only type levels still free are interpreted; a level that typing already fixed is a solved
         -- level (R2S) and keeps its R2B fact check
         let mut freeT : Array String := #[]
+        -- (coherence by unification: a type level that typing solved through one of its own occurrences,
+        -- `?l := max (…, u_l)`, is interpreted too; its solution must be its R2F reading, checked below)
+        let mut cycT : Array String := #[]
         for (m, v) in ownMVars do
           if typeLevels.contains m then
-            if (← instantiateLevelMVars v).isMVar then freeT := freeT.push m
+            let vi ← instantiateLevelMVars v
+            if vi.isMVar then freeT := freeT.push m
+            else if unify && (collectLevelParams {} (.sort vi)).params.contains (levelParamName m) then
+              freeT := freeT.push m
+              cycT := cycT.push m
         let ownI := (freeT ++ chosen.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
         -- (R3G-F levels are minimal only where they are implicit: not levels of this declaration's source)
         let explicitLv := globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)
@@ -830,6 +849,10 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
         for (l, ms) in chosen do
           for r in ms do
             if let .mvar r' ← instantiateLevelMVars (.mvar r) then assignLevelMVar r' ι[l]!
+        for (m, v) in ownMVars do
+          if cycT.contains m then
+            unless (← instantiateLevelMVars v).normalize == ι[m]!.normalize do
+              cycleRef.modify (·.push s!"{m} solved as {← instantiateLevelMVars v}, not its R2F reading {ι[m]!}")
     -- default of a still-free proof-local level: its minimal model over the *current* values of the
     -- type levels (parameters or solutions)
     let dflt (id : LMVarId) : MetaM Level := do
@@ -840,7 +863,14 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
           if typeLevels.contains t then cur := cur.insert t (← instantiateLevelMVars v)
         pure (minimalModelLevel genv.facts cur m)
       | none => pure .zero
-    let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt keepParams (solve := lower || joint)
+    -- coherence by unification: per-occurrence shared levels left free by typing are the own variables
+    -- (after the value's type is unified with the declared type, before the parameters are named)
+    let rebindThenKeep : MetaM Unit := do
+      if let some ref := sharedRef? then rebindShared ref gl
+      keepParams
+    let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt rebindThenKeep (solve := lower || joint)
+    unless (← cycleRef.get).isEmpty do
+      return { base with status := "UNIVERSE_REJECTED", message := s!"coherence by unification: {← cycleRef.get}" }
     -- R-CARRIER P2 post-pass: a remaining `u_l` of a split level (e.g. own-level hypothesis types) is its
     -- first copy; copies that no longer occur in the type (a statement: its value) are merged into one that
     -- does; a level left with one copy is `u_l` again; the remaining copies are renumbered l__c0, l__c1, …
@@ -1143,7 +1173,7 @@ def rsMinimalFor (genv : GEnv) (i : IR.InductiveDecl) (rsOwn : Array String) : S
 
 def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
     (raw : Json) (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false)
-    (plain : Bool := false) (rsOwn : Array String := #[]) :
+    (plain : Bool := false) (rsOwn : Array String := #[]) (unify : Bool := false) :
     MetaM (DeclResult × Option IndTarget) := do
   let base : DeclResult := { source := i.name, kind := "inductive", status := "" }
   let (missing, failed, pending) := blockedDeps results (i.typeDeps.filter (· != i.name))
@@ -1219,8 +1249,22 @@ where
       let v ← mkFreshLevelMVar
       gl := gl.insert m v
       extraMVars := extraMVars.push (m, v)
-    let ty ← match ← runTrans genv (withPath "arity" (transClosed body.type)) gl (lowerShared := lower) (hyps := hypsRef?) with
+    -- coherence by unification (docs/COHERENCE_READINGS.md §6): per-occurrence shared levels
+    let sharedRef? : Option (IO.Ref (Array (LMVarId × String))) ← if unify then some <$> IO.mkRef #[] else pure none
+    let ty ← match ← runTrans genv (withPath "arity" (transClosed body.type)) gl (lowerShared := lower) (hyps := hypsRef?) (sharedFresh := sharedRef?) with
       | .ok e => pure e
+      | .error e => return (fromTransError base e, none)
+    -- (plain parameters per occurrence: the block's own sort is its R2F reading, which equals the source
+    -- sort at every model of the facts and bounds the fields' readings, e.g. `Finite.type`'s at 110)
+    let sortInterp := plain && unify
+    let ty ← if !sortInterp then pure ty else
+      match ← runTrans genv (withPath "sort" (transSort body.sort)) (ownLevelInterp genv.facts globals (rsMinimalFor genv i rsOwn) genv.decoupled) with
+      | .ok s =>
+        let rec repl : Expr → Expr
+          | .forallE n d b bi => .forallE n d (repl b) bi
+          | .sort _ => s
+          | e => e
+        pure (repl ty)
       | .error e => return (fromTransError base e, none)
     -- constructor types are translated and type-checked against a local `self` of the arity type
     -- (the block is not declared yet), which is then replaced by the constant at the parameters
@@ -1228,7 +1272,7 @@ where
       let mut out : Array Constructor := #[]
       for c in body.ctors, cn in cnames do
         let r ← (withReader (fun ctx => { ctx with locals := #[sv] })
-                   (withPath s!"ctor {c.name}" (do return eraseBinderScopes (← instLevelMVars (← trans c.type))))).run { genv, globalLevels := gl, lowerShared := lower, hyps := hypsRef? } |>.run
+                   (withPath s!"ctor {c.name}" (do return eraseBinderScopes (← instLevelMVars (← trans c.type))))).run { genv, globalLevels := gl, lowerShared := lower, hyps := hypsRef?, sharedFresh := sharedRef? } |>.run
         match r with
         | .ok cty =>
           -- R3″/R5S: unify level metavariables of the block by type-checking the constructor type
@@ -1240,6 +1284,7 @@ where
       | .ok cs => pure cs
       | .error e => return (fromTransError base e, none)
     try Meta.check ty catch _ => pure ()
+    if let some ref := sharedRef? then rebindShared ref gl
     -- a non-template level that unification leaves free is a genuine independent level of the
     -- block: it becomes a (non-template) universe parameter, R3 applies at references (R2T)
     let mut sol : Std.HashMap String Level := {}
@@ -1283,6 +1328,9 @@ where
       let mut occ : Array (String × Level) := #[]
       for e in #[ty] ++ ctors.map (·.type) do
         for (n, ls) in constOccurrences (← instLevelMVars e) do
+          -- (rule H: a prerequisite hypothesis's statement is instantiated where it is used — the
+          -- translator's choice, as in R-CARRIER refinement 1 — so its arguments decide no class)
+          if genv.leafStmtTargets.contains n then continue
           if let some gs := genv.constGlobals[n]? then
             let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
             if gs.size == ls.length then
@@ -1291,8 +1339,17 @@ where
       -- never make a constructor field too big for the block's sort
       let mut inArity : Array Level := #[]
       for (n, ls) in constOccurrences (← instLevelMVars ty) do
-        if genv.constGlobals.contains n then
+        if let some gs := genv.constGlobals[n]? then
+          let ls' := ls.drop (genv.polyByTarget[n]?.getD 0)
           for σ in ls do inArity := inArity.push (← instantiateLevelMVars σ)
+          -- (rule R: an arity argument `max (?x, …)` that unification built from a referenced declaration's
+          -- R2F reading; its metavariable `?x`, an argument for the same source level elsewhere, is the class)
+          if gs.size == ls'.length then
+            for l in gs, σ in ls' do
+              let σ ← instantiateLevelMVars σ
+              unless σ.isMVar do
+                for m in (σ.collectMVars {}).toArray do
+                  if occ.any (fun (l', x) => l' == l && x == .mvar m) then inArity := inArity.push (.mvar m)
       let mut picks : Array String := #[]
       let mut done : Array Level := #[]
       for (_, σ) in occ.filter (fun (_, σ) => inArity.contains σ) do
@@ -1394,7 +1451,7 @@ where
                                nonUniform := i.npars - (nparamsRec - hyps.size), pendingHyps := hyps.map (·.2) }
       return ({ base with status := if hyps.isEmpty then "TRANSLATED_AND_CHECKED" else "PENDING_KERNEL_CHECKED",
                           pendingHyps := hyps.map (·.2), targetType := ty, numParams := nparamsRec, primitiveRecord := isRecord,
-                          universeLowered := lower, plainLevels := plain,
+                          universeLowered := lower, plainLevels := plain, sortInterp := plain && unify,
                           levelParams := lparams, paramLevels := globals, isTemplate, templateParams,
                           implicitLevels := extraOwn.filter (!(globalsOfInd i).contains ·),
                           resultSortImplicit := rsOwn,
@@ -1434,6 +1491,7 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("universe_cumulativity", Json.bool r.cumulativity),
     ("universe_lowered", Json.bool r.universeLowered),
     ("plain_levels", Json.bool r.plainLevels),
+    ("sort_interp", Json.bool r.sortInterp),
     ("delta_inlined", Json.arr (r.deltaInlined.map Json.str)),
     ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>
       Json.mkObj [("level", m), ("sigma", levelJson l), ("in_type", Json.bool (r.r2bpInType.contains m))])),
@@ -1883,11 +1941,14 @@ where
           if retry r.status then
             -- strict tiers first; the cumulativity tier (R3↑, R2B-P) only when they all fail
             -- R3↓ last (cumulativity tier, reported): references instantiated below shared levels
-            for (fr, it, cu, lo) in [(true, false, false, false), (false, true, false, false), (true, true, false, false),
-                                     (false, false, true, false), (true, false, true, false), (false, true, true, false),
-                                     (true, true, true, false), (false, false, true, true), (true, false, true, true),
-                                     (false, true, true, true), (true, true, true, true)] do
-              let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo)
+            -- coherence by unification (§6 of docs/COHERENCE_READINGS.md) after the strict tiers: the same
+            -- checks, with shared levels instantiated per occurrence and rebound where typing leaves them free
+            for (fr, it, cu, lo, un) in [(true, false, false, false, false), (false, true, false, false, false), (true, true, false, false, false),
+                                     (false, false, false, false, true), (false, true, false, false, true), (true, true, false, false, true),
+                                     (false, false, true, false, false), (true, false, true, false, false), (false, true, true, false, false),
+                                     (true, true, true, false, false), (false, false, true, true, false), (true, false, true, true, false),
+                                     (false, true, true, true, false), (true, true, true, true, false)] do
+              let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (unify := un)
               lastTier := some r'
               if r'.status == "INTERFACE_REJECTED" then iface := some r'
               if r'.accepted then
@@ -1926,6 +1987,25 @@ where
                 r := r'
                 iface := none
                 break
+          -- generality first (docs/COHERENCE_READINGS.md §6): a definition accepted with an own *type*
+          -- level solved by typing (R2S) under coherence by construction is retried with shared levels
+          -- instantiated per occurrence; the retry is kept only when it is accepted with fewer solved type
+          -- levels (the same checks: it is at least as general)
+          if r.accepted && !isStmt && genv.stmtMode then
+            let tyLv := globalsOf c.type
+            let solvedTy (x : DeclResult) := (x.bodyLevels.filter fun (m, _) => tyLv.contains m).size
+            if solvedTy r > 0 then
+              let sAcc ← saveState
+              let mut better := false
+              for it in [false, true] do
+                sBefore.restore
+                let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+                  (interp := it) (extraOwn := eo) (unify := true)
+                if r'.accepted && solvedTy r' < solvedTy r && r'.levelDefaults ≤ r.levelDefaults then
+                  r := { r' with levelDiagnostics := r'.levelDiagnostics.push s!"generality: {solvedTy r} solved type level(s) reduced to {solvedTy r'} (shared levels per occurrence)" }
+                  better := true
+                  break
+              unless better do sAcc.restore
           if r.accepted then break
         -- a declaration that no attempt accepts keeps the diagnosis of the plain attempt without
         -- implicit levels (the earlier behaviour)
@@ -1983,7 +2063,16 @@ where
         let run1 (eo : Array String) (lower : Bool) (rs : Array String := #[]) : MetaM (DeclResult × Option IndTarget) := do
           let (a, ta) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (plain := true) (rsOwn := rs)
           if a.accepted then return (a, ta)
-          processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (rsOwn := rs)
+          -- coherence by unification (docs/COHERENCE_READINGS.md §6) before the R2F interpretation, as plain
+          -- parameters are (M6): the plain attempt with shared levels instantiated per occurrence
+          unless lower do
+            let (u, tu) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (plain := true) (rsOwn := rs) (unify := true)
+            if u.accepted then return (u, tu)
+          let (b, tb) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (rsOwn := rs)
+          if b.accepted || lower then return (b, tb)
+          let (u, tu) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (rsOwn := rs) (unify := true)
+          if u.accepted then return (u, tu)
+          return (b, tb)
         let (r, t?) ← do
           let (d, _) ← processInductive genv results i src.rawDecls[i.name]! (discover := true)
           if d.status == "DISCOVERED" && !d.implicitLevels.isEmpty then

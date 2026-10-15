@@ -109,9 +109,10 @@ def forge(label, new, plain=False, row=CNT, edit=None):
 
 
 k, rc, probs = forge("raising-summand", {"k": "max", "a": {"k": "param", "n": P(L)}, "b": {"k": "param", "n": P(RAISE)}})
-check(rc == 2 and any("not entailed" in p for p in probs),
+check(rc == 2 and any("not entailed" in p or "299 is shared" in p for p in probs),
       f"forged max(u_299, u_1007) (raising): audit-rejected (forged row kernel: {k})")
-check(cnt.get("universe_lowered"), "the Countable instance is on the R3-down tier (lower arguments are reported)")
+OUT["countable_tier"] = "R3-down" if cnt.get("universe_lowered") else "plain"
+# (since stage 3, entry 13, the instance is on a plain tier — shared levels per occurrence; before, on R3-down)
 k, rc, probs = forge("no-u_l", {"k": "param", "n": P(M)}, plain=True)
 check(rc == 2 and any("299 is shared" in p for p in probs),
       f"forged u_577 for the shared 299 on a plain tier (a specialization, no u_l summand): audit-rejected (forged row kernel: {k})")

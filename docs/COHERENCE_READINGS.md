@@ -113,3 +113,64 @@ translator.
 | Unit (audit) | Lower argument (`u_a`, `Set`) at a statement | accepted |
 | Unit (audit) | Lower argument at any other reference | rejected |
 | Unit (audit) | Raising (`u_b`), offset (`u_a + 1`) at a statement | rejected |
+
+## 6. Coherence by unification: shared levels per occurrence (stage 3, entry 13)
+
+**The failure (PROTECTED_RANGE_NARROWED, 597 roots alone after R and H).** Every reference to a shared
+level used the declaration's one level variable ("coherence by construction"). Wherever typing needed a
+referenced definition's R2F *reading* of that level, there was only one variable to fit it, so it was
+identified or solved. Three shapes on the measured frontier:
+
+* **`JobType := Equality.type`** reads its level 58 as `max (u32, u51+1, u55, u58)`.
+  * `Equality.sort` applied to `Job : JobType` needs that reading at its 58 position, while the
+    binder has `u58`.
+  * Every plain tier was ill-typed: `?58 =?= max (…, ?58)` has no solution.
+* **`schedule`.** Its result sort `?22` must equal `ProcessorState`'s reading of `State`'s level,
+  `max (?22, ?51, ?101)`.
+  * The bounded solver settled on `22 := max (51, 101)`. The source has only `51 ≤ 22`, so this tied
+    `PState`'s `State` universe to the job carrier.
+  * `JobReady` (332 roots on its frontier) inherited the narrowing.
+* **`ProcessorState`.** Its R2F interpretation reads both `Job`'s carrier and `Core`'s carrier as
+  `max (u51, u101)`, because 51 and 101 are mutually equal in the source graph.
+  * `processor_state`'s `Core := unit` (carrier 0) therefore pinned `Job`'s carrier.
+  * The plain-parameter attempt (M6) failed only because of the first shape.
+
+**The change (construction only; acceptance is unchanged in kind).**
+
+1. **Per-occurrence levels.** On a new retry tier, a reference to a level shared with the declaration
+   takes a fresh level metavariable per occurrence. After the value's type is unified with the declared
+   type (inside `solveLevels`, before the parameters are named), every such metavariable left free is
+   bound back to the declaration's own variable (`rebindShared`). Only typing can therefore give an
+   occurrence another argument, for example a referenced definition's reading.
+   * Where typing solved the own level through one of its own occurrences (`?l := max (…, ?occ)`), the
+     occurrence is the parameter `u_l`.
+   * That level is then booked as *interpreted*, and its solution must be exactly its R2F reading
+     (`ownLevelInterp`), or the tier is refused.
+   * Order: constants try the tier after the strict tiers. Blocks try plain parameters per occurrence
+     before the R2F interpretation, as M6 orders plain before R2F.
+2. **Blocks with plain parameters per occurrence** (`sort_interp`): the arity's final sort is read
+   through the R2F interpretation. That equals the source sort at every model, and it bounds the
+   fields' readings (`Finite.type`'s at 110, with `101 < 110` in the source). Every binder and field
+   keeps plain parameters.
+3. **Generality retry for definitions.** A definition accepted with an own *type* level solved by
+   typing is retried with per-occurrence levels. The retry is kept only if it is accepted with fewer
+   solved type levels and no more defaults.
+4. **Discovery modulo readings** (blocks):
+   * an arity argument `max (?x, …)` built from a reading makes `?x` a candidate, when `?x` is an
+     argument for the same source level elsewhere;
+   * prerequisite-statement references decide no class (rule H; R-CARRIER refinement 1).
+
+**The checks, in their general form (one principle).** Rule R is stated as equality at every model of
+the source facts:
+* `equalAtModels` (translator) and `equal_at_models` (audit), on summands with `u_m` read as `m`.
+* The argument for a shared level `l` must equal `l` at every model, and every summand still passes R3.
+  This subsumes §2's `max (u_l, s…)` and also admits a source-equal `u_m`.
+* The same holds for the argument for a solved or interpreted own level: it must equal the solution
+  or image at every model.
+* The generality checks (`freeLevelRef`, `check_statement_generality`) accept a binder argument that
+  equals the referenced level at every model. This extends R-CARRIER refinement 5 (source-equal
+  summands) to readings such as `max (u58, u32, u51+1, u55, u22)`.
+
+Justification: an argument equal to the level at every model of the source facts is the source's
+level, so it is no specialization. This is rule R's justification, applied wherever coherence or
+generality compares a level with its expected value.

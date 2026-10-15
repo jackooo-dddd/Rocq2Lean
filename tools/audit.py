@@ -174,6 +174,35 @@ def motive_levels(ty):
     return mot - oth
 
 
+def split_sort_interp(src_t, tgt_t, interp):
+    """Coherence by unification for blocks (docs/COHERENCE_READINGS.md §6), independently: a plain block
+    whose arity's final sort is read through the R2F interpretation `interp` (recomputed from the source).
+    Checks that final sort and returns the arity pair with both final sorts neutralized, for the
+    structural check with plain levels."""
+    def fin(t, path):
+        while t.get("k") in ("prod", "forall"):
+            path.append("b")
+            t = t["b"]
+        return t
+    sp, tp = [], []
+    sf, tf = fin(src_t, sp), fin(tgt_t, tp)
+    if sf.get("k") != "sort" or tf.get("k") != "sort":
+        raise Mismatch("sort_interp: the arity does not end in a sort")
+    if level_nf(tf["l"]) != source_sort_nf(sf["s"], interp):
+        raise Mismatch(f"sort_interp: the arity's sort {tf['l']} is not the R2F reading of the source sort")
+
+    def put(t, path, leaf):
+        t = copy.deepcopy(t)
+        cur = t
+        for k in path[:-1]:
+            cur = cur[k]
+        if path:
+            cur[path[-1]] = leaf
+            return t
+        return leaf
+    return put(src_t, sp, {"k": "sort", "s": {"k": "prop"}}), put(tgt_t, tp, {"k": "sort", "l": {"k": "zero"}})
+
+
 def source_sort_nf(s, body=None):
     """Normal form of the target sort a source sort must become: global levels of the declaration's
     type are parameters u_<name> (R2); proof-local levels (R2B) are read through their solutions
@@ -2269,6 +2298,27 @@ def const_occurrences(e, acc):
     return acc
 
 
+def equal_at_models(facts, own_params, a, b):
+    """Rule R (docs/COHERENCE_READINGS.md), independently: the levels a and b (u_m read as the source level m,
+    a constant c as Set + c) are equal at every model of the source facts: every summand of either side lies
+    below some summand of the other in the native graph."""
+    def summ(x):
+        c, ps = level_nf(x)
+        out = [("Set", c or 0)]
+        for p_, k in ps:
+            if p_ not in own_params:
+                return None
+            out.append((own_params[p_], k))
+        return out
+
+    def leq(lhs, rhs):
+        return all((x == "Set" and i == 0) or any(
+            (x == y or facts.entails(x, y, 0) or x == "Set") if i <= j else facts.entails(x, y, i - j)
+            for y, j in rhs) for x, i in lhs)
+    sa, sb = summ(a), summ(b)
+    return sa is not None and sb is not None and leq(sa, sb) and leq(sb, sa)
+
+
 def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None, own_admit=frozenset(), lift=False,
                         lower=False):
     """Rule R3 (docs/UNIVERSE_TRANSLATION.md) for every reference in `exprs`.
@@ -2303,8 +2353,12 @@ def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None
                 # Rule R (docs/COHERENCE_READINGS.md): for a shared level, max(u_l, s1, ...) whose other
                 # summands pass the R3 check below equals l at every model of the source facts (an R2F
                 # reading, not a specialization); not for motive-level (R8) parameters
-                reading = not ca and not da and any(p == level_param(l) and k == 0 for p, k in ps)
-                if body and l in body and not (low and (c, ps) != level_nf(bump(body[l]))):
+                # (general form: the argument equals l at every model of the source facts, e.g. a summand
+                # u_m of a source-equal level m)
+                reading = not ca and not da and equal_at_models(facts, own_params, sigma, {"k": "param", "n": level_param(l)})
+                # (rule R for a proof-local level or an R2F image: equal to it at every model of the facts)
+                same_sol = body and l in body and not ca and not da and equal_at_models(facts, own_params, sigma, body[l])
+                if body and l in body and not same_sol and not (low and (c, ps) != level_nf(bump(body[l]))):
                     if (c, ps) != level_nf(bump(body[l])):
                         raise Mismatch(f"{name}: source level {l} is proof-local, argument must be its solution {body[l]}")
                 elif l in own_l and not (body and l in body) and not reading and not (low and (c, ps) != level_nf(bump({"k": "param", "n": level_param(l)}))):
@@ -2475,6 +2529,12 @@ def check_statement_generality(facts, own, gen, exprs, poly, types):
                                                    facts.entails(SPLIT_COPIES.get(own_by_param[p_], own_by_param[p_]), l, 0) and
                                                    facts.entails(l, SPLIT_COPIES.get(own_by_param[p_], own_by_param[p_]), 0)
                                                    for p_, k in ps):
+                    continue
+                # (rule R, general form: an argument over own levels, copies excluded, equal to l at every model
+                # of the source facts is l's reading, not a specialization)
+                plain_own = {pp: g for pp, g in own_by_param.items() if g not in SPLIT_COPIES}
+                if ps and level_param(l) not in plain_own and equal_at_models(
+                        facts, {**plain_own, level_param(l): l}, sigma, {"k": "param", "n": level_param(l)}):
                     continue
                 if not ps and facts.entails(l, "Set", 0):
                     continue
@@ -3295,8 +3355,16 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
                 # R2F: sorts of a non-template block are read through the fact-respecting interpretation
                 # R2F (non-template): sorts read through the fact-respecting interpretation;
                 # R5S (template): other levels read through their reported solutions (fact-checked)
+                src_ar, tgt_ar = b["type"], r["target_type"]
+                if r.get("sort_interp") and not (tb is None and r.get("plain_levels")):
+                    raise Mismatch("sort_interp reported for a block without plain parameters")
                 if tb is None and r.get("plain_levels"):
                     aud.body = None               # M6: plain parameters (u_l itself for every level)
+                    if r.get("sort_interp"):
+                        if FACTS is None:
+                            raise Mismatch("sort_interp without native facts")
+                        src_ar, tgt_ar = split_sort_interp(b["type"], r["target_type"], own_level_interp(
+                            FACTS, params0, set(ind_globals(d)), rs_deps(d) | set(r.get("result_sort_implicit_levels") or [])))
                 elif tb is None:
                     aud.body = own_level_interp(FACTS, params0, set(ind_globals(d)), rs_deps(d) | set(r.get("result_sort_implicit_levels") or [])) if FACTS is not None else None   # explicit and implicit levels
                 else:
@@ -3304,7 +3372,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
                         check_body_levels(FACTS, d, sol0, params0)
                     aud.body = sol0
                 try:
-                    aud.check(b["type"], r["target_type"], ["arity"])
+                    aud.check(src_ar, tgt_ar, ["arity"])
                     self_ref = ("const", t, [{"k": "param", "n": l} for l in want_lp])
                     for c, tc in zip(b["ctors"], r["target_ctors"]):
                         aud.check(c["type"], tc["type"], ["ctor " + c["name"]], [self_ref])
@@ -3904,6 +3972,8 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 tb = template_binding(d)
                 if bool(r.get("template")) != (tb is not None):
                     raise Mismatch("template status differs from the source kernel record")
+                if r.get("sort_interp") and not (tb is None and r.get("plain_levels")):
+                    raise Mismatch("sort_interp reported for a block without plain parameters")
                 if tb is None and r.get("plain_levels"):
                     aud.body = None
                 elif tb is None:
@@ -3921,7 +3991,13 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                         ty_t = ty_t["b"]
                     check_hyp_telescope(tele_rows, leaves, hs, hyp_t)
                     henv = [("hyp", l, len(hs) - 1 - i) for i, l in enumerate(hs)][::-1]
-                    aud.check(b["type"], ty_t, ["arity"], henv)
+                    src_ar = b["type"]
+                    if r.get("sort_interp"):
+                        if FACTS is None:
+                            raise Mismatch("sort_interp without native facts")
+                        src_ar, ty_t = split_sort_interp(b["type"], ty_t, own_level_interp(
+                            FACTS, params0, set(ind_globals(d)), rs_deps(d) | set(r.get("result_sort_implicit_levels") or [])))
+                    aud.check(src_ar, ty_t, ["arity"], henv)
                     self_ref = ("selfp", t, [{"k": "param", "n": l} for l in want_lp], hs) if hs else \
                         ("const", t, [{"k": "param", "n": l} for l in want_lp])
                     for c, tc in zip(b["ctors"], r["target_ctors"]):

@@ -265,13 +265,15 @@ _MAX = {"k": "max", "a": _P("SF.a"), "b": _P("SF.b")}
 _EQ = [("SF.a", "le", "SF.l"), ("SF.l", "le", "SF.a"), ("SF.b", "le", "SF.l"), ("SF.l", "le", "SF.b")]
 OUT["equal_level_generality"] = r5 = {
     "equal": _gen(_EQ, _MAX),
+    # (since stage 3, entry 13: the general form, equal to l at every model of the facts — a = l, b <= l)
     "one_summand_only_below": _gen(_EQ[:3], _MAX),
+    "all_summands_only_below": _gen([_EQ[0], _EQ[2]], _MAX),
     "offset": _gen(_EQ, {"k": "max", "a": _P("SF.a"), "b": {"k": "succ", "l": _P("SF.b")}}),
     "not_own": _gen(_EQ, _MAX, own=("SF.a",)),
 }
-check(r5["equal"] and not (r5["one_summand_only_below"] or r5["offset"] or r5["not_own"]),
-      "refinement 5: max(u_a, u_b) for l accepted only when a, b are equal to l in the source (below only, offset, "
-      f"not own: rejected) {r5}")
+check(r5["equal"] and r5["one_summand_only_below"] and not (r5["all_summands_only_below"] or r5["offset"] or r5["not_own"]),
+      "refinement 5 (general form): max(u_a, u_b) for l accepted only when it equals l at every model of the source facts "
+      f"(a = l, b <= l: accepted; both only below, offset, not own: rejected) {r5}")
 
 (ROOT / "reports" / "statement_only" / "test_carrier.json").write_text(json.dumps(OUT, indent=1) + "\n")
 finish("test-carrier")

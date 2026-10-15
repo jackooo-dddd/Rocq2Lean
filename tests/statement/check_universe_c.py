@@ -5,9 +5,9 @@ on a small Prosa probe (fixtures/stmt/c: opt_eqP, ideal processor_state, JLFP_po
 1. C-1 (R3G for statements): MathComp's opt_eqP (A′: an opaque constant, its body's proof subterms
    statements) keeps its reference levels as parameters (eqtype.51, eqtype.58), so option's canonical
    eqType is generic; no statement row has a
-   defaulted level. The ideal processor_state is refused, never claimed narrowed: before R-CARRIER its
-   translation narrowed Job to level 0; since R-CARRIER (entry 11) it is refused earlier, by the
-   shared-level coherence rule (REFERENCE_COHERENCE, outside R-CARRIER).
+   defaulted level. The ideal processor_state is never claimed narrowed: before R-CARRIER its
+   translation narrowed Job to level 0; from R-CARRIER (entry 11) to rules R and H (entry 12) it was
+   refused; since stage 3 (entry 13) it is claimed with Job's carrier generic.
 2. Negative controls, the target itself narrowed with every self-reported trace removed (no
    `universe_level_defaults`, no residual record, no implicit level): opt_eqP's first obligation
    statement at closed levels {0,0}, {0,1}, {2,2}
@@ -81,9 +81,27 @@ OUT["processor_state"] = {"status": ps["status"], "message": ps.get("message", "
 # R-CARRIER (entry 11) separates the instance's carrier from Job's, but the definition is still refused,
 # now at a reference whose shared level gets an R2F `max` argument (REFERENCE_COHERENCE; RULE_BACKLOG).
 # (Corpus run 1's broad P1 claimed it; the narrowed P1 does not. The check states the actual result.)
-check(ps["status"] == "UNIVERSE_REJECTED" and ("coherence" in ps.get("message", "")
-                                               or "universe specialization refused" in ps.get("message", "")),
-      "ideal processor_state (protected) is refused, never claimed narrowed (since R-CARRIER: the coherence rule)")
+# Stage 3 (entry 13, docs/COHERENCE_READINGS.md §6): with shared levels per occurrence, ProcessorState has
+# plain parameters (its sort read through R2F), so `unit`'s carrier no longer reaches Job's: the definition
+# is claimed, and Job's carrier argument equals eqtype.51 at every model of the source facts (not narrowed).
+import importlib.util  # noqa: E402
+_sp = importlib.util.spec_from_file_location("r2l_audit_c", ROOT / "tools" / "audit.py")
+_A = importlib.util.module_from_spec(_sp)
+_sp.loader.exec_module(_A)
+_facts = json.loads((RUN / "source.ndjson").read_text().splitlines()[4])
+_src = {"u_" + l.replace(".", "_"): l for l in _facts["levels"]}
+_t = ps.get("target_type") or {}
+while _t.get("k") == "forall" and _t["n"].startswith("h_"):
+    _t = _t["b"]
+_job = _t.get("t", {}) if _t.get("k") == "forall" else {}
+_own = {q: _src[q] for q in ps.get("level_params") or [] if q in _src}
+_U51 = "u_mathcomp_boot_eqtype_51"
+_generic = (_job.get("n") == "Rocq.prosa.behavior.job.JobType" and len(_job.get("u", [])) == 4 and
+            _A.equal_at_models(_A.Facts(_facts), {**_own, _U51: "mathcomp.boot.eqtype.51"}, _job["u"][1], {"k": "param", "n": _U51}))
+OUT["processor_state"]["job_binder"] = _job
+check(ps["status"] in ("PENDING_KERNEL_CHECKED", "TRANSLATED_AND_CHECKED") and _generic,
+      "ideal processor_state (protected) is claimed with Job's carrier generic (equal to eqtype.51 at every model), "
+      "never narrowed (since stage 3: shared levels per occurrence)")
 claimed = [r for r in rep["results"] if r["status"] in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED",
                                                          "TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED")]
 stmt_rows = [r for r in claimed if r["status"].startswith("STATEMENT_")]

@@ -1,7 +1,7 @@
 {
  "schema": "rocq2lean-conversion-dependence/1",
- "run": "/home/shunqwang4/research/r2l-run-RH2/runs/st-corpus-RH2",
- "translation_report_sha256": "93a17c3e1071d6edfd19d5c5d45863ccde08ff09ad628ae397a5372796d72a45",
+ "run": "/home/shunqwang4/research/r2l-run-CB3/runs/st-corpus-CB3",
+ "translation_report_sha256": "5e03dc1d71a63266395d5a2d51e2f469dbc73491310e803a0df962465d0b4b33",
  "lowered": [
   "mathcomp.boot.div.edivn_rec",
   "mathcomp.boot.div.modn_rec"
@@ -13,12 +13,12 @@
   {
    "part": 0,
    "exit": 0,
-   "seconds": 8.8
+   "seconds": 8.9
   },
   {
    "part": 1,
    "exit": 0,
-   "seconds": 8.5
+   "seconds": 8.6
   }
  ],
  "by_rocq_verdict": {
@@ -31,7 +31,7 @@
    "rocq": "CONV_NEEDS",
    "reason": "guard deferred",
    "lean": "TRANSLATION_FAILED",
-   "lean_message": "internal error: unknown metavariable `?_uniq.479437`"
+   "lean_message": "internal error: unknown metavariable `?_uniq.903527`"
   }
  ],
  "claimed_although_needing_unfolding": [],

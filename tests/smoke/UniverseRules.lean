@@ -32,6 +32,12 @@ private def u (s : String) : Level := .param (levelParamName s)
 #guard !ok #["b"] "b" (.max (u "b") (.succ (.succ .zero)))  -- Set + 2 ≤ b not entailed
 #guard !ok #["a", "b"] "b" (.max (.succ (u "b")) (u "a"))   -- u_b + 1 is not a reading of b
 #guard !ok #["a", "b", "c"] "c" (.max (u "a") (u "b"))      -- no u_c summand: a specialization of c
+-- Rule R as equality at every model of the facts (`equalAtModels`, docs/COHERENCE_READINGS.md §6)
+#guard equalAtModels F #["a", "b"] (.max (u "b") (u "a")) (u "b")        -- a ≤ b: max (b, a) = b
+#guard !equalAtModels F #["a", "b"] (u "a") (u "b")                      -- a alone is below b
+#guard !equalAtModels F #["b", "c"] (.max (u "b") (u "c")) (u "b")       -- c is above b
+#guard equalAtModels F #["a", "c"] (.max (u "c") (.succ (u "a"))) (u "c") -- a + 1 ≤ c (a < c)
+#guard !equalAtModels F #["a"] (.param `u_foreign) (u "a")               -- a foreign parameter
 #guard !(checkInstantiation F #["a", "b"] "b" (.max (u "b") (u "a")) {} true).toBool
                                                      -- motive-level (R8) parameter: expects u_b + 1
 #guard !(checkInstantiation F #["a", "b"] "b" (.max (u "b") (u "a")) (({} : Std.HashMap String Level).insert "b" (u "a"))).toBool

@@ -197,6 +197,12 @@ structure TCtx where
   the declaration, so Lean's unifier instantiates them at their arguments' levels (`PolC.{0} Z` where
   Rocq uses `PolC@{l} Z` with `Z : Set ≤ Type@{l}`); each argument is checked not to raise (R3). -/
   lowerShared : Bool := false
+  /-- Coherence by unification (docs/COHERENCE_READINGS.md §6): references take a fresh level
+  metavariable per occurrence for a level shared with the declaration, recorded here with its source
+  level; after translation, every one left free is bound back to the declaration's own variable for it
+  (`rebindShared`), so only typing (e.g. a referenced definition's R2F reading `max (u_l, …)`) gives an
+  occurrence another argument. The obligations are then checked as on a plain tier (no lowering). -/
+  sharedFresh : Option (IO.Ref (Array (LMVarId × String))) := none
   /-- `locals[k]` is the Lean value of the `k`-th enclosing source binder, outermost first;
   source `rel i` denotes `locals[locals.size - 1 - i]`. -/
   locals : Array Expr := #[]
@@ -356,6 +362,12 @@ solved from the arguments and checked by R3 (no raising). -/
 def sharedOrFreshLevels (globals : Array String) : TransM (List Level) := do
   if (← read).lowerShared then return ← liftMeta do globals.toList.mapM fun _ => mkFreshLevelMVar
   let own := (← read).globalLevels
+  if let some ref := (← read).sharedFresh then
+    return ← globals.toList.mapM fun l => do
+      let v ← liftMeta mkFreshLevelMVar
+      if own.contains l then
+        if let .mvar m := v then ref.modify (·.push (m, l))
+      pure v
   globals.toList.mapM fun l => match own[l]? with
     | some v => pure v
     | none => liftMeta mkFreshLevelMVar
@@ -2249,9 +2261,10 @@ def transUnfoldEq (body : IR.Term) (self : Expr) : TransM (Option Expr) := do
 def runTrans {α} (genv : GEnv) (x : TransM α) (globalLevels : Std.HashMap String Level := {})
     (polyLevels : Array Level := #[]) (factReduce : Bool := false) (admitLevels : Array String := #[])
     (lowerShared : Bool := false) (hyps : Option (IO.Ref (Array (MVarId × String))) := none)
-    (declKey : String := "") (hypExact : Bool := false) :
+    (declKey : String := "") (hypExact : Bool := false)
+    (sharedFresh : Option (IO.Ref (Array (LMVarId × String))) := none) :
     MetaM (Except TransError α) :=
-  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact }).run
+  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact, sharedFresh }).run
 
 /-- Pending validation: the hypothesis metavariables (in creation order) become binders of the
 declaration, `∀ hs, e` (`lam := false`) or `fun hs => e` (Lean's binding abstraction handles their
@@ -2366,6 +2379,36 @@ partial def levelNF : Level → Option (Nat × List (Name × Nat))
       | none => acc ++ [(p, k)]) p1)
   | _ => none
 
+/-- Coherence by unification: every per-occurrence metavariable of a shared level `l` still free after
+translation is the declaration's own variable for `l` (coherence where typing imposes nothing else). -/
+def rebindShared (ref : IO.Ref (Array (LMVarId × String))) (gl : Std.HashMap String Level) : MetaM Unit := do
+  for (m, l) in ← ref.get do
+    if let .mvar r ← instantiateLevelMVars (.mvar m) then
+      if let some v := gl[l]? then
+        -- (never a cyclic assignment: an own level already solved through this occurrence stays free here,
+        -- and the declaration's ordinary solving decides it)
+        let vi ← instantiateLevelMVars v
+        -- (the own level already solved through this occurrence, `?l := max (…, ?occ)`: the occurrence is
+        -- the parameter `u_l` itself, so `l` denotes `max (…, u_l)`, its R2F reading; never a cycle)
+        if (vi.collectMVars {}).contains r then
+          unless vi == .mvar r do assignLevelMVar r (.param (levelParamName l))
+        else assignLevelMVar r v
+
+/-- Rule R (docs/COHERENCE_READINGS.md): the levels `σ` and `τ` over the own levels `own` (`u_m` read as the
+source level `m`, a constant `c` as `Set + c`) are equal at every model of the source facts: each summand
+of either side lies below some summand of the other (entailed by the native graph). -/
+def equalAtModels (f : IR.UniverseFacts) (own : Array String) (σ τ : Level) : Bool := Id.run do
+  let summ (x : Level) : Option (List (String × Nat)) := do
+    let (c, ps) ← levelNF x.normalize
+    let ps ← ps.mapM fun (p, k) => (own.find? (levelParamName · == p)).map (·, k)
+    some (("Set", c) :: ps)
+  let leq (lhs rhs : List (String × Nat)) : Bool :=
+    lhs.all fun (a, i) => (a == "Set" && i == 0) || rhs.any fun (b, j) =>
+      if i ≤ j then a == b || entails f a b 0 || a == "Set" else entails f a b (i - j)
+  match summ σ, summ τ with
+  | some a, some b => leq a b && leq b a
+  | _, _ => false
+
 /-- Universe obligation (docs/UNIVERSE_TRANSLATION.md, rule R3) for one reference: the target
 universe argument `σ` for the referenced constant's parameter standing for source level `l`. -/
 def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) (σ : Level)
@@ -2379,6 +2422,9 @@ def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) 
   let shift (x : Level) : Level := if cAdmit && !dAdmit then x.succ else x
   if let some s := body[l]? then
     if σ.normalize == (shift s).normalize then return
+    -- Rule R: an argument equal to the solution (or R2F image) at every model of the source facts (its
+    -- summands are R3-checked below, as every argument's)
+    if !cAdmit && !dAdmit && equalAtModels f own σ s then pure () else
     -- R3↓: as for a shared level, a lower argument (checked below not to raise)
     unless allowLower do
       throw s!"coherence: source level {l} is a proof-local level of the referring declaration, solved as {s}; the argument must be the same, not {σ}"
@@ -2389,9 +2435,9 @@ def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) 
     -- below (`m + k ≤ l`, `Set + c ≤ l` entailed) equals `l` at every model of the source facts: it is a
     -- referenced declaration's R2F reading of `l`, not a specialization. Not for motive-level (R8)
     -- parameters, where the argument is `u_l + 1`.
-    let reading := !cAdmit && !dAdmit && (match levelNF σ.normalize with
-      | some (_, ps) => ps.any (fun (p, k) => p == levelParamName l && k == 0)
-      | none => false)
+    -- (general form, `equalAtModels`: the argument equals `l` at every model of the source facts, e.g. a
+    -- summand `u_m` of a source-equal level `m`)
+    let reading := !cAdmit && !dAdmit && equalAtModels f own σ (.param (levelParamName l))
     if reading then pure () else
     -- R3↓ (cumulativity tier only, reported per declaration): a lower argument, checked below not to
     -- raise (Set + c ≤ l and m + k ≤ l entailed): Rocq used the reference at l with arguments of

@@ -65,7 +65,9 @@ All three parts are derived mechanically from the source and from typing, withou
      Such an argument is a referenced declaration's R2F reading of equal levels, not a specialization:
      the source has one level there. Found at `HB_unnamed_mixin_109`'s obligation 13 (`SubType`'s 577
      at `max (u1053, u959)`, with 1053 = 959 = 577 in the source). Translator (`freeLevelRef`) and
-     audit (`check_statement_generality`) implement it independently.
+     audit (`check_statement_generality`) implement it independently. Since entry 13 it holds in the
+     general form of rule R: an argument equal to `l` at every model of the source facts (for example
+     `max (u_a, u_b)` with `a = l` and `b ≤ l`) is accepted (docs/COHERENCE_READINGS.md §6).
 
 **P3: a proof-local level never represents a class.** In statement mode, only own *type* levels represent
 the class of reference arguments they belong to. A proof-local level is solved and fact-checked by R2S
