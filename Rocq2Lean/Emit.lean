@@ -2012,6 +2012,10 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
            message := if rt then s!"resource limit per declaration: {msg.take 300}" else s!"internal error: {msg.take 600}" }, none)
     let mut r := r
     r := { r with timeMs := (← IO.monoMsNow) - tDecl, tierTimes := ← match genv.tierLog with | some ref => ref.get | none => pure #[] }
+    -- (diagnostics: `R2L_PROGRESS=<file>` appends each finished declaration, so a long run can be followed;
+    -- not part of any report)
+    if let some f := (← IO.getEnv "R2L_PROGRESS") then
+      IO.FS.withFile f .append fun h => h.putStrLn s!"{r.timeMs}\t{r.status}\t{r.source}"
     match asm? with
     | none => if let some g := genv? then genv := g
     | some a =>
