@@ -2343,7 +2343,12 @@ where
           -- changes (the reason the pass is not used in place)
           -- (not for a declaration with phantom checks: Q-a lowers those, and the constant discovery pass recursed
           -- without bound on HB's `BaseAddMagma_isAddMagma.phant_Build`, aborting a whole run — S15)
-          if !r.accepted && !isStmt && genv.stmtMode && gone.isEmpty && (retry r.status || r.status == "INTERFACE_REJECTED") then
+          -- (speed, entry 16: only when a failure shows the symptom it addresses, a level defaulted to 0 — no claim
+          -- that existed before the tier depends on it)
+          let msgs := r.message ++ ((lastTier.map (·.message)).getD "")
+          let zeroDefault := (msgs.splitOn "(some 0)").length > 1 || (msgs.splitOn "argument is 0").length > 1
+          if !r.accepted && !isStmt && genv.stmtMode && gone.isEmpty && zeroDefault &&
+              (retry r.status || r.status == "INTERFACE_REJECTED" || r.status == "TRANSLATION_FAILED") then
             let sD ← saveState
             let dsc ← budgeted c.name "constant" <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
               (discover := true)
