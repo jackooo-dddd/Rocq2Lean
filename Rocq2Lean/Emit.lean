@@ -656,11 +656,10 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | none => pure val
       | some cnt => lambdaTelescope val fun xs b => do
         let some cod ← (try some <$> instantiateForall ty xs catch _ => pure none) | return val
-        let bt ← inferType b
-        if ← isDefEq bt cod then return val
-        match ← liftCoerce b bt cod with
-        | some b' => cnt.modify (· + 1); mkLambdaFVars xs b'
-        | none => return val
+        let n0 ← cnt.get
+        let b' ← liftCoerceValue b cod cnt
+        if (← cnt.get) == n0 then return val
+        mkLambdaFVars xs b'
     let coercions ← match coerceRef? with | some r => r.get | none => pure 0
     let (val, propLiftDepth) ← if !propLift then pure (val, none) else do
       let r? ← forallTelescope ty fun xs cod => do
@@ -2220,14 +2219,18 @@ where
                   break
           -- rule P (approved): a proposition used at a type, lifted by `PULift` (last tier; only a declaration
           -- whose value is a proposition at a declared `Type`, refused otherwise at once)
-          let castFail := r.status == "TRANSLATION_FAILED" && r.message.startsWith "default cast annotation is not convertible"
+          let castFail := r.status == "TRANSLATION_FAILED" && (r.message.startsWith "default cast annotation is not convertible" ||
+            r.message.startsWith "scrutinee type is not an application of")
           if !r.accepted && c0.bodyState != "opaque_interface" && (retry r.status || castFail) then
             -- (with the ladder's variants: R2F-c, cumulativity, R3↓, per-occurrence coherence)
             for (it, cu, lo, un) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
                                      (false, false, true, false), (false, false, false, true), (true, false, false, true), (false, true, true, false)] do
               let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
                 (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (unify := un) (propLift := true)
-              if r'.status == "UNSUPPORTED_FEATURE" then break
+              -- (no lift to insert, or a translation failure the universe variants cannot change)
+              if r'.status == "UNSUPPORTED_FEATURE" || r'.status == "TRANSLATION_FAILED" then
+                if r'.status == "TRANSLATION_FAILED" then lastTier := some r'
+                break
               lastTier := some r'
               if r'.accepted then
                 r := r'

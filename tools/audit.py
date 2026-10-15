@@ -520,6 +520,14 @@ class Auditor:
             inner = peel_lift_coercion(e)
             if inner is not None:
                 return self.check(s, inner, path + ["lift"], env)
+            # (η: a source function used at a function type differing by lifts is η-expanded, its
+            # arguments and result coerced; the head is compared under the n extra binders, so it cannot
+            # mention them)
+            if e["k"] == "lam" and k not in ("lam", "cast"):
+                eta = peel_eta(e)
+                if eta is not None:
+                    head, n = eta
+                    return self.check(s, head, path + ["eta"], Auditor.shift(env, n))
         if k == "cast":
             # the cast's term as is; otherwise a cast repair around it (a source convoy match has the
             # same outer shape as a repair, so the direct comparison comes first)
@@ -1804,6 +1812,27 @@ def peel_lift_coercion(e):
     if level_nf(h["u"][1]) != level_nf({"k": "zero"}):
         raise Mismatch(f"rule P: {h['n']} at a non-Prop universe {h['u'][1]}")
     return e["a"]
+
+
+def peel_eta(e):
+    """`fun x₀ … xₙ₋₁ => c (f a… c x₀ … c xₙ₋₁)` (c: optional lift coercions) -> (f a…, n); otherwise None."""
+    n, b = 0, e
+    while b.get("k") == "lam":
+        n, b = n + 1, b["b"]
+    while (x := peel_lift_coercion(b)) is not None:
+        b = x
+    args = []
+    while b.get("k") == "app" and len(args) < n:
+        args.append(b["a"])
+        b = b["f"]
+    if len(args) != n:
+        return None
+    for i, a in enumerate(args):               # args[0] is the last argument, x_{n-1} = bvar 0
+        while (x := peel_lift_coercion(a)) is not None:
+            a = x
+        if a != {"k": "bvar", "i": i}:
+            return None
+    return b, n
 
 
 def strip_prop_lift(r, tv, src_type, body):

@@ -1349,6 +1349,25 @@ def coerceArgs (f : Expr) (args : Array Expr) (cnt : IO.Ref Nat) : MetaM (Array 
     fty := b.instantiate1 a'
   return out
 
+/-- Rule P, term level: `b` used at `cod`. Directly (`liftCoerce`), or, for a function at a function type
+whose domains or codomain differ by lifts, η-expanded with its arguments and result coerced
+(`fun xs => PULift.up (o (PULift.down x) …)`); unchanged when nothing needs a coercion. -/
+partial def liftCoerceValue (b cod : Expr) (cnt : IO.Ref Nat) : MetaM Expr := do
+  let bt ← inferType b
+  if ← isDefEq bt cod then return b
+  if let some c ← liftCoerce b bt cod then
+    cnt.modify (· + 1); return c
+  let cod' ← whnf cod
+  unless cod'.isForall do return b
+  let n0 ← cnt.get
+  let r ← forallTelescope cod' fun ys cod2 => do
+    let args ← coerceArgs b ys cnt
+    unless args.size == ys.size do return none
+    let b2 ← liftCoerceValue (mkAppN b args) cod2 cnt
+    if (← cnt.get) == n0 then return none
+    return some (← mkLambdaFVars ys b2)
+  return r.getD b
+
 mutual
 
 partial def trans (t : IR.Term) : TransM Expr := do
@@ -1466,6 +1485,18 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
     pure (hs ++ params)
   let npar := npar + nh
   let scrut' ← withPath "scrutinee" (trans scrut)
+  -- rule P, term level: a scrutinee of a lifted type (`h : Rnat a b` matched as the equation it lifts)
+  -- is its proof, `PULift.down h`
+  let scrut' ← match (← read).propCoerce with
+    | some cnt => liftMeta do
+      let t ← whnf (← inferType scrut')
+      match t.getAppFn with
+      | .const ``PULift [r, u] =>
+        if t.getAppNumArgs == 1 && u.isZero then
+          cnt.modify (· + 1); pure (mkApp2 (mkConst ``PULift.down [r, .zero]) t.appArg! scrut')
+        else pure scrut'
+      | _ => pure scrut'
+    | none => pure scrut'
   -- M6 ι-generalized fix lowering: a match on the decreasing argument, which is the constructor
   -- application C_k fields in this minor premise, is its branch k (Rocq's and Lean's ι-rule)
   if let some (_, k, fields) := (← read).iota.find? (·.1 == scrut') then
@@ -1576,6 +1607,18 @@ partial def transCaseNU (tgt : IndTarget) (ind : IndRef) (npar : Nat) (puinst : 
   let params ← (pparams.extract 0 nu).mapIdxM fun j a => withPath s!"param{j}" (trans a)
   let u ← withPath s!"param{nu}" (trans pparams[nu]!)
   let scrut' ← withPath "scrutinee" (trans scrut)
+  -- rule P, term level: a scrutinee of a lifted type (`h : Rnat a b` matched as the equation it lifts)
+  -- is its proof, `PULift.down h`
+  let scrut' ← match (← read).propCoerce with
+    | some cnt => liftMeta do
+      let t ← whnf (← inferType scrut')
+      match t.getAppFn with
+      | .const ``PULift [r, u] =>
+        if t.getAppNumArgs == 1 && u.isZero then
+          cnt.modify (· + 1); pure (mkApp2 (mkConst ``PULift.down [r, .zero]) t.appArg! scrut')
+        else pure scrut'
+      | _ => pure scrut'
+    | none => pure scrut'
   let sty ← liftMeta do whnf (← instLevelMVars (← inferType scrut'))
   unless sty.getAppFn.isConstOf iname && sty.getAppNumArgs == nu + k + nridx do
     failT "TRANSLATION_FAILED" s!"scrutinee type is not an application of {iname}"
