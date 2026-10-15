@@ -405,11 +405,14 @@ def collapseHyps (ty val : Expr) (names : Array String) : MetaM (Expr × Expr ×
     let mut keep : Array Nat := #[]
     let mut dupOf : Array (Expr × Expr) := #[]
     for j in [0:xs.size] do
-      let tj := (← instantiateMVars (← inferType xs[j]!)).replaceFVars (dupOf.map (·.1)) (dupOf.map (·.2))
+      -- (types compared with every universe level normalized: `max a b` and `max b a` are one type, as for
+      -- the audit's copy of this check)
+      let normLv (e : Expr) : Expr := e.replaceLevel fun l => some l.normalize
+      let tj := normLv ((← instantiateMVars (← inferType xs[j]!)).replaceFVars (dupOf.map (·.1)) (dupOf.map (·.2)))
       let mut canon : Option Nat := none
       for i in keep do
         if canon.isNone && names[i]! == names[j]! then
-          if (← instantiateMVars (← inferType xs[i]!)) == tj then canon := some i
+          if normLv (← instantiateMVars (← inferType xs[i]!)) == tj then canon := some i
       match canon with
       | some i => dupOf := dupOf.push (xs[j]!, xs[i]!)
       | none => keep := keep.push j
