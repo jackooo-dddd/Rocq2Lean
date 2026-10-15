@@ -33,7 +33,7 @@
  },
  "processor_state": {
   "status": "UNIVERSE_REJECTED",
-  "message": "reference to Rocq.mathcomp.boot.eqtype.HB_unnamed_factory_16__rocq2lean_obligation_1.statement: coherence: source level mathcomp.boot.eqtype.58 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.58, not max\n(max\n (max (max u_mathcomp_boot_eqtype_32 1) u_mathcomp_boot_eqtype_55)\n (max u_mathcomp_boot_eqtype_32 u_mathcomp_boot_eqtype_55)\n 1)\n1 [last tier: UNIVER"
+  "message": "protected public declaration: universe specialization refused (a quantification range would be narrowed): Rocq.prosa.behavior.job.JobType: the level of u_mathcomp_boot_eqtype_51 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_mathcomp_boot_eqtype_51 [last tier: UNIVERSE_REJECTED: protected public declaration: universe speci"
  },
  "policies": {
   "JLFP_policy": {

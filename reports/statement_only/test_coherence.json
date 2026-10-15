@@ -1,0 +1,145 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   0,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 119,
+   "DEFINITION_AUDITED_PENDING": 33,
+   "STATEMENT_AUDITED": 29,
+   "STATEMENT_AUDITED_PENDING": 15
+  }
+ },
+ "rows": {
+  "SF.Coh.sub_pickle_refl": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "universe_level_defaults": 0,
+   "universe_lowered": false
+  },
+  "SF.Coh.ord_pickle_refl": {
+   "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+   "universe_level_defaults": 0,
+   "universe_lowered": false
+  },
+  "SF.Coh.task_ord_affinity": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "universe_level_defaults": 0,
+   "universe_lowered": false
+  },
+  "mathcomp.boot.choice.eqtype_sub_type__canonical__choice_Countable": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "universe_level_defaults": 0,
+   "universe_lowered": true
+  },
+  "mathcomp.boot.fintype.HB_unnamed_factory_66": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "universe_level_defaults": 0,
+   "universe_lowered": false
+  },
+  "mathcomp.boot.fintype.HB_unnamed_factory_66__rocq2lean_obligation_1": {
+   "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+   "universe_level_defaults": 0,
+   "universe_lowered": false
+  }
+ },
+ "reading_references": [
+  "Rocq.mathcomp.boot.choice.Countable.axioms_.Class",
+  "Rocq.mathcomp.boot.choice.Countable.type",
+  "Rocq.mathcomp.boot.choice.Countable.type.Pack"
+ ],
+ "negative": {
+  "raising-summand": {
+   "kernel_all": false,
+   "forged_row_kernel": "REJECTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "mathcomp.boot.choice.eqtype_sub_type__canonical__choice_Countable: Rocq.mathcomp.boot.choice.Countable.type: mathcomp.boot.choice.1007 + 0 <= mathcomp.boot.choice.299 not entailed by the source universe graph"
+   ]
+  },
+  "no-u_l": {
+   "kernel_all": false,
+   "forged_row_kernel": "REJECTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "mathcomp.boot.choice.eqtype_sub_type__canonical__choice_Countable: Rocq.mathcomp.boot.choice.Countable.type: source level mathcomp.boot.choice.299 is shared, argument must be u_mathcomp_boot_choice_299"
+   ]
+  },
+  "hyp-raising": {
+   "kernel_all": false,
+   "forged_row_kernel": "REJECTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Coh.task_ord_affinity: Rocq.mathcomp.boot.eqtype.inj_eqAxiom__rocq2lean_obligation_2.statement: mathcomp.boot.eqtype.51 + 1 <= mathcomp.boot.eqtype.51 not entailed by the source universe graph"
+   ]
+  }
+ },
+ "unit": {
+  "identity": true,
+  "reading": true,
+  "reading_reordered": true,
+  "reading_with_set1": true,
+  "raising_summand": false,
+  "offset_summand": false,
+  "constant_above": false,
+  "u_l_offset": false,
+  "no_u_l": false,
+  "motive_level": false,
+  "proof_local": false
+ },
+ "task_ord_affinity": {
+  "status": "PENDING_KERNEL_CHECKED",
+  "universe_lowered": false,
+  "binder_type": {
+   "u": [
+    {
+     "n": "u_mathcomp_boot_eqtype_32",
+     "k": "param"
+    },
+    {
+     "n": "u_mathcomp_boot_eqtype_51",
+     "k": "param"
+    },
+    {
+     "n": "u_mathcomp_boot_eqtype_55",
+     "k": "param"
+    },
+    {
+     "n": "u_mathcomp_boot_eqtype_58",
+     "k": "param"
+    }
+   ],
+   "n": "Rocq.mathcomp.boot.eqtype.Equality.type",
+   "k": "const"
+  },
+  "level_params": [
+   "u_mathcomp_boot_choice_1007",
+   "u_mathcomp_boot_choice_299",
+   "u_mathcomp_boot_choice_339",
+   "u_mathcomp_boot_choice_342",
+   "u_mathcomp_boot_choice_938",
+   "u_mathcomp_boot_choice_965",
+   "u_mathcomp_boot_choice_968",
+   "u_mathcomp_boot_eqtype_32",
+   "u_mathcomp_boot_eqtype_51",
+   "u_mathcomp_boot_eqtype_533",
+   "u_mathcomp_boot_eqtype_55",
+   "u_mathcomp_boot_eqtype_58",
+   "u_mathcomp_boot_eqtype_583",
+   "u_mathcomp_boot_eqtype_588"
+  ]
+ },
+ "hypotheses_at_carrier_0": [
+  "Rocq.mathcomp.boot.eqtype.inj_eqAxiom__rocq2lean_obligation_1.statement",
+  "Rocq.mathcomp.boot.eqtype.inj_eqAxiom__rocq2lean_obligation_2.statement"
+ ],
+ "unit_h": {
+  "lower_at_statement": true,
+  "set_at_statement": true,
+  "lower_elsewhere": false,
+  "raising_at_statement": false,
+  "offset_at_statement": false
+ }
+}

@@ -1309,3 +1309,166 @@ ideal `processor_state` and `task_affinity` among them.
   levels), which is a further representation decision.
 * A second variant measured on subsets (H: copy semantics at prerequisite-statement hypotheses) gained
   nothing on its own.
+
+## Entry 12 — Rules R and H: shared-level coherence modulo an R2F reading; prerequisite instances (2026-10-15)
+
+Request: merge case B and push; adopt rule R (entry 11 §9) with an independent audit, negative
+controls and full regression testing; investigate and fix the `Affinity.task_affinity` regression.
+Then find the next blocker family by measurement. Branch `rules-coherence`, from `main` = `74ca20b`
+(case B, merged and pushed at the start of this round).
+
+### (1) What was changed
+
+* **Rule R** (`b915360`, `docs/COHERENCE_READINGS.md` §1–4). At a reference, an argument for a shared
+  level `l` may be `max (u_l, s₁, …)` when every other summand passes R3 (no raising). This is not
+  allowed for motive-level (R8) or proof-local levels.
+  * Translator: `checkInstantiation`. Audit: `check_universe_args`.
+  * It is always on; the experiment's environment flags were removed.
+* **Rule H** (`892699a`, §5). At a reference to a proof task's statement (the type of a generated
+  prerequisite hypothesis), an argument for a shared level may lie below it. This is R3↓, on every
+  tier.
+  * Translator: `GEnv.leafStmtTargets`, filled where `leafStmt` is registered.
+  * Audit: `HYP_STATEMENTS`, derived from the source's proof tasks (`is_leaf` plus the generated
+    statements) under both target namings.
+* **Task rendering** (`2e46cbf`): the heartbeat limit applies per task. Before, it applied to the
+  whole `#rocq2lean_render_tasks` command, and 3,186 tasks exceeded it in run RH. Translation and
+  checks are unchanged.
+
+### (2) The `task_affinity` regression (diagnosis and fix)
+
+`Affinity.task_affinity (T : eqType) (n : nat) := T -> affinity n` shares `eqtype.51` with its
+binder `T`.
+* `affinity`'s prerequisite hypothesis `inj_eqAxiom`'s obligation 1 is used at `nat_eqType`, whose
+  carrier is 0. `task_affinity` inherits that hypothesis at `…, 0, …`, and coherence refused the plain
+  tiers.
+* On the R3↓ tier, `T`'s carrier was solved to 0: a narrowing, refused for this protected definition.
+* Under R the dependency chain became general, which exposed this; before R it was specialized
+  enough to hide it.
+* H accepts the hypothesis instance (R3-checked). The fixture `task_ord_affinity` reproduces the
+  shape: without H it is accepted only on R3↓ with `T : Equality.type.{…, 0, …}`; with H it is on a
+  plain tier with `u_51`.
+
+### (3) Independent checks and controls
+
+* `scripts/test-coherence` (16 checks; fixture `fixtures/stmt/coh`: real exporter, real MathComp
+  declarations, synthetic statements):
+  * Positive: the `choice` sub-type Countable instance has no defaulted level, and its references
+    read 299 as `max (u_299, u_577)`. `factory_66`, its obligation 1, `ord_pickle_refl` and
+    `sub_pickle_refl` are claimed. Before R (checked at `74ca20b`), the obligation was refused and
+    the others blocked.
+  * Negative forged rows, audit-rejected (the kernel rejected the forged rows too):
+    * `max (u_299, u_1007)`, which raises;
+    * `u_577` for the shared 299 on a plain tier, which specializes.
+  * Rule H: `task_ord_affinity` as above. Its hypotheses forged at `u_51 + 1` (raising) are
+    audit-rejected.
+  * Unit controls on the audit:
+    * R: readings accepted; rejected are a raising summand, an offset, `Set + 2`, `u_l + 1`, no `u_l`
+      summand, a motive level and a proof-local level;
+    * H: a lower argument is accepted at a statement only; raising and offset arguments are rejected
+      there.
+* `tests/smoke/UniverseRules.lean`: the same R cases as `#guard`s on the translator's
+  `checkInstantiation`.
+
+### (4) Coverage — FULL CORPUS, same 4,474 protected roots
+
+| Run | Impl | Accepted | Audited Pending | Blocked | Direct Failure |
+|---|---|---|---|---|---|
+| CB3 (entry 11) | `ee4e779` | 673 | 2,260 | 1,494 | 47 |
+| RR (R) | `b915360` | 673 | 2,834 | 933 | 34 |
+| RH (R + H) | `892699a` | 673 | 2,983 | 785 | 33 |
+| **RH2 (R + H + task fix)** | `2e46cbf` | **673** | **2,983** | **785** | **33** |
+
+All four runs were validated: consumer, audit, source instances (R2B-P), `CORPUS_PROVENANCE_BOUND`
+and conversion dependence. RH's task rendering failed, which is the fix in `2e46cbf`; RH2 renders
+3,156 tasks.
+
+**Protected transitions:**
+
+| Transition | Newly supported | Classic | Genuine regressions | Moved between unclaimed categories |
+|---|---|---|---|---|
+| CB3 → RH2 | 723 | 702 | 0 | 2 |
+| CB3 → RR | 575 | — | 1 (`task_affinity`) | — |
+| RR → RH2 | 149 | 149 | 0 | — |
+
+**All rows (10,966):**
+
+| Transition | Claimed gained | Claimed lost |
+|---|---|---|
+| CB3 → RH2 | 737 | 0 |
+| CB3 → RR | 589 | 1 |
+| RR → RH2 | 149 | 0 |
+
+Old false acceptances: 0.
+
+### (5) Remaining blockers (RH2 backlog)
+
+818 protected roots are unclaimed (756 modern, 62 Classic). REFERENCE_COHERENCE no longer occurs.
+
+| Family | Members | Roots affected | Roots blocked by it alone |
+|---|---|---|---|
+| PROTECTED_RANGE_NARROWED | 11 | 623 | 597 |
+| SOLUTION_FACT_VIOLATED | 312 | 139 | 11 |
+| PROP_TYPE_CUMULATIVITY | 10 | 82 | 1 |
+
+Measured on the dependency frontier of the unclaimed protected roots, PROTECTED_RANGE_NARROWED has
+two mechanisms:
+
+* **(a)** `JobType`'s carrier 51 pinned to 0: the processor-state instances (`ideal.processor_state`
+  and 5 more), plus `schedule_up_to`. 280 roots have `processor_state` on their frontier.
+  * `ProcessorState`'s parameter `Job` and field `Core` get the R2F reading `max (u51, u101)`, because
+    51 and 101 are mutually equal in the source graph.
+  * A concrete `Core := unit` therefore pins `Job`'s carrier.
+* **(b)** `JobType`'s level 32 pinned to 0: `JobReady`, `SystemEvolutions`, `concrete_job`. 332 roots
+  have `JobReady` on their frontier.
+  * Upstream, the protected `schedule` was accepted with its result-sort level 22 *solved* to
+    `max (u51, u101)`. The source has only `51 ≤ 22`, so this ties `PState`'s `State` universe to the
+    job carrier.
+  * Cause: coherence by construction makes the declared sort `?22` and `ProcessorState`'s reading
+    `max (?22, ?51, ?101)` one cyclic equation, which the bounded solver settles at `max (51, 101)`.
+  * Both checks (R2S facts and generality) accept this solution, because typing forced it under the
+    single-variable representation.
+
+Stage 3 (per-occurrence shared levels) is in progress on branch `rules-occurrence`. It is not
+adopted and is measured separately (entry 13).
+
+### (6) Process corrections in this round
+
+* The frozen suite worktree `r2l-B-test` held a copied fixture (from the pre-change baseline check
+  of `fixtures/stmt/coh` at `74ca20b`) that blocked the checkout. That first suite job was stopped
+  and the tree cleaned before the recorded runs. Baselines are now taken only in throwaway
+  directories.
+* A `pkill -f` pattern matched the shell running it. Jobs are now stopped by PID.
+* Pushes over SSH stall in the machine's proxy (fake-IP TUN routing of `github.com`); the push
+  output is authoritative. Memory note `github-push-proxy`.
+
+### (7) Regressions and validation
+
+* Frozen worktree `r2l-B-test`:
+
+  | Commit | Statement suites | `test-all` |
+  |---|---|---|
+  | `b915360` | all 12 pass (`test-coherence` 12) | 18/18 |
+  | `892699a` | all 12 pass (`test-coherence` 16) | 18/18 |
+  | `2e46cbf` | all 12 pass | 18/18 |
+
+  The statement suites are `test-statement` 30, `test-termination` 22, `test-assembly` 34,
+  `test-opaque` 16, `test-universe-c` 22, `test-universe-r2` 9, `test-multi-instance` 8,
+  `test-level-split` 18, `test-result-sort` 15, `test-carrier` 20, `test-coherence` and
+  `test-provenance` 5. The reports in `reports/statement_only/test_*.json` and
+  `reports/test_all.json` are from the `2e46cbf` run.
+* Corpus as in (4). No protected regression in RH or RH2.
+
+### (8) Commands and evidence
+
+Corpus runs in frozen worktrees `r2l-run-RR`, `r2l-run-RH` and `r2l-run-RH2`, as in entry 11
+(`statement_run.py merge / translate / check / instances / tasks`, `conversion_deps.py`,
+`coverage_delta.py snapshot`, `statement_provenance.py manifest / check`, `c1_transitions.py`,
+`rule_backlog.py`).
+
+Evidence:
+* `coverage/{RR,RH,RH2}.json`;
+* `coverage/transitions-CB3-to-{RR,RH2}.json` and `coverage/transitions-RR-to-RH2.json`;
+* `RULE_BACKLOG.{md,json}` and `PROOF_TASKS.jsonl` (RH2);
+* `provenance/CORPUS_MANIFEST.json` (RH2; `-CB3` kept);
+* `termination/CONVERSION_DEPENDENCE{,-RH2}.json`;
+* `test_coherence.json` and the other frozen-suite reports.

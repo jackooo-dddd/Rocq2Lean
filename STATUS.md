@@ -1,7 +1,22 @@
 # Status
 
-**2026-10-15 — R-CARRIER, case B Option 2 (branch `rules-carrier`, experimental; committed locally,
-not merged or pushed, pending review).**
+**2026-10-15 — Rules R and H (branch `rules-coherence`; merged into `main` after validation).**
+* **Rule R** (`docs/COHERENCE_READINGS.md`): shared-level coherence modulo an R2F reading. An argument
+  `max (u_l, s…)` whose other summands pass R3 equals `l` at every model of the source facts.
+* **Rule H** (same document, §5): R3↓ at proof tasks' statements, the types of generated prerequisite
+  hypotheses, on every tier. It fixes R's one regression (Classic `Affinity.task_affinity`).
+* **Corpus** at `2e46cbf` (run `r2l-run-RH2`; consumer, audit, source instances, provenance and task
+  rendering OK): **673 Accepted / 2,983 Audited Pending / 785 Blocked / 33 Direct Failure** (from CB3's
+  673 / 2,260 / 1,494 / 47).
+  * 723 protected roots newly supported (702 Classic); 0 protected regressions;
+  * all rows: +737 claimed, 0 lost.
+  * R alone (run RR, `b915360`): 673 / 2,834 / 933 / 34 (+575, one regression); H adds +149.
+* REFERENCE_COHERENCE is gone. The largest remaining family is PROTECTED_RANGE_NARROWED: 11 members,
+  597 roots blocked by it alone.
+* ITERATION_LOG entry 12.
+
+**2026-10-15 — R-CARRIER, case B Option 2 (branch `rules-carrier`; merged into `main` and pushed on
+2026-10-15).**
 * Per-operand carrier universe levels: P1 decoupled parameter carriers, P2 implicit operand copies
   `l__c<k>`, P3 proof-local levels never represent a class, and refinements 1–5
   (`docs/CARRIER_LEVELS.md`).
