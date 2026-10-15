@@ -115,6 +115,16 @@ structure DeclResult where
   /-- Coherence by unification for blocks (docs/COHERENCE_READINGS.md §6): plain parameters, with the
   arity's final sort read through the R2F interpretation. -/
   sortInterp : Bool := false
+  /-- Rule P: the number of binders under which the value is lifted by `PULift` (none: no lift). -/
+  propLift : Option Nat := none
+  /-- Rule P, term level: the number of `PULift.up`/`PULift.down` coercions inserted. -/
+  propLiftCoercions : Nat := 0
+  /-- Rule P, statements: the head-δ chain δβ-inlined to state a lifted codomain as its proposition. -/
+  propLiftUnfold : Array String := #[]
+  /-- Rule T (docs/COINDUCTIVE.md): a non-recursive coinductive block translated as an inductive. -/
+  coinductiveAsInductive : Bool := false
+  /-- Rule Q-a: the levels that occurred only as sort arguments of phantom checks (lowered per occurrence). -/
+  phantomLowered : Array String := #[]
   /-- Timing (entry 14): the declaration's translation time and its attempts (tier, ms, status). -/
   timeMs : Nat := 0
   tierTimes : Array (String × Nat × String) := #[]
@@ -397,11 +407,14 @@ def collapseHyps (ty val : Expr) (names : Array String) : MetaM (Expr × Expr ×
     let mut keep : Array Nat := #[]
     let mut dupOf : Array (Expr × Expr) := #[]
     for j in [0:xs.size] do
-      let tj := (← instantiateMVars (← inferType xs[j]!)).replaceFVars (dupOf.map (·.1)) (dupOf.map (·.2))
+      -- (types compared with every universe level normalized: `max a b` and `max b a` are one type, as for
+      -- the audit's copy of this check)
+      let normLv (e : Expr) : Expr := e.replaceLevel fun l => some l.normalize
+      let tj := normLv ((← instantiateMVars (← inferType xs[j]!)).replaceFVars (dupOf.map (·.1)) (dupOf.map (·.2)))
       let mut canon : Option Nat := none
       for i in keep do
         if canon.isNone && names[i]! == names[j]! then
-          if (← instantiateMVars (← inferType xs[i]!)) == tj then canon := some i
+          if normLv (← instantiateMVars (← inferType xs[i]!)) == tj then canon := some i
       match canon with
       | some i => dupOf := dupOf.push (xs[j]!, xs[i]!)
       | none => keep := keep.push j
@@ -544,7 +557,8 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
     (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
-    (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) :
+    (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) (propLift : Bool := false)
+    (phantom : Bool := false) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
@@ -623,14 +637,15 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       ownMVars := ownMVars.push (m, v)
     -- coherence by unification (docs/COHERENCE_READINGS.md §6): per-occurrence shared levels
     let sharedRef? : Option (IO.Ref (Array (LMVarId × String))) ← if unify then some <$> IO.mkRef #[] else pure none
-    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? with
+    let coerceRef? : Option (IO.Ref Nat) ← if propLift then some <$> IO.mkRef 0 else pure none
+    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? with
+    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom with
       | .ok e => pure e
       | .error e =>
         if e.msg.startsWith "termination obligation required" && !wfTerm && genv.stmtMode then
-          return ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify)
+          return ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify) (propLift := propLift) (phantom := phantom)
         return fromTransError base e
     -- pending validation: the hypotheses become the artifact's leading binders *before* universe
     -- solving, so that the levels of their types (references to prerequisite statements) are
@@ -638,6 +653,36 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let hyps ← match hypsRef? with | some ref => ref.get | none => pure #[]
     let (ty, val) ← if hyps.isEmpty then pure (ty, val) else
       pure (← abstractHyps hyps ty false, ← abstractHyps hyps val true)
+    -- rule P (docs/PROP_LIFT.md, approved 2026-10-15): a definition declared at `∀ Γ, Type@{l}`
+    -- whose value is a proposition (Rocq's Prop ≤ Type cumulativity) has its value lifted,
+    -- `fun Γ => PULift.{u_l+1, 0} P : Type u_l`; reported as the number of non-hypothesis binders.
+    -- Term level: the `PULift.up`/`down` inserted during translation (`liftCoerce`), counted.
+    -- (the value against the declared type, under the value's own λs: Rocq's conversion of the body with
+    -- the type, e.g. `fun b p h => o b p h` declared at `… → Rnat b (pred_N p)` with `o`'s statement the
+    -- proposition; `o b p h` becomes `PULift.up (o b p h)`)
+    let val ← match coerceRef? with
+      | none => pure val
+      | some cnt => lambdaTelescope val fun xs b => do
+        let some cod ← (try some <$> instantiateForall ty xs catch _ => pure none) | return val
+        let n0 ← cnt.get
+        let b' ← liftCoerceValue b cod cnt genv.liftTargets
+        if (← cnt.get) == n0 then return val
+        mkLambdaFVars xs b'
+    let coercions ← match coerceRef? with | some r => r.get | none => pure 0
+    let (val, propLiftDepth) ← if !propLift then pure (val, none) else do
+      let r? ← forallTelescope ty fun xs cod => do
+        let cod ← whnf cod
+        let .sort sl := cod | return none
+        if sl.isZero then return none
+        let b := (mkAppN val xs).headBeta
+        unless (← whnf (← inferType b)).isProp do return none
+        return some (← mkLambdaFVars xs (mkApp (mkConst ``PULift [sl, .zero]) b), xs.size - hyps.size)
+      match r? with
+      | some (v, k) => pure (v, some k)
+      | none =>
+        if coercions == 0 then
+          return { base with status := "UNSUPPORTED_FEATURE", message := "rule P: no proposition used at a type" }
+        pure (val, none)
     -- an opaque-data interface `Rocq.<name>.type := ⟦T⟧` is declared at the sort Lean infers for ⟦T⟧:
     -- Rocq's native sort of T is an upper bound that cumulativity absorbs and Lean cannot; the
     -- interface is T itself, not its sort (the audit checks the type is a sort, the value is T)
@@ -1144,7 +1189,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
                                       synthetic := synth,
                                       pendingHyps := hyps.map (·.2), targetType := ty, targetValue := val,
                                       levelParams := lparams, paramLevels := globals.map backCopy, levelCopies := splits, polyParams := polyNames.length,
-                                      factReduced := factReduce, implicitLevels, levelInterp,
+                                      factReduced := factReduce, implicitLevels, levelInterp, propLift := propLiftDepth, propLiftCoercions := coercions,
                                       admittingLevels := admitLv, cumulativity := cumul, r2bpLevels := r2bp, sortLevels := sortLv, resultSortInherited := inherited,
                                       r2bpInType := (r2bp.map (·.1)).filter (globalsOf c.type).contains,
                                       universeLowered := lower, deltaInlined := inlinedA }
@@ -1225,7 +1270,9 @@ def processInductiveCore (genv : GEnv) (results : Std.HashMap String DeclResult)
       return ({ base with status := "BOOTSTRAP_RESOLVED", rule := rule.id, target := rule.target.types[0]?,
                           targetKind := "inductive (bootstrap)" }, some rule.target)
     | .error msg => return ({ base with status := "AUDIT_REJECTED", rule := rule.id, message := msg }, none)
-  | none => generateInductive base i hypsRef?
+  | none => do
+    let (r, t) ← generateInductive base i hypsRef?
+    pure ({ r with coinductiveAsInductive := i.finite == "CoFinite" }, t)
 
 where
   /-- M3a: emit a fresh Lean inductive for a single-body, monomorphic, non-coinductive block. -/
@@ -1233,7 +1280,10 @@ where
       MetaM (DeclResult × Option IndTarget) := do
     let unsupported (msg : String) := ({ base with status := "UNSUPPORTED_FEATURE", message := msg }, none)
     if let .polymorphic .. := i.universes then return unsupported "universe-polymorphic inductive"
-    if i.finite == "CoFinite" then return unsupported "coinductive type"
+    -- rule T (docs/COINDUCTIVE.md, approved 2026-10-15): a non-recursive coinductive block (one body, no
+    -- constructor argument or index mentions it) is its least fixed point too; translated as the inductive
+    -- (a `cofix` stays refused by the term translation)
+    if i.finite == "CoFinite" && !nonRecursiveBlock i then return unsupported "recursive coinductive type"
     unless i.bodies.size == 1 do return unsupported s!"mutual block of {i.bodies.size} inductives"
     let body := i.bodies[0]!
     -- Primitive records (M5): structure-like (one constructor, no indices, non-recursive), so Lean's
@@ -1580,19 +1630,49 @@ def tierLabel (kind : String) (flags : List (String × Bool)) (eo : Nat) : Strin
   let fs := flags.filterMap fun (n, b) => if b then some n else none
   s!"{kind}[{",".intercalate fs}]{if eo == 0 then "" else s!" eo{eo}"}"
 
+/-- Rule P, statements (docs/PROP_LIFT.md §3.3): the head-δ chain `[c₁, …, cₙ]` of a term (under its
+products) that reaches a definition translated with a lifted value: each `cᵢ` a transparent monomorphic
+constant whose body, β-applied to the arguments, has head `cᵢ₊₁`; `cₙ` is a `prop_lift` row. -/
+partial def liftChain (bodies : Std.HashMap String IR.Term) (results : Std.HashMap String DeclResult)
+    (t : IR.Term) (fuel : Nat := 8) : Option (Array String) :=
+  match t with
+  | .prod _ _ b => liftChain bodies results b fuel
+  | t => go t fuel
+where
+  go (t : IR.Term) (fuel : Nat) : Option (Array String) :=
+    let (c, args) := match t with
+      | .app (.const c _) args => (some c, args)
+      | .const c _ => (some c, #[])
+      | _ => (none, #[])
+    match c, fuel with
+    | none, _ | _, 0 => none
+    | some c, fuel + 1 =>
+      if ((results[c]?).bind (·.propLift)).isSome then some #[c] else
+      match bodies[c]? with
+      | some b => (go (IR.betaApp b args).flattenApps fuel).map (#[c] ++ ·)
+      | none => none
+
 def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
     (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
-    (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) :
+    (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) (propLift : Bool := false)
+    (phantom : Bool := false) :
     MetaM DeclResult := do
   let t0 ← IO.monoMsNow
-  let r ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort
-    wfTerm inheritSort hypExact joint unify
+  let lbl0 := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
+      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom)] extraOwn.size
+  -- (an attempt aborted by its budget is logged too, then the exception goes on to `budgeted`)
+  let r ← tryCatchRuntimeEx (processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort
+      wfTerm inheritSort hypExact joint unify propLift phantom) fun e => do
+    if let some ref := genv.tierLog then ref.modify (·.push (lbl0, (← IO.monoMsNow) - t0, "RESOURCE_LIMIT | aborted"))
+    throw e
   if let some ref := genv.tierLog then
     let lbl := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
-      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify)] extraOwn.size
-    ref.modify (·.push (lbl, (← IO.monoMsNow) - t0, r.status))
+      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom)] extraOwn.size
+    -- (a refused attempt's reason, abbreviated: diagnostics only, the timing file is not the report)
+    let st := if r.accepted || r.status == "UNSUPPORTED_FEATURE" then r.status else s!"{r.status} | {r.message.take 600}"
+    ref.modify (·.push (lbl, (← IO.monoMsNow) - t0, st))
   return r
 
 def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
@@ -1638,6 +1718,11 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("universe_lowered", Json.bool r.universeLowered),
     ("plain_levels", Json.bool r.plainLevels),
     ("sort_interp", Json.bool r.sortInterp),
+    ("prop_lift", match r.propLift with | some k => Json.num k | none => Json.null),
+    ("prop_lift_coercions", Json.num r.propLiftCoercions),
+    ("prop_lift_unfold", Json.arr (r.propLiftUnfold.map Json.str)),
+    ("phantom_lowered", Json.arr (r.phantomLowered.map Json.str)),
+    ("coinductive_as_inductive", Json.bool r.coinductiveAsInductive),
 
     ("delta_inlined", Json.arr (r.deltaInlined.map Json.str)),
     ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>
@@ -1844,6 +1929,12 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
   let erasingPoly := src.decls.foldl (init := ({} : Std.HashMap String IR.Term)) fun m d => match d with
     | .constant c => match erasingPolyBody? c with | some b => m.insert c.name b | none => m
     | _ => m
+  let phantomDefs := src.decls.foldl (init := ({} : Std.HashMap String (Array (Nat × Nat)))) fun m d => match d with
+    | .constant c => match phantomDefPairs? c with | some ps => m.insert c.name ps | none => m
+    | _ => m
+  let phantomProofs := src.decls.foldl (init := ({} : Std.HashSet String)) fun m d => match d with
+    | .constant c => if phantomDefs.contains c.name && !(c.bodyState == "transparent" && c.body.isSome) then m.insert c.name else m
+    | _ => m
   let stmtMode := ((src.header.getObjVal? "mode").toOption.bind (fun m => (m.getObjValAs? String "name").toOption)) == some "statement"
   -- R-CARRIER P1: parameter carrier levels of every exported block, once, from the source
   let carrierSet : Std.HashSet String := src.decls.foldl (fun acc d => match d with
@@ -1855,7 +1946,7 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
                       else (Split.decoupledPairs i).foldl (·.insert ·) acc
     | _ => acc) {}
   let tierLog ← IO.mkRef (#[] : Array (String × Nat × String))
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog }
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, phantomDefs, phantomProofs, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   let opaqueData : Std.HashSet String := src.decls.foldl (init := {}) fun m d => match d with
@@ -2058,9 +2149,39 @@ where
         let mut lastTier : Option DeclResult := none
         -- P0: a tier that would only succeed by specializing a protected statement
         let mut iface : Option DeclResult := none
+        -- rule Q-a (docs/PHANTOM_SORT.md): the declaration with its phantom checks' sort arguments marked, and
+        -- the levels occurring only there
+        let (cQ, gone) : IR.ConstantDecl × Array String := Id.run do
+          if genv.phantomDefs.isEmpty then return (c, #[])
+          let (tyQ, ch1) := erasePhantomSorts genv.phantomDefs c.type
+          let (bdQ, ch2) := match c.body with
+            | some b => let (b', ch) := erasePhantomSorts genv.phantomDefs b; (some b', ch)
+            | none => (none, false)
+          if !(ch1 || ch2) then return (c, #[])
+          let before := match c.body with | some b => globalsOf b (globalsOf c.type) | none => globalsOf c.type
+          let after := match bdQ with | some b => globalsOf b (globalsOf tyQ) | none => globalsOf tyQ
+          return ({ c with type := tyQ, body := bdQ }, (before.toArray.filter (!after.contains ·)).qsort (· < ·))
         for eo in exts do
           let sBefore ← saveState
-          let r0 ← if (motiveLevels c.type).isEmpty then processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (extraOwn := eo) else do
+          -- (rule Q-a first, when it applies: strictly more general, as it leaves the phantom-only levels out
+          -- and every other level as before; otherwise a plain attempt may identify the carriers of a phantom
+          -- check, a narrowing)
+          -- (a declaration using a proof of a phantom check, HB's `id_phant` — a prerequisite then used at a
+          -- different lowered sort at each occurrence — starts with per-instance hypotheses, P3: 587/608 on the
+          -- GEL frontier; the plain attempt follows if it fails, so only the order differs)
+          let rQ ← if gone.isEmpty then pure none else do
+            let p3First := (c0.typeDeps ++ c0.bodyDeps).any genv.phantomProofs.contains
+            let mut res : Option DeclResult := none
+            for p3 in (if p3First then [true, false] else [false]) do
+              let q ← processConstant genv results cQ (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+                (extraOwn := eo.filter (!gone.contains ·)) (hypExact := p3) (phantom := true)
+              if q.accepted then
+                res := some { q with phantomLowered := gone }
+                break
+              sBefore.restore
+            pure res
+          let r0 ← if let some q := rQ then pure q else
+            if (motiveLevels c.type).isEmpty then processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (extraOwn := eo) else do
               let a ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (admit := true) (extraOwn := eo)
               if a.accepted then pure a else processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (extraOwn := eo)
           first := some r0          -- the diagnosis kept is that of the last (earlier-behaviour) attempt
@@ -2126,6 +2247,123 @@ where
                 if r'.status == "INTERFACE_REJECTED" then iface := some r'
                 if r'.accepted then
                   r := r'
+                  break
+          -- δβ-inlining of erasing polymorphic definitions for constants (entry 15, last tier): the constant's
+          -- type and value with those applications δβ-reduced (definitional; the audit re-derives the names
+          -- and audits the row against the inlined source), when the attempts above failed
+          if !r.accepted && (retry r.status) && !genv.erasingPoly.isEmpty then
+            let names : Std.HashSet String := genv.erasingPoly.fold (fun acc k _ => acc.insert k) {}
+            let (tyE, u1) := inlineConsts genv.erasingPoly names c.type
+            let (bdE, u2) := match c.body with
+              | some b => let (b', u) := inlineConsts genv.erasingPoly names b; (some b', u)
+              | none => (none, {})
+            let used := (u1.insertMany u2).toArray.qsort (· < ·)
+            unless used.isEmpty do
+              let cE := { c with type := tyE, body := bdE }
+              -- (a statement's own levels are those of the inlined statement: a level that occurred only in
+              -- an inlined reference's instance, e.g. `reverse_coercion@{eqtype.58}`, is no longer one; S9 audit)
+              let eoE := match bdE with
+                | some b => eo.filter (globalsOf b (globalsOf tyE)).contains
+                | none => eo.filter (globalsOf tyE).contains
+              for (it, cu, lo, un) in [(false, false, false, false), (true, false, false, false), (false, false, false, true),
+                                       (true, false, false, true), (false, true, true, false), (false, true, true, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results cE (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eoE) (lower := lo) (unify := un)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                if r'.accepted then
+                  r := { r' with deltaInlined := used }
+                  iface := none
+                  break
+          -- rule P (approved): a proposition used at a type, lifted by `PULift` (last tier; only a declaration
+          -- whose value is a proposition at a declared `Type`, refused otherwise at once)
+          let castFail := r.status == "TRANSLATION_FAILED" && (r.message.startsWith "default cast annotation is not convertible" ||
+            r.message.startsWith "scrutinee type is not an application of")
+          -- (speed, exact gate: coercions need a dependency reaching a lifted definition; a value lift needs a
+          -- definition declared at a `Type`)
+          let liftPossible := (c0.typeDeps ++ c0.bodyDeps).any genv.liftReach.contains || (!isStmt && irEndsInSort c0.type)
+          if !r.accepted && c0.bodyState != "opaque_interface" && (retry r.status || castFail) && liftPossible then
+            -- (with the ladder's variants: R2F-c, cumulativity, R3↓, per-occurrence coherence)
+            for (it, cu, lo, un) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
+                                     (false, false, true, false), (false, false, false, true), (true, false, false, true), (false, true, true, false)] do
+              let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+                (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (unify := un) (propLift := true)
+              -- (no lift to insert, or a translation failure or exhausted budget the universe variants cannot change)
+              if r'.status == "UNSUPPORTED_FEATURE" || r'.status == "TRANSLATION_FAILED" || r'.status == "RESOURCE_LIMIT" then
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                break
+              lastTier := some r'
+              if r'.accepted then
+                r := r'
+                iface := none
+                break
+          -- rule P, statements (docs/PROP_LIFT.md §3.3): an unprotected statement whose codomain is a lifted type
+          -- (an obligation of a proof used at `Rnat …`, `Rnat := fun_hrel …`) is stated as the proposition: the
+          -- head-δ chain to the lifted definition δβ-inlined (Rocq conversion); its uses get `PULift.up`
+          if !r.accepted && isStmt && c0.bodyState != "opaque_interface" && !genv.protectedNames.contains c0.name && (retry r.status) then
+            if let some chain := (c.body.bind (liftChain genv.irBodies results ·)) then
+              let names : Std.HashSet String := chain.foldl (·.insert ·) {}
+              let (bU, _) := inlineConsts genv.irBodies names c.body.get!
+              let cU := { c with body := some bU }
+              for (it, cu, pl) in [(false, false, false), (true, false, false), (false, true, false), (false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results cU (stmt := true)
+                  (interp := it) (cumul := cu) (extraOwn := eo) (propLift := pl)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                if r'.accepted then
+                  r := { r' with propLiftUnfold := chain }
+                  iface := none
+                  break
+          -- rule Q-a (docs/PHANTOM_SORT.md, approved 2026-10-15): the sort arguments of phantom checks
+          -- (HB's `unify T1 T2 t1 t2 s := phantom T1 t1 → phantom T2 t2`) at the types of their values, per
+          -- occurrence; levels occurring only there are no longer the declaration's (no parameter, no fact)
+          if !r.accepted && (retry r.status || r.status == "INTERFACE_REJECTED") && !gone.isEmpty then
+                let eoQ := eo.filter (!gone.contains ·)
+                -- (with per-instance prerequisite hypotheses, P3: a proof of a phantom check, HB's `id_phant`,
+                -- is a prerequisite used at a different lowered sort at each occurrence)
+                -- (order from the timing data, GEL frontier: P3 587/608 successes, cu+lo 38, cu 1, it+P3 2; it, un
+                -- and it+un 0/647 each — tried last, not pruned: no claim depends on the order)
+                for (it, cu, lo, un, p3) in [(false, false, false, false, true), (false, true, true, false, false),
+                                             (false, true, false, false, false), (true, false, false, false, true),
+                                             (true, false, false, false, false), (false, false, false, true, false),
+                                             (true, false, false, true, false), (false, false, true, false, true),
+                                             (false, false, false, true, true)] do
+                  let r' ← budgeted c.name "constant" <| processConstant genv results cQ (stmt := isStmt)
+                    (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eoQ)
+                    (lower := lo) (unify := un) (hypExact := p3) (phantom := true)
+                  if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                  -- (speed: an exhausted budget is not changed by the next variant)
+                  if r'.status == "RESOURCE_LIMIT" then break
+                  if r'.accepted then
+                    r := { r' with phantomLowered := gone }
+                    iface := none
+                    break
+          -- R3G for definitions, last resort (entry 15): a failing definition is retried with the implicit levels
+          -- of its references (discovery pass) as its own levels, instead of leaving those references' levels
+          -- to their defaults (`refines`' relation level forced to 0 below `Set < l`; Classic `job_eqdef`'s
+          -- carrier pinned to 0). Only declarations that fail without it: no accepted row, hence no dependant,
+          -- changes (the reason the pass is not used in place)
+          -- (not for a declaration with phantom checks: Q-a lowers those, and the constant discovery pass recursed
+          -- without bound on HB's `BaseAddMagma_isAddMagma.phant_Build`, aborting a whole run — S15)
+          -- (speed, entry 16: only when a failure shows the symptom it addresses, a level defaulted to 0 — no claim
+          -- that existed before the tier depends on it)
+          let msgs := r.message ++ ((lastTier.map (·.message)).getD "")
+          let zeroDefault := (msgs.splitOn "(some 0)").length > 1 || (msgs.splitOn "argument is 0").length > 1
+          if !r.accepted && !isStmt && genv.stmtMode && gone.isEmpty && zeroDefault &&
+              (retry r.status || r.status == "INTERFACE_REJECTED" || r.status == "TRANSLATION_FAILED") then
+            let sD ← saveState
+            let dsc ← budgeted c.name "constant" <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
+              (discover := true)
+            sD.restore
+            if dsc.status == "DISCOVERED" && !dsc.implicitLevels.isEmpty then
+              let eoD := (eo ++ dsc.implicitLevels).toList.eraseDups.toArray
+              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, true, false),
+                                       (false, false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
+                  (interp := it) (cumul := cu) (lower := lo) (hypExact := p3) (extraOwn := eoD)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := r'
+                  iface := none
                   break
           -- P3 (ITERATION_LOG entry 8): per-instance prerequisite hypotheses (no level unified across uses;
           -- duplicates collapsed after solving), when the attempts above failed
@@ -2366,6 +2604,11 @@ where
     let deps := match d with
       | .constant c => c.typeDeps ++ c.bodyDeps
       | .inductive i => i.typeDeps
+    -- rule P gate: the declaration reaches a lifted definition
+    if r.propLift.isSome || deps.any genv.liftReach.contains then
+      genv := { genv with liftReach := genv.liftReach.insert d.name,
+                          liftTargets := (r.target.toList ++ (r.targetCtors.map (·.1)).toList).foldl (fun s n => s.insert n)
+                            (genv.liftTargets.insert ``PULift) }
     let cl := r.resultSortImplicit.foldl (·.insert ·) (genv.rsOfDeps deps)
     unless cl.isEmpty do genv := { genv with rsClosure := genv.rsClosure.insert d.name cl }
     -- R3G-F applicability at references to this declaration (docs/RESULT_SORT_LEVELS.md §2): besides an

@@ -86,7 +86,10 @@ also recomputed by the auditor and checked by the consumer, R4), and erased cast
 
 * **Construction primitives.** The accessibility lowering uses Lean prelude inductives `Acc`,
   `PSigma`, `Exists`, `Or` and `False`, the convoy lowering uses `Eq`, and the mutual fixpoint
-  and course-of-values lowerings use `PProd` and `PUnit` (with their constructors and recursors). The consumer's dependency check
+  and course-of-values lowerings use `PProd` and `PUnit` (with their constructors and recursors), and
+  rule P (docs/PROP_LIFT.md) uses the prelude structure `PULift` with `PULift.up` and `PULift.down`
+  (a proposition lifted to a type; `PULift P` is a subsingleton, the identification Lean already makes
+  for every proof, so no new collapse). The consumer's dependency check
   admits exactly this fixed list in addition to the run's accepted closure and the bootstrap
   targets. They are kernel-defined inductive types; the axiom detector still runs on every target,
   and none is involved in any axiom.

@@ -513,6 +513,25 @@ class Auditor:
         C = lambda s2, e2, seg, env2=env: self.check(s2, e2, path + [seg], env2)
         if e["k"] == "mdata":
             raise Mismatch(f"{path}: unexpected metadata node in target")
+        # rule P, term level (docs/PROP_LIFT.md §3): in a row reporting coercions, `PULift.up X t` /
+        # `PULift.down X t` with `PULift.{_, 0}` (X a proposition: the kernel checks t's type against it)
+        # stands for t, the source term at that position (C1: up/down are the two sides of PULift X ≃ X)
+        if COERCE[0]:
+            inner = peel_lift_coercion(e)
+            if inner is not None:
+                return self.check(s, inner, path + ["lift"], env)
+            # (η: a source function used at a function type differing by lifts is η-expanded, its
+            # arguments and result coerced; the head is compared under the n extra binders, so it cannot
+            # mention them)
+            if e["k"] == "lam" and k not in ("lam", "cast"):
+                eta = peel_eta(e)
+                if eta is not None:
+                    head, n = eta
+                    return self.check(s, head, path + ["eta"], Auditor.shift(env, n))
+        if k == "phantom_sort":           # rule Q-a: a phantom check's sort argument, lowered per occurrence
+            if e["k"] != "sort":
+                raise Mismatch(f"{path}: a phantom check's sort argument is not a sort")
+            return
         if k == "cast":
             # the cast's term as is; otherwise a cast repair around it (a source convoy match has the
             # same outer shape as a repair, so the direct comparison comes first)
@@ -1784,6 +1803,172 @@ def anon(e):
     return e
 
 
+COERCE = [False]      # whether the row being audited reports rule P coercions
+PHANTOM = "Corelib.ssr.ssreflect_rw.phantom"
+
+
+def phantom_def_pairs(d):
+    """Rule Q-a (docs/PHANTOM_SORT.md), independently of the translator: a transparent monomorphic constant
+    whose body, after its λs, is a chain of non-dependent products of `phantom X x`, X a λ-parameter whose
+    type is a sort and x a λ-parameter of type X. Returns the (sort, value) parameter index pairs, or None.
+    Every application of such a definition is inhabited (by phantom's constructor), whatever its sorts."""
+    if d.get("kind") != "constant" or (d.get("universes") or {}).get("k") != "monomorphic":
+        return None
+    is_ph = lambda t: t.get("k") == "app" and t["f"].get("k") == "ind" and t["f"]["ind"] == {"mind": PHANTOM, "i": 0}
+    tys = []
+    if d.get("body_state") == "transparent" and d.get("body"):
+        b = d["body"]                                   # a phantom check: the body after its λs
+        while b.get("k") == "lam":
+            tys.append(b["ty"])
+            b = b["b"]
+    else:                                               # a proof of one: the statement after its parameters
+        b = d["type"]
+        while b.get("k") == "prod" and not is_ph(b["ty"]):
+            tys.append(b["ty"])
+            b = b["b"]
+        if not (is_ph(b) or (b.get("k") == "prod" and is_ph(b["ty"]))):
+            return None
+    n = len(tys)
+
+    def factor(t, k):
+        if t.get("k") != "app" or t["f"].get("k") != "ind" or t["f"]["ind"] != {"mind": PHANTOM, "i": 0} \
+                or len(t["args"]) != 2 or any(a.get("k") != "rel" for a in t["args"]):
+            return None
+        ai, vi = t["args"][0]["i"], t["args"][1]["i"]
+        if not (k <= ai < n + k and k <= vi < n + k):
+            return None
+        pa, pv = n - 1 - (ai - k), n - 1 - (vi - k)
+        tv = tys[pv]
+        if tys[pa].get("k") != "sort" or tv.get("k") != "rel" or not (tv["i"] < pv and pv - 1 - tv["i"] == pa):
+            return None
+        return pa, pv
+
+    pairs, k = [], 0
+    while b.get("k") == "prod":
+        f = factor(b["ty"], k)
+        if f is None or mentions_rels(b["b"], 0, 1):
+            return None
+        pairs.append(f)
+        b, k = b["b"], k + 1
+    f = factor(b, k)
+    if f is None:
+        return None
+    return pairs + [f]
+
+
+def erase_phantom_sorts(t, pd):
+    """Rule Q-a: the sort arguments at the sort-parameter positions of phantom-definition applications,
+    replaced by the marker {"k": "phantom_sort"} (which matches any target sort: the kernel fixes it as the
+    type of the paired value)."""
+    if isinstance(t, list):
+        return [erase_phantom_sorts(x, pd) for x in t]
+    if not isinstance(t, dict):
+        return t
+    out = {k: erase_phantom_sorts(v, pd) for k, v in t.items()}
+    if t.get("k") == "app" and t["f"].get("k") == "const" and t["f"]["c"] in pd:
+        args = list(out["args"])
+        for si, _ in pd[t["f"]["c"]]:
+            if si < len(args) and t["args"][si].get("k") == "sort":
+                args[si] = {"k": "phantom_sort"}
+        out["args"] = args
+    return out
+
+
+def peel_lift_coercion(e):
+    """`PULift.up X t` or `PULift.down X t` with universe instance [r, 0] -> t; otherwise None."""
+    if e.get("k") != "app" or e["f"].get("k") != "app":
+        return None
+    h = e["f"]["f"]
+    if h.get("k") != "const" or h.get("n") not in ("PULift.up", "PULift.down") or len(h.get("u") or []) != 2:
+        return None
+    if level_nf(h["u"][1]) != level_nf({"k": "zero"}):
+        raise Mismatch(f"rule P: {h['n']} at a non-Prop universe {h['u'][1]}")
+    return e["a"]
+
+
+def check_coinductive(d, r):
+    """Rule T (docs/COINDUCTIVE.md), independently: a coinductive block is accepted as an inductive only when
+    the row reports it and the block has one body, no constructor argument or index mentioning the block
+    (the arguments are stored innermost first: args[k] lies under the block, the parameters and the
+    len(args) - 1 - k earlier arguments)."""
+    co = d.get("finite") == "CoFinite"
+    if bool(r.get("coinductive_as_inductive")) != co:
+        raise Mismatch("coinductive_as_inductive differs from the source block's kind")
+    if not co:
+        return
+    if len(d["bodies"]) != 1:
+        raise Mismatch("rule T: a mutual coinductive block")
+    npars, nb = d["npars"], len(d["bodies"])
+    for b in d["bodies"]:
+        for c in b["ctors"]:
+            n_ = len(c["args"])
+            for k, a in enumerate(c["args"]):
+                if mentions_rels(a["ty"], n_ - 1 - k + npars, nb):
+                    raise Mismatch(f"rule T: constructor {c['name']} is recursive (an argument mentions the block)")
+            for x in c.get("indices") or []:
+                if mentions_rels(x, len(c["args"]) + npars, nb):
+                    raise Mismatch(f"rule T: constructor {c['name']} has an index mentioning the block")
+
+
+def peel_eta(e):
+    """`fun x₀ … xₙ₋₁ => c (f a… c x₀ … c xₙ₋₁)` (c: optional lift coercions) -> (f a…, n); otherwise None."""
+    n, b = 0, e
+    while b.get("k") == "lam":
+        n, b = n + 1, b["b"]
+    while (x := peel_lift_coercion(b)) is not None:
+        b = x
+    args = []
+    while b.get("k") == "app" and len(args) < n:
+        args.append(b["a"])
+        b = b["f"]
+    if len(args) != n:
+        return None
+    for i, a in enumerate(args):               # args[0] is the last argument, x_{n-1} = bvar 0
+        while (x := peel_lift_coercion(a)) is not None:
+            a = x
+        if a != {"k": "bvar", "i": i}:
+            return None
+    return b, n
+
+
+def strip_prop_lift(r, tv, src_type, body):
+    """Rule P (docs/PROP_LIFT.md, approved), independently: a row reporting `prop_lift = k` has,
+    under its first k value binders, exactly `PULift.{r, 0} X`, where the source type after k binders is a
+    sort `Type@{l}` and r is that sort's image (so `PULift.{r,0} X : Sort r` is exactly the declared
+    type); the kernel checks that X is a proposition (`PULift.{_, 0}`). Returns the value with the wrapper
+    replaced by X, for the structural check against the source."""
+    k = r.get("prop_lift")
+    if k is None:
+        return tv
+    if not isinstance(k, int) or k < 0:
+        raise Mismatch(f"rule P: invalid lift depth {k}")
+    st = src_type
+    for _ in range(k):
+        if st.get("k") != "prod":
+            raise Mismatch("rule P: the source type has fewer binders than the lift depth")
+        st = st["b"]
+    if st.get("k") != "sort" or st["s"].get("k") != "type":
+        raise Mismatch("rule P: the source type does not end in a Type at the lift depth")
+    tv = copy.deepcopy(tv)
+    holder, key, cur = None, None, tv
+    for _ in range(k):
+        if cur.get("k") != "lam":
+            raise Mismatch("rule P: the value has fewer binders than the lift depth")
+        holder, key, cur = cur, "b", cur["b"]
+    if not (cur.get("k") == "app" and cur["f"].get("k") == "const" and cur["f"]["n"] == "PULift"
+            and len(cur["f"]["u"]) == 2):
+        raise Mismatch("rule P: no PULift at the lift depth")
+    lv_r, lv_s = cur["f"]["u"]
+    if level_nf(lv_s) != level_nf({"k": "zero"}):
+        raise Mismatch("rule P: the lifted term is not lifted from Prop")
+    if level_nf(lv_r) != source_sort_nf(st["s"], body):
+        raise Mismatch(f"rule P: the lift's level {lv_r} is not the image of the source sort")
+    if holder is None:
+        return cur["a"]
+    holder[key] = cur["a"]
+    return tv
+
+
 def src_has_univ_var(t):
     """Whether a source term mentions a universe variable ({"k": "var", "i": n}, in a sort or an instance)."""
     if isinstance(t, list):
@@ -2089,6 +2274,7 @@ def carrier_levels(d):
 
 
 DECL_SRC = {}        # source name -> exported declaration (its dependency lists), set with RS_CLOSURE
+ERASED = {}          # entry 15: constant -> erasing definitions δβ-inlined in its type and value
 RS_CLOSURE = {}      # R3G-F: source name -> result-sort implicit levels in its dependency closure (itself included)
 
 
@@ -3373,12 +3559,14 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
     aud = Auditor(decls, list(rows.values()), recursors)
     for s in sorted(decls):
         r, d = rows.get(s), decls[s]
+        COERCE[0] = bool(r and r.get("prop_lift_coercions"))
         v = {"source": s, "status": r.get("status") if r else None,
              "role": "root" if s in canon else ("required" if s in closure else "extra_not_required")}
         try:
             if r is None:
                 raise Mismatch("no unique result row")
             if r["status"] == "TRANSLATED_AND_CHECKED" and d["kind"] == "inductive":
+                check_coinductive(d, r)
                 if len(d["bodies"]) != 1:
                     raise Mismatch("UNAUDITABLE: mutual block")
                 b = d["bodies"][0]
@@ -3447,13 +3635,14 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
                 try:
                     aud.check(d["type"], r["target_type"], ["type"])
                     body_s = d["body"]
-                    if r.get("delta_inlined"):
+                    m6 = [n_ for n_ in (r.get("delta_inlined") or []) if n_ not in ERASED.get(s, ())]
+                    if m6:
                         # M6: Set-motive constants used at a Prop family, inlined (definitional)
-                        for n_ in r["delta_inlined"]:
+                        for n_ in m6:
                             if n_ not in aud.ir_bodies or not has_set_motive(decls[n_]["type"]):
                                 raise Mismatch(f"inlined {n_} is not a transparent constant with a Set-motive binder")
-                        body_s = inline_consts(body_s, set(r["delta_inlined"]), aud.ir_bodies)
-                    aud.check(body_s, r["target_value"], ["body"])
+                        body_s = inline_consts(body_s, set(m6), aud.ir_bodies)
+                    aud.check(body_s, strip_prop_lift(r, r["target_value"], d["type"], aud.body), ["body"])
                 finally:
                     aud.body = None
                     REDUCE[0] = False
@@ -3726,9 +3915,94 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     # entry 14: a block translated with erasing polymorphic definitions δβ-inlined is audited against its
     # inlined source; the inlined names must be erasing definitions (recomputed here from the source), and
     # each must actually occur in the block
+    ERASED.clear()
+    # rule P, statements (docs/PROP_LIFT.md §3.3): a statement translated with a lifted codomain stated as
+    # its proposition; the reported chain is recomputed here from the source (the head-δ chain of the
+    # codomain, transparent monomorphic constants, ending at a definition translated with a lifted value),
+    # never for a protected declaration, and the statement is audited against the source with the chain
+    # δβ-inlined (Rocq conversion)
+    prot_pin = PROTECTED_PIN()
+    # rule Q-a (docs/PHANTOM_SORT.md): a row translated with phantom checks' sort arguments lowered is
+    # audited against the source with those arguments marked; the reported levels must be exactly the
+    # levels that occur only there (recomputed here), and the phantom definitions are recomputed too
+    pdefs = {n_: ps for n_, d_ in decls.items() if (ps := phantom_def_pairs(d_))}
+    for n, r in sorted(rows.items()):
+        pl_ = r.get("phantom_lowered") or []
+        if not pl_ or n not in decls:
+            continue
+        d = decls[n]
+        stmt_ = d.get("body_state") in ("statement_only", "obligation", "opaque_interface")
+        parts = [d.get("type")] if stmt_ or d["kind"] != "constant" else [d.get("type"), d.get("body")]
+        er = erase_phantom_sorts(parts, pdefs)
+        gone = source_globals(parts, set()) - source_globals(er, set())
+        if not gone or sorted(gone) != sorted(pl_):
+            problem("structure", f"{n}: phantom-lowered levels {pl_} are not the levels occurring only in phantom checks {sorted(gone)}")
+            continue
+        decls[n] = dict(d, type=er[0], **({} if len(er) == 1 else {"body": er[1]}))
+    for n, r in sorted(rows.items()):
+        ch = r.get("prop_lift_unfold") or []
+        if not ch:
+            continue
+        try:
+            d = decls.get(n)
+            if d is None or d["kind"] != "constant" or d.get("body_state") not in ("statement_only", "obligation"):
+                raise Mismatch("rule P unfolding reported for a row that is not a statement")
+            if n in prot_pin:
+                raise Mismatch("rule P unfolding reported for a protected declaration")
+            t = d["type"]
+            while t.get("k") == "prod":
+                t = t["b"]
+            want = []
+            for _ in range(8):
+                hd, args = (t["f"], t["args"]) if t.get("k") == "app" else (t, [])
+                c_ = hd.get("c") if hd.get("k") == "const" else None
+                if c_ is None:
+                    break
+                want.append(c_)
+                if (rows.get(c_) or {}).get("prop_lift") is not None and st(c_) in ("TRANSLATED_AND_CHECKED", "PENDING_KERNEL_CHECKED"):
+                    break
+                dc = decls.get(c_)
+                if not (dc and dc["kind"] == "constant" and dc.get("body_state") == "transparent" and dc.get("body")
+                        and (dc.get("universes") or {}).get("k") == "monomorphic"):
+                    break
+                t = src_flatten_apps(beta_app(dc["body"], args))
+            if want != ch or (rows.get(ch[-1]) or {}).get("prop_lift") is None:
+                raise Mismatch(f"rule P unfolding {ch} is not the source codomain's head chain to a lifted definition {want}")
+            bodies = {c_: decls[c_]["body"] for c_ in ch[:-1]}
+            bodies[ch[-1]] = decls[ch[-1]]["body"]
+            def pre(x, k, bodies=bodies):
+                if x.get("k") == "app" and x["f"].get("k") == "const" and x["f"]["c"] in bodies:
+                    return src_flatten_apps(beta_app(bodies[x["f"]["c"]], x["args"]))
+                return None
+            decls[n] = dict(d, type=src_rewrite(d["type"], pre))
+        except Mismatch as e:
+            problem("structure", f"{n}: {e}")
     for n, r in sorted(rows.items()):
         di = r.get("delta_inlined") or []
-        if not di or n not in decls or decls[n]["kind"] != "inductive":
+        if not di or n not in decls:
+            continue
+        if decls[n]["kind"] == "constant":
+            # entry 15: a constant translated with erasing definitions δβ-inlined in its type and value (the
+            # other reported names are M6 Set-motive constants, checked where the value is audited)
+            bodies = {n_: erasing_poly_body(decls[n_]) for n_ in di if n_ in decls}
+            bodies = {k: v for k, v in bodies.items() if v is not None}
+            if not bodies:
+                continue
+            def pre(x, k, bodies=bodies):
+                if x.get("k") == "app" and x["f"].get("k") == "const" and x["f"]["c"] in bodies:
+                    return src_flatten_apps(beta_app(bodies[x["f"]["c"]], x["args"]))
+                return None
+            d2 = copy.deepcopy(decls[n])
+            d2["type"] = src_rewrite(d2["type"], pre)
+            if d2.get("body") is not None:
+                d2["body"] = src_rewrite(d2["body"], pre)
+            txt = json.dumps([d2["type"], d2.get("body")])
+            if d2 == decls[n] or any(f'"c": "{n_}"' in txt for n_ in bodies):
+                problem("structure", f"{n}: the reported inlining does not remove the definitions {sorted(bodies)}")
+            decls[n] = d2
+            ERASED[n] = set(bodies)
+            continue
+        if decls[n]["kind"] != "inductive":
             continue
         bodies = {}
         for n_ in di:
@@ -3819,6 +4093,8 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     # interface protection (as in proof mode, for every claimed row)
     root_dir = Path(__file__).resolve().parent.parent
     iface_checked = 0
+    prop_lift_protected = []
+    phantom_protected = []
     try:
         pin = json.load(open(root_dir / "tools" / "protected_interface.pin.json"))
         mbytes = (root_dir / pin["manifest"]).read_bytes()
@@ -3842,6 +4118,18 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 if (r_.get("sort_lowered_levels") and not r_.get("result_sort_inherited")) or \
                         any(x.get("in_type") for x in r_.get("r2bp_levels") or []):
                     problem("interface", f"{r_.get('source')}: protected public declaration translated with a specialized statement")
+                # rule P (C5, docs/PROP_LIFT.md): every lifted position of a protected declaration is listed (an
+                # equivalent range, C1, never a narrowed one); a lifted statement codomain is never protected
+                if r_.get("prop_lift") is not None or r_.get("prop_lift_coercions"):
+                    prop_lift_protected.append({"source": r_["source"], "status": r_["status"],
+                                                "value_lift_depth": r_.get("prop_lift"),
+                                                "coercions": r_.get("prop_lift_coercions") or 0})
+                if r_.get("prop_lift_unfold"):
+                    problem("interface", f"{r_.get('source')}: protected statement translated with a lifted codomain unfolded")
+                # rule Q-a: a protected declaration's lowered phantom checks are listed (equivalent hypotheses:
+                # every instance of a phantom check is inhabited)
+                if r_.get("phantom_lowered"):
+                    phantom_protected.append({"source": r_["source"], "status": r_["status"], "levels": r_["phantom_lowered"]})
     except (OSError, KeyError, ValueError) as e:
         problem("interface", f"protection data unreadable: {e}")
     # statement views and prerequisites, from the source alone
@@ -4024,6 +4312,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     wf_users = {}
     for s_ in sorted(decls):
         r, d = rows.get(s_), views[s_]
+        COERCE[0] = bool(r and r.get("prop_lift_coercions"))
         v = {"source": s_, "status": r.get("status") if r else None, "leaf": s_ in leaves,
              "role": "root" if s_ in canon else ("required" if s_ in closure else "extra_not_required")}
         try:
@@ -4046,6 +4335,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             aud.wf_used = []
             tele_rows = vrows if (assembly and pending) else rows
             if d["kind"] == "inductive":
+                check_coinductive(d, r)
                 b = d["bodies"][0]
                 if len(d["bodies"]) != 1:
                     raise Mismatch("UNAUDITABLE: mutual block")
@@ -4145,12 +4435,13 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 else:
                     aud.check(d["type"], ty, ["type"], env)
                 body_s = d["body"]
-                if r.get("delta_inlined"):
-                    for n_ in r["delta_inlined"]:
+                m6 = [n_ for n_ in (r.get("delta_inlined") or []) if n_ not in ERASED.get(s_, ())]
+                if m6:
+                    for n_ in m6:
                         if n_ not in aud.ir_bodies or not has_set_motive(decls[n_]["type"]):
                             raise Mismatch(f"inlined {n_} is not a transparent constant with a Set-motive binder")
-                    body_s = inline_consts(body_s, set(r["delta_inlined"]), aud.ir_bodies)
-                aud.check(body_s, val, ["body"], env)
+                    body_s = inline_consts(body_s, set(m6), aud.ir_bodies)
+                aud.check(body_s, strip_prop_lift(r, val, decls[s_]["type"], aud.body), ["body"], env)
                 # B: its termination lowerings use exactly its own termination obligations
                 want_wf = sorted(x for x, rx in syn.items() if rx["synthesized_from"] == s_ and rx["synthetic_kind"] == "termination")
                 if sorted(aud.wf_used) != want_wf:
@@ -4204,7 +4495,9 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
            "assembly": ({"proofs_assembled": len(proved), "by_assembly_state": dict(sorted(by_asm.items(), key=str))}
                         if assembly else None),
            "status": "OK" if not problems else "AUDIT_REJECTED",
-           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked, "level_split_checked": split_checked, "result_sort_implicit_checked": RSI_CHECKED[0], "level_copies_checked": copies_checked,
+           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked,
+           "prop_lift_protected": sorted(prop_lift_protected, key=lambda x: x["source"]),
+           "phantom_lowered_protected": sorted(phantom_protected, key=lambda x: x["source"]), "level_split_checked": split_checked, "result_sort_implicit_checked": RSI_CHECKED[0], "level_copies_checked": copies_checked,
            "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
            "definition_type_specialization_candidates": {
                "note": "non-protected definitions only (protected ones are rejected): a binder-domain level of the "

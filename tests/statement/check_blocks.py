@@ -38,6 +38,7 @@ OUT = {}
 RUN = ROOT / "runs" / "st-s4"
 LCML, SE, CJ = ("prosa.util.lcmseq.lcml", "prosa.results.transfer_schedulability.paper_model.SystemEvolutions",
                 "prosa.implementation.definitions.task.concrete_job")
+JT = "prosa.implementation.definitions.task.job_task"
 GCD, GCDT = "mathcomp.boot.div.gcdn", "mathcomp.boot.div.gcdn__rocq2lean_termination_1"
 RC = "Corelib.Init.Prelude.reverse_coercion"
 CLAIMED = ("TRANSLATED_AND_CHECKED", "STATEMENT_KERNEL_CHECKED", "PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
@@ -46,7 +47,7 @@ P = lambda l: "u_" + l.replace(".", "_")
 # 1. pipeline
 shutil.rmtree(RUN, ignore_errors=True)
 rcs = [cli("export", "--mode", "statement", "--manifest", ROOT / "fixtures/stmt/s4/manifest.json",
-           "--roots", ",".join([LCML, SE, CJ]), "--out", RUN)[0]]
+           "--roots", ",".join([LCML, SE, CJ, JT]), "--out", RUN)[0]]
 rcs.append(cli("translate", "--input", RUN / "source.ndjson", "--out", RUN)[0])
 rcs.append(cli("validate", "--run", RUN)[0])
 v = json.loads((RUN / "validate.json").read_text())
@@ -111,6 +112,11 @@ OUT["concrete_job_implicit_as_arguments"] = occ_ok
 check(occ_ok and all(f for _, f in occ_ok), "concrete_job: every implicit level is the argument of a reference for that level")
 
 
+jt = R[JT]
+check(jt["status"] in CLAIMED and jt.get("delta_inlined") == [RC] and "reverse_coercion" not in json.dumps([jt.get("target_type"), jt.get("target_value")]),
+      "job_task (a constant, entry 15): claimed with reverse_coercion δβ-inlined in its type and value")
+
+
 # 3. negative: forged rows
 def forge(label, row, edit):
     rep2 = copy.deepcopy(rep)
@@ -149,6 +155,10 @@ check(tl is not None and rc == 2 and any("occur explicitly in the source" in p_ 
 k, rc, probs = forge("delta-not-erasing", CJ, lambda r, rows: r.update(delta_inlined=["prosa.behavior.job.JobType"]))
 check(rc == 2 and any("is not an erasing polymorphic definition" in p_ for p_ in probs),
       f"concrete_job with delta_inlined naming a non-erasing definition (JobType): audit-rejected (kernel: {k})")
+k, rc, probs = forge("delta-not-erasing-constant", JT, lambda r, rows: r.update(delta_inlined=["prosa.behavior.job.JobType"]))
+check(rc == 2 and probs, f"job_task with delta_inlined naming a non-erasing definition: audit-rejected (kernel: {k}) {probs[:1]}")
+k, rc, probs = forge("delta-hidden-constant", JT, lambda r, rows: r.update(delta_inlined=[]))
+check(rc == 2 and probs, f"job_task with its inlining unreported: audit-rejected (kernel: {k}) {probs[:1]}")
 k, rc, probs = forge("delta-hidden", CJ, lambda r, rows: r.update(delta_inlined=[]))
 check(rc == 2 and probs, f"concrete_job with its inlining unreported: audit-rejected (kernel: {k}) {probs[:1]}")
 

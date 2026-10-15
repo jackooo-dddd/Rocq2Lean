@@ -1,0 +1,1 @@
+{"name": "stmt-plift", "load_paths": [["-Q", ".", "SF"]], "files": ["Plift.v"], "requires": ["SF.Plift"]}

@@ -106,6 +106,16 @@ structure GEnv where
   setMotive : Std.HashSet String := {}
   /-- Entry 14: erasing polymorphic definitions (`erasingPolyBody?`) and their bodies. -/
   erasingPoly : Std.HashMap String IR.Term := {}
+  /-- Rule Q-a (docs/PHANTOM_SORT.md): phantom definitions (`phantomDefPairs?`) and their
+  (sort parameter, value parameter) index pairs. -/
+  phantomDefs : Std.HashMap String (Array (Nat × Nat)) := {}
+  /-- Rule Q-a: the phantom definitions that are proofs of phantom checks (HB's `id_phant`). -/
+  phantomProofs : Std.HashSet String := {}
+  /-- Rule P gate (speed, exact): source declarations whose dependency closure reaches a definition
+  translated with a lifted value, and their target names (with `PULift`): a lifted type can only arise by
+  unfolding one of them, so only terms mentioning one can need a coercion. -/
+  liftReach : Std.HashSet String := {}
+  liftTargets : Std.HashSet Name := {}
   /-- Timing (entry 14): the attempts of the declaration being translated (tier label, ms, status). -/
   tierLog : Option (IO.Ref (Array (String × Nat × String))) := none
   /-- P0: protected public interface (pinned Prosa/Classic inventory, bound in the export contract):
@@ -220,6 +230,12 @@ structure TCtx where
   /-- P3 retry tier: a prerequisite hypothesis is reused only at a type equal *without* assigning any
   level metavariable (each other use gets its own hypothesis; duplicates are collapsed after solving). -/
   hypExact : Bool := false
+  /-- Rule P, term level (docs/PROP_LIFT.md §3): where a cast or an application argument mismatches
+  only by a lift, `PULift.up` / `PULift.down` is inserted (counted here; `none` outside rule P's tier). -/
+  propCoerce : Option (IO.Ref Nat) := none
+  /-- Rule Q-a: at an application of a phantom definition, a sort argument at a sort-parameter position
+  is the type of the paired value argument (per occurrence). -/
+  phantomLower : Bool := false
 
 abbrev TransM := ReaderT TCtx (ExceptT TransError MetaM)
 
@@ -791,6 +807,110 @@ def erasingPolyBody? (c : IR.ConstantDecl) : Option IR.Term := do
   if n == 0 || termHasUnivVar t then none
   some b
 
+/-- Rule T (docs/COINDUCTIVE.md): one body, and no constructor argument or index mentions the block.
+The arguments are stored innermost first: `args[k]` lies under the block, the `npars` parameters and the
+`args.size - 1 - k` earlier arguments; the indices under all arguments. -/
+def nonRecursiveBlock (i : IR.InductiveDecl) : Bool :=
+  i.bodies.size == 1 && i.bodies.all fun b => b.ctors.all fun c =>
+    (Id.run do
+      let mut ok := true
+      for h : k in [0:c.args.size] do
+        if c.args[k].type.mentionsRels (c.args.size - 1 - k + i.npars) i.bodies.size then ok := false
+      return ok) &&
+    c.indices.all fun x => !x.mentionsRels (c.args.size + i.npars) i.bodies.size
+
+/-- Rule Q-a (docs/PHANTOM_SORT.md): a *phantom definition* is a transparent monomorphic constant whose
+body, after its λs, is a chain of non-dependent products of `phantom X x` (Corelib's
+`ssreflect_rw.phantom : ∀ T : Type, T → Prop`, one constructor without fields), each `X` a λ-bound
+parameter whose type is a sort and `x` a λ-bound parameter of type `X` (HB's
+`unify T1 T2 t1 t2 s := phantom T1 t1 → phantom T2 t2`). Returns the (sort, value) parameter pairs.
+Every application of it is inhabited (by the constructors), whatever its sort arguments. -/
+partial def phantomDefPairs? (c : IR.ConstantDecl) : Option (Array (Nat × Nat)) := do
+  let .monomorphic := c.universes | none
+  let isPh (t : IR.Term) : Bool := match t with
+    | .app (.ind ⟨"Corelib.ssr.ssreflect_rw.phantom", 0⟩ _) _ => true
+    | _ => false
+  -- a phantom check (`unify`: the body after its λs), or a proof of one (`id_phant : ∀ T t, phantom T t →
+  -- phantom T t`: the statement after its parameters)
+  let rec peelL (t : IR.Term) (acc : Array IR.Term) : Array IR.Term × IR.Term :=
+    match t with
+    | .lam _ ty b => peelL b (acc.push ty)
+    | t => (acc, t)
+  let rec peelP (t : IR.Term) (acc : Array IR.Term) : Array IR.Term × IR.Term :=
+    match t with
+    | .prod _ ty b => if isPh ty then (acc, t) else peelP b (acc.push ty)
+    | t => (acc, t)
+  let (tys, b) ← match c.bodyState, c.body with
+    | "transparent", some body => pure (peelL body #[])
+    | _, _ => do
+      let (tys, b) := peelP c.type #[]
+      guard (isPh b || match b with | .prod _ ty _ => isPh ty | _ => false)
+      pure (tys, b)
+  let n := tys.size
+  -- a factor at depth k (under k non-dependent products): `phantom (rel a) (rel v)`
+  let factor (t : IR.Term) (k : Nat) : Option (Nat × Nat) := do
+    let .app (.ind ⟨"Corelib.ssr.ssreflect_rw.phantom", 0⟩ _) args := t | none
+    guard (args.size == 2)
+    let .rel a := args[0]! | none
+    let .rel v := args[1]! | none
+    guard (k ≤ a && a < n + k && k ≤ v && v < n + k)
+    let pa := n - 1 - (a - k)
+    let pv := n - 1 - (v - k)
+    let .sort _ := tys[pa]! | none
+    -- the value parameter's type is the sort parameter (`rel j` under pv binders)
+    let .rel j := tys[pv]! | none
+    guard (j < pv && pv - 1 - j == pa)
+    return (pa, pv)
+  let rec chain (t : IR.Term) (k : Nat) (acc : Array (Nat × Nat)) : Option (Array (Nat × Nat)) :=
+    match t with
+    | .prod _ a rest =>
+      if rest.mentionsRels 0 1 then none else
+      match factor a k with
+      | some p => chain rest (k + 1) (acc.push p)
+      | none => none
+    | t => (factor t k).map acc.push
+  let ps ← chain b 0 #[]
+  guard (!ps.isEmpty)
+  return ps
+
+/-- Rule Q-a: the sort arguments at the sort-parameter positions of phantom-definition applications,
+replaced by `Prop` (a placeholder: the translation puts the type of the paired value there). Returns
+the term and whether anything was replaced. -/
+partial def erasePhantomSorts (pd : Std.HashMap String (Array (Nat × Nat))) (t : IR.Term) : IR.Term × Bool :=
+  let go (u : IR.Term) := erasePhantomSorts pd u
+  let goA (as : Array IR.Term) : Array IR.Term × Bool :=
+    as.foldl (fun (acc, ch) x => let (y, c) := go x; (acc.push y, ch || c)) (#[], false)
+  match t with
+  | .app f args =>
+    let (f', c1) := go f
+    let (args', c2) := goA args
+    match f with
+    | .const d _ => match pd[d]? with
+      | some pairs =>
+        let (a, c3) := pairs.foldl (fun (a, ch) (si, _) =>
+          match a[si]? with
+          | some (.sort _) => (a.set! si (.sort .prop), true)
+          | _ => (a, ch)) (args', false)
+        (.app f' a, c1 || c2 || c3)
+      | none => (.app f' args', c1 || c2)
+    | _ => (.app f' args', c1 || c2)
+  | .cast c kd ty => let (c', u1) := go c; let (ty', u2) := go ty; (.cast c' kd ty', u1 || u2)
+  | .prod n ty b => let (a, u1) := go ty; let (b', u2) := go b; (.prod n a b', u1 || u2)
+  | .lam n ty b => let (a, u1) := go ty; let (b', u2) := go b; (.lam n a b', u1 || u2)
+  | .letIn n v ty b =>
+    let (v', u1) := go v; let (ty', u2) := go ty; let (b', u3) := go b
+    (.letIn n v' ty' b', u1 || u2 || u3)
+  | .case i np r pu ps pctx ret c brs =>
+    let (ps', u1) := goA ps; let (ret', u2) := go ret; let (c', u3) := go c
+    let (brs', u4) := brs.foldl (fun (acc, ch) (ctx, b) => let (b', u) := go b; (acc.push (ctx, b'), ch || u)) (#[], false)
+    (.case i np r pu ps' pctx ret' c' brs', u1 || u2 || u3 || u4)
+  | .proj i np a c => let (c', u) := go c; (.proj i np a c', u)
+  | .fix ds idx =>
+    let (ds', u) := ds.foldl (fun (acc, ch) (n, ty, b, r) =>
+      let (ty', u1) := go ty; let (b', u2) := go b; (acc.push (n, ty', b', r), ch || u1 || u2)) (#[], false)
+    (.fix ds' idx, u)
+  | _ => (t, false)
+
 /-- M6 δ-inlining of `Set`-motive constants (a last tier): every application of a constant of
 `names` is replaced by its source body β-reduced with the arguments (definitional). Returns the
 term and the names actually inlined. -/
@@ -1312,6 +1432,66 @@ def restoreTrans (s : TransSaved) : TransM Unit := do
   if let some r := (← read).hyps then r.modify (·.take s.hyps)
   if let some r := (← read).sharedFresh then r.modify (·.take s.shared)
 
+/-- Rule P, term level: `e : act` used at `exp`, where the two differ only by a lift of a proposition.
+`exp ≡ PULift.{r,0} P` with `act ≡ P` gives `PULift.up e`; `act ≡ PULift.{r,0} P` with `exp ≡ P` (a
+proposition) gives `PULift.down e`. Only `PULift.{_, 0}`: the lifted type is a proposition. -/
+def liftCoerce (e act exp : Expr) : MetaM (Option Expr) := do
+  let exp' ← whnf exp
+  if exp'.isAppOfArity ``PULift 1 then
+    if let [r, u] := exp'.getAppFn.constLevels! then
+      if u.isZero && (← isDefEq act exp'.appArg!) then
+        return some (mkApp2 (mkConst ``PULift.up [r, .zero]) exp'.appArg! e)
+  let act' ← whnf act
+  if act'.isAppOfArity ``PULift 1 then
+    if let [r, u] := act'.getAppFn.constLevels! then
+      if u.isZero && (← isProp exp) && (← isDefEq act'.appArg! exp) then
+        return some (mkApp2 (mkConst ``PULift.down [r, .zero]) act'.appArg! e)
+  return none
+
+/-- Rule P, term level: the arguments of `f a₁ … aₙ`, each coerced by `liftCoerce` where its type is not
+the function's domain at it (counted in `cnt`). -/
+def coerceArgs (f : Expr) (args : Array Expr) (cnt : IO.Ref Nat) (lifted : Std.HashSet Name) : MetaM (Array Expr) := do
+  -- (speed, exact: a lift can only appear by unfolding a constant of `lifted`, or a let-bound local)
+  let mayLift (e : Expr) : MetaM Bool := do
+    let e ← instantiateMVars e
+    if (e.find? fun x => x.isConst && lifted.contains x.constName!).isSome then return true
+    let lctx ← getLCtx
+    return (e.find? fun x => x.isFVar && ((lctx.find? x.fvarId!).map (·.isLet)).getD false).isSome
+  let mut fty ← inferType f
+  let mut out := #[]
+  for a in args do
+    fty ← whnf fty
+    let .forallE _ d b _ := fty | return out ++ args.extract out.size args.size
+    let a' ← do
+      let aty ← inferType a
+      if !(← mayLift d) && !(← mayLift aty) then pure a else
+      if ← isDefEq aty d then pure a else
+        match ← liftCoerce a aty d with
+        | some c => cnt.modify (· + 1); pure c
+        | none => pure a
+    out := out.push a'
+    fty := b.instantiate1 a'
+  return out
+
+/-- Rule P, term level: `b` used at `cod`. Directly (`liftCoerce`), or, for a function at a function type
+whose domains or codomain differ by lifts, η-expanded with its arguments and result coerced
+(`fun xs => PULift.up (o (PULift.down x) …)`); unchanged when nothing needs a coercion. -/
+partial def liftCoerceValue (b cod : Expr) (cnt : IO.Ref Nat) (lifted : Std.HashSet Name) : MetaM Expr := do
+  let bt ← inferType b
+  if ← isDefEq bt cod then return b
+  if let some c ← liftCoerce b bt cod then
+    cnt.modify (· + 1); return c
+  let cod' ← whnf cod
+  unless cod'.isForall do return b
+  let n0 ← cnt.get
+  let r ← forallTelescope cod' fun ys cod2 => do
+    let args ← coerceArgs b ys cnt lifted
+    unless args.size == ys.size do return none
+    let b2 ← liftCoerceValue (mkAppN b args) cod2 cnt lifted
+    if (← cnt.get) == n0 then return none
+    return some (← mkLambdaFVars ys b2)
+  return r.getD b
+
 mutual
 
 partial def trans (t : IR.Term) : TransM Expr := do
@@ -1331,6 +1511,9 @@ partial def trans (t : IR.Term) : TransM Expr := do
     -- M6: a proof whose cast needs a fixpoint's unfolding at open arguments (castRepair)
     if ← liftMeta (isProp ty') then
       if let some r ← liftMeta (castRepair c' (← inferType c') ty' 3) then return r
+    if let some cnt := (← read).propCoerce then
+      if let some r ← liftMeta (liftCoerce c' (← inferType c') ty') then
+        cnt.modify (· + 1); return r
     failT "TRANSLATION_FAILED" s!"{kind} cast annotation is not convertible in Lean"
   | .prod n ty b => withPath "prod" do
     checkRelevant n
@@ -1359,7 +1542,23 @@ partial def trans (t : IR.Term) : TransM Expr := do
         let ls := (← read).locals
         if i < ls.size && ls[ls.size - 1 - i]!.isFVarOf ac.f then
           return ← accCallSite ac args'
+    -- rule Q-a: a phantom check's sort arguments, per occurrence, at the types of their values
+    let args' ← if !(← read).phantomLower then pure args' else
+      match f with
+      | .const d _ => match (← read).genv.phantomDefs[d]? with
+        | some pairs => liftMeta do
+          let mut a := args'
+          for (si, vi) in pairs do
+            if h : si < args.size then
+              if let .sort _ := args[si] then
+                if vi < a.size then a := a.set! si (← instantiateMVars (← inferType a[vi]!))
+          pure a
+        | none => pure args'
+      | _ => pure args'
     let f' ← withPath "f" (transHead f args')
+    let args' ← match (← read).propCoerce with
+      | some cnt => do liftMeta (coerceArgs f' args' cnt (← read).genv.liftTargets)
+      | none => pure args'
     let e := mkAppN f' args'
     -- Universe arguments left as metavariables at a reference (generalized constants, generated
     -- inductives with level parameters) are solved here from the argument types when possible,
@@ -1423,6 +1622,18 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
     pure (hs ++ params)
   let npar := npar + nh
   let scrut' ← withPath "scrutinee" (trans scrut)
+  -- rule P, term level: a scrutinee of a lifted type (`h : Rnat a b` matched as the equation it lifts)
+  -- is its proof, `PULift.down h`
+  let scrut' ← match (← read).propCoerce with
+    | some cnt => liftMeta do
+      let t ← whnf (← inferType scrut')
+      match t.getAppFn with
+      | .const ``PULift [r, u] =>
+        if t.getAppNumArgs == 1 && u.isZero then
+          cnt.modify (· + 1); pure (mkApp2 (mkConst ``PULift.down [r, .zero]) t.appArg! scrut')
+        else pure scrut'
+      | _ => pure scrut'
+    | none => pure scrut'
   -- M6 ι-generalized fix lowering: a match on the decreasing argument, which is the constructor
   -- application C_k fields in this minor premise, is its branch k (Rocq's and Lean's ι-rule)
   if let some (_, k, fields) := (← read).iota.find? (·.1 == scrut') then
@@ -1533,6 +1744,18 @@ partial def transCaseNU (tgt : IndTarget) (ind : IndRef) (npar : Nat) (puinst : 
   let params ← (pparams.extract 0 nu).mapIdxM fun j a => withPath s!"param{j}" (trans a)
   let u ← withPath s!"param{nu}" (trans pparams[nu]!)
   let scrut' ← withPath "scrutinee" (trans scrut)
+  -- rule P, term level: a scrutinee of a lifted type (`h : Rnat a b` matched as the equation it lifts)
+  -- is its proof, `PULift.down h`
+  let scrut' ← match (← read).propCoerce with
+    | some cnt => liftMeta do
+      let t ← whnf (← inferType scrut')
+      match t.getAppFn with
+      | .const ``PULift [r, u] =>
+        if t.getAppNumArgs == 1 && u.isZero then
+          cnt.modify (· + 1); pure (mkApp2 (mkConst ``PULift.down [r, .zero]) t.appArg! scrut')
+        else pure scrut'
+      | _ => pure scrut'
+    | none => pure scrut'
   let sty ← liftMeta do whnf (← instLevelMVars (← inferType scrut'))
   unless sty.getAppFn.isConstOf iname && sty.getAppNumArgs == nu + k + nridx do
     failT "TRANSLATION_FAILED" s!"scrutinee type is not an application of {iname}"
@@ -2344,9 +2567,10 @@ def runTrans {α} (genv : GEnv) (x : TransM α) (globalLevels : Std.HashMap Stri
     (polyLevels : Array Level := #[]) (factReduce : Bool := false) (admitLevels : Array String := #[])
     (lowerShared : Bool := false) (hyps : Option (IO.Ref (Array (MVarId × String))) := none)
     (declKey : String := "") (hypExact : Bool := false)
-    (sharedFresh : Option (IO.Ref (Array (LMVarId × String))) := none) :
+    (sharedFresh : Option (IO.Ref (Array (LMVarId × String))) := none)
+    (propCoerce : Option (IO.Ref Nat) := none) (phantomLower : Bool := false) :
     MetaM (Except TransError α) :=
-  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact, sharedFresh }).run
+  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact, sharedFresh, propCoerce, phantomLower }).run
 
 /-- Pending validation: the hypothesis metavariables (in creation order) become binders of the
 declaration, `∀ hs, e` (`lam := false`) or `fun hs => e` (Lean's binding abstraction handles their

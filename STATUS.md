@@ -1,5 +1,22 @@
 # Status
 
+**2026-10-16 — Stage 5: job_task, rule P, rule Q-a, rule T, speed (merged into `main` after validation).**
+* **Rules adopted (approved 2026-10-15):** rule P, `PULift` for a proposition used at a type
+  (`docs/PROP_LIFT.md`, C1–C5 proofs); rule Q-a, phantom-only sort lowering for HB's `unify`/`id_phant`
+  (`docs/PHANTOM_SORT.md`, equivalence proofs; **Q-b not adopted**); rule T, non-recursive coinductive types
+  as inductives (`docs/COINDUCTIVE.md`, T1–T5). New suites: `test-prop-lift`, `test-phantom-sort`,
+  `test-coinductive`.
+* **No-policy fixes:** `job_task` (δβ-inlining of erasing definitions for constants), the erasing tier's own
+  levels, R3G for definitions as a last resort (`refine_maxn`/`refine_minn`), P3 collapse with normalized
+  levels, a proof-mode audit crash.
+* **Corpus** at `38df8a9` (run `r2l-run-S17`; all checks OK): **685 Accepted / 3,584 Audited Pending / 184
+  Blocked / 21 Direct Failure**, 205 unclaimed (S8: 676 / 3,538 / 235 / 25, 260 unclaimed).
+  * 55 protected roots newly supported since S8; 0 regressions; all rows +1,965 claimed, 0 lost.
+* **Open:** the GEL/order group (79 roots) behind a 23-declaration HB frontier (R-CARRIER copies × copied
+  facts), next; Classic `job_eqdef` needs a representation decision; translation time (4 h 36 min, P3
+  attempts) is the next speed target.
+* ITERATION_LOG entry 15.
+
 **2026-10-15 — Stage 4: blocks, terminations and translator speed (merged into `main` after validation).**
 * `gcdn` (B-P termination statements), R3G for template blocks and field-only classes, δβ-inlining of
   erasing polymorphic definitions, native compilation and conditional tiers.
@@ -8,8 +25,8 @@
   / 25).
   * 558 protected roots newly supported since RH2; 0 regressions; all rows +1,988 since S3, 0 lost.
 * Full-corpus translation takes 22.5 min, native (S4 interpreted: more than 106 min).
-* **Awaiting decisions:** rule P (`docs/PROP_LIFT_PROPOSAL.md`), rule Q
-  (`docs/PHANTOM_SORT_PROPOSAL.md`), and coinductive `Task_T`.
+* **Awaiting decisions (decided in stage 5):** rule P (now `docs/PROP_LIFT.md`), rule Q (now
+  `docs/PHANTOM_SORT.md`, Q-a), and coinductive `Task_T` (now `docs/COINDUCTIVE.md`, rule T).
 * ITERATION_LOG entry 14.
 
 **2026-10-15 — R-CARRIER, case B Option 2 (branch `rules-carrier`, experimental; committed locally,
