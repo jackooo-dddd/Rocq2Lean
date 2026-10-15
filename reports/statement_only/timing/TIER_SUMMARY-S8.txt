@@ -1,0 +1,54 @@
+declarations 10972, total translation 1348 s
+tier                                       calls      sec      ok  sec/call
+c[] eo                                      4571    870.2    2286     0.190
+c[]                                         6221    261.5    5120     0.042
+c[cu,lo]                                     288     26.1     189     0.090
+c[un] eo                                     631     17.7       0     0.028
+c[cu] eo                                     631     17.5       2     0.028
+c[cu,lo] eo                                  629     17.3       0     0.027
+c[lo,p3] eo                                  629     17.2       0     0.027
+c[cu]                                        289     14.3       1     0.050
+c[it]                                        312     12.2      13     0.039
+c[it,cu]                                     288     10.3       0     0.036
+c[lo,p3]                                      93      9.4       0     0.101
+c[it] eo                                     641      7.6      10     0.012
+c[p3] eo                                     140      7.0       0     0.050
+c[p3]                                         43      6.6       6     0.154
+c[it,cu,lo]                                   99      6.4       0     0.065
+c[it,p3]                                      37      5.2       0     0.141
+c[it,un] eo                                  631      4.5       0     0.007
+c[it,cu,lo] eo                               629      4.4       0     0.007
+c[it,cu] eo                                  629      4.4       0     0.007
+c[it,p3] eo                                  140      2.7       0     0.019
+c[rv]                                         77      2.5      10     0.033
+c[lo,rv]                                      67      2.5       4     0.037
+c[it,rv]                                      67      1.7       0     0.025
+c[fr,it,cu,lo,rv]                             63      1.6       0     0.026
+c[it,lo,rv]                                   63      1.6       0     0.026
+c[jo]                                         59      1.2      59     0.020
+c[it,jo]                                      58      1.1      58     0.019
+c[ad]                                         46      1.0      10     0.022
+c[un]                                         67      0.4      10     0.006
+i[pl] eo                                     130      0.3      21     0.003
+slowest declarations:
+      6.9 s  UNIVERSE_REJECTED             16 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/isNumRing.phant_axioms
+      6.2 s  UNIVERSE_REJECTED             16 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/isNumRing.phant_Build
+      4.1 s  UNIVERSE_REJECTED             11 attempts  prosa.classic.implementation.apa.bertogna_edf_example/ResponseTimeAnalysisEDF.ts_obligation_1
+      4.0 s  UNIVERSE_REJECTED             11 attempts  prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.ts_obligation_1
+      3.9 s  UNIVERSE_REJECTED             14 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/NumZmod_isNumRing.phant_Build
+      3.7 s  UNIVERSE_REJECTED             16 attempts  mathcomp.algebra.algebraic_hierarchy.divalg/GRing/ComNzRing_hasMulInverse.phant_axioms
+      3.3 s  UNIVERSE_REJECTED             13 attempts  mathcomp.algebra.algebraic_hierarchy.divalg/GRing/ComNzRing_hasMulInverse.phant_Build__rocq2lean_obligation_2
+      3.2 s  UNIVERSE_REJECTED             13 attempts  mathcomp.algebra.algebraic_hierarchy.divalg/GRing/ComNzRing_hasMulInverse.phant_Build__rocq2lean_obligation_4
+      3.1 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_29
+      3.1 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_70
+      3.1 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_29
+      3.0 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_70
+      3.0 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_82
+      2.9 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_29
+      2.9 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_41
+      2.9 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_41
+      2.9 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_70
+      2.9 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_82
+      2.9 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_82
+      2.9 s  STATEMENT_PENDING_KERNEL_CHECKED   1 attempts  mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_41
+time in declarations not claimed: 192 s

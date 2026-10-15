@@ -1,5 +1,17 @@
 # Status
 
+**2026-10-15 — Stage 4: blocks, terminations and translator speed (merged into `main` after validation).**
+* `gcdn` (B-P termination statements), R3G for template blocks and field-only classes, δβ-inlining of
+  erasing polymorphic definitions, native compilation and conditional tiers.
+* **Corpus** at `f5e373c` (run `r2l-run-S8`; all checks OK):
+  **676 Accepted / 3,538 Audited Pending / 235 Blocked / 25 Direct Failure** (S3: 673 / 3,477 / 299
+  / 25).
+  * 558 protected roots newly supported since RH2; 0 regressions; all rows +1,988 since S3, 0 lost.
+* Full-corpus translation takes 22.5 min, native (S4 interpreted: more than 106 min).
+* **Awaiting decisions:** rule P (`docs/PROP_LIFT_PROPOSAL.md`), rule Q
+  (`docs/PHANTOM_SORT_PROPOSAL.md`), and coinductive `Task_T`.
+* ITERATION_LOG entry 14.
+
 **2026-10-15 — R-CARRIER, case B Option 2 (branch `rules-carrier`, experimental; committed locally,
 not merged or pushed, pending review).**
 * Per-operand carrier universe levels: P1 decoupled parameter carriers, P2 implicit operand copies

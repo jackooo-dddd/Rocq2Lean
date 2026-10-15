@@ -110,6 +110,7 @@
     "u_mathcomp_boot_eqtype_32__c0",
     "u_mathcomp_boot_eqtype_32__c1",
     "u_mathcomp_boot_eqtype_533",
+    "u_mathcomp_boot_eqtype_542",
     "u_mathcomp_boot_eqtype_55",
     "u_mathcomp_boot_eqtype_577",
     "u_mathcomp_boot_eqtype_58",
@@ -131,6 +132,7 @@
    "status": "PENDING_KERNEL_CHECKED",
    "level_params": [
     "u_mathcomp_boot_eqtype_533",
+    "u_mathcomp_boot_eqtype_542",
     "u_mathcomp_boot_eqtype_577",
     "u_mathcomp_boot_eqtype_583",
     "u_mathcomp_boot_eqtype_588",
@@ -291,7 +293,8 @@
  },
  "equal_level_generality": {
   "equal": true,
-  "one_summand_only_below": false,
+  "one_summand_only_below": true,
+  "all_summands_only_below": false,
   "offset": false,
   "not_own": false
  }

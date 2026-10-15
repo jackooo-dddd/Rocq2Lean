@@ -1,0 +1,188 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   0,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 56,
+   "DEFINITION_AUDITED_PENDING": 30,
+   "STATEMENT_AUDITED": 20,
+   "STATEMENT_AUDITED_PENDING": 10
+  }
+ },
+ "rows": {
+  "prosa.util.lcmseq.lcml": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "pending_hypotheses": [
+    "Corelib.ssr.ssrbool.is_true_true",
+    "Corelib.ssr.ssrbool.not_false_is_true",
+    "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_1",
+    "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_2",
+    "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_1",
+    "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_2",
+    "mathcomp.boot.div.modn_rec__rocq2lean_termination_1",
+    "mathcomp.boot.div.gcdn__rocq2lean_termination_1",
+    "mathcomp.boot.div.edivn_rec__rocq2lean_termination_1"
+   ],
+   "implicit_levels": [],
+   "delta_inlined": [],
+   "template": false
+  },
+  "prosa.results.transfer_schedulability.paper_model.SystemEvolutions": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "pending_hypotheses": [],
+   "implicit_levels": [
+    "mathcomp.boot.eqtype.32",
+    "mathcomp.boot.eqtype.55",
+    "mathcomp.boot.eqtype.58"
+   ],
+   "delta_inlined": [],
+   "template": true
+  },
+  "prosa.implementation.definitions.task.concrete_job": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "pending_hypotheses": [
+    "Corelib.ssr.ssrbool.is_true_true",
+    "Corelib.ssr.ssrbool.not_false_is_true",
+    "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_1",
+    "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_2",
+    "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_1",
+    "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_2",
+    "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_1",
+    "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_2",
+    "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_3",
+    "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_4",
+    "mathcomp.boot.eqtype.pair_eqP__rocq2lean_obligation_1",
+    "mathcomp.boot.eqtype.pair_eqP__rocq2lean_obligation_2",
+    "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_1",
+    "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_2",
+    "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_3",
+    "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_4",
+    "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_5",
+    "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_6",
+    "prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1",
+    "prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_2",
+    "prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_3",
+    "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_1",
+    "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_2",
+    "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_3"
+   ],
+   "implicit_levels": [
+    "mathcomp.boot.eqtype.32",
+    "mathcomp.boot.eqtype.55",
+    "mathcomp.boot.eqtype.58",
+    "prosa.implementation.definitions.extrapolated_arrival_curve.21"
+   ],
+   "delta_inlined": [
+    "Corelib.Init.Prelude.reverse_coercion"
+   ],
+   "template": false
+  },
+  "mathcomp.boot.div.gcdn": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "pending_hypotheses": [
+    "Corelib.ssr.ssrbool.is_true_true",
+    "Corelib.ssr.ssrbool.not_false_is_true",
+    "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_1",
+    "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_2",
+    "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_1",
+    "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_2",
+    "mathcomp.boot.div.modn_rec__rocq2lean_termination_1",
+    "mathcomp.boot.div.gcdn__rocq2lean_termination_1"
+   ],
+   "implicit_levels": [],
+   "delta_inlined": [],
+   "template": false
+  },
+  "mathcomp.boot.div.gcdn__rocq2lean_termination_1": {
+   "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+   "pending_hypotheses": [
+    "Corelib.ssr.ssrbool.is_true_true",
+    "Corelib.ssr.ssrbool.not_false_is_true",
+    "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_1",
+    "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_2",
+    "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_1",
+    "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_2",
+    "mathcomp.boot.div.modn_rec__rocq2lean_termination_1"
+   ],
+   "implicit_levels": [],
+   "delta_inlined": [],
+   "template": false
+  }
+ },
+ "SystemEvolutions_not_generic": [],
+ "concrete_job_implicit_as_arguments": [
+  [
+   "mathcomp.boot.eqtype.32",
+   true
+  ],
+  [
+   "mathcomp.boot.eqtype.55",
+   true
+  ],
+  [
+   "mathcomp.boot.eqtype.58",
+   true
+  ],
+  [
+   "prosa.implementation.definitions.extrapolated_arrival_curve.21",
+   true
+  ]
+ ],
+ "negative": {
+  "termination-extra-hyp": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "mathcomp.boot.div.gcdn__rocq2lean_termination_1: termination statement hypotheses ['mathcomp.boot.div.edivn_rec__rocq2lean_termination_1'] are not prerequisites of its constant",
+    "mathcomp.boot.div.gcdn__rocq2lean_termination_1: not used by its constant's audited termination lowering"
+   ]
+  },
+  "template-implicit-explicit": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "prosa.results.transfer_schedulability.paper_model.SystemEvolutions: implicit levels ['prosa.results.transfer_schedulability.paper_model.33'] occur explicitly in the source",
+    "prosa.results.transfer_schedulability.paper_model.SystemEvolutions: ctor Rocq.prosa.results.transfer_schedulability.paper_model.SystemEvolutions.Build_SystemEvolutions: Rocq.prosa.results.transfer_schedulability.paper_model.SystemEvolutions (template level 0 from parameter 0): universe argument {'k'",
+    "prosa.results.transfer_schedulability.paper_model.SystemEvolutions: implicit levels ['prosa.results.transfer_schedulability.paper_model.33'] occur explicitly in the source"
+   ]
+  },
+  "delta-not-erasing": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "prosa.implementation.definitions.task.concrete_job: inlined prosa.behavior.job.JobType is not an erasing polymorphic definition",
+    "prosa.implementation.definitions.task.concrete_job: implicit levels ['mathcomp.boot.eqtype.58'] occur explicitly in the source",
+    "prosa.implementation.definitions.task.concrete_job: implicit levels ['mathcomp.boot.eqtype.58'] occur explicitly in the source"
+   ]
+  },
+  "delta-hidden": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "prosa.implementation.definitions.task.concrete_job: implicit levels ['mathcomp.boot.eqtype.58'] occur explicitly in the source",
+    "prosa.implementation.definitions.task.concrete_job: implicit levels ['mathcomp.boot.eqtype.58'] occur explicitly in the source"
+   ]
+  },
+  "implicit-not-argument": {
+   "forged_row_kernel": "REJECTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "prosa.implementation.definitions.task.concrete_job: implicit level mathcomp.boot.eqtype.32 is not the argument of a reference for that level",
+    "prosa.implementation.definitions.task.concrete_job: ['ctor Build_concrete_job', 'prod.b', 'prod.b', 'prod.b', 'prod.b', 'prod.b']: source rel 5 should be RocqPending.prosa.implementation.definitions.task.concrete_job applied to its hypotheses"
+   ]
+  }
+ },
+ "unit": {
+  "reverse_coercion": true,
+  "monomorphic": [
+   "mathcomp.boot.seq.foldr",
+   false
+  ],
+  "polymorphic_body_with_levels": false,
+  "polymorphic_opaque": false
+ }
+}

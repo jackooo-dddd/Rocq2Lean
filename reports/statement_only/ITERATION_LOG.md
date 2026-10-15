@@ -1309,3 +1309,139 @@ ideal `processor_state` and `task_affinity` among them.
   levels), which is a further representation decision.
 * A second variant measured on subsets (H: copy semantics at prerequisite-statement hypotheses) gained
   nothing on its own.
+
+## Entry 14 — Stage 4 (blocks and terminations) and translator speed (2026-10-15)
+
+Request, in order:
+1. Finish U4 and fix `gcdn`, verifying the actual downstream gains.
+2. `SystemEvolutions` and `concrete_job`, with independent audit checks and negative controls.
+3. Submit the `fun_hrel` lifting design for approval.
+4. The MathComp `order`/`nmodule` group, measured on its complete frontier.
+
+Then, on request, speed up full runs: conditional tiers, reuse, late-tier budgets, timing, pruning.
+Branch `rules-speed`: `rules-fields`, stage 4, followed by the speed changes.
+
+### (1) `div.gcdn` (25 protected roots blocked by it alone)
+
+* **Root cause of the internal error.** `transFix` restores the Meta state after a failed structural
+  attempt, but the hypothesis registry (an `IO.Ref`) kept a hypothesis for `modn`'s prerequisite that
+  pointed to a metavariable which no longer existed. Backtracking now also truncates the registries
+  (`TransSaved`).
+* The real gain needed four more steps (docs/TERMINATION.md §9):
+  * the decreasing argument may contain prerequisite-hypothesis placeholders (`modn` is pending);
+  * hypotheses are created outside local scopes, since they are closed propositions;
+  * let-bound locals are unfolded in a call context's binder types *before* abstraction;
+  * **B-P**: the termination statement is a pending proof task over the prerequisites its relation
+    mentions. The audit copy checks the telescope and requires the hypotheses to be among its
+    constant's recomputed prerequisites.
+* **Downstream:** `gcdn`, `lcmn` and `lcmseq.lcml` are claimed. Conversion dependence is now
+  `needs unfolding: []`, where `gcdn` used to be the one CONV_NEEDS.
+
+### (2) Blocks (docs/COHERENCE_READINGS.md §7)
+
+* **R3G for template blocks** (`SystemEvolutions`). Implicit levels are non-template parameters, never
+  solved. Audit copy in `ind_params`.
+* **R3G for field-only classes** (Classic `concrete_task`; the fixture `holder`, the limitation
+  recorded in entry 10, is lifted).
+* **Per-occurrence discovery,** and class rebinding to the lowest level of a class.
+* **δβ-inlining of erasing polymorphic definitions** (`reverse_coercion`), last tier for blocks
+  (`concrete_job`). The audit re-derives the erasing property (`erasing_poly_body`) and audits against
+  the inlined source (`inline_erasing_block`, which includes primitive-record projection types).
+* **Translator-side rule mirroring the audit:** an implicit level must be the argument of some
+  reference for that level.
+* **Reverted after measurement:** per-occurrence *instance* levels. U4's audit correctly rejected the
+  `reverse_coercion` instance arguments they produced; such blocks now go to δβ-inlining.
+* **Controls:** `scripts/test-blocks` (13 checks, fixture `fixtures/stmt/s4`). Forged rows, all
+  audit-rejected:
+  * a termination statement over a non-prerequisite;
+  * a template level reported as implicit;
+  * `delta_inlined` naming a non-erasing definition;
+  * an unreported inlining;
+  * an implicit level that is no reference's argument.
+
+  Unit controls cover `erasing_poly_body`. `test-result-sort`'s `holder` expectation now states
+  acceptance.
+
+### (3) Proposals awaiting decisions (not implemented)
+
+* `docs/PROP_LIFT_PROPOSAL.md`, **rule P**: `PULift` for Prop ≤ Type cumulativity, with
+  correspondence obligations C1–C5. Measured: `fun_hrel` (17 roots alone).
+* `docs/PHANTOM_SORT_PROPOSAL.md`, **rule Q**: sort arguments of HB phantom checks.
+  * The complete frontier of `GEL`, shared by the 79-root group, is 315 failing declarations.
+  * 306 of them are SOLUTION_FACT_VIOLATED in declarations whose type contains
+    `HB.structures.unify`. Their levels occur only as type arguments of that check, and Rocq types
+    them by cumulativity.
+  * Recommended option: Q-a (phantom-only).
+
+### (4) Speed
+
+| Change | Kind | Measured effect |
+|---|---|---|
+| **Native code** (`precompileModules`, `--load-dynlib` in translate and the consumers) | The translator ran in Lean's IR interpreter. | Subset 104 s → 2 s, byte-identical. Corpus translation ≥ 106 min (S4, interpreted, ungated; stopped) → 26 min (S6). |
+| **Conditional tiers** | Discovery only with generalized dependencies. Per-occurrence attempts only with shared levels and kernel/universe failures. Per-occurrence discovery lazily, after the plain attempts fail. δ tier only for kernel/universe failures. | |
+| **Exact gates** | R2⁺ tiers only when a sort is fact-reducible. P3 variants identical to earlier tiers skipped without prerequisites. | S6 → S7: 1,520 s → 1,353 s of translation, identical rows. |
+| **Late-tier budgets** | A fifth of the declaration's heartbeat budget, failure contained. | |
+| **Timing** | `translation_timing.json`: phases and per-declaration attempts, outside the deterministic report. | The first plain attempt per declaration is 76% of translation time (S6). Zero-yield tiers cost 261 s (S6) before the gates. |
+
+Other findings:
+* **Performance bug.** Class rebinding was O(n²) in occurrences; it is now a single pass. This was
+  U4's 2h+ runtime.
+* **Hashing.** The 157 MB source hash was about 100 s interpreted; it is under 1 s native.
+* **Pruning** of tiers that never succeed on the corpus (it/cu/lo combinations for statements) is
+  deferred. They are not provably redundant, and fixtures may rely on them. The data is in
+  `translation_timing.json`.
+
+### (5) Coverage — FULL CORPUS, same 4,474 protected roots
+
+| Run | Impl | Accepted | Audited Pending | Blocked | Direct Failure | Translation |
+|---|---|---|---|---|---|---|
+| S3 (entry 13) | `2c78107` | 673 | 3,477 | 299 | 25 | ≈ 38 min (interpreted) |
+| S6 | `940d82b` | 676 | 3,538 | 235 | 25 | 26 min |
+| S7 | `b30ae60` | 676 | 3,538 | 235 | 25 | 23.5 min |
+| **S8** | `f5e373c` (= merged tree, docs aside) | **676** | **3,538** | **235** | **25** | 22.5 min |
+
+* **Validation (S8):** consumer, audit, source instances, `CORPUS_PROVENANCE_BOUND`, conversion
+  dependence (`needs unfolding: []`), and 5,330 proof tasks rendered.
+* **Earlier runs of this stage:**
+  * S6's audit rejected one row: its δ-inlining check counted projection metadata. Fixed in S7, and S6
+    re-audited clean.
+  * U4 (partial stage 4) was audit-rejected for per-occurrence instance levels, which were reverted.
+  * S4 (interpreted, ungated) was superseded and stopped.
+* **Protected transitions RH2 → S8:** 558 newly supported (543 modern, 15 Classic), 0 genuine
+  regressions, 4 moved between unclaimed categories.
+  * 3 of these 4 went from blocked to refused, now that their dependencies translate: Classic
+    `job_eqdef` and `concrete_taskset`, and `definitions.task.job_task`.
+  * Relative to S3 this stage adds 64 newly supported.
+* **All rows:** S3 → S8, 1,988 claimed rows gained, 0 lost. S6, S7 and S8 are row-identical
+  (status and terms). Old false acceptances: 0.
+
+### (6) Remaining blockers (S8)
+
+260 protected roots are unclaimed (213 modern, 47 Classic):
+
+| Roots | Blocker | Status |
+|---|---|---|
+| 79 | MathComp `order`/`nmodule` group | Rule Q, needs a decision |
+| 43 | `definitions.task.job_task` | REFERENCE_COHERENCE, newly exposed |
+| 17 alone (68 affected) | `fun_hrel` | Rule P, needs a decision |
+| 13 | Classic `Task_T` | Coinductive, needs a decision |
+| 11 | STATEMENT_FREE_LEVEL_PINNED | Classic `ts_obligation_1` |
+| rest | Smaller families | See `RULE_BACKLOG.md` |
+
+### (7) Validation and process
+
+* **Frozen worktree `r2l-B-test` at `f5e373c`:** all 14 statement suites pass (`test-blocks` 13,
+  `test-occurrence` 10, `test-coherence` 15, `test-result-sort` 15, …), and `test-all` is 18/18.
+* An earlier `test-all` at `b30ae60` failed 15 suites on determinism, because timing was inside the
+  bound report. Fixed in `f5e373c` by moving it to `translation_timing.json`.
+* The stage was squashed before merging, so the debug traces of a WIP commit are not in the merged
+  history.
+
+### (8) Evidence
+
+* `coverage/{S6,S8}.json` and `coverage/transitions-RH2-to-S8.json`;
+* `RULE_BACKLOG.{md,json}` and `PROOF_TASKS.jsonl` (S8);
+* `provenance/CORPUS_MANIFEST.json` (S8; `-S3` kept);
+* `termination/CONVERSION_DEPENDENCE{,-S8}.json`;
+* `timing/translation_timing-S8.json` and `timing/TIER_SUMMARY-S8.txt`;
+* the frozen-suite reports.
