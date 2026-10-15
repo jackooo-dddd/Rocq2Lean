@@ -3979,6 +3979,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     # interface protection (as in proof mode, for every claimed row)
     root_dir = Path(__file__).resolve().parent.parent
     iface_checked = 0
+    prop_lift_protected = []
     try:
         pin = json.load(open(root_dir / "tools" / "protected_interface.pin.json"))
         mbytes = (root_dir / pin["manifest"]).read_bytes()
@@ -4002,6 +4003,14 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 if (r_.get("sort_lowered_levels") and not r_.get("result_sort_inherited")) or \
                         any(x.get("in_type") for x in r_.get("r2bp_levels") or []):
                     problem("interface", f"{r_.get('source')}: protected public declaration translated with a specialized statement")
+                # rule P (C5, docs/PROP_LIFT.md): every lifted position of a protected declaration is listed (an
+                # equivalent range, C1, never a narrowed one); a lifted statement codomain is never protected
+                if r_.get("prop_lift") is not None or r_.get("prop_lift_coercions"):
+                    prop_lift_protected.append({"source": r_["source"], "status": r_["status"],
+                                                "value_lift_depth": r_.get("prop_lift"),
+                                                "coercions": r_.get("prop_lift_coercions") or 0})
+                if r_.get("prop_lift_unfold"):
+                    problem("interface", f"{r_.get('source')}: protected statement translated with a lifted codomain unfolded")
     except (OSError, KeyError, ValueError) as e:
         problem("interface", f"protection data unreadable: {e}")
     # statement views and prerequisites, from the source alone
@@ -4366,7 +4375,8 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
            "assembly": ({"proofs_assembled": len(proved), "by_assembly_state": dict(sorted(by_asm.items(), key=str))}
                         if assembly else None),
            "status": "OK" if not problems else "AUDIT_REJECTED",
-           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked, "level_split_checked": split_checked, "result_sort_implicit_checked": RSI_CHECKED[0], "level_copies_checked": copies_checked,
+           "universe_arguments_checked": univ_checked, "interface_checked": iface_checked,
+           "prop_lift_protected": sorted(prop_lift_protected, key=lambda x: x["source"]), "level_split_checked": split_checked, "result_sort_implicit_checked": RSI_CHECKED[0], "level_copies_checked": copies_checked,
            "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
            "definition_type_specialization_candidates": {
                "note": "non-protected definitions only (protected ones are rejected): a binder-domain level of the "
