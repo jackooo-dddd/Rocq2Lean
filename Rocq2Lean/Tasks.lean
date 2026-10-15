@@ -53,17 +53,22 @@ syntax (name := rocqRenderTasks) "#rocq2lean_render_tasks " str str : command
     for t in tasks do
       let stmt := ((t.getObjValAs? String "statement_constant").toOption.getD "").toName
       let nh := (t.getObjValAs? Nat "hypotheses").toOption.getD 0
-      let (lps, e) ← taskStatement stmt nh
-      let ci ← getConstInfo stmt
-      let body ← match ci.value? with
-        | some v => do
-          let b ← lambdaBoundedTelescope v nh fun _ b => pure b
-          pure (toString (← withOptions (fun o => o.setBool `pp.fullNames true) (ppExpr b)))
-        | none => pure ""
+      -- (the heartbeat limit applies per task, not to the whole rendering command)
+      let (lps, e, body) ← withCurrHeartbeats do
+        let (lps, e) ← taskStatement stmt nh
+        let ci ← getConstInfo stmt
+        let body ← match ci.value? with
+          | some v => do
+            let b ← lambdaBoundedTelescope v nh fun _ b => pure b
+            pure (toString (← withOptions (fun o => o.setBool `pp.fullNames true) (ppExpr b)))
+          | none => pure ""
+        pure (lps, e, body)
+      let ePP ← withCurrHeartbeats do
+        pure (toString (← withOptions (fun o => o.setBool `pp.fullNames true) (ppExpr e)))
       out := out.push (Json.mkObj [
         ("statement_constant", stmt.toString), ("level_params", Json.arr (lps.map (Json.str ·.toString)).toArray),
         ("task_type", exprJson e),
-        ("task_type_pp", toString (← withOptions (fun o => o.setBool `pp.fullNames true) (ppExpr e))),
+        ("task_type_pp", ePP),
         ("statement_pp", body)])
     return out
   IO.FS.writeFile outP ((Json.arr out).compress ++ "\n")
