@@ -8,8 +8,8 @@
   "validation": "STATEMENT_VALIDATED",
   "by_validation": {
    "DEFINITION_AUDITED": 112,
-   "DEFINITION_AUDITED_PENDING": 48,
-   "NOT_TRANSLATED": 2,
+   "DEFINITION_AUDITED_PENDING": 49,
+   "NOT_TRANSLATED": 1,
    "STATEMENT_AUDITED": 33,
    "STATEMENT_AUDITED_PENDING": 3
   }
@@ -32,8 +32,30 @@
   "universe_level_defaults": 0
  },
  "processor_state": {
-  "status": "UNIVERSE_REJECTED",
-  "message": "reference to Rocq.mathcomp.boot.eqtype.HB_unnamed_factory_16__rocq2lean_obligation_1.statement: coherence: source level mathcomp.boot.eqtype.58 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.58, not max\n(max\n (max (max u_mathcomp_boot_eqtype_32 1) u_mathcomp_boot_eqtype_55)\n (max u_mathcomp_boot_eqtype_32 u_mathcomp_boot_eqtype_55)\n 1)\n1 [last tier: UNIVER"
+  "status": "PENDING_KERNEL_CHECKED",
+  "message": "",
+  "job_binder": {
+   "u": [
+    {
+     "n": "u_mathcomp_boot_eqtype_32",
+     "k": "param"
+    },
+    {
+     "n": "u_mathcomp_boot_eqtype_51",
+     "k": "param"
+    },
+    {
+     "n": "u_mathcomp_boot_eqtype_55",
+     "k": "param"
+    },
+    {
+     "n": "u_mathcomp_boot_eqtype_58",
+     "k": "param"
+    }
+   ],
+   "n": "Rocq.prosa.behavior.job.JobType",
+   "k": "const"
+  }
  },
  "policies": {
   "JLFP_policy": {
@@ -149,7 +171,7 @@
  "negative_narrowed_statement_0-0": {
   "kernel": true,
   "validate_exit": 2,
-  "blocked_dependents": 5,
+  "blocked_dependents": 6,
   "audit_problems": [
    "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1: Rocq.mathcomp.boot.eqtype.Equality.type: source level mathcomp.boot.eqtype.51 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_mathcomp_boot_eqtype_51: the statement is specialized (R3G)"
   ],
@@ -169,7 +191,7 @@
  "negative_narrowed_statement_0-1": {
   "kernel": true,
   "validate_exit": 2,
-  "blocked_dependents": 5,
+  "blocked_dependents": 6,
   "audit_problems": [
    "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1: Rocq.mathcomp.boot.eqtype.Equality.type: source level mathcomp.boot.eqtype.51 is free in the statement (not determined by the reference's arguments, not forced by the source graph) but its argument is {'k': 'zero'}, not the parameter u_mathcomp_boot_eqtype_51: the statement is specialized (R3G)"
   ],
@@ -189,7 +211,7 @@
  "negative_narrowed_statement_2-2": {
   "kernel": true,
   "validate_exit": 2,
-  "blocked_dependents": 5,
+  "blocked_dependents": 6,
   "audit_problems": [
    "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1: Rocq.mathcomp.boot.eqtype.Equality.sort: Set + 2 <= mathcomp.boot.eqtype.51 not entailed by the source universe graph"
   ],

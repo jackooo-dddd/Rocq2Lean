@@ -293,7 +293,7 @@
    "validate_exit": 2,
    "audit_problems": [
     "SF.Rs.typeE: R3G-F level SF.Rs.22 occurs as a sort in a constructor type (a field range)",
-    "SF.Rs.typeE: ['arity']: sort mismatch"
+    "SF.Rs.typeE: sort_interp: the arity's sort {'k': 'max', 'a': {'k': 'max', 'b': {'l': {'n': 'u_SF_Rs_25', 'k': 'param'}, 'k': 'succ'}, 'a': {'k': 'max', 'b': {'l': {'n': 'u_SF_Rs_24', 'k': 'param'}, 'k': 'succ'}, 'a': {'k': 'max', 'b': {'l': {'l': {'n': 'u_SF_Rs_23', 'k': 'param'}, 'k': 'succ'}, 'k':"
    ],
    "consumer_problems": [
     "SF.Rs.typeE: result-sort implicit level SF.Rs.22 is not confined to the block's result sort and to universe arguments"

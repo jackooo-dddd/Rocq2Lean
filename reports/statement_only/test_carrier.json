@@ -291,7 +291,8 @@
  },
  "equal_level_generality": {
   "equal": true,
-  "one_summand_only_below": false,
+  "one_summand_only_below": true,
+  "all_summands_only_below": false,
   "offset": false,
   "not_own": false
  }
