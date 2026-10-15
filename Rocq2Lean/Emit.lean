@@ -1924,6 +1924,9 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
   let phantomDefs := src.decls.foldl (init := ({} : Std.HashMap String (Array (Nat × Nat)))) fun m d => match d with
     | .constant c => match phantomDefPairs? c with | some ps => m.insert c.name ps | none => m
     | _ => m
+  let phantomProofs := src.decls.foldl (init := ({} : Std.HashSet String)) fun m d => match d with
+    | .constant c => if phantomDefs.contains c.name && !(c.bodyState == "transparent" && c.body.isSome) then m.insert c.name else m
+    | _ => m
   let stmtMode := ((src.header.getObjVal? "mode").toOption.bind (fun m => (m.getObjValAs? String "name").toOption)) == some "statement"
   -- R-CARRIER P1: parameter carrier levels of every exported block, once, from the source
   let carrierSet : Std.HashSet String := src.decls.foldl (fun acc d => match d with
@@ -1935,7 +1938,7 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
                       else (Split.decoupledPairs i).foldl (·.insert ·) acc
     | _ => acc) {}
   let tierLog ← IO.mkRef (#[] : Array (String × Nat × String))
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, phantomDefs, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog }
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, phantomDefs, phantomProofs, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   let opaqueData : Std.HashSet String := src.decls.foldl (init := {}) fun m d => match d with
@@ -2155,10 +2158,20 @@ where
           -- (rule Q-a first, when it applies: strictly more general, as it leaves the phantom-only levels out
           -- and every other level as before; otherwise a plain attempt may identify the carriers of a phantom
           -- check, a narrowing)
+          -- (a declaration using a proof of a phantom check, HB's `id_phant` — a prerequisite then used at a
+          -- different lowered sort at each occurrence — starts with per-instance hypotheses, P3: 587/608 on the
+          -- GEL frontier; the plain attempt follows if it fails, so only the order differs)
           let rQ ← if gone.isEmpty then pure none else do
-            let q ← processConstant genv results cQ (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
-              (extraOwn := eo.filter (!gone.contains ·)) (phantom := true)
-            if q.accepted then pure (some { q with phantomLowered := gone }) else do sBefore.restore; pure none
+            let p3First := (c0.typeDeps ++ c0.bodyDeps).any genv.phantomProofs.contains
+            let mut res : Option DeclResult := none
+            for p3 in (if p3First then [true, false] else [false]) do
+              let q ← processConstant genv results cQ (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+                (extraOwn := eo.filter (!gone.contains ·)) (hypExact := p3) (phantom := true)
+              if q.accepted then
+                res := some { q with phantomLowered := gone }
+                break
+              sBefore.restore
+            pure res
           let r0 ← if let some q := rQ then pure q else
             if (motiveLevels c.type).isEmpty then processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (extraOwn := eo) else do
               let a ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (admit := true) (extraOwn := eo)

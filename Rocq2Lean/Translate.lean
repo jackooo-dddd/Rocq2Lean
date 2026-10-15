@@ -109,6 +109,8 @@ structure GEnv where
   /-- Rule Q-a (docs/PHANTOM_SORT.md): phantom definitions (`phantomDefPairs?`) and their
   (sort parameter, value parameter) index pairs. -/
   phantomDefs : Std.HashMap String (Array (Nat × Nat)) := {}
+  /-- Rule Q-a: the phantom definitions that are proofs of phantom checks (HB's `id_phant`). -/
+  phantomProofs : Std.HashSet String := {}
   /-- Rule P gate (speed, exact): source declarations whose dependency closure reaches a definition
   translated with a lifted value, and their target names (with `PULift`): a lifted type can only arise by
   unfolding one of them, so only terms mentioning one can need a coercion. -/
