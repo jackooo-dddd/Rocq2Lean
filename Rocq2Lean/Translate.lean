@@ -106,6 +106,9 @@ structure GEnv where
   setMotive : Std.HashSet String := {}
   /-- Entry 14: erasing polymorphic definitions (`erasingPolyBody?`) and their bodies. -/
   erasingPoly : Std.HashMap String IR.Term := {}
+  /-- Rule Q-a (docs/PHANTOM_SORT.md): phantom definitions (`phantomDefPairs?`) and their
+  (sort parameter, value parameter) index pairs. -/
+  phantomDefs : Std.HashMap String (Array (Nat × Nat)) := {}
   /-- Timing (entry 14): the attempts of the declaration being translated (tier label, ms, status). -/
   tierLog : Option (IO.Ref (Array (String × Nat × String))) := none
   /-- P0: protected public interface (pinned Prosa/Classic inventory, bound in the export contract):
@@ -223,6 +226,9 @@ structure TCtx where
   /-- Rule P, term level (docs/PROP_LIFT.md §3): where a cast or an application argument mismatches
   only by a lift, `PULift.up` / `PULift.down` is inserted (counted here; `none` outside rule P's tier). -/
   propCoerce : Option (IO.Ref Nat) := none
+  /-- Rule Q-a: at an application of a phantom definition, a sort argument at a sort-parameter position
+  is the type of the paired value argument (per occurrence). -/
+  phantomLower : Bool := false
 
 abbrev TransM := ReaderT TCtx (ExceptT TransError MetaM)
 
@@ -793,6 +799,86 @@ def erasingPolyBody? (c : IR.ConstantDecl) : Option IR.Term := do
   let (t, n) := peel b 0
   if n == 0 || termHasUnivVar t then none
   some b
+
+/-- Rule Q-a (docs/PHANTOM_SORT.md): a *phantom definition* is a transparent monomorphic constant whose
+body, after its λs, is a chain of non-dependent products of `phantom X x` (Corelib's
+`ssreflect_rw.phantom : ∀ T : Type, T → Prop`, one constructor without fields), each `X` a λ-bound
+parameter whose type is a sort and `x` a λ-bound parameter of type `X` (HB's
+`unify T1 T2 t1 t2 s := phantom T1 t1 → phantom T2 t2`). Returns the (sort, value) parameter pairs.
+Every application of it is inhabited (by the constructors), whatever its sort arguments. -/
+partial def phantomDefPairs? (c : IR.ConstantDecl) : Option (Array (Nat × Nat)) := do
+  guard (c.bodyState == "transparent")
+  let .monomorphic := c.universes | none
+  let some body := c.body | none
+  let rec peel (t : IR.Term) (acc : Array IR.Term) : Array IR.Term × IR.Term :=
+    match t with
+    | .lam _ ty b => peel b (acc.push ty)
+    | t => (acc, t)
+  let (tys, b) := peel body #[]
+  let n := tys.size
+  -- a factor at depth k (under k non-dependent products): `phantom (rel a) (rel v)`
+  let factor (t : IR.Term) (k : Nat) : Option (Nat × Nat) := do
+    let .app (.ind ⟨"Corelib.ssr.ssreflect_rw.phantom", 0⟩ _) args := t | none
+    guard (args.size == 2)
+    let .rel a := args[0]! | none
+    let .rel v := args[1]! | none
+    guard (k ≤ a && a < n + k && k ≤ v && v < n + k)
+    let pa := n - 1 - (a - k)
+    let pv := n - 1 - (v - k)
+    let .sort _ := tys[pa]! | none
+    -- the value parameter's type is the sort parameter (`rel j` under pv binders)
+    let .rel j := tys[pv]! | none
+    guard (j < pv && pv - 1 - j == pa)
+    return (pa, pv)
+  let rec chain (t : IR.Term) (k : Nat) (acc : Array (Nat × Nat)) : Option (Array (Nat × Nat)) :=
+    match t with
+    | .prod _ a rest =>
+      if rest.mentionsRels 0 1 then none else
+      match factor a k with
+      | some p => chain rest (k + 1) (acc.push p)
+      | none => none
+    | t => (factor t k).map acc.push
+  let ps ← chain b 0 #[]
+  guard (!ps.isEmpty)
+  return ps
+
+/-- Rule Q-a: the sort arguments at the sort-parameter positions of phantom-definition applications,
+replaced by `Prop` (a placeholder: the translation puts the type of the paired value there). Returns
+the term and whether anything was replaced. -/
+partial def erasePhantomSorts (pd : Std.HashMap String (Array (Nat × Nat))) (t : IR.Term) : IR.Term × Bool :=
+  let go (u : IR.Term) := erasePhantomSorts pd u
+  let goA (as : Array IR.Term) : Array IR.Term × Bool :=
+    as.foldl (fun (acc, ch) x => let (y, c) := go x; (acc.push y, ch || c)) (#[], false)
+  match t with
+  | .app f args =>
+    let (f', c1) := go f
+    let (args', c2) := goA args
+    match f with
+    | .const d _ => match pd[d]? with
+      | some pairs =>
+        let (a, c3) := pairs.foldl (fun (a, ch) (si, _) =>
+          match a[si]? with
+          | some (.sort _) => (a.set! si (.sort .prop), true)
+          | _ => (a, ch)) (args', false)
+        (.app f' a, c1 || c2 || c3)
+      | none => (.app f' args', c1 || c2)
+    | _ => (.app f' args', c1 || c2)
+  | .cast c kd ty => let (c', u1) := go c; let (ty', u2) := go ty; (.cast c' kd ty', u1 || u2)
+  | .prod n ty b => let (a, u1) := go ty; let (b', u2) := go b; (.prod n a b', u1 || u2)
+  | .lam n ty b => let (a, u1) := go ty; let (b', u2) := go b; (.lam n a b', u1 || u2)
+  | .letIn n v ty b =>
+    let (v', u1) := go v; let (ty', u2) := go ty; let (b', u3) := go b
+    (.letIn n v' ty' b', u1 || u2 || u3)
+  | .case i np r pu ps pctx ret c brs =>
+    let (ps', u1) := goA ps; let (ret', u2) := go ret; let (c', u3) := go c
+    let (brs', u4) := brs.foldl (fun (acc, ch) (ctx, b) => let (b', u) := go b; (acc.push (ctx, b'), ch || u)) (#[], false)
+    (.case i np r pu ps' pctx ret' c' brs', u1 || u2 || u3 || u4)
+  | .proj i np a c => let (c', u) := go c; (.proj i np a c', u)
+  | .fix ds idx =>
+    let (ds', u) := ds.foldl (fun (acc, ch) (n, ty, b, r) =>
+      let (ty', u1) := go ty; let (b', u2) := go b; (acc.push (n, ty', b', r), ch || u1 || u2)) (#[], false)
+    (.fix ds' idx, u)
+  | _ => (t, false)
 
 /-- M6 δ-inlining of `Set`-motive constants (a last tier): every application of a constant of
 `names` is replaced by its source body β-reduced with the arguments (definitional). Returns the
@@ -1419,6 +1505,19 @@ partial def trans (t : IR.Term) : TransM Expr := do
         if i < ls.size && ls[ls.size - 1 - i]!.isFVarOf ac.f then
           return ← accCallSite ac args'
     let f' ← withPath "f" (transHead f args')
+    -- rule Q-a: a phantom check's sort arguments, per occurrence, at the types of their values
+    let args' ← if !(← read).phantomLower then pure args' else
+      match f with
+      | .const d _ => match (← read).genv.phantomDefs[d]? with
+        | some pairs => liftMeta do
+          let mut a := args'
+          for (si, vi) in pairs do
+            if h : si < args.size then
+              if let .sort _ := args[si] then
+                if vi < a.size then a := a.set! si (← instantiateMVars (← inferType a[vi]!))
+          pure a
+        | none => pure args'
+      | _ => pure args'
     let args' ← match (← read).propCoerce with
       | some cnt => liftMeta (coerceArgs f' args' cnt)
       | none => pure args'
@@ -2431,9 +2530,9 @@ def runTrans {α} (genv : GEnv) (x : TransM α) (globalLevels : Std.HashMap Stri
     (lowerShared : Bool := false) (hyps : Option (IO.Ref (Array (MVarId × String))) := none)
     (declKey : String := "") (hypExact : Bool := false)
     (sharedFresh : Option (IO.Ref (Array (LMVarId × String))) := none)
-    (propCoerce : Option (IO.Ref Nat) := none) :
+    (propCoerce : Option (IO.Ref Nat) := none) (phantomLower : Bool := false) :
     MetaM (Except TransError α) :=
-  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact, sharedFresh, propCoerce }).run
+  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact, sharedFresh, propCoerce, phantomLower }).run
 
 /-- Pending validation: the hypothesis metavariables (in creation order) become binders of the
 declaration, `∀ hs, e` (`lam := false`) or `fun hs => e` (Lean's binding abstraction handles their

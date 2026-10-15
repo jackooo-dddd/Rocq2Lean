@@ -528,6 +528,10 @@ class Auditor:
                 if eta is not None:
                     head, n = eta
                     return self.check(s, head, path + ["eta"], Auditor.shift(env, n))
+        if k == "phantom_sort":           # rule Q-a: a phantom check's sort argument, lowered per occurrence
+            if e["k"] != "sort":
+                raise Mismatch(f"{path}: a phantom check's sort argument is not a sort")
+            return
         if k == "cast":
             # the cast's term as is; otherwise a cast repair around it (a source convoy match has the
             # same outer shape as a repair, so the direct comparison comes first)
@@ -1800,6 +1804,65 @@ def anon(e):
 
 
 COERCE = [False]      # whether the row being audited reports rule P coercions
+PHANTOM = "Corelib.ssr.ssreflect_rw.phantom"
+
+
+def phantom_def_pairs(d):
+    """Rule Q-a (docs/PHANTOM_SORT.md), independently of the translator: a transparent monomorphic constant
+    whose body, after its λs, is a chain of non-dependent products of `phantom X x`, X a λ-parameter whose
+    type is a sort and x a λ-parameter of type X. Returns the (sort, value) parameter index pairs, or None.
+    Every application of such a definition is inhabited (by phantom's constructor), whatever its sorts."""
+    if d.get("kind") != "constant" or d.get("body_state") != "transparent" or \
+            (d.get("universes") or {}).get("k") != "monomorphic" or not d.get("body"):
+        return None
+    b, tys = d["body"], []
+    while b.get("k") == "lam":
+        tys.append(b["ty"])
+        b = b["b"]
+    n = len(tys)
+
+    def factor(t, k):
+        if t.get("k") != "app" or t["f"].get("k") != "ind" or t["f"]["ind"] != {"mind": PHANTOM, "i": 0} \
+                or len(t["args"]) != 2 or any(a.get("k") != "rel" for a in t["args"]):
+            return None
+        ai, vi = t["args"][0]["i"], t["args"][1]["i"]
+        if not (k <= ai < n + k and k <= vi < n + k):
+            return None
+        pa, pv = n - 1 - (ai - k), n - 1 - (vi - k)
+        tv = tys[pv]
+        if tys[pa].get("k") != "sort" or tv.get("k") != "rel" or not (tv["i"] < pv and pv - 1 - tv["i"] == pa):
+            return None
+        return pa, pv
+
+    pairs, k = [], 0
+    while b.get("k") == "prod":
+        f = factor(b["ty"], k)
+        if f is None or mentions_rels(b["b"], 0, 1):
+            return None
+        pairs.append(f)
+        b, k = b["b"], k + 1
+    f = factor(b, k)
+    if f is None:
+        return None
+    return pairs + [f]
+
+
+def erase_phantom_sorts(t, pd):
+    """Rule Q-a: the sort arguments at the sort-parameter positions of phantom-definition applications,
+    replaced by the marker {"k": "phantom_sort"} (which matches any target sort: the kernel fixes it as the
+    type of the paired value)."""
+    if isinstance(t, list):
+        return [erase_phantom_sorts(x, pd) for x in t]
+    if not isinstance(t, dict):
+        return t
+    out = {k: erase_phantom_sorts(v, pd) for k, v in t.items()}
+    if t.get("k") == "app" and t["f"].get("k") == "const" and t["f"]["c"] in pd:
+        args = list(out["args"])
+        for si, _ in pd[t["f"]["c"]]:
+            if si < len(args) and t["args"][si].get("k") == "sort":
+                args[si] = {"k": "phantom_sort"}
+        out["args"] = args
+    return out
 
 
 def peel_lift_coercion(e):
@@ -3825,6 +3888,23 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     # never for a protected declaration, and the statement is audited against the source with the chain
     # δβ-inlined (Rocq conversion)
     prot_pin = PROTECTED_PIN()
+    # rule Q-a (docs/PHANTOM_SORT.md): a row translated with phantom checks' sort arguments lowered is
+    # audited against the source with those arguments marked; the reported levels must be exactly the
+    # levels that occur only there (recomputed here), and the phantom definitions are recomputed too
+    pdefs = {n_: ps for n_, d_ in decls.items() if (ps := phantom_def_pairs(d_))}
+    for n, r in sorted(rows.items()):
+        pl_ = r.get("phantom_lowered") or []
+        if not pl_ or n not in decls:
+            continue
+        d = decls[n]
+        stmt_ = d.get("body_state") in ("statement_only", "obligation", "opaque_interface")
+        parts = [d.get("type")] if stmt_ or d["kind"] != "constant" else [d.get("type"), d.get("body")]
+        er = erase_phantom_sorts(parts, pdefs)
+        gone = source_globals(parts, set()) - source_globals(er, set())
+        if not gone or sorted(gone) != sorted(pl_):
+            problem("structure", f"{n}: phantom-lowered levels {pl_} are not the levels occurring only in phantom checks {sorted(gone)}")
+            continue
+        decls[n] = dict(d, type=er[0], **({} if len(er) == 1 else {"body": er[1]}))
     for n, r in sorted(rows.items()):
         ch = r.get("prop_lift_unfold") or []
         if not ch:
@@ -3980,6 +4060,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     root_dir = Path(__file__).resolve().parent.parent
     iface_checked = 0
     prop_lift_protected = []
+    phantom_protected = []
     try:
         pin = json.load(open(root_dir / "tools" / "protected_interface.pin.json"))
         mbytes = (root_dir / pin["manifest"]).read_bytes()
@@ -4011,6 +4092,10 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                                                 "coercions": r_.get("prop_lift_coercions") or 0})
                 if r_.get("prop_lift_unfold"):
                     problem("interface", f"{r_.get('source')}: protected statement translated with a lifted codomain unfolded")
+                # rule Q-a: a protected declaration's lowered phantom checks are listed (equivalent hypotheses:
+                # every instance of a phantom check is inhabited)
+                if r_.get("phantom_lowered"):
+                    phantom_protected.append({"source": r_["source"], "status": r_["status"], "levels": r_["phantom_lowered"]})
     except (OSError, KeyError, ValueError) as e:
         problem("interface", f"protection data unreadable: {e}")
     # statement views and prerequisites, from the source alone
@@ -4376,7 +4461,8 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                         if assembly else None),
            "status": "OK" if not problems else "AUDIT_REJECTED",
            "universe_arguments_checked": univ_checked, "interface_checked": iface_checked,
-           "prop_lift_protected": sorted(prop_lift_protected, key=lambda x: x["source"]), "level_split_checked": split_checked, "result_sort_implicit_checked": RSI_CHECKED[0], "level_copies_checked": copies_checked,
+           "prop_lift_protected": sorted(prop_lift_protected, key=lambda x: x["source"]),
+           "phantom_lowered_protected": sorted(phantom_protected, key=lambda x: x["source"]), "level_split_checked": split_checked, "result_sort_implicit_checked": RSI_CHECKED[0], "level_copies_checked": copies_checked,
            "instance_levels": {"checked": inst.checked, "deferred_to_consumer": inst.deferred},
            "definition_type_specialization_candidates": {
                "note": "non-protected definitions only (protected ones are rejected): a binder-domain level of the "

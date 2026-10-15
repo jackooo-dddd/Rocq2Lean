@@ -1,0 +1,1 @@
+{"name": "stmt-phant", "load_paths": [["-Q", ".", "SF"]], "files": ["Phant.v"], "requires": ["SF.Phant"]}
