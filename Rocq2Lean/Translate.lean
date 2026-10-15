@@ -807,14 +807,26 @@ parameter whose type is a sort and `x` a λ-bound parameter of type `X` (HB's
 `unify T1 T2 t1 t2 s := phantom T1 t1 → phantom T2 t2`). Returns the (sort, value) parameter pairs.
 Every application of it is inhabited (by the constructors), whatever its sort arguments. -/
 partial def phantomDefPairs? (c : IR.ConstantDecl) : Option (Array (Nat × Nat)) := do
-  guard (c.bodyState == "transparent")
   let .monomorphic := c.universes | none
-  let some body := c.body | none
-  let rec peel (t : IR.Term) (acc : Array IR.Term) : Array IR.Term × IR.Term :=
+  let isPh (t : IR.Term) : Bool := match t with
+    | .app (.ind ⟨"Corelib.ssr.ssreflect_rw.phantom", 0⟩ _) _ => true
+    | _ => false
+  -- a phantom check (`unify`: the body after its λs), or a proof of one (`id_phant : ∀ T t, phantom T t →
+  -- phantom T t`: the statement after its parameters)
+  let rec peelL (t : IR.Term) (acc : Array IR.Term) : Array IR.Term × IR.Term :=
     match t with
-    | .lam _ ty b => peel b (acc.push ty)
+    | .lam _ ty b => peelL b (acc.push ty)
     | t => (acc, t)
-  let (tys, b) := peel body #[]
+  let rec peelP (t : IR.Term) (acc : Array IR.Term) : Array IR.Term × IR.Term :=
+    match t with
+    | .prod _ ty b => if isPh ty then (acc, t) else peelP b (acc.push ty)
+    | t => (acc, t)
+  let (tys, b) ← match c.bodyState, c.body with
+    | "transparent", some body => pure (peelL body #[])
+    | _, _ => do
+      let (tys, b) := peelP c.type #[]
+      guard (isPh b || match b with | .prod _ ty _ => isPh ty | _ => false)
+      pure (tys, b)
   let n := tys.size
   -- a factor at depth k (under k non-dependent products): `phantom (rel a) (rel v)`
   let factor (t : IR.Term) (k : Nat) : Option (Nat × Nat) := do
@@ -1504,7 +1516,6 @@ partial def trans (t : IR.Term) : TransM Expr := do
         let ls := (← read).locals
         if i < ls.size && ls[ls.size - 1 - i]!.isFVarOf ac.f then
           return ← accCallSite ac args'
-    let f' ← withPath "f" (transHead f args')
     -- rule Q-a: a phantom check's sort arguments, per occurrence, at the types of their values
     let args' ← if !(← read).phantomLower then pure args' else
       match f with
@@ -1518,6 +1529,7 @@ partial def trans (t : IR.Term) : TransM Expr := do
           pure a
         | none => pure args'
       | _ => pure args'
+    let f' ← withPath "f" (transHead f args')
     let args' ← match (← read).propCoerce with
       | some cnt => liftMeta (coerceArgs f' args' cnt)
       | none => pure args'

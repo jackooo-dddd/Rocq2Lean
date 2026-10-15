@@ -38,6 +38,12 @@ T → Prop`, which has one constructor without fields; `X` is a λ-parameter who
 a λ-parameter of type `X`. HB's `unify` is one. The criterion is recomputed from the source, independently,
 by the translator and the audit.
 
+The criterion also covers a **proof of a phantom check**: a monomorphic constant whose statement, after its
+parameters, is such a chain (HB's `id_phant : ∀ T t, phantom T t → phantom T t`, which HB passes as the
+proof of a `unify` hypothesis at the same common sort). An application of it is a proof of a phantom
+proposition; its type is fixed by the (lowered) position it is used at, which the kernel checks, and
+Lean's proof irrelevance makes any two proofs of it equal.
+
 At every application of a phantom definition, a sort argument at a sort-parameter position becomes the
 type of the paired value argument, per occurrence: `unify (Type u4376) (Type u51') Tlocal (sort s) msg`.
 Levels that occurred **only** there are no longer the declaration's own levels: no parameter, no solution,

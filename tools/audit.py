@@ -1812,13 +1812,22 @@ def phantom_def_pairs(d):
     whose body, after its λs, is a chain of non-dependent products of `phantom X x`, X a λ-parameter whose
     type is a sort and x a λ-parameter of type X. Returns the (sort, value) parameter index pairs, or None.
     Every application of such a definition is inhabited (by phantom's constructor), whatever its sorts."""
-    if d.get("kind") != "constant" or d.get("body_state") != "transparent" or \
-            (d.get("universes") or {}).get("k") != "monomorphic" or not d.get("body"):
+    if d.get("kind") != "constant" or (d.get("universes") or {}).get("k") != "monomorphic":
         return None
-    b, tys = d["body"], []
-    while b.get("k") == "lam":
-        tys.append(b["ty"])
-        b = b["b"]
+    is_ph = lambda t: t.get("k") == "app" and t["f"].get("k") == "ind" and t["f"]["ind"] == {"mind": PHANTOM, "i": 0}
+    tys = []
+    if d.get("body_state") == "transparent" and d.get("body"):
+        b = d["body"]                                   # a phantom check: the body after its λs
+        while b.get("k") == "lam":
+            tys.append(b["ty"])
+            b = b["b"]
+    else:                                               # a proof of one: the statement after its parameters
+        b = d["type"]
+        while b.get("k") == "prod" and not is_ph(b["ty"]):
+            tys.append(b["ty"])
+            b = b["b"]
+        if not (is_ph(b) or (b.get("k") == "prod" and is_ph(b["ty"]))):
+            return None
     n = len(tys)
 
     def factor(t, k):

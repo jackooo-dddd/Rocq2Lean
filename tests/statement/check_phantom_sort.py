@@ -5,7 +5,8 @@ fixtures/stmt/phant (synthetic, HB's shape: a check at one common sort over carr
 levels), through the real exporter and translator.
 
 1. Pipeline: export, translate, validate (consumer, audit).
-2. Positive: `chk` and the statement `chk_stmt` keep independent carrier levels (25, 26) with the common
+2. Positive: a proof of a phantom check (`id_ph`, HB's `id_phant`) passed at the common sort is lowered
+   (`chk_id`'s obligation); `chk` and the statement `chk_stmt` keep independent carrier levels (25, 26) with the common
    sort's level 27 lowered (`phantom_lowered` = [27]); without the rule `chk`'s plain translation identifies
    the carriers (a narrowing) and `chk_stmt` is refused as a specialization. The phantom definition itself and
    a non-phantom check (`notph`, `chk_np`) are untouched.
@@ -36,7 +37,7 @@ _spec.loader.exec_module(A)
 OUT = {}
 RUN = ROOT / "runs" / "st-phant"
 F = "SF.Phant."
-ROOTS = [F + x for x in ("unify", "chk", "chk_stmt", "notph", "chk_np")]
+ROOTS = [F + x for x in ("unify", "chk", "chk_stmt", "notph", "chk_np", "id_ph", "chk_id")]
 CLAIMED = ("TRANSLATED_AND_CHECKED", "STATEMENT_KERNEL_CHECKED", "PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
 P = lambda l: "u_" + l.replace(".", "_")
 
@@ -59,7 +60,9 @@ for n in ("chk", "chk_stmt"):
     r = R[F + n]
     check(r.get("phantom_lowered") == [F + "27"] and r.get("level_params") == [P(F + "25"), P(F + "26")],
           f"{n}: carriers at independent levels (25, 26), the check's common sort level 27 lowered")
-check(not any(R[F + n].get("phantom_lowered") for n in ("unify", "notph", "chk_np")),
+check(R[F + "chk_id__rocq2lean_obligation_1"].get("phantom_lowered") == [F + "27"],
+      "chk_id: the proof of the phantom check (id_ph's shape, HB's id_phant) at the common sort, lowered in its obligation")
+check(not any(R[F + n].get("phantom_lowered") for n in ("unify", "notph", "chk_np", "id_ph")),
       "no lowering for the phantom definition itself or a non-phantom check")
 
 # 3. negative: forged rows
@@ -136,6 +139,7 @@ while b["k"] == "lam":
 b["ty"]["args"][1] = {"k": "rel", "i": 3}            # phantom T1 t2: the value is not of the sort parameter
 OUT["unit"] = u = {
     "unify_pairs": A.phantom_def_pairs(src[F + "unify"]) == [(0, 2), (1, 3)],
+    "id_ph_pairs": A.phantom_def_pairs(src[F + "id_ph"]) == [(0, 1), (0, 1)],
     "notph_none": A.phantom_def_pairs(src[F + "notph"]) is None,
     "chk_none": A.phantom_def_pairs(src[F + "chk"]) is None,
     "mismatched_value_none": A.phantom_def_pairs(bad) is None,

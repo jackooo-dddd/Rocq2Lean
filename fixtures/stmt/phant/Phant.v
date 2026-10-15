@@ -12,3 +12,9 @@ Proof. reflexivity. Qed.
 (* not a phantom definition: the body is not a chain of phantom checks *)
 Definition notph (T1 : Type) (t1 : T1) := t1 = t1.
 Definition chk_np (A : Type@{a}) (h : notph Type@{c} A) : nat := 0.
+(* a proof of a phantom check (HB.structures.id_phant's shape), passed at the common sort: its sort
+   argument is lowered too *)
+Lemma id_ph (T : Type) (t : T) (x : phantom T t) : phantom T t.
+Proof. exact x. Qed.
+Lemma chk_id (A : Type@{a}) : chk A A (@id_ph Type@{c} A) = 0.
+Proof. reflexivity. Qed.
