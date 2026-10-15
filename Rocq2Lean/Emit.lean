@@ -660,7 +660,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | some cnt => lambdaTelescope val fun xs b => do
         let some cod ← (try some <$> instantiateForall ty xs catch _ => pure none) | return val
         let n0 ← cnt.get
-        let b' ← liftCoerceValue b cod cnt
+        let b' ← liftCoerceValue b cod cnt genv.liftTargets
         if (← cnt.get) == n0 then return val
         mkLambdaFVars xs b'
     let coercions ← match coerceRef? with | some r => r.get | none => pure 0
@@ -1650,8 +1650,13 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     (phantom : Bool := false) :
     MetaM DeclResult := do
   let t0 ← IO.monoMsNow
-  let r ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort
-    wfTerm inheritSort hypExact joint unify propLift phantom
+  let lbl0 := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
+      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom)] extraOwn.size
+  -- (an attempt aborted by its budget is logged too, then the exception goes on to `budgeted`)
+  let r ← tryCatchRuntimeEx (processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort
+      wfTerm inheritSort hypExact joint unify propLift phantom) fun e => do
+    if let some ref := genv.tierLog then ref.modify (·.push (lbl0, (← IO.monoMsNow) - t0, "RESOURCE_LIMIT | aborted"))
+    throw e
   if let some ref := genv.tierLog then
     let lbl := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
       ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom)] extraOwn.size
@@ -2249,15 +2254,18 @@ where
           -- whose value is a proposition at a declared `Type`, refused otherwise at once)
           let castFail := r.status == "TRANSLATION_FAILED" && (r.message.startsWith "default cast annotation is not convertible" ||
             r.message.startsWith "scrutinee type is not an application of")
-          if !r.accepted && c0.bodyState != "opaque_interface" && (retry r.status || castFail) then
+          -- (speed, exact gate: coercions need a dependency reaching a lifted definition; a value lift needs a
+          -- definition declared at a `Type`)
+          let liftPossible := (c0.typeDeps ++ c0.bodyDeps).any genv.liftReach.contains || (!isStmt && irEndsInSort c0.type)
+          if !r.accepted && c0.bodyState != "opaque_interface" && (retry r.status || castFail) && liftPossible then
             -- (with the ladder's variants: R2F-c, cumulativity, R3↓, per-occurrence coherence)
             for (it, cu, lo, un) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
                                      (false, false, true, false), (false, false, false, true), (true, false, false, true), (false, true, true, false)] do
               let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
                 (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (unify := un) (propLift := true)
-              -- (no lift to insert, or a translation failure the universe variants cannot change)
-              if r'.status == "UNSUPPORTED_FEATURE" || r'.status == "TRANSLATION_FAILED" then
-                if r'.status == "TRANSLATION_FAILED" then lastTier := some r'
+              -- (no lift to insert, or a translation failure or exhausted budget the universe variants cannot change)
+              if r'.status == "UNSUPPORTED_FEATURE" || r'.status == "TRANSLATION_FAILED" || r'.status == "RESOURCE_LIMIT" then
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
                 break
               lastTier := some r'
               if r'.accepted then
@@ -2296,6 +2304,8 @@ where
                     (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eoQ)
                     (lower := lo) (unify := un) (hypExact := p3) (phantom := true)
                   if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                  -- (speed: an exhausted budget is not changed by the next variant)
+                  if r'.status == "RESOURCE_LIMIT" then break
                   if r'.accepted then
                     r := { r' with phantomLowered := gone }
                     iface := none
@@ -2539,6 +2549,11 @@ where
     let deps := match d with
       | .constant c => c.typeDeps ++ c.bodyDeps
       | .inductive i => i.typeDeps
+    -- rule P gate: the declaration reaches a lifted definition
+    if r.propLift.isSome || deps.any genv.liftReach.contains then
+      genv := { genv with liftReach := genv.liftReach.insert d.name,
+                          liftTargets := (r.target.toList ++ (r.targetCtors.map (·.1)).toList).foldl (fun s n => s.insert n)
+                            (genv.liftTargets.insert ``PULift) }
     let cl := r.resultSortImplicit.foldl (·.insert ·) (genv.rsOfDeps deps)
     unless cl.isEmpty do genv := { genv with rsClosure := genv.rsClosure.insert d.name cl }
     -- R3G-F applicability at references to this declaration (docs/RESULT_SORT_LEVELS.md §2): besides an

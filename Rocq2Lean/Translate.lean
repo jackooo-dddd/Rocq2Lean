@@ -109,6 +109,11 @@ structure GEnv where
   /-- Rule Q-a (docs/PHANTOM_SORT.md): phantom definitions (`phantomDefPairs?`) and their
   (sort parameter, value parameter) index pairs. -/
   phantomDefs : Std.HashMap String (Array (Nat × Nat)) := {}
+  /-- Rule P gate (speed, exact): source declarations whose dependency closure reaches a definition
+  translated with a lifted value, and their target names (with `PULift`): a lifted type can only arise by
+  unfolding one of them, so only terms mentioning one can need a coercion. -/
+  liftReach : Std.HashSet String := {}
+  liftTargets : Std.HashSet Name := {}
   /-- Timing (entry 14): the attempts of the declaration being translated (tier label, ms, status). -/
   tierLog : Option (IO.Ref (Array (String × Nat × String))) := none
   /-- P0: protected public interface (pinned Prosa/Classic inventory, bound in the export contract):
@@ -1431,7 +1436,13 @@ def liftCoerce (e act exp : Expr) : MetaM (Option Expr) := do
 
 /-- Rule P, term level: the arguments of `f a₁ … aₙ`, each coerced by `liftCoerce` where its type is not
 the function's domain at it (counted in `cnt`). -/
-def coerceArgs (f : Expr) (args : Array Expr) (cnt : IO.Ref Nat) : MetaM (Array Expr) := do
+def coerceArgs (f : Expr) (args : Array Expr) (cnt : IO.Ref Nat) (lifted : Std.HashSet Name) : MetaM (Array Expr) := do
+  -- (speed, exact: a lift can only appear by unfolding a constant of `lifted`, or a let-bound local)
+  let mayLift (e : Expr) : MetaM Bool := do
+    let e ← instantiateMVars e
+    if (e.find? fun x => x.isConst && lifted.contains x.constName!).isSome then return true
+    let lctx ← getLCtx
+    return (e.find? fun x => x.isFVar && ((lctx.find? x.fvarId!).map (·.isLet)).getD false).isSome
   let mut fty ← inferType f
   let mut out := #[]
   for a in args do
@@ -1439,6 +1450,7 @@ def coerceArgs (f : Expr) (args : Array Expr) (cnt : IO.Ref Nat) : MetaM (Array 
     let .forallE _ d b _ := fty | return out ++ args.extract out.size args.size
     let a' ← do
       let aty ← inferType a
+      if !(← mayLift d) && !(← mayLift aty) then pure a else
       if ← isDefEq aty d then pure a else
         match ← liftCoerce a aty d with
         | some c => cnt.modify (· + 1); pure c
@@ -1450,7 +1462,7 @@ def coerceArgs (f : Expr) (args : Array Expr) (cnt : IO.Ref Nat) : MetaM (Array 
 /-- Rule P, term level: `b` used at `cod`. Directly (`liftCoerce`), or, for a function at a function type
 whose domains or codomain differ by lifts, η-expanded with its arguments and result coerced
 (`fun xs => PULift.up (o (PULift.down x) …)`); unchanged when nothing needs a coercion. -/
-partial def liftCoerceValue (b cod : Expr) (cnt : IO.Ref Nat) : MetaM Expr := do
+partial def liftCoerceValue (b cod : Expr) (cnt : IO.Ref Nat) (lifted : Std.HashSet Name) : MetaM Expr := do
   let bt ← inferType b
   if ← isDefEq bt cod then return b
   if let some c ← liftCoerce b bt cod then
@@ -1459,9 +1471,9 @@ partial def liftCoerceValue (b cod : Expr) (cnt : IO.Ref Nat) : MetaM Expr := do
   unless cod'.isForall do return b
   let n0 ← cnt.get
   let r ← forallTelescope cod' fun ys cod2 => do
-    let args ← coerceArgs b ys cnt
+    let args ← coerceArgs b ys cnt lifted
     unless args.size == ys.size do return none
-    let b2 ← liftCoerceValue (mkAppN b args) cod2 cnt
+    let b2 ← liftCoerceValue (mkAppN b args) cod2 cnt lifted
     if (← cnt.get) == n0 then return none
     return some (← mkLambdaFVars ys b2)
   return r.getD b
@@ -1531,7 +1543,7 @@ partial def trans (t : IR.Term) : TransM Expr := do
       | _ => pure args'
     let f' ← withPath "f" (transHead f args')
     let args' ← match (← read).propCoerce with
-      | some cnt => liftMeta (coerceArgs f' args' cnt)
+      | some cnt => do liftMeta (coerceArgs f' args' cnt (← read).genv.liftTargets)
       | none => pure args'
     let e := mkAppN f' args'
     -- Universe arguments left as metavariables at a reference (generalized constants, generated
