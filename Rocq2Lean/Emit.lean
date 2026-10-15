@@ -2328,6 +2328,28 @@ where
                     r := { r' with phantomLowered := gone }
                     iface := none
                     break
+          -- R3G for definitions, last resort (entry 15): a failing definition is retried with the implicit levels
+          -- of its references (discovery pass) as its own levels, instead of leaving those references' levels
+          -- to their defaults (`refines`' relation level forced to 0 below `Set < l`; Classic `job_eqdef`'s
+          -- carrier pinned to 0). Only declarations that fail without it: no accepted row, hence no dependant,
+          -- changes (the reason the pass is not used in place)
+          if !r.accepted && !isStmt && genv.stmtMode && (retry r.status || r.status == "INTERFACE_REJECTED") then
+            let sD ← saveState
+            let dsc ← budgeted c.name "constant" <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
+              (discover := true)
+            sD.restore
+            if dsc.status == "DISCOVERED" && !dsc.implicitLevels.isEmpty then
+              let eoD := (eo ++ dsc.implicitLevels).toList.eraseDups.toArray
+              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, true, false),
+                                       (false, false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
+                  (interp := it) (cumul := cu) (lower := lo) (hypExact := p3) (extraOwn := eoD)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := r'
+                  iface := none
+                  break
           -- P3 (ITERATION_LOG entry 8): per-instance prerequisite hypotheses (no level unified across uses;
           -- duplicates collapsed after solving), when the attempts above failed
           if !r.accepted && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then
