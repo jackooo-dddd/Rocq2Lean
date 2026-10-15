@@ -2298,10 +2298,12 @@ where
                 let eoQ := eo.filter (!gone.contains ·)
                 -- (with per-instance prerequisite hypotheses, P3: a proof of a phantom check, HB's `id_phant`,
                 -- is a prerequisite used at a different lowered sort at each occurrence)
-                for (it, cu, lo, un, p3) in [(true, false, false, false, false), (false, false, false, true, false),
-                                             (true, false, false, true, false), (false, true, false, false, false),
-                                             (false, true, true, false, false), (false, false, false, false, true),
-                                             (true, false, false, false, true), (false, false, true, false, true),
+                -- (order from the timing data, GEL frontier: P3 587/608 successes, cu+lo 38, cu 1, it+P3 2; it, un
+                -- and it+un 0/647 each — tried last, not pruned: no claim depends on the order)
+                for (it, cu, lo, un, p3) in [(false, false, false, false, true), (false, true, true, false, false),
+                                             (false, true, false, false, false), (true, false, false, false, true),
+                                             (true, false, false, false, false), (false, false, false, true, false),
+                                             (true, false, false, true, false), (false, false, true, false, true),
                                              (false, false, false, true, true)] do
                   let r' ← budgeted c.name "constant" <| processConstant genv results cQ (stmt := isStmt)
                     (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eoQ)
