@@ -2323,13 +2323,16 @@ where
                 let eoQ := eo.filter (!gone.contains ·)
                 -- (with per-instance prerequisite hypotheses, P3: a proof of a phantom check, HB's `id_phant`,
                 -- is a prerequisite used at a different lowered sort at each occurrence)
-                -- (order from the timing data, GEL frontier: P3 587/608 successes, cu+lo 38, cu 1, it+P3 2; it, un
-                -- and it+un 0/647 each — tried last, not pruned: no claim depends on the order)
-                for (it, cu, lo, un, p3) in [(false, false, false, false, true), (false, true, true, false, false),
-                                             (false, true, false, false, false), (true, false, false, false, true),
-                                             (true, false, false, false, false), (false, false, false, true, false),
-                                             (true, false, false, true, false), (false, false, true, false, true),
+                -- (order from the timing data, S17: lo+P3 232 successes, cu+lo 108, it+P3 2, cu 1; P3 alone repeats the
+                -- first attempt for a declaration using `id_phant` (identical flags), so it is skipped there; it, un
+                -- and it+un succeeded nowhere — tried last, not pruned)
+                let p3First := (c0.typeDeps ++ c0.bodyDeps).any genv.phantomProofs.contains
+                for (it, cu, lo, un, p3) in [(false, false, true, false, true), (false, true, true, false, false),
+                                             (true, false, false, false, true), (false, true, false, false, false),
+                                             (false, false, false, false, true), (true, false, false, false, false),
+                                             (false, false, false, true, false), (true, false, false, true, false),
                                              (false, false, false, true, true)] do
+                  if p3First && p3 && !it && !cu && !lo && !un then continue
                   let r' ← budgeted c.name "constant" <| processConstant genv results cQ (stmt := isStmt)
                     (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eoQ)
                     (lower := lo) (unify := un) (hypExact := p3) (phantom := true)
@@ -2371,7 +2374,8 @@ where
                   break
           -- P3 (ITERATION_LOG entry 8): per-instance prerequisite hypotheses (no level unified across uses;
           -- duplicates collapsed after solving), when the attempts above failed
-          if !r.accepted && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then
+          -- (speed, entry 16: not where Q-a applies — S17: 0 successes there in 3,821 s; Q-a's own P3 variants cover it)
+          if !r.accepted && genv.stmtMode && gone.isEmpty && (retry r.status || r.status == "TRANSLATION_FAILED") then
             -- (speed, entry 14: without pending prerequisites or a fixpoint no hypothesis exists, and the first two
             -- variants are exactly earlier tiers)
             let (_, _, cPend) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
