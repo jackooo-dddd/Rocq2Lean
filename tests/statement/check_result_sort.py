@@ -61,7 +61,12 @@ for n in ("SF.Rs.unify_like", "SF.Rs.pack_eta", "SF.Rs.mk_op"):
     check(R[n]["status"] == "STATEMENT_KERNEL_CHECKED", f"{n}: accepted")
 check(not rsi("SF.Rs.wrapA") and R["SF.Rs.wrapA"]["status"] == "TRANSLATED_AND_CHECKED",
       "wrapA: its carrier level is an arity (R3G) level, not a result-sort level")
-check(R["SF.Rs.holder"]["status"] == "KERNEL_REJECTED", "holder: kernel-rejected as before the rule (reported limitation)")
+# (entry 14, R3G for field-only classes: holder's field typeE keeps its levels as implicit parameters
+# instead of R3″'s 0, which the kernel rejected; the limitation recorded in entry 10 is lifted)
+_h = R["SF.Rs.holder"]
+check(_h["status"] == "TRANSLATED_AND_CHECKED" and len(_h.get("implicit_levels") or []) >= 2
+      and all(("u_" + l.replace(".", "_")) in _h["level_params"] for l in _h.get("implicit_levels") or []),
+      "holder: accepted, typeE's levels implicit parameters of the block (R3G for fields; was kernel-rejected under R3″)")
 e32 = res_lv("mathcomp.boot.eqtype/hasDecEq.axioms_")[0]
 e55 = res_lv("mathcomp.boot.eqtype/Equality.axioms_")[0]
 check(rsi("mathcomp.boot.eqtype/Equality.axioms_") == [e32] and sorted(rsi("mathcomp.boot.eqtype/Equality.type")) == sorted([e32, e55]),

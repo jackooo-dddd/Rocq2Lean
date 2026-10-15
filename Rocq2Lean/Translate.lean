@@ -104,6 +104,10 @@ structure GEnv where
   /-- M6: transparent monomorphic constants with a `Set`-motive binder (`P : … → Set`), whose uses at
   a `Prop`-valued family (Rocq's `Prop ≤ Set`) can only be translated through their body. -/
   setMotive : Std.HashSet String := {}
+  /-- Entry 14: erasing polymorphic definitions (`erasingPolyBody?`) and their bodies. -/
+  erasingPoly : Std.HashMap String IR.Term := {}
+  /-- Timing (entry 14): the attempts of the declaration being translated (tier label, ms, status). -/
+  tierLog : Option (IO.Ref (Array (String × Nat × String))) := none
   /-- P0: protected public interface (pinned Prosa/Classic inventory, bound in the export contract):
   these declarations keep their full source statement — no R2B-S result-sort lowering and no R2B-P
   specialization of a statement level — whether they are requested roots or dependencies. -/
@@ -333,7 +337,10 @@ def transInstLevel : IR.Level → TransM Level
     if (← read).genv.sortOverride.contains n then
       failT "UNSUPPORTED_FEATURE" s!"adapter-bound level {n} in a universe instance"
     match (← read).globalLevels[n]? with
-    | some l => pure l
+    | some l =>
+      -- (an instance level stays the image of the source level: the audit requires exactly that; an
+      -- erasing polymorphic definition is δβ-inlined instead, entry 14)
+      pure l
     | none => failT "UNSUPPORTED_FEATURE" s!"global universe {n} in an instance is not generalized for this declaration"
 
 def transSort : SortIR → TransM Expr
@@ -360,14 +367,16 @@ levels is *the same level* in monomorphic Rocq, so the reference uses the referr
 own variable for it (coherence by construction, R3/R2S); any other level gets a fresh metavariable,
 solved from the arguments and checked by R3 (no raising). -/
 def sharedOrFreshLevels (globals : Array String) : TransM (List Level) := do
-  if (← read).lowerShared then return ← liftMeta do globals.toList.mapM fun _ => mkFreshLevelMVar
   let own := (← read).globalLevels
+  -- (coherence by unification first, also on the R3↓ tier: the occurrences are recorded and rebound)
   if let some ref := (← read).sharedFresh then
     return ← globals.toList.mapM fun l => do
       let v ← liftMeta mkFreshLevelMVar
-      if own.contains l then
-        if let .mvar m := v then ref.modify (·.push (m, l))
+      -- (every occurrence is recorded, own or not: a class whose lowest level is not an own level is
+      -- left to R3G, `rebindShared`)
+      if let .mvar m := v then ref.modify (·.push (m, l))
       pure v
+  if (← read).lowerShared then return ← liftMeta do globals.toList.mapM fun _ => mkFreshLevelMVar
   globals.toList.mapM fun l => match own[l]? with
     | some v => pure v
     | none => liftMeta mkFreshLevelMVar
@@ -410,7 +419,11 @@ def hypFor (ref : IO.Ref (Array (MVarId × String))) (l : String) (d : Expr) : T
   -- metavariables; a hygienic name would differ between the declaration and its residual record)
   let base := "h_" ++ l.map fun ch => if ch == '.' || ch == '/' then '_' else ch
   let nm := if same.isEmpty then base else s!"{base}__{same.size + 1}"
-  let m ← liftMeta (mkFreshExprMVar (some d) .syntheticOpaque (Name.mkSimple nm))
+  -- (a hypothesis is a closed proposition: it is created outside every local scope of the translation,
+  -- so abstracting a scope — an accessibility lowering's call context, `div.gcdn` — never drags the
+  -- scope's locals into it through the metavariable's context)
+  let m ← liftMeta (if d.hasFVar then mkFreshExprMVar (some d) .syntheticOpaque (Name.mkSimple nm)
+    else withLCtx {} {} (mkFreshExprMVar (some d) .syntheticOpaque (Name.mkSimple nm)))
   ref.modify (·.push (m.mvarId!, l))
   pure m
 
@@ -749,6 +762,35 @@ partial def IR.Term.hasSetMotive : IR.Term → Bool
   | .prod _ a b => a.isSetFamily 0 || b.hasSetMotive
   | _ => false
 
+/-- Whether a source term mentions a universe variable (`var i`) in a sort or a universe instance. -/
+partial def termHasUnivVar : IR.Term → Bool
+  | .sort (.type u) => u.any fun e => (e.level matches .var _)
+  | .const _ u | .ind _ u | .construct _ _ u => u.any fun x => (x matches .var _)
+  | .cast t _ ty => termHasUnivVar t || termHasUnivVar ty
+  | .prod _ a b | .lam _ a b => termHasUnivVar a || termHasUnivVar b
+  | .letIn _ v t b => termHasUnivVar v || termHasUnivVar t || termHasUnivVar b
+  | .app f as => termHasUnivVar f || as.any termHasUnivVar
+  | .evar _ as => as.any termHasUnivVar
+  | .case _ _ _ pu ps _ r c brs => pu.any (fun x => (x matches .var _)) || ps.any termHasUnivVar || termHasUnivVar r ||
+      termHasUnivVar c || brs.any (termHasUnivVar ·.2)
+  | .proj _ _ _ t => termHasUnivVar t
+  | .fix defs _ | .cofix defs _ => defs.any fun (_, t, b, _) => termHasUnivVar t || termHasUnivVar b
+  | _ => false
+
+/-- δ-inlining of erasing polymorphic definitions (entry 14): a transparent universe-polymorphic
+constant whose body, after its leading λs, mentions no universe variable (`reverse_coercion x' x := x'`).
+Applied, its δβ-reduct is definitionally equal and carries none of the instance's levels. -/
+def erasingPolyBody? (c : IR.ConstantDecl) : Option IR.Term := do
+  unless c.bodyState == "transparent" do none
+  unless (c.universes matches .polymorphic ..) do none
+  let some b := c.body | none
+  let rec peel : IR.Term → Nat → IR.Term × Nat
+    | .lam _ _ t, n => peel t (n + 1)
+    | t, n => (t, n)
+  let (t, n) := peel b 0
+  if n == 0 || termHasUnivVar t then none
+  some b
+
 /-- M6 δ-inlining of `Set`-motive constants (a last tier): every application of a constant of
 `names` is replaced by its source body β-reduced with the arguments (definitional). Returns the
 term and the names actually inlined. -/
@@ -879,8 +921,15 @@ def accCallSite (ac : AccSite) (args : Array Expr) : TransM Expr := do
     else if ac.idxPos[i]!.isNone then
       unless ← liftMeta (isDefEq args[i]! ac.expected[i]!) do
         failT "UNSUPPORTED_FEATURE" s!"recursive call changes parameter {i}, which precedes the decreasing argument"
-  if a.containsFVar ac.ih.fvarId! || a.containsFVar ac.f || a.hasExprMVar then
+  if a.containsFVar ac.ih.fvarId! || a.containsFVar ac.f then
     failT "UNSUPPORTED_FEATURE" "accessibility lowering: nested recursive call in the decreasing argument"
+  -- (a metavariable in the decreasing argument must be a prerequisite hypothesis of the declaration — a
+  -- pending function in it, `div.gcdn`'s `modn` — which becomes a binder; any other is unresolved)
+  if a.hasExprMVar then
+    let hs ← match (← read).hyps with | some r => pure ((← r.get).map (·.1)) | none => pure #[]
+    let ms ← liftMeta (getMVars a)
+    unless ms.all hs.contains do
+      failT "UNSUPPORTED_FEATURE" "accessibility lowering: the decreasing argument has unresolved metavariables"
   let pr ← liftMeta (accPairOf ac.hasIdx ac.nparams ac.idxTy ac.fam ac.idxLvl a)
   -- the call's own context: every local introduced after Acc.rec's minor premise (let-bound
   -- locals are unfolded in the argument instead)
@@ -905,8 +954,16 @@ def accCallSite (ac : AccSite) (args : Array Expr) : TransM Expr := do
   let cLvl ← liftMeta (getLevel cTy)
   let c ← ac.counter.modifyGet fun n => (n, n + 1)
   let cert ← if ac.collect then do
+      -- (let-bound locals are unfolded in the whole disjunct, including the types of the context's
+      -- binders, which may mention them — `div.gcdn`'s `h : n' = n₀.+1` with `n' := n %% m` — before the
+      -- context is abstracted, since a let's value may mention the context itself)
       let d ← liftMeta <| withLocalDecl `y .default cTy fun y => do
-        mkLambdaFVars #[y, ac.s] (← mkExistsFVars ctx (mkApp3 (mkConst ``Eq [cLvl]) cTy y prZ))
+        let mut b := mkApp3 (mkConst ``Eq [cLvl]) cTy y prZ
+        for x in ctx.reverse do
+          let xd := lctx.get! x.fvarId!
+          let ty := unfoldLets (← instantiateMVars xd.type)
+          b := mkApp2 (mkConst ``Exists [← getLevel ty]) ty (.lam xd.userName ty (b.abstract #[x]) .default)
+        mkLambdaFVars #[y, ac.s] b
       if d.containsFVar ac.ih.fvarId! || d.containsFVar ac.f then
         failT "UNSUPPORTED_FEATURE" "accessibility lowering: a recursive call's context mentions the recursion"
       ac.dsRef.modify (·.push d)
@@ -1234,6 +1291,26 @@ partial def castRepair (c act exp : Expr) (fuel : Nat) : MetaM (Option Expr) := 
       ty := rest.instantiate1 m
     if ok then return some (mkApp (mkAppN recC (params ++ #[motive] ++ minors ++ #[v])) c)
   return none
+
+/-- A backtracking point of a translation: the Meta state together with the sizes of the registries
+that live outside it (prerequisite hypotheses, per-occurrence shared levels). Restoring it also drops
+the entries an abandoned attempt registered, which would otherwise name metavariables that no longer
+exist (`div.gcdn`: a hypothesis for `modn`'s prerequisite created by the failed structural lowering). -/
+structure TransSaved where
+  st : Meta.SavedState
+  hyps : Nat
+  shared : Nat
+
+def saveTrans : TransM TransSaved := do
+  let st ← liftMeta saveState
+  let hyps ← match (← read).hyps with | some r => pure (← r.get).size | none => pure 0
+  let shared ← match (← read).sharedFresh with | some r => pure (← r.get).size | none => pure 0
+  return { st, hyps, shared }
+
+def restoreTrans (s : TransSaved) : TransM Unit := do
+  liftMeta s.st.restore
+  if let some r := (← read).hyps then r.modify (·.take s.hyps)
+  if let some r := (← read).sharedFresh then r.modify (·.take s.shared)
 
 mutual
 
@@ -1605,21 +1682,21 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
   if defs.size > 1 then return ← transFixMutual defs fidx
   -- M6 course-of-values recursion, only when the structural lowering finds a recursive call on a
   -- subterm that is not a direct recursive field (Ring_polynom `norm_aux`)
-  let saved ← liftMeta saveState
+  let saved ← saveTrans
   tryCatchThe TransError (transFix1 defs false) fun e => do
     unless e.msg.startsWith "recursive call on a term that is not a direct recursive constructor field" do
       throwThe TransError e
-    liftMeta saved.restore
+    restoreTrans saved
     unless (← read).genv.stmtMode do return ← transFix1 defs true
     -- B (statement mode, docs/TERMINATION.md): recursion that neither the structural nor the
     -- course-of-values lowering covers (a call on a subterm Rocq's guard sees only by reducing a
     -- function, MathComp's edivn_rec) is lowered to Acc.rec over its call relation, with an explicit
     -- termination obligation
-    let saved2 ← liftMeta saveState
+    let saved2 ← saveTrans
     tryCatchThe TransError (transFix1 defs true) fun e2 => do
       unless e2.msg.startsWith "recursive call on a term that is not a direct recursive constructor field" do
         throwThe TransError e2
-      liftMeta saved2.restore
+      restoreTrans saved2
       transFixWf defs
 
 /-- The single-fixpoint lowering (see `transFix`); `cov`: course-of-values recursion, with motive
@@ -1957,7 +2034,12 @@ partial def transFixWf (defs : Array (AName × IR.Term × IR.Term × Nat)) : Tra
     let wfBody ← liftMeta do
       let e ← withLocalDecl `s .default C fun s => mkForallFVars #[s] (accTy Rdef s)
       instantiateMVars e
-    if wfBody.hasExprMVar then return ← unsup "the call relation depends on pending prerequisites"
+    -- (the call relation may mention prerequisite hypotheses — a pending function in a recursive call's
+    -- argument; the termination obligation is then a pending proof task over them, docs/TERMINATION.md §B-P)
+    if wfBody.hasExprMVar then
+      let hs ← match (← read).hyps with | some r => pure ((← r.get).map (·.1)) | none => pure #[]
+      unless (← liftMeta (getMVars wfBody)).all hs.contains do
+        return ← unsup "the call relation has unresolved metavariables"
     let lctx ← getLCtx
     let mut need : Std.HashSet FVarId := {}
     let mut todo := (collectFVars {} wfBody).fvarIds
@@ -2381,18 +2463,38 @@ partial def levelNF : Level → Option (Nat × List (Name × Nat))
 
 /-- Coherence by unification: every per-occurrence metavariable of a shared level `l` still free after
 translation is the declaration's own variable for `l` (coherence where typing imposes nothing else). -/
-def rebindShared (ref : IO.Ref (Array (LMVarId × String))) (gl : Std.HashMap String Level) : MetaM Unit := do
-  for (m, l) in ← ref.get do
+def rebindShared (ref : IO.Ref (Array (LMVarId × String))) (gl : Std.HashMap String Level)
+    (f : IR.UniverseFacts := { levels := #[], relations := #[] }) : MetaM Unit := do
+  -- one pass: the class (root metavariable) of every occurrence and the source levels it carries
+  let occs ← ref.get
+  let mut roots : Array (LMVarId × String) := #[]
+  let mut cls : Std.HashMap LMVarId (Array String) := {}
+  for (m, l) in occs do
     if let .mvar r ← instantiateLevelMVars (.mvar m) then
-      if let some v := gl[l]? then
-        -- (never a cyclic assignment: an own level already solved through this occurrence stays free here,
-        -- and the declaration's ordinary solving decides it)
-        let vi ← instantiateLevelMVars v
-        -- (the own level already solved through this occurrence, `?l := max (…, ?occ)`: the occurrence is
-        -- the parameter `u_l` itself, so `l` denotes `max (…, u_l)`, its R2F reading; never a cycle)
-        if (vi.collectMVars {}).contains r then
-          unless vi == .mvar r do assignLevelMVar r (.param (levelParamName l))
-        else assignLevelMVar r v
+      roots := roots.push (r, l)
+      let cur := cls.getD r #[]
+      unless cur.contains l do cls := cls.insert r (cur.push l)
+  let mut done : Std.HashSet LMVarId := {}
+  for (r, l0) in roots do
+    if done.contains r then continue
+    done := done.insert r
+    -- (still free: an earlier assignment in this pass may have bound it)
+    unless (← instantiateLevelMVars (.mvar r)) == .mvar r do continue
+    let c := cls.getD r #[l0]
+    -- (one class of occurrences for several shared levels, identified by typing: it is the level lying
+    -- below every other level of the class, as R3G chooses; the others' arguments are then R3-checked)
+    let low? := c.find? fun x => c.all fun y => x == y || entails f x y 0
+    -- (a class whose lowest level is not an own level is left free: R3G names it after that level)
+    if let some lo := low? then
+      unless gl.contains lo do continue
+    let l := low?.getD l0
+    if let some v := gl[l]? then
+      let vi ← instantiateLevelMVars v
+      -- (the own level already solved through this occurrence, `?l := max (…, ?occ)`: the occurrence is
+      -- the parameter `u_l` itself, so `l` denotes `max (…, u_l)`, its R2F reading; never a cycle)
+      if (vi.collectMVars {}).contains r then
+        unless vi == .mvar r do assignLevelMVar r (.param (levelParamName l))
+      else assignLevelMVar r v
 
 /-- Rule R (docs/COHERENCE_READINGS.md): the levels `σ` and `τ` over the own levels `own` (`u_m` read as the
 source level `m`, a constant `c` as `Set + c`) are equal at every model of the source facts: each summand

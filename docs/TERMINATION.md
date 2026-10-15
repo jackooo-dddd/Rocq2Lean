@@ -117,8 +117,8 @@ submitted proof is chosen.
 ## 7. Scope and limits
 
 * Decreasing argument of an inductive without indices; matches enclosing recursive calls on
-  inductives without indices; the call relation must not mention pending prerequisites; the
-  termination statement must not involve universe-polymorphic levels. Each limit is a reported
+  inductives without indices; the call relation may mention pending prerequisites only through their
+  hypotheses (§9, B-P); the termination statement must not involve universe-polymorphic levels. Each limit is a reported
   refusal (`UNSUPPORTED_FEATURE: termination lowering: …`).
 * Exporter-marked deferred termination (`"termination": "deferred"`: a recursion on a proof subterm
   that became an obligation) is still refused (no corpus record has it).
@@ -133,3 +133,44 @@ B + C-1: their termination obligations are prerequisites of 204 / 138 protected 
 Conversion dependence: 738 dependents re-checked in Rocq, 737 `CONV_OK`, 1 `CONV_NEEDS`
 (`mathcomp.boot.div.gcdn`, not claimed; it fails in the translator with an internal "unknown
 metavariable" error instead of a clean refusal — to fix). No claimed row needs the unfolding.
+
+## 9. B-P: termination statements over prerequisites (2026-10-15, `ITERATION_LOG.md` entry 14)
+
+**The case.** MathComp's `div.gcdn`. Its recursive call `gcdn (m' %% n') n'` is guarded in Rocq only by
+reducing `modn`. `modn` is itself termination-lowered, so in statement mode it is a pending definition
+over its prerequisite (`modn_rec`'s termination obligation). The call relation of `gcdn`'s lowering
+therefore mentions `modn` applied to the hypothesis for that prerequisite. §7 refused this as "depends
+on other hypotheses". Before the fixes below, the attempt also failed with an internal error.
+
+**The rule.** The termination obligation of such a constant is a *pending* proof task over the
+prerequisites its statement mentions, closed under their own dependencies, in the constant's telescope
+order:
+
+```
+RocqPending.<c>__rocq2lean_termination_k.statement : ∀ hs, Prop := fun hs => ∀ Γ, ∀ s : C, Acc C R s
+```
+
+* The constant's hypothesis binder is that statement applied to those hypotheses, as for every
+  prerequisite with prerequisites of its own.
+* The audit checks the hypothesis telescope like every pending artifact's, through
+  `check_hyp_telescope`.
+* The statement's hypotheses must be prerequisites of its constant, recomputed from the source, and
+  never the statement itself.
+* The kernel checks the statement over exactly them; a missing one would leave it ill-typed.
+* The body itself is still the δ-free `Acc.rec` lowering of §2.
+
+**Translator fixes found on the way** (none changes an accepted translation's meaning):
+* *Backtracking.* `transFix` restores the Meta state after a failed structural attempt. It now also
+  truncates the registries kept outside that state: the prerequisite hypotheses and the per-occurrence
+  levels. An abandoned attempt's hypothesis named a metavariable that no longer existed; that was the
+  internal error.
+* *Closed hypotheses outside local scopes.* A prerequisite hypothesis is a closed proposition, so it is
+  created in the empty local context. Abstracting an accessibility call's context then no longer drags
+  the recursion's locals into it.
+* *Let-bound locals in a call's context.* They are unfolded in the binder types of the call
+  relation's disjunct *before* the context is abstracted, since a let's value may mention the context.
+
+**Controls** (`scripts/test-blocks`, fixture `fixtures/stmt/s4`):
+* positive: `gcdn`, `lcmn` and `lcmseq.lcml` are claimed;
+* negative: a termination statement forged over a hypothesis that is not a prerequisite of its
+  constant (`edivn_rec`'s) is audit-rejected.

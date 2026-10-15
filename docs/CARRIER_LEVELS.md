@@ -119,7 +119,8 @@ These proofs support the rule; they are not a complete cross-language correctnes
 * **P2** applies to free classes of implicit levels in a declaration's type. Explicit source levels are
   R-SPLIT's domain (binder sorts).
 * **Not covered:**
-  * a block whose *field* has a carrier level defaulted by R3″ (fixture `holder`, entry 10);
+  * a block whose *field* has a carrier level defaulted by R3″ (fixture `holder`, entry 10). Since
+    entry 14 this is covered by R3G for field-only classes (docs/COHERENCE_READINGS.md §7);
   * coherence refusals from R2F `max` readings of non-carrier levels (REFERENCE_COHERENCE);
   * protected ranges narrowed by other mechanisms (`JobReady`).
   * R2F readings of *source-equal* levels. Where the source makes two own levels equal, R2F reads both

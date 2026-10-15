@@ -1,16 +1,5 @@
 # Status
 
-**2026-10-15 — Stage 3: coherence by unification, shared levels per occurrence (branch
-`rules-occurrence`; merged into `main` after validation).**
-* `docs/COHERENCE_READINGS.md` §6, with rule R in its general form (equality at every source model).
-* **Corpus** at `2c78107` (run `r2l-run-S3`; consumer, audit, instances, provenance and tasks OK):
-  **673 Accepted / 3,477 Audited Pending / 299 Blocked / 25 Direct Failure** (RH2: 673 / 2,983 / 785
-  / 33).
-  * 494 protected roots newly supported; 0 regressions; all rows +531 claimed, 0 lost.
-* 324 protected roots remain unclaimed.
-* `fun_hrel` (Prop ≤ Type) and `Task_T` (coinductive) need representation decisions.
-* ITERATION_LOG entry 13.
-
 **2026-10-15 — R-CARRIER, case B Option 2 (branch `rules-carrier`, experimental; committed locally,
 not merged or pushed, pending review).**
 * Per-operand carrier universe levels: P1 decoupled parameter carriers, P2 implicit operand copies

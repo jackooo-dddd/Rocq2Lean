@@ -115,6 +115,11 @@ structure DeclResult where
   /-- Coherence by unification for blocks (docs/COHERENCE_READINGS.md §6): plain parameters, with the
   arity's final sort read through the R2F interpretation. -/
   sortInterp : Bool := false
+  /-- Timing (entry 14): the declaration's translation time and its attempts (tier, ms, status). -/
+  timeMs : Nat := 0
+  tierTimes : Array (String × Nat × String) := #[]
+  /-- R3G for fields (discovery pass only): implicit levels found only in constructor fields. -/
+  fieldImplicit : Array String := #[]
   /-- Assembly (docs/ASSEMBLY.md): the row's assembly state (empty outside assembly), a note, the
   pending artifact an assembled row replaces, and — for a proof task whose verified proof template
   was instantiated — the final theorem `Rocq.<leaf>` with its template, type and value. -/
@@ -535,7 +540,7 @@ private partial def lowersTo (facts : IR.UniverseFacts) (globals : Array String)
     | .mvar _ => false
   go σ.normalize 0
 
-partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
+partial def processConstantCore (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
     (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
@@ -625,7 +630,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       | .ok e => pure e
       | .error e =>
         if e.msg.startsWith "termination obligation required" && !wfTerm && genv.stmtMode then
-          return ← processConstant genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify)
+          return ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify)
         return fromTransError base e
     -- pending validation: the hypotheses become the artifact's leading binders *before* universe
     -- solving, so that the levels of their types (references to prerequisite statements) are
@@ -866,7 +871,7 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
     -- coherence by unification: per-occurrence shared levels left free by typing are the own variables
     -- (after the value's type is unified with the declared type, before the parameters are named)
     let rebindThenKeep : MetaM Unit := do
-      if let some ref := sharedRef? then rebindShared ref gl
+      if let some ref := sharedRef? then rebindShared ref gl genv.facts
       keepParams
     let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt rebindThenKeep (solve := lower || joint)
     unless (← cycleRef.get).isEmpty do
@@ -1047,22 +1052,44 @@ partial def processConstant (genv : GEnv) (results : Std.HashMap String DeclResu
       unless leaf.startsWith (c.name ++ "__rocq2lean_termination_") do continue
       let some p := binderTypeAt? ty j
         | return { base with status := "TRANSLATION_FAILED", message := "termination hypothesis binder not found" }
-      if p.hasLooseBVars then
-        return { base with status := "UNSUPPORTED_FEATURE", message := "termination lowering: the termination statement depends on other hypotheses" }
-      let used := (collectLevelParams {} p).params
+      -- B-P (docs/TERMINATION.md): a termination statement that mentions earlier hypotheses (a pending
+      -- function in a recursive call's argument, `div.gcdn`'s `modn`) is a pending proof task over the
+      -- prerequisites it uses (closed under their own dependencies, in telescope order):
+      -- `RocqPending.<leaf>.statement : ∀ hs, Prop := fun hs => ∀ Γ, ∀ s, Acc C R s`, and the binder is it
+      -- applied to those hypotheses
+      let (sty, sval, deps) ← forallBoundedTelescope ty (some j) fun hs _ => do
+        let p' := p.instantiateRev hs
+        let mut need : Std.HashSet FVarId := {}
+        let mut todo := (collectFVars {} p').fvarIds
+        while !todo.isEmpty do
+          let v := todo.back!
+          todo := todo.pop
+          if need.contains v || !hs.any (·.fvarId! == v) then continue
+          need := need.insert v
+          todo := todo ++ (collectFVars {} (← inferType (mkFVar v))).fvarIds
+        let ds := (List.range hs.size).toArray.filter fun k => need.contains hs[k]!.fvarId!
+        let dv := ds.map (hs[·]!)
+        return (← mkForallFVars dv (mkSort .zero), ← mkLambdaFVars dv p', ds)
+      if sty.hasLooseBVars || sval.hasLooseBVars then
+        return { base with status := "UNSUPPORTED_FEATURE", message := "termination lowering: the termination statement depends on non-hypothesis binders" }
+      let used := (collectLevelParams {} sval).params ++ (collectLevelParams {} sty).params
       if polyNames.any used.contains then
         return { base with status := "UNSUPPORTED_FEATURE", message := "termination lowering: termination statement of a universe-polymorphic definition" }
       let slps := lparams.filter used.contains
-      let sname := targetName (leaf ++ ".statement")
-      match ← addOrReuse (genv.reuseExisting || (← getEnv).contains sname) (← mkConstDecl sname "def" slps (mkSort .zero) p) with
+      let tpend := !deps.isEmpty
+      let sname := if tpend then pendingTargetName (leaf ++ ".statement") else targetName (leaf ++ ".statement")
+      match ← addOrReuse (genv.reuseExisting || (← getEnv).contains sname) (← mkConstDecl sname "def" slps sty sval) with
       | .rejected msg => return { base with status := "KERNEL_REJECTED", message := s!"termination statement {leaf}: {msg}" }
       | .accepted => pure ()
-      let sc := mkConst sname (slps.map Level.param)
+      -- (the binder j sees the j earlier binders as bvars j-1 … 0)
+      let sc := mkAppN (mkConst sname (slps.map Level.param)) (deps.map fun k => mkBVar (j - 1 - k))
       ty := setBinderTypeAt ty j sc
       val := setBinderTypeAt val j sc
-      synth := synth.push { source := leaf, kind := "constant", status := "STATEMENT_KERNEL_CHECKED",
+      synth := synth.push { source := leaf, kind := "constant",
+                            status := if tpend then "STATEMENT_PENDING_KERNEL_CHECKED" else "STATEMENT_KERNEL_CHECKED",
+                            pendingHyps := deps.map (hyps[·]!.2),
                             rule := "termination/statement", target := some sname, targetKind := "statement",
-                            targetType := some (mkSort .zero), targetValue := some p, levelParams := slps,
+                            targetType := some sty, targetValue := some sval, levelParams := slps,
                             paramLevels := (globals.filter fun g => slps.contains (levelParamName g)).map backCopy,
                             synthesizedFrom := c.name, syntheticKind := "termination" }
     -- (B: a definition translated with a termination hypothesis that assembly resolved to a final
@@ -1171,7 +1198,7 @@ def rsMinimalFor (genv : GEnv) (i : IR.InductiveDecl) (rsOwn : Array String) : S
   let base := (rsOwn.foldl (·.insert ·) (genv.rsOfDeps i.typeDeps)).fold (fun acc l => if expl.contains l then acc else acc.insert l) {}
   base
 
-def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
+def processInductiveCore (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
     (raw : Json) (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false)
     (plain : Bool := false) (rsOwn : Array String := #[]) (unify : Bool := false) :
     MetaM (DeclResult × Option IndTarget) := do
@@ -1225,8 +1252,9 @@ where
     let isTemplate := (i.native.getObjValAs? Bool "template").toOption == some true
     -- R3G for blocks: implicit levels (discovered in a first pass) are own levels of the block from
     -- the start, interpreted by R2F together with the explicit ones
-    let allGlobals := if isTemplate then globalsOfInd i
-      else (globalsOfInd i ++ extraOwn).toList.eraseDups.toArray.qsort (· < ·)
+    -- (R3G for template blocks, entry 14: their implicit levels are ordinary, non-template parameters,
+    -- left free by the constructors like the other non-template levels of the block)
+    let allGlobals := (globalsOfInd i ++ extraOwn).toList.eraseDups.toArray.qsort (· < ·)
     let templateParams ← if isTemplate then
         match templateBinding i allGlobals with
         | .ok b => pure b
@@ -1284,7 +1312,7 @@ where
       | .ok cs => pure cs
       | .error e => return (fromTransError base e, none)
     try Meta.check ty catch _ => pure ()
-    if let some ref := sharedRef? then rebindShared ref gl
+    if let some ref := sharedRef? then rebindShared ref gl genv.facts
     -- a non-template level that unification leaves free is a genuine independent level of the
     -- block: it becomes a (non-template) universe parameter, R3 applies at references (R2T)
     let mut sol : Std.HashMap String Level := {}
@@ -1299,6 +1327,10 @@ where
         return ({ base with status := "UNSUPPORTED_FEATURE",
                             message := s!"level {m} of the template inductive is only partly determined by its constructors" }, none)
       unless freeExtra.contains m do sol := sol.insert m s.normalize
+    -- (an implicit level of a template block is a parameter or nothing: one the constructors solve is
+    -- refused, and the block is translated without it)
+    if let some m := extraOwn.find? (fun m => !(globalsOfInd i).contains m && sol.contains m) then
+      return ({ base with status := "UNIVERSE_REJECTED", message := s!"implicit level {m} of the template block is solved by its constructors" }, none)
     let globals := (globals ++ freeExtra).qsort (· < ·)
     let lparams := globals.toList.map levelParamName
     -- pending validation: the hypotheses created so far are the block's leading parameters; the
@@ -1322,8 +1354,6 @@ where
     -- declaration whose parameter stands for source level `l` is `l` itself. The pass reports the
     -- levels so found (same choice and coherence conditions as for constants); the block is then
     -- translated again with them as own levels (`extraOwn`).
-    if discover && isTemplate then
-      return ({ base with status := "DISCOVERED" }, none)     -- never adds the declaration
     if discover then
       let mut occ : Array (String × Level) := #[]
       for e in #[ty] ++ ctors.map (·.type) do
@@ -1377,6 +1407,7 @@ where
             if gs.size == ls.length then
               for l in gs, σ in ls do occF := occF.push (n, l, ← instantiateLevelMVars σ)
       let mut rsPicks : Array String := #[]
+      let doneArity := done
       if !isTemplate && !resLv.isEmpty then
         for (_, _, σ) in occF do
           unless σ.isMVar && !done.contains σ && !inArity.contains σ do continue
@@ -1388,8 +1419,23 @@ where
             occσ.all (fun (n, l', _) => l' == l && ((genv.resultOnly[n]?).getD #[]).contains l) &&
             resLv.any (fun s => entails genv.facts l s 0)
           if let some l := pick then rsPicks := rsPicks.push l
-      return ({ base with status := "DISCOVERED", implicitLevels := (picks ++ rsPicks).qsort (· < ·),
-                          resultSortImplicit := rsPicks.qsort (· < ·) }, none)
+      -- R3G for fields (entry 13): a class occurring only in constructor fields that R3G-F does not take is
+      -- the source level of its references too, under the same conditions as an arity class; the block
+      -- is tried with it first, and without it (R3″'s 0) when the kernel finds a field too big
+      let mut fieldPicks : Array String := #[]
+      let mut doneF := doneArity
+      if !isTemplate then
+        for (_, _, σ) in occF do
+          unless σ.isMVar && !doneF.contains σ && !inArity.contains σ do continue
+          doneF := doneF.push σ
+          let cls := (occ.filter (·.2 == σ)).map (·.1)
+          let pick := cls.toList.eraseDups.find? fun l =>
+            !globals.contains l && !picks.contains l && !rsPicks.contains l && !fieldPicks.contains l &&
+            !genv.templateLevels.contains l &&
+            cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) && (occ.filter (·.1 == l)).all (·.2.hasMVar)
+          if let some l := pick then fieldPicks := fieldPicks.push l
+      return ({ base with status := "DISCOVERED", implicitLevels := (picks ++ rsPicks ++ fieldPicks).qsort (· < ·),
+                          resultSortImplicit := rsPicks.qsort (· < ·), fieldImplicit := fieldPicks.qsort (· < ·) }, none)
     -- R3″: references inside the block (to generalized constants / level-parameter inductives) carry
     -- level metavariables; those not fixed by type-checking (nor taken by R3G) take their least
     -- R3-admissible value 0, and R3 is checked on every universe argument of the block.
@@ -1406,6 +1452,22 @@ where
     -- for it, its R2F interpretation ι l (u_l itself when no fact constrains l)
     let interpMap : Std.HashMap String Level :=
       if isTemplate || plain then {} else (ownLevelInterp genv.facts globals (rsMinimalFor genv i rsOwn) genv.decoupled)
+    -- R3G (as the audit requires, independently): an implicit level is the argument — its parameter, or its
+    -- R2F image — of some reference for that level in the block (else it stands for nothing, and an
+    -- occurrence lowered below it would be a specialization; entry 14)
+    unless discover do
+      for l in extraOwn.filter (!(globalsOfInd i).contains ·) do
+        let want := ((interpMap[l]?).getD (.param (levelParamName l))).normalize
+        let mut found := false
+        for e in #[ty] ++ ctors.map (·.type) do
+          for (n, ls) in constOccurrences e do
+            if let some gs := genv.constGlobals[n]? then
+              let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
+              if gs.size == ls.length then
+                for g in gs, σ in ls do
+                  if g == l && σ.normalize == want then found := true
+        unless found do
+          return ({ base with status := "UNIVERSE_REJECTED", message := s!"implicit level {l} is not the argument of a reference for that level" }, none)
     for e in #[ty] ++ ctors.map (·.type) do
       match checkUniverseObligations genv globals e interpMap (allowLower := lower) with
       | .ok n => nchecks := nchecks + n
@@ -1460,6 +1522,90 @@ where
 
 /-! ## Report -/
 
+/-- Speed (entry 14): the source levels of the generalized declarations a declaration depends on
+(accepted, pending, statements, blocks), as their parameters stand for them. -/
+def depGlobalLevels (genv : GEnv) (deps : Array String) : Std.HashSet String := Id.run do
+  let mut out : Std.HashSet String := {}
+  for d in deps do
+    let mut ts : Array Name := #[]
+    if let some t := genv.consts[d]? then ts := ts.push t
+    if let some (t, _) := genv.pendingDefs[d]? then ts := ts.push t
+    if let some (t, _) := genv.leafStmt[d]? then ts := ts.push t
+    if let some it := genv.inds[d]? then ts := ts ++ it.types ++ it.ctors.foldl (· ++ ·) #[]
+    for t in ts do
+      if let some gs := genv.constGlobals[t]? then
+        for g in gs do out := out.insert g
+  return out
+
+/-- Speed (entry 14): whether R2⁺ can change any sort of a source term (`factReduceUniverse` drops a
+summand somewhere). If not, a fact-reduced tier translates exactly as its plain counterpart. -/
+partial def termFactReducible (f : IR.UniverseFacts) : IR.Term → Bool
+  | .sort (.type u) => (factReduceUniverse f u).size != u.size
+  | .cast t _ ty => termFactReducible f t || termFactReducible f ty
+  | .prod _ a b | .lam _ a b => termFactReducible f a || termFactReducible f b
+  | .letIn _ v t b => termFactReducible f v || termFactReducible f t || termFactReducible f b
+  | .app g as => termFactReducible f g || as.any (termFactReducible f)
+  | .evar _ as => as.any (termFactReducible f)
+  | .case _ _ _ _ ps _ r c brs => ps.any (termFactReducible f) || termFactReducible f r ||
+      termFactReducible f c || brs.any (termFactReducible f ·.2)
+  | .proj _ _ _ t => termFactReducible f t
+  | .fix defs _ | .cofix defs _ => defs.any fun (_, t, b, _) => termFactReducible f t || termFactReducible f b
+  | _ => false
+
+partial def termHasFix : IR.Term → Bool
+  | .fix .. | .cofix .. => true
+  | .cast t _ ty => termHasFix t || termHasFix ty
+  | .prod _ a b | .lam _ a b => termHasFix a || termHasFix b
+  | .letIn _ v t b => termHasFix v || termHasFix t || termHasFix b
+  | .app g as => termHasFix g || as.any termHasFix
+  | .case _ _ _ _ ps _ r c brs => ps.any termHasFix || termHasFix r || termHasFix c || brs.any (termHasFix ·.2)
+  | .proj _ _ _ t => termHasFix t
+  | _ => false
+
+/-- Speed (entry 14): a late, last-resort tier with its own, smaller heartbeat budget (a fifth of the
+declaration's) under a fresh counter; an attempt exhausting it is a failed attempt (`RESOURCE_LIMIT`,
+state restored), not the end of the declaration's other tiers. -/
+def budgeted (src kind : String) (x : MetaM DeclResult) : MetaM DeclResult := do
+  let saved ← saveState
+  tryCatchRuntimeEx
+    (withTheReader Core.Context (fun c => { c with maxHeartbeats := c.maxHeartbeats / 5 }) (withCurrHeartbeats x))
+    fun e => do
+      saved.restore
+      pure { source := src, kind, status := if e.isRuntime then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
+             message := s!"late tier: {(← e.toMessageData.toString).take 300}" }
+
+/-- Timing (entry 14): every translation attempt of a declaration is logged with its tier's flags, its
+time and its status, and the log is reported per row (`tier_times`). -/
+def tierLabel (kind : String) (flags : List (String × Bool)) (eo : Nat) : String :=
+  let fs := flags.filterMap fun (n, b) => if b then some n else none
+  s!"{kind}[{",".intercalate fs}]{if eo == 0 then "" else s!" eo{eo}"}"
+
+def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
+    (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
+    (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
+    (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
+    (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) :
+    MetaM DeclResult := do
+  let t0 ← IO.monoMsNow
+  let r ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort
+    wfTerm inheritSort hypExact joint unify
+  if let some ref := genv.tierLog then
+    let lbl := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
+      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify)] extraOwn.size
+    ref.modify (·.push (lbl, (← IO.monoMsNow) - t0, r.status))
+  return r
+
+def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
+    (raw : Json) (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false)
+    (plain : Bool := false) (rsOwn : Array String := #[]) (unify : Bool := false) :
+    MetaM (DeclResult × Option IndTarget) := do
+  let t0 ← IO.monoMsNow
+  let r ← processInductiveCore genv results i raw extraOwn discover lower plain rsOwn unify
+  if let some ref := genv.tierLog then
+    let lbl := tierLabel "i" [("di", discover), ("lo", lower), ("pl", plain), ("un", unify)] extraOwn.size
+    ref.modify (·.push (lbl, (← IO.monoMsNow) - t0, r.1.status))
+  return r
+
 partial def levelJson : Level → Json
   | .zero => Json.mkObj [("k", "zero")]
   | .succ l => Json.mkObj [("k", "succ"), ("l", levelJson l)]
@@ -1492,6 +1638,7 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("universe_lowered", Json.bool r.universeLowered),
     ("plain_levels", Json.bool r.plainLevels),
     ("sort_interp", Json.bool r.sortInterp),
+
     ("delta_inlined", Json.arr (r.deltaInlined.map Json.str)),
     ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>
       Json.mkObj [("level", m), ("sigma", levelJson l), ("in_type", Json.bool (r.r2bpInType.contains m))])),
@@ -1694,6 +1841,9 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
   let setMotive := src.decls.foldl (init := ({} : Std.HashSet String)) fun m d => match d with
     | .constant c => if irBodies.contains c.name && c.type.hasSetMotive then m.insert c.name else m
     | _ => m
+  let erasingPoly := src.decls.foldl (init := ({} : Std.HashMap String IR.Term)) fun m d => match d with
+    | .constant c => match erasingPolyBody? c with | some b => m.insert c.name b | none => m
+    | _ => m
   let stmtMode := ((src.header.getObjVal? "mode").toOption.bind (fun m => (m.getObjValAs? String "name").toOption)) == some "statement"
   -- R-CARRIER P1: parameter carrier levels of every exported block, once, from the source
   let carrierSet : Std.HashSet String := src.decls.foldl (fun acc d => match d with
@@ -1704,7 +1854,8 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     | .inductive i => if (i.native.getObjValAs? Bool "template").toOption == some true then acc
                       else (Split.decoupledPairs i).foldl (·.insert ·) acc
     | _ => acc) {}
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled }
+  let tierLog ← IO.mkRef (#[] : Array (String × Nat × String))
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   let opaqueData : Std.HashSet String := src.decls.foldl (init := {}) fun m d => match d with
@@ -1752,6 +1903,8 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
         continue
     -- the heartbeat budget is per declaration; a declaration exceeding it is a RESOURCE_LIMIT row
     let saved ← saveState
+    if let some ref := genv.tierLog then ref.set #[]
+    let tDecl ← IO.monoMsNow
     -- (an internal error of one declaration is its TRANSLATION_FAILED row, not the end of the run)
     -- resource limits per declaration (docs/TRUST.md): reflection proofs (ring/lia certificates)
     -- evaluate the translated normalizers on concrete data during the checks
@@ -1767,6 +1920,7 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
            status := if rt then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
            message := if rt then s!"resource limit per declaration: {msg.take 300}" else s!"internal error: {msg.take 600}" }, none)
     let mut r := r
+    r := { r with timeMs := (← IO.monoMsNow) - tDecl, tierTimes := ← match genv.tierLog with | some ref => ref.get | none => pure #[] }
     match asm? with
     | none => if let some g := genv? then genv := g
     | some a =>
@@ -1943,12 +2097,21 @@ where
             -- R3↓ last (cumulativity tier, reported): references instantiated below shared levels
             -- coherence by unification (§6 of docs/COHERENCE_READINGS.md) after the strict tiers: the same
             -- checks, with shared levels instantiated per occurrence and rebound where typing leaves them free
+            -- (speed, entry 14: per-occurrence tiers only for a constant sharing a level with a reference)
+            let cDep := depGlobalLevels genv (c.typeDeps ++ c.bodyDeps)
+            let cShared := (globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)).toList.any cDep.contains || !eo.isEmpty
+            let cReducible := termFactReducible genv.facts c.type || (c.body.map (termFactReducible genv.facts)).getD false
             for (fr, it, cu, lo, un) in [(true, false, false, false, false), (false, true, false, false, false), (true, true, false, false, false),
                                      (false, false, false, false, true), (false, true, false, false, true), (true, true, false, false, true),
                                      (false, false, true, false, false), (true, false, true, false, false), (false, true, true, false, false),
                                      (true, true, true, false, false), (false, false, true, true, false), (true, false, true, true, false),
                                      (false, true, true, true, false), (true, true, true, true, false)] do
-              let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (unify := un)
+              if un && !cShared then continue
+              -- (an R2⁺ tier with nothing to reduce is its plain counterpart, which already failed)
+              if fr && !cReducible then continue
+              let late := cu || lo || un
+              let att := processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface") (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (unify := un)
+              let r' ← if late then budgeted c.name "constant" att else att
               lastTier := some r'
               if r'.status == "INTERFACE_REJECTED" then iface := some r'
               if r'.accepted then
@@ -1967,8 +2130,13 @@ where
           -- P3 (ITERATION_LOG entry 8): per-instance prerequisite hypotheses (no level unified across uses;
           -- duplicates collapsed after solving), when the attempts above failed
           if !r.accepted && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then
+            -- (speed, entry 14: without pending prerequisites or a fixpoint no hypothesis exists, and the first two
+            -- variants are exactly earlier tiers)
+            let (_, _, cPend) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
+            let noHyps := cPend.isEmpty && !((c.body.map termHasFix).getD false)
             for (fr, it, cu, lo) in [(false, false, false, false), (false, true, false, false), (false, false, false, true)] do
-              let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+              if noHyps && !lo then continue
+              let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
                 (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := true)
               if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
               if r'.accepted then
@@ -1994,7 +2162,8 @@ where
           if r.accepted && !isStmt && genv.stmtMode then
             let tyLv := globalsOf c.type
             let solvedTy (x : DeclResult) := (x.bodyLevels.filter fun (m, _) => tyLv.contains m).size
-            if solvedTy r > 0 then
+            let gDep := depGlobalLevels genv (c.typeDeps ++ c.bodyDeps)
+            if solvedTy r > 0 && (r.bodyLevels.any fun (m, _) => gDep.contains m) then
               let sAcc ← saveState
               let mut better := false
               for it in [false, true] do
@@ -2060,35 +2229,118 @@ where
         -- M6: each attempt first with plain universe parameters (more general: the R2F interpretation
         -- also bakes in facts that only uses elsewhere impose, e.g. Ring_theory.ring_morph's
         -- C ≥ R from IDmorph), then with the R2F interpretation
-        let run1 (eo : Array String) (lower : Bool) (rs : Array String := #[]) : MetaM (DeclResult × Option IndTarget) := do
-          let (a, ta) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (plain := true) (rsOwn := rs)
-          if a.accepted then return (a, ta)
-          -- coherence by unification (docs/COHERENCE_READINGS.md §6) before the R2F interpretation, as plain
-          -- parameters are (M6): the plain attempt with shared levels instantiated per occurrence
-          unless lower do
-            let (u, tu) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (plain := true) (rsOwn := rs) (unify := true)
+        let ladder (i : IR.InductiveDecl) : MetaM (DeclResult × Option IndTarget) := do
+          let run1 (eo : Array String) (lower : Bool) (rs : Array String := #[]) : MetaM (DeclResult × Option IndTarget) := do
+            -- (per-occurrence attempts only when some level of the block is a referenced declaration's: its own
+            -- levels against the dependencies' generalized levels, or implicit levels, which are such by definition)
+            let depLv := depGlobalLevels genv i.typeDeps
+            let shared := !eo.isEmpty || (globalsOfInd i).any depLv.contains
+            -- (R3↓ tier: shared levels per occurrence first — lowered where typing lowers them, otherwise the
+            -- own level — then fresh and defaulted, as before)
+            if lower && shared then
+              for pl in [true, false] do
+                let (u, tu) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := true) (plain := pl) (rsOwn := rs) (unify := true)
+                if u.accepted then return (u, tu)
+            let (a, ta) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (plain := true) (rsOwn := rs)
+            if a.accepted then return (a, ta)
+            -- coherence by unification (docs/COHERENCE_READINGS.md §6) before the R2F interpretation, as plain
+            -- parameters are (M6): the plain attempt with shared levels instantiated per occurrence
+            if !lower && shared && (a.status == "KERNEL_REJECTED" || a.status == "UNIVERSE_REJECTED") then
+              let (u, tu) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (plain := true) (rsOwn := rs) (unify := true)
+              if u.accepted then return (u, tu)
+            let (b, tb) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (rsOwn := rs)
+            if b.accepted || lower || !shared || !(b.status == "KERNEL_REJECTED" || b.status == "UNIVERSE_REJECTED") then return (b, tb)
+            let (u, tu) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (rsOwn := rs) (unify := true)
             if u.accepted then return (u, tu)
-          let (b, tb) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (lower := lower) (rsOwn := rs)
-          if b.accepted || lower then return (b, tb)
-          let (u, tu) ← processInductive genv results i src.rawDecls[i.name]! (extraOwn := eo) (rsOwn := rs) (unify := true)
-          if u.accepted then return (u, tu)
-          return (b, tb)
-        let (r, t?) ← do
-          let (d, _) ← processInductive genv results i src.rawDecls[i.name]! (discover := true)
-          if d.status == "DISCOVERED" && !d.implicitLevels.isEmpty then
-            let (r1, t1) ← run1 d.implicitLevels false d.resultSortImplicit
-            if r1.accepted then pure (r1, t1) else
-            -- (R3G-F levels refused by the kernel: the arity's implicit levels alone, as before)
-            let old := d.implicitLevels.filter (!d.resultSortImplicit.contains ·)
-            if !d.resultSortImplicit.isEmpty && !old.isEmpty then
-              let (r2, t2) ← run1 old false
-              if r2.accepted then pure (r2, t2) else run1 #[] false
-            else run1 #[] false
-          else run1 #[] false
-        -- R3↓ last (reported): references in the block instantiated below its shared levels
-        let (r, t?) ← if r.accepted || !(r.status == "KERNEL_REJECTED" || r.status == "UNIVERSE_REJECTED") then pure (r, t?) else do
-          let (r2, t2) ← run1 #[] true
-          if r2.accepted then pure (r2, t2) else pure ({ r with message := s!"{r.message} [R3↓ attempt: {r2.status}: {r2.message}]" }, t?)
+            return (b, tb)
+          -- (speed, entry 14: discovery only when a dependency has generalized levels — otherwise no reference
+          -- level can be free; per-occurrence attempts only when the block shares a level with a reference)
+          let depLv := depGlobalLevels genv i.typeDeps
+          let shared := (globalsOfInd i).any depLv.contains
+          let noDisc : DeclResult := { source := i.name, kind := "inductive", status := "DISCOVERED" }
+          let (d0, _) ← if depLv.isEmpty then pure (noDisc, none) else processInductive genv results i src.rawDecls[i.name]! (discover := true)
+          let attempt (d : DeclResult) : MetaM (DeclResult × Option IndTarget) := do
+            let (r, t?) ← do
+              if d.status == "DISCOVERED" && !d.implicitLevels.isEmpty then
+                let (r1, t1) ← run1 d.implicitLevels false d.resultSortImplicit
+                if r1.accepted then pure (r1, t1) else
+                -- (R3G for fields refused by the kernel: the levels found in the arity and by R3G-F, as before)
+                let (r1, t1) ← if d.fieldImplicit.isEmpty then pure (r1, t1) else
+                  let ex := d.implicitLevels.filter (!d.fieldImplicit.contains ·)
+                  if ex.isEmpty then run1 #[] false else run1 ex false d.resultSortImplicit
+                if r1.accepted then pure (r1, t1) else
+                -- (R3G-F levels refused by the kernel: the arity's implicit levels alone, as before)
+                let old := d.implicitLevels.filter (!d.resultSortImplicit.contains ·)
+                if !d.resultSortImplicit.isEmpty && !old.isEmpty then
+                  let (r2, t2) ← run1 old false
+                  if r2.accepted then pure (r2, t2) else run1 #[] false
+                else run1 #[] false
+              else run1 #[] false
+            -- R3↓ last (reported): references in the block instantiated below its shared levels
+            if r.accepted || !(r.status == "KERNEL_REJECTED" || r.status == "UNIVERSE_REJECTED") then return (r, t?)
+            -- (with the discovered implicit levels first: per occurrence, a lowered field keeps them; entry 13)
+            let (r2, t2) ← if d.status == "DISCOVERED" && !d.implicitLevels.isEmpty then do
+                let (a, ta) ← run1 d.implicitLevels true d.resultSortImplicit
+                if a.accepted then pure (a, ta) else run1 #[] true
+              else run1 #[] true
+            if r2.accepted then pure (r2, t2) else pure ({ r with message := s!"{r.message} [R3↓ attempt: {r2.status}: {r2.message}]" }, t?)
+          let (r, t?) ← attempt d0
+          -- per-occurrence discovery (entry 14), only when the plain attempts failed on a block that shares a
+          -- level with a reference: classes that coherence by construction identifies with an own level (a
+          -- lower carrier under `Equality.sort`) can then be named
+          if r.accepted || !shared || d0.status != "DISCOVERED" ||
+              !(r.status == "KERNEL_REJECTED" || r.status == "UNIVERSE_REJECTED") then return (r, t?)
+          let (du, _) ← processInductive genv results i src.rawDecls[i.name]! (discover := true) (unify := true)
+          let extra := du.implicitLevels.filter (!d0.implicitLevels.contains ·)
+          if du.status != "DISCOVERED" || extra.isEmpty then return (r, t?)
+          let d := { d0 with implicitLevels := (d0.implicitLevels ++ extra).qsort (· < ·),
+                             fieldImplicit := (d0.fieldImplicit ++ extra.filter du.fieldImplicit.contains).qsort (· < ·) }
+          let (r2, t2) ← attempt d
+          if r2.accepted then return (r2, t2)
+          return (r, t?)
+        let (r, t?) ← ladder i
+        -- δ-inlining of erasing polymorphic definitions (entry 14, last tier): the whole ladder on the
+        -- block with those applications δβ-reduced (definitional; the audit re-derives both the names
+        -- and the inlined source), when every attempt on the source block failed
+        let (r, t?) ← if r.accepted || genv.erasingPoly.isEmpty ||
+            !(r.status == "KERNEL_REJECTED" || r.status == "UNIVERSE_REJECTED") then pure (r, t?) else do
+          let names : Std.HashSet String := genv.erasingPoly.fold (fun acc k _ => acc.insert k) {}
+          let bodies := genv.erasingPoly
+          let inl (t : IR.Term) (used : Std.HashSet String) : IR.Term × Std.HashSet String :=
+            let (t', u) := inlineConsts bodies names t
+            (t', used.insertMany u)
+          let mut used : Std.HashSet String := {}
+          let mut params := #[]
+          for p in i.params do
+            let (t, u) := inl p.type used
+            used := u
+            params := params.push { p with type := t }
+          let mut bodies' := #[]
+          for b in i.bodies do
+            let (ty, u) := inl b.type used
+            used := u
+            let mut ctors := #[]
+            for c in b.ctors do
+              let (cty, u) := inl c.type used
+              used := u
+              let mut args := #[]
+              for a in c.args do
+                let (at', u) := inl a.type used
+                used := u
+                args := args.push { a with type := at' }
+              ctors := ctors.push { c with type := cty, args }
+            -- (primitive records: the projections' types, as the audit inlines them)
+            let mut projs := #[]
+            for (pn, pr, pt) in b.projs do
+              let (pt', u) := inl pt used
+              used := u
+              projs := projs.push (pn, pr, pt')
+            bodies' := bodies'.push { b with type := ty, ctors, projs }
+          if used.isEmpty then pure (r, t?) else
+          let (r2, t2) ← ladder { i with params, bodies := bodies' }
+          let usedA := used.toArray.qsort (· < ·)
+          if r2.accepted then pure ({ r2 with deltaInlined := usedA }, t2)
+          else pure ({ r with message := s!"{r.message} [δ-inlined {usedA}: {r2.status}: {r2.message.take 400}]" }, t?)
         if let some t := t? then genv := { genv with inds := genv.inds.insert i.name t }
         -- Non-template inductives with generalized global levels: references obey R3 like
         -- generalized constants (the type and its constructors carry the same parameters).

@@ -1,0 +1,1 @@
+{"name": "stmt-s4", "load_paths": [["-R", "../../../.work/prosa-0.6-rocq93", "prosa"], ["-R", "../../../.work/coqeal-ce3d1d6", "CoqEAL"], ["-Q", ".", "SF"]], "files": [], "requires": ["prosa.util.lcmseq", "prosa.results.transfer_schedulability.paper_model", "prosa.implementation.definitions.task"]}

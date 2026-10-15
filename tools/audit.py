@@ -311,7 +311,11 @@ def ind_params(d, r):
             raise Mismatch(f"implicit levels {sorted(implicit & set(ind_globals(d)))} occur explicitly in the source")
         return sorted(set(ind_globals(d)) | implicit), {}, None
     sol = {x["level"]: x["sigma"] for x in r.get("solved_levels", [])}
-    params = sorted(set(ind_globals(d)) - set(sol))
+    # R3G for template blocks (entry 14): implicit levels are non-template parameters, never solved
+    implicit = set(r.get("implicit_levels") or [])
+    if implicit & set(ind_globals(d)):
+        raise Mismatch(f"implicit levels {sorted(implicit & set(ind_globals(d)))} occur explicitly in the source")
+    params = sorted((set(ind_globals(d)) - set(sol)) | implicit)
     if not set(sol) <= set(ind_globals(d)) - set(tb) or not set(tb) <= set(params):
         raise Mismatch(f"solved levels {sorted(sol)} must be non-template levels of the block")
     return params, sol, tb
@@ -1778,6 +1782,52 @@ def anon(e):
     if isinstance(e, list):
         return [anon(v) for v in e]
     return e
+
+
+def src_has_univ_var(t):
+    """Whether a source term mentions a universe variable ({"k": "var", "i": n}, in a sort or an instance)."""
+    if isinstance(t, list):
+        return any(src_has_univ_var(x) for x in t)
+    if not isinstance(t, dict):
+        return False
+    if t.get("k") == "var" and "i" in t:
+        return True
+    return any(src_has_univ_var(v) for v in t.values() if isinstance(v, (dict, list)))
+
+
+def erasing_poly_body(d):
+    """Entry 14, independently: a transparent universe-polymorphic constant whose body, after its
+    leading lambdas, mentions no universe variable (its applications are δβ-reducible without leaving
+    any level of the instance). Returns the body, or None."""
+    if d.get("kind") != "constant" or d.get("body_state") != "transparent" or d.get("body") is None:
+        return None
+    if (d.get("universes") or {}).get("k") != "polymorphic":
+        return None
+    b, n = d["body"], 0
+    while b.get("k") == "lam":
+        b, n = b["b"], n + 1
+    return d["body"] if n > 0 and not src_has_univ_var(b) else None
+
+
+def inline_erasing_block(d, bodies):
+    """The block `d` with every application of the given erasing definitions δβ-reduced (no fuel bound:
+    each reduct is smaller, the definitions erase their arguments' levels)."""
+    def pre(x, k):
+        if x.get("k") == "app" and x["f"].get("k") == "const" and x["f"]["c"] in bodies:
+            return src_flatten_apps(beta_app(bodies[x["f"]["c"]], x["args"]))
+        return None
+    d2 = copy.deepcopy(d)
+    for p_ in d2.get("params") or []:
+        p_["ty"] = src_rewrite(p_["ty"], pre)        # (context declarations: n, body, ty)
+    for b in d2.get("bodies") or []:
+        b["type"] = src_rewrite(b["type"], pre)
+        for c in b.get("ctors") or []:
+            c["type"] = src_rewrite(c["type"], pre)
+            for a in c.get("args") or []:
+                a["ty"] = src_rewrite(a["ty"], pre)
+        for pj in b.get("projs") or []:              # (primitive records: the projections' types)
+            pj["type"] = src_rewrite(pj["type"], pre)
+    return d2
 
 
 def src_rewrite(t, pre, k=0, again=True):
@@ -3495,18 +3545,32 @@ def check_hyp_telescope(rows, leaves, hs, hyp_t):
             raise Mismatch(f"hypothesis {l}: type is not its statement {lr['target']}")
 
 
-def check_termination_statement(r, used):
-    """B: `def <leaf>.statement : Prop := ∀ Γ, ∀ s : C, Acc C R s`, with no hypothesis; its parent's
-    audited termination lowering applies it (as hypothesis or final theorem) to the locals Γ and the
-    decreasing argument, so the kernel identifies its C and R with the lowering's carrier and call
-    relation (whose shape the parent's audit checked against the source's recursive calls)."""
-    if r.get("pending_hypotheses"):
-        raise Mismatch("a termination statement with hypotheses")
+def check_termination_statement(r, used, rows=None, leaves=None):
+    """B: `def <leaf>.statement : Prop := ∀ Γ, ∀ s : C, Acc C R s`; its parent's audited termination
+    lowering applies it (as hypothesis or final theorem) to the locals Γ and the decreasing argument, so
+    the kernel identifies its C and R with the lowering's carrier and call relation (whose shape the
+    parent's audit checked against the source's recursive calls).
+    B-P (docs/TERMINATION.md): when the call relation mentions prerequisite hypotheses of the parent (a
+    pending function in a recursive call's argument), the statement is a pending proof task over them:
+    `∀ hs, Prop := fun hs => ∀ Γ, ∀ s : C, Acc C R s`, its hypothesis telescope checked like every pending
+    artifact's (each binder a prerequisite's statement applied to the hypotheses of its own prerequisites)."""
     if not used:
         raise Mismatch("not used by its constant's audited termination lowering")
-    if r.get("target_type") != {"k": "sort", "l": {"k": "zero"}}:
+    hs = r.get("pending_hypotheses") or []
+    ty, e = r.get("target_type"), r.get("target_value")
+    hyp_t = []
+    for i, l in enumerate(hs):
+        if ty.get("k") != "forall" or e.get("k") != "lam" or ty["t"] != e["t"]:
+            raise Mismatch(f"termination statement: hypothesis {i} ({l}) missing or differing between type and value")
+        hyp_t.append(ty["t"])
+        ty, e = ty["b"], e["b"]
+    if hs:
+        if rows is None or leaves is None:
+            raise Mismatch("a termination statement with hypotheses outside a pending telescope check")
+        check_hyp_telescope(rows, leaves, hs, hyp_t)
+    if ty != {"k": "sort", "l": {"k": "zero"}}:
         raise Mismatch("a termination statement is not a Prop")
-    e, prev = r.get("target_value"), None
+    prev = None
     while e.get("k") == "forall":
         prev, e = e, e["b"]
     h, a = Auditor.unspine(e)
@@ -3659,6 +3723,25 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             problem("coverage", f"{s_}: exported declaration has no result")
     rows = {r["source"]: r for r in results if counts[r.get("source")] == 1 and (r.get("source") in decls or r.get("source") in syn)}
     st = lambda x: rows.get(x, {}).get("status")
+    # entry 14: a block translated with erasing polymorphic definitions δβ-inlined is audited against its
+    # inlined source; the inlined names must be erasing definitions (recomputed here from the source), and
+    # each must actually occur in the block
+    for n, r in sorted(rows.items()):
+        di = r.get("delta_inlined") or []
+        if not di or n not in decls or decls[n]["kind"] != "inductive":
+            continue
+        bodies = {}
+        for n_ in di:
+            b_ = erasing_poly_body(decls[n_]) if n_ in decls else None
+            if b_ is None:
+                problem("structure", f"{n}: inlined {n_} is not an erasing polymorphic definition")
+            else:
+                bodies[n_] = b_
+        if len(bodies) == len(di):
+            d2 = inline_erasing_block(decls[n], bodies)
+            if any(json.dumps(d2).count(f'"c": "{n_}"') or json.dumps(d2).count(f'"c":"{n_}"') for n_ in di) or d2 == decls[n]:
+                problem("structure", f"{n}: the reported inlining does not remove the definitions {di}")
+            decls[n] = d2
     rep_roots = report.get("roots", [])
     if [(r.get("requested"), r.get("name")) for r in rep_roots] != [(r["requested"], r["name"]) for r in src_roots] \
             or any(r.get("status") != st(r.get("name")) for r in rep_roots):
@@ -3805,8 +3888,9 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
     for n, v in views.items():
         refs[n] = closure_refs([v["type"], v["body"]] if v["kind"] == "constant" else [v["params"], v["bodies"]], set()) - {n}
     # B: a termination-lowered constant needs its termination obligations (which its lowering must
-    # use, audited below); a termination statement needs nothing (it is refused when its relation
-    # mentions a pending prerequisite); an unfolding equation needs what its constant needs
+    # use, audited below); a termination statement needs no source reference of its own (B-P: the
+    # prerequisites of its constant that its relation mentions are checked below); an unfolding equation
+    # needs what its constant needs
     for n, r_ in syn.items():
         par = r_["synthesized_from"]
         if r_["synthetic_kind"] == "termination":
@@ -3858,6 +3942,14 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                     raise Mismatch(f"accepted row with assembly state {a_}")
             # (P3: a prerequisite may occur once per universe instance; check_hyp_telescope checks that
             # its occurrences have different types)
+            # B-P (docs/TERMINATION.md): a termination statement's hypotheses are prerequisites of its
+            # constant that its call relation mentions (a subset of the constant's recomputed prerequisites,
+            # never itself); the kernel checked the statement over exactly them, the telescope its order
+            if n in syn and syn[n]["synthetic_kind"] == "termination" and hs:
+                par_need = need(syn[n]["synthesized_from"]) - {n}
+                if not set(hs) <= par_need:
+                    raise Mismatch(f"termination statement hypotheses {sorted(set(hs) - par_need)} are not prerequisites of its constant")
+                nd = set(hs)
             if set(hs) != nd:
                 raise Mismatch(f"hypotheses {hs} differ from the recomputed prerequisites {sorted(nd)}")
             want = ("STATEMENT_" if n in leaves else "") + ("PENDING_KERNEL_CHECKED" if nd else
@@ -4096,7 +4188,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             if r["target"] != want_t or r["target_kind"] != "statement":
                 raise Mismatch(f"target {r['target']} ({r['target_kind']}) is not the statement {want_t}")
             if r["synthetic_kind"] == "termination":
-                check_termination_statement(r, s_ in wf_users.get(par, []))
+                check_termination_statement(r, s_ in wf_users.get(par, []), tele_rows, leaves)
             else:
                 check_unfolding_equation(aud, decls[par], rows.get(par), r, leaves, tele_rows)
             v["verdict"] = "MATCH"

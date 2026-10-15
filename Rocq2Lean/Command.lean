@@ -83,14 +83,17 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
       | some a, some b => if a.isEmpty then none else some (a, b)
       | _, _ => none
     else none
+  let tStart ← IO.monoMsNow
   let bytes ← IO.FS.readBinFile srcPath
   let gotSha := Sha256.hexDigest bytes
+  let tSha ← IO.monoMsNow
   unless gotSha == wantSha do
     throwError "EXPORT_VALIDATION_FAILED: {srcPath} has SHA-256 {gotSha}, expected {wantSha}"
   let some contents := String.fromUTF8? bytes | throwError "EXPORT_VALIDATION_FAILED: source is not UTF-8"
   let source ← match IR.parseSource contents with
     | .ok s => pure s
     | .error e => throwError "EXPORT_VALIDATION_FAILED: {e}"
+  let tParse ← IO.monoMsNow
   if let some msg := rootContractProblem source then
     IO.FS.writeFile repPath ((Json.mkObj [
       ("report", "rocq2lean-translation/0.3"), ("status", "ROOT_CONTRACT_REJECTED"), ("reason", msg),
@@ -101,6 +104,7 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
     | some (p, h) => readProtection p h gotSha
     | none => pure (Json.null, {})
   let results ← liftTermElabM (translateSource source protNames)
+  let tTrans ← IO.monoMsNow
   let roots := rootSummary source results
   let count (p : DeclResult → Bool) := (results.filter p).size
   let rootNames := source.roots.map (·.name)
@@ -111,6 +115,15 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
     ("bootstrap_resolved", count (·.status == "BOOTSTRAP_RESOLVED")),
     ("generated_helpers", 0),
     ("not_ok", count (!·.ok))]
+  -- timing (entry 14), outside the (deterministic, bound) report: phases and per-declaration attempts
+  let timing := Json.mkObj [
+    ("schema", "rocq2lean-translation-timing/1"),
+    ("phase_ms", Json.mkObj [("sha256", Json.num (tSha - tStart)), ("parse", Json.num (tParse - tSha)),
+                             ("translate", Json.num (tTrans - tParse))]),
+    ("declarations", Json.arr (results.map fun r => Json.mkObj [("source", r.source), ("status", r.status),
+      ("time_ms", Json.num r.timeMs),
+      ("tier_times", Json.arr (r.tierTimes.map fun (l, ms, st) => Json.arr #[Json.str l, Json.num ms, Json.str st]))]))]
+  IO.FS.writeFile ((System.FilePath.mk repPath).withFileName "translation_timing.json") (timing.compress ++ "\n")
   -- statement mode: a root translated as its statement, or pending on proofs, is not a failure
   let pendingSt (s : String) := s == "OBLIGATIONS_PENDING" || s == "PENDING_KERNEL_CHECKED" ||
     s == "STATEMENT_PENDING_KERNEL_CHECKED"

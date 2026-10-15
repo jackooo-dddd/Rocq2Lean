@@ -32,7 +32,7 @@ not a verified compiler; passing fixtures prove nothing beyond them.
 | MetaRocq Template quoter (`c18395ad`, unpatched) | turns kernel terms into the serialized AST | round trip against a fresh quotation; native recomputation of metadata and universes (the quoter's *term* structure is not re-derived natively) |
 | `rocq/exporter` | serializes the AST and native facts | independent decoder + `RtEq.v`; native `NativeMeta` / `CheckRelation` in a fresh process |
 | `tools/contract.py` | coverage contract from the validated IR | the auditor recomputes the closure independently and compares |
-| `Rocq2Lean/*.lean` translator | proposes `Expr`/`Declaration`s, solves universe levels | kernel; consumer; independent auditor (structure, universes, lowering); replay |
+| `Rocq2Lean/*.lean` translator | proposes `Expr`/`Declaration`s, solves universe levels | kernel; consumer; independent auditor (structure, universes, lowering); replay. Since entry 14 it runs as native code (`precompileModules`, loaded with `--load-dynlib`): the same program as interpreted, byte-identical reports on the measured subsets; the build digest covers the native library |
 | Lean v4.33.1 kernel (`lean_add_decl`) | type checking | the only acceptance authority for typing |
 | `Rocq2Lean/Verify.lean` consumer | fresh-process readback, coverage, target dependencies, axioms, recursor-index obligation | separate process and module; contract-driven |
 | `tools/audit.py` | independent structural / universe / lowering audit | separate implementation and rule tables; uses only source IR, contract, report and kernel recursor metadata |

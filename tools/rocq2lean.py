@@ -265,9 +265,10 @@ class RunLock:
 # Artifacts a phase invalidates when it starts (anything downstream of it).
 DOWNSTREAM = {
     "export": ["source.ndjson", "source_snapshot.json", "contract.json", "roundtrip.json", "translation_report.json",
+               "translation_timing.json",
                "translation_manifest.json", "audit.json", "consumer_result.json", "verify.json", "validate.json",
                "lean", "PROOF_TASKS.jsonl", "assembly"],
-    "translate": ["translation_report.json", "translation_manifest.json", "audit.json", "consumer_result.json",
+    "translate": ["translation_report.json", "translation_timing.json", "translation_manifest.json", "audit.json", "consumer_result.json",
                   "verify.json", "validate.json", "lean", "PROOF_TASKS.jsonl", "assembly"],
     "verify": ["audit.json", "consumer_result.json", "verify.json", "lean/Rocq2LeanConsumer.lean",
                "lean/Rocq2LeanConsumer.olean", "lean/Rocq2LeanConsumer.ilean"],
@@ -444,12 +445,23 @@ def inspect(manifest, roots):
 
 # ---------------------------------------------------------------- translate
 
+NATIVE_LIB = ROOT / ".lake" / "build" / "lib" / "librocq2lean__pilot_Rocq2Lean.so"
+
+
+def native_args():
+    """Speed (entry 14): the translator library as native code (`precompileModules`), loaded into `lean`
+    instead of running in the IR interpreter; the same program (results byte-identical)."""
+    return [f"--load-dynlib={NATIVE_LIB}"] if NATIVE_LIB.exists() else []
+
+
 def lean_build_sha256():
-    """Digest of the built translator oleans used by the generated module."""
+    """Digest of the built translator oleans used by the generated module (and of its native library)."""
     h = hashlib.sha256()
     for p in sorted((ROOT / ".lake" / "build" / "lib" / "lean").glob("Rocq2Lean*.olean")) + \
             sorted((ROOT / ".lake" / "build" / "lib" / "lean" / "Rocq2Lean").glob("*.olean")):
         h.update(p.name.encode() + sha256_file(p).encode())
+    if NATIVE_LIB.exists():
+        h.update(NATIVE_LIB.name.encode() + sha256_file(NATIVE_LIB).encode())
     return h.hexdigest()
 
 
@@ -477,13 +489,13 @@ def _translate(inp, out):
         if con["ir_sha256"] == in_sha:
             run_id = con["run_id"]
     run_id = run_id or f"translate-only-{in_sha[:16]}"
-    run(["lake", "-d", str(ROOT), "build", "Rocq2Lean"], log, env=lean_env())
+    run(["lake", "-d", str(ROOT), "build", "Rocq2Lean", "Rocq2Lean:shared"], log, env=lean_env())
     mod = lean_dir / "Rocq2LeanOut.lean"
     # P0: the contract (when this run's export wrote one for this IR) carries the protection binding
     # that the translator enforces; a translate-only run has none (protection: null, not verifiable)
     prot_args = f' "{con_p}" "{sha256_file(con_p)}"' if run_id and not run_id.startswith("translate-only") else ""
     mod.write_text(f'import Rocq2Lean\n#rocq2lean_import "{inp}" "{report}" "{in_sha}" "{run_id}"{prot_args}\n')
-    p = run(["lake", "-d", str(ROOT), "env", "lean", str(mod), "-o", str(lean_dir / "Rocq2LeanOut.olean"),
+    p = run(["lake", "-d", str(ROOT), "env", "lean", *native_args(), str(mod), "-o", str(lean_dir / "Rocq2LeanOut.olean"),
              "-i", str(lean_dir / "Rocq2LeanOut.ilean")], log, cwd=lean_dir, env=lean_env(), check=False)
     if not report.exists():
         raise Rejected("TRANSLATION_FAILED", f"no report written (exit {p.returncode}); see {log}")
@@ -712,7 +724,7 @@ def _verify(run_dir, mode="proof"):
                     f'#rocq2lean_verify "{con_p}" "{report_p}" "{cres}"\n')
     lp = run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], log, env=lean_env()).stdout.strip()
     env = dict(lean_env(), LEAN_PATH=f"{lp}:{lean_dir}")
-    p = run([f"{HOME}/.elan/bin/lean", str(cons)], log, cwd=lean_dir, env=env, check=False)
+    p = run([f"{HOME}/.elan/bin/lean", *native_args(), str(cons)], log, cwd=lean_dir, env=env, check=False)
     consumer = json.loads(cres.read_text()) if cres.exists() else {"status": "NOT_RUN", "detectors": {}}
     if p.returncode != 0 or consumer.get("status") != "OK":
         raise Rejected("AUDIT_REJECTED", f"consumer check failed (exit {p.returncode}): "
@@ -892,7 +904,7 @@ def _lean_in_run(run_dir, module_text, name, log, extra_path=()):
     f.write_text(module_text)
     lp = run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], log, env=lean_env()).stdout.strip()
     env = dict(lean_env(), LEAN_PATH=":".join([lp, str(lean_dir), *map(str, extra_path)]))
-    return run([f"{HOME}/.elan/bin/lean", str(f), "-o", str(f.with_suffix(".olean"))], log, cwd=f.parent, env=env, check=False)
+    return run([f"{HOME}/.elan/bin/lean", *native_args(), str(f), "-o", str(f.with_suffix(".olean"))], log, cwd=f.parent, env=env, check=False)
 
 
 def tasks(run_dir, out=None):

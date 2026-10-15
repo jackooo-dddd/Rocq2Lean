@@ -145,7 +145,9 @@ def check():
     env = dict(os.environ, PATH=f"{Path.home()}/.elan/bin:" + os.environ["PATH"])
     lp = subprocess.run(["lake", "-d", str(ROOT), "env", "printenv", "LEAN_PATH"], capture_output=True, text=True, env=env).stdout.strip()
     env["LEAN_PATH"] = f"{lp}:{lean}"
-    p = subprocess.run(["lean", "Rocq2LeanConsumer.lean"], cwd=lean, capture_output=True, text=True, env=env)
+    sys.path.insert(0, str(ROOT / "tools"))
+    import rocq2lean as R0
+    p = subprocess.run(["lean", *R0.native_args(), "Rocq2LeanConsumer.lean"], cwd=lean, capture_output=True, text=True, env=env)
     (RUN / "consumer.out").write_text(p.stdout + p.stderr)
     p2 = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), str(RUN / "source.ndjson"), str(RUN / "contract.json"),
                          str(RUN / "translation_report.json"), str(RUN / "audit.json"), str(RUN / "consumer_result.json")],
@@ -381,7 +383,7 @@ def assemble_dry():
     cres = A / "consumer_result.json"
     (A / "lean" / "Consumer.lean").write_text(f'import Rocq2LeanAssembled\nimport Rocq2Lean.Verify\n'
                                               f'#rocq2lean_verify "{con}" "{out}" "{cres}" "{proofs}"\n')
-    p2 = subprocess.run([f"{R.HOME}/.elan/bin/lean", "Consumer.lean"], cwd=A / "lean", env=env, capture_output=True, text=True)
+    p2 = subprocess.run([f"{R.HOME}/.elan/bin/lean", *R.native_args(), "Consumer.lean"], cwd=A / "lean", env=env, capture_output=True, text=True)
     (A / "consumer.out").write_text(p2.stdout + p2.stderr)
     p3 = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "audit.py"), str(src), str(con), str(out),
                          str(A / "audit.json"), str(cres), "--assembly", str(proofs), "--validated", str(rep)],

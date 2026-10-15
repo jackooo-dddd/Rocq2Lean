@@ -174,3 +174,50 @@ the source facts:
 Justification: an argument equal to the level at every model of the source facts is the source's
 level, so it is no specialization. This is rule R's justification, applied wherever coherence or
 generality compares a level with its expected value.
+
+## 7. Blocks (stage 4, entry 14)
+
+Four refinements of the block ladder. Each keeps the existing checks, and each has an independent
+audit copy.
+
+1. **R3G for field-only classes.**
+   * A reference level class that occurs only in constructor fields, and that R3G-F does not take, is
+     discovered like an arity class (same conditions).
+   * The block is tried with it first. If the kernel finds a field too big, it is tried without it
+     (R3″'s 0, as before).
+   * Example: Classic `ConcreteTask.concrete_task`, whose `affinity` field references `choice`'s 1007.
+2. **R3G for template blocks.**
+   * Discovery also runs on template blocks.
+   * Their implicit levels are ordinary non-template parameters, which the constructors must leave free.
+     One that the constructors solve is refused, and the block falls back.
+   * The audit's `ind_params` takes implicit levels for template blocks. They must not occur explicitly
+     in the source and are never solved.
+   * Example: `paper_model.SystemEvolutions (Omega : Type@{33}) (Job : JobType)`.
+3. **Per-occurrence discovery and rebinding.**
+   * Discovery also runs with shared levels per occurrence. Classes that coherence by construction
+     identified with an own level (a lower carrier under `Equality.sort`) can then be named.
+   * In `rebindShared`, a class is bound to its *lowest* level, the one entailed below every other, as
+     R3G chooses. A class whose lowest level is not an own level is left to R3G.
+   * Per-occurrence levels also apply on the R3↓ tier, tried first there. They do *not* apply to
+     universe-polymorphic instance levels: an instance level stays the image of the source level, as the
+     audit requires. Corpus run U4 showed that per-occurrence instance levels gave `reverse_coercion`
+     arguments the audit correctly rejected. Such blocks go to δβ-inlining instead.
+4. **An implicit level is a reference's argument** (translator, mirroring the audit): every implicit
+   level of a block must be the argument (its parameter, or its R2F image) of some reference for that
+   level. Otherwise the attempt is refused. Without this, the fresh-and-default R3↓ form could declare
+   an implicit level that stands for nothing while its reference was specialized to 0. The audit
+   rejected that form; the translator now refuses it too.
+
+**δβ-inlining of erasing polymorphic definitions** (last tier for blocks):
+* An *erasing* definition is a transparent universe-polymorphic constant whose body, after its leading
+  λs, mentions no universe variable: `reverse_coercion x' x := x'`.
+* When every attempt on a block fails, the whole ladder is run on the block with those applications
+  δβ-reduced. The result is definitionally equal and carries none of the instance's levels.
+* Example: `concrete_job`'s field `Equality.sort (reverse_coercion Equality.type Type@{25} inst
+  concrete_task)`, which Rocq type-checks only through `Type@{21} ≤ Type@{25}`, becomes
+  `Equality.sort inst`.
+* The audit re-derives the erasing property for each reported name (`erasing_poly_body`). It replaces
+  the block's source by its inlined form (`inline_erasing_block`) before every other check, and rejects
+  a report whose inlining leaves an occurrence or changes nothing.
+
+**Controls:** `scripts/test-blocks`.
