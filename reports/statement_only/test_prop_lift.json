@@ -1,0 +1,185 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   0,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 7,
+   "DEFINITION_AUDITED_PENDING": 4,
+   "STATEMENT_AUDITED": 5
+  }
+ },
+ "rows": {
+  "SF.Plift.frel": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "prop_lift": 5,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.R": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.r1__rocq2lean_obligation_1": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.r1": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 1,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.back": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.r_succ__rocq2lean_obligation_1": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.r_succ": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 1,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.refines": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.refine_one": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.refine_back": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.pick": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.r2__rocq2lean_obligation_1": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": [
+    "SF.Plift.R",
+    "SF.Plift.frel"
+   ]
+  },
+  "SF.Plift.r2": {
+   "status": "PENDING_KERNEL_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 1,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.dmatch": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 1,
+   "prop_lift_unfold": []
+  }
+ },
+ "negative": {
+  "lift-wrong-level": {
+   "forged_row_kernel": "REJECTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Plift.frel: rule P: the lift's level {'k': 'succ', 'l': {'l': {'n': 'u_SF_Plift_23', 'k': 'param'}, 'k': 'succ'}} is not the image of the source sort"
+   ],
+   "consumer": "AUDIT_REJECTED"
+  },
+  "lift-wrong-depth": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Plift.frel: rule P: the source type does not end in a Type at the lift depth"
+   ],
+   "consumer": "OK"
+  },
+  "lift-no-cumulativity": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Plift.pick: rule P: the source type does not end in a Type at the lift depth"
+   ],
+   "consumer": "OK"
+  },
+  "lift-of-type": {
+   "forged_row_kernel": "REJECTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Plift.frel: ['body', 'lam.b', 'lam.b', 'lam.b', 'lam.b', 'lam.b']: expected application with 3 arguments"
+   ],
+   "consumer": "AUDIT_REJECTED"
+  },
+  "coercion-unreported": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Plift.r1: ['body']: SF.Plift.r1__rocq2lean_obligation_1 must be one of its hypotheses (bvar [0]), found app"
+   ],
+   "consumer": "OK"
+  },
+  "coercion-non-prop": {
+   "forged_row_kernel": "REJECTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Plift.r1: rule P: PULift.up at a non-Prop universe {'k': 'succ', 'l': {'k': 'zero'}}"
+   ],
+   "consumer": "AUDIT_REJECTED"
+  },
+  "unfold-not-head-chain": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Plift.r2__rocq2lean_obligation_1: rule P unfolding ['SF.Plift.R'] is not the source codomain's head chain to a lifted definition ['SF.Plift.R', 'SF.Plift.frel']",
+    "SF.Plift.r2__rocq2lean_obligation_1: ['body', 'arg1']: expected constant Nat.zero, found app"
+   ],
+   "consumer": "OK"
+  },
+  "unfold-on-definition": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Plift.pick: rule P unfolding reported for a row that is not a statement"
+   ],
+   "consumer": "OK"
+  }
+ },
+ "correspondence": {
+  "exit": 0,
+  "theorems_without_axioms": 12,
+  "output": "'PropLiftCorrespondence.toProp_ofProp' does not depend on any axioms\n'PropLiftCorrespondence.ofProp_toProp' does not depend on any axioms\n'PropLiftCorrespondence.nonempty_iff' does not depend on any axioms\n'PropLiftCorrespondence.lift_subsingleton' does not depend on any axioms\n'PropLiftCorrespondence.liftAt_eq' does not depend on any axioms\n'PropLiftCorrespondence.frel_eq' does not depend on any axioms\n'PropLiftCorrespondence.frel_iff' does not depend on any axioms\n'PropLiftCorrespondence.R_level_indep' does not depend on any axioms\n'PropLiftCorrespondence.r2_obligation_lifted' does not depend on any axioms\n'PropLiftCorrespondence.r1_down' does not depend on any axioms\n'PropLiftCorrespondence.r2_value' does not depend on any axioms\n'PropLiftCorrespondence.dmatch_value' does not depend on any axioms\n"
+ },
+ "unit": {
+  "eta_simple": true,
+  "eta_coerced": true,
+  "eta_swapped": true,
+  "eta_missing_arg": true,
+  "peel_up": true,
+  "peel_other": true,
+  "peel_non_prop_rejected": true
+ }
+}

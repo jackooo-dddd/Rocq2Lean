@@ -1364,9 +1364,9 @@ Branch `rules-speed`: `rules-fields`, stage 4, followed by the speed changes.
 
 ### (3) Proposals awaiting decisions (not implemented)
 
-* `docs/PROP_LIFT_PROPOSAL.md`, **rule P**: `PULift` for Prop ≤ Type cumulativity, with
+* `docs/PROP_LIFT_PROPOSAL.md` (now `docs/PROP_LIFT.md`), **rule P**: `PULift` for Prop ≤ Type cumulativity, with
   correspondence obligations C1–C5. Measured: `fun_hrel` (17 roots alone).
-* `docs/PHANTOM_SORT_PROPOSAL.md`, **rule Q**: sort arguments of HB phantom checks.
+* `docs/PHANTOM_SORT_PROPOSAL.md` (now `docs/PHANTOM_SORT.md`), **rule Q**: sort arguments of HB phantom checks.
   * The complete frontier of `GEL`, shared by the 79-root group, is 315 failing declarations.
   * 306 of them are SOLUTION_FACT_VIOLATED in declarations whose type contains
     `HB.structures.unify`. Their levels occur only as type arguments of that check, and Rocq types
@@ -1445,3 +1445,157 @@ Other findings:
 * `termination/CONVERSION_DEPENDENCE{,-S8}.json`;
 * `timing/translation_timing-S8.json` and `timing/TIER_SUMMARY-S8.txt`;
 * the frozen-suite reports.
+
+---
+
+## Entry 15 — Stage 5: job_task, rule P, rule Q-a, rule T, speed (2026-10-15/16)
+
+Request (stage 5): (1) fix `job_task` and other no-policy blockers; (2) rule P (approved): scoped `PULift`
+Prop-to-Type translation with correspondence C1–C5; (3) rule Q-a only (approved; Q-b not adopted):
+phantom-only sort lowering with equivalence proofs; (4) `Task_T`: propose a sound coinductive encoding
+before implementing. Then, on request, speed (exact gates only) and diagnosis of the next blockers.
+Branch `rules-s5` (from `main` = `44bf88b`).
+
+### (1) `job_task` and no-policy fixes
+
+* **δβ-inlining of erasing polymorphic definitions for constants** (`a3ecbc9`), as stage 4 did for blocks:
+  `definitions.task.job_task` (43 protected roots) is claimed. Audit: the inlined names are recomputed as
+  erasing (`erasing_poly_body`), and the row is audited against the inlined source.
+* **Erasing tier, own levels** (S9 audit finding): a statement's own levels are those of the *inlined*
+  statement; a level that occurred only in `reverse_coercion`'s instance is no longer one. S9 was
+  audit-rejected on 13 rows for this ("implicit level … is not the argument of a reference"); fixed, and
+  the 12 affected roots (Classic `periodic_arrivals_*`, `ts_is_schedulable`, `job_generation_valid_jobs`)
+  are claimed with the audit OK.
+* **R3G for definitions, last resort** (`8440a83`): a failing definition is retried with its references'
+  implicit levels as its own (the discovery pass), instead of their defaults. `refine_maxn`/`refine_minn`:
+  `Rnat`'s level 47805 (`Set < 47805`) was defaulted to 0, forcing `refines`' level 38671 to 0 against
+  `Set < 38671`; now a parameter. Only declarations that fail without it are retried, so no accepted row
+  changes (the reason the pass is not used in place).
+* **Proof-mode audit crash** (`6351998`): a variable of the stage-5 δ check (`s_` for `s`) broke proof-mode
+  audits; caught by `test-m6` in the frozen suites.
+* **P3 collapse with normalized levels** (`ac525ad`): two hypotheses of one prerequisite at `Type (max a b)`
+  and `Type (max b a)` were not collapsed; the audit (comparing modulo the level normal form) rejected 3
+  rows of the GEL subset. The translator now compares with normalized levels.
+
+### (2) Rule P (docs/PROP_LIFT.md, adopted)
+
+* Value lift `PULift.{u_l+1,0} P` for a proposition used at `Type@{l}` (`fun_hrel`); term-level
+  `PULift.up`/`PULift.down` at casts, application arguments, the value against its declared type (with
+  η-transport of an η-reduced proof body) and `match` scrutinees; an unprotected statement whose codomain is
+  a lifted type is stated as its proposition (head chain δβ-inlined). Consumer allows `PULift` (+ `up`,
+  `down`) as construction primitives (docs/TRUST.md).
+* Audit, independent: `strip_prop_lift` (depth, source `Type` sort, level image), `peel_lift_coercion`
+  (only in rows reporting coercions, only `PULift.{_, 0}`), `peel_eta`, the recomputed head chain of a lifted
+  statement (never protected), and the C5 listing `prop_lift_protected`.
+* C1–C5: `tests/statement/proofs/prop_lift_correspondence.lean` (12 theorems, axiom-free); fixture
+  `fixtures/stmt/plift`; `scripts/test-prop-lift` (19 checks: every shape, 8 forged-row negatives — wrong
+  level, depth, no cumulativity, lift of a type, unreported/non-Prop coercion, wrong head chain, unfolding on
+  a definition — and unit controls).
+
+### (3) Rule Q-a (docs/PHANTOM_SORT.md, adopted; Q-b not adopted)
+
+* Phantom definitions (body after its λs a chain of `phantom X x`, HB's `unify`; or a statement of that
+  shape, HB's `id_phant`), recomputed from the source by translator and audit. At their applications a sort
+  argument at a sort-parameter position is the type of the paired value; levels occurring only there leave
+  the declaration (`phantom_lowered`). Tried first when it applies (strictly more general); for declarations
+  using `id_phant`, with per-instance hypotheses (P3) first.
+* Equivalence: every instance of a phantom check holds, so any two instances are equivalent
+  (`tests/statement/proofs/phantom_sort_equivalence.lean`, 6 theorems, axiom-free). Fixture
+  `fixtures/stmt/phant`; `scripts/test-phantom-sort` (12 checks: independent carriers kept, the `id_phant`
+  shape, 4 forged-row negatives, criterion units).
+* GEL subset (3,382 declarations, roots `GEL`, `GEL_is_total`, `ELF`): claimed 2,423 → 3,050, direct
+  failures 345 → ~20, audit OK. The three roots remain blocked by a 23-declaration frontier (§6).
+
+### (4) Rule T (docs/COINDUCTIVE.md) — proposed, approved, adopted
+
+* `Task_T` is the corpus's only coinductive type and is **non-recursive** (`build_task : nat → nat → nat →
+  nat → Task_T`); no `cofix` occurs in the export. Proposed as rule T with obligations T1–T5 (same carrier,
+  eliminations, no definitional surplus that changes a statement, universes, protection); approved by the
+  user; implemented (`cba01c6`).
+* A coinductive block is the Lean inductive when it has one body and no constructor argument or index
+  mentions it (`nonRecursiveBlock`); `cofix` stays refused. The audit now checks every claimed block's kind
+  (`check_coinductive`: flag ⇔ `CoFinite`, the criterion recomputed) — before, it had no check on it.
+* Fixture `fixtures/stmt/coind` (with the Rocq-proved η lemma, T1's Rocq side), `scripts/test-coinductive`
+  (10 checks), `tests/statement/proofs/coinductive_correspondence.lean` (4 theorems, axiom-free). The first
+  fixture run found a wrong argument-order assumption in **both** copies (constructor arguments are stored
+  innermost first): the recursive `stream` was accepted. Fixed before commit; the negative control keeps it.
+* Corpus: the 13 protected roots of `extraction_tdma` are claimed (S17).
+
+### (5) Speed (exact gates; user's suggestions evaluated)
+
+| Change | Kind | Effect |
+|---|---|---|
+| Rule-P gate: dependency closure reaches a `prop_lift` definition, or a value lift is possible | exact | CoqEAL subset 244 s → 76 s; 0 rows worse, 7 improved (now within budget), other terms equal modulo level normalization; audit OK |
+| Coercion prefilter: only arguments whose type mentions a lifted constant | exact | (same measurement) |
+| Stop variants after an exhausted budget; log aborted attempts | exact | aborted attempts were invisible (~1,400 s of S10) |
+| Q-a variants ordered by measured success, P3 first for `id_phant` users | order only | GEL subset 4,589 s → 1,249 s, same claims |
+| "Stop after a repeated identical failure" | **rejected by data** | on S10 it would lose 87 claimed declarations (incl. `fun_hrel`) to save 53 s |
+| Failure kind → variant map | not adopted | only "coherence on a shared level" maps cleanly (179/181 by `cu,lo`) |
+| Per-declaration memoization of subterm translations | not adopted | a subterm's translation depends on the attempt's level metavariables and registries |
+| Incremental corpus runs | proposed (next) | needs exact replay of per-declaration registries; validation: row-identical to a full run |
+
+### (6) Coverage — FULL CORPUS, same 4,474 protected roots
+
+| Run | Impl | Accepted | Audited Pending | Blocked | Direct Failure | Unclaimed | Translation |
+|---|---|---|---|---|---|---|---|
+| S8 (entry 14) | `f5e373c` | 676 | 3,538 | 235 | 25 | 260 | 22.5 min |
+| S9 | `a3ecbc9` (job_task) | — | — | — | — | 231 | audit-rejected (13 rows, fixed) |
+| S10 | `39d6b57` (+ rule P) | 678 | 3,576 | 196 | 24 | 220 | 50 min |
+| **S17** | **`38df8a9`** (= merged tree, docs aside) | **685** | **3,584** | **184** | **21** | **205** | 4 h 36 min |
+
+* **Validation (S17):** consumer OK, audit OK, source instances OK, `CORPUS_PROVENANCE_BOUND`, conversion
+  dependence (`needs unfolding: []`), 7,180 proof tasks rendered.
+* **Protected transitions S8 → S17:** 55 newly supported (31 modern, 24 Classic), **0 regressions**, 0 old
+  false acceptances; 9 moved from Blocked to Direct Failure (their dependencies now translate: the
+  `job_constructor` uniqueness facts, the refinement `*_ready_instance`s, Classic `powerset`,
+  `refine_ArrivalPrefix`).
+* **All rows S8 → S17:** claimed 7,839 → 9,804 (**+1,965, 0 lost**). Q-a accounts for most of them (MathComp
+  HB builders, `phant_*` constants and obligations); direct failures 793 (S10) → 245.
+* **Runs that did not complete:** S11–S14 were stopped to measure later commits; **S15 aborted** (stack
+  overflow: the R3G-for-definitions tier's constant discovery recursed without bound on HB's
+  `BaseAddMagma_isAddMagma.phant_Build`; bisected to `8440a83`, fixed in `107ab09` by excluding declarations
+  with phantom checks); **S16** was killed at the tool's 2 h background limit (long runs are now detached).
+* **Translation time 4 h 36 min** (timing/TIER_SUMMARY-S17.txt): P3 attempts dominate. With Q-a, about a
+  thousand more HB declarations reach the late tiers. The Q-a first attempt with P3 succeeds 587/1,232; the
+  non-Q-a P3 tier never succeeds on declarations where Q-a applies (0 successes, 3,821 s); the Q-a tier's
+  winners are `lo,p3,ph` (232) and `cu,lo,ph` (108). These data drive the next speed step (§7).
+
+### (7) Remaining blockers and diagnoses (S17)
+
+205 protected roots are unclaimed (182 modern, 23 Classic).
+
+| Family | Members | Affected roots | Diagnosis / next |
+|---|---|---|---|
+| SOLUTION_FACT_VIOLATED | 138 | 144 (26 alone) | GEL/order HB frontier (23 declarations at the GEL roots): (A) R-CARRIER copies — a proof-local level solved through one operand copy fails the copied fact of another (`25__c1 ≤ 158`); (B) R2F-c identification in `phant_axioms`; (C) `order.HB_unnamed_factory_64` obligations ("binder levels forced"); (D) budget exhaustion in `rings_modules` builders. Also `refines_abstr`/`refines_apply` obligations. **Next stage.** |
+| UNIVERSE_OTHER | 42 | 125 | CMorphisms (`iffT_flip_arrow_subrelation`) |
+| REFERENCE_RAISING | 11 | 83 | refinement obligations (`refine_search_space_emax_EDF`) |
+| COUPLED_BINDER_LEVELS | 4 | 71 | `order.HB_unnamed_factory_64` obligations (shape C) |
+| COURSE_OF_VALUES | 8 | 39 | CoqEAL `param.*_R` |
+| PROP_TYPE_CUMULATIVITY | 12 | 28 (15 alone) | `CMorphisms.respectful` and the `job_constructor` uniqueness facts (rule P does not apply: polymorphic relation classes) |
+| STATEMENT_FREE_LEVEL_PINNED | 3 | 13 | Classic `ts_obligation_1` |
+| PROTECTED_RANGE_NARROWED | 1 | 9 (2 alone) | Classic `job_eqdef`: `concrete_job`'s generalized field carrier `eqtype.51` is pinned to `Set` by the concrete `concrete_task` instance; all instances are plausibly isomorphic, but accepting the specialization needs a correspondence argument — **a representation decision** (booked, not changed). |
+
+Speed, next (data from S17; order-only changes and redundancy are exact, prunings are measured): skip the
+non-Q-a P3 tier where Q-a applies (0/… successes, 3,821 s); drop the Q-a tier's repeat of the P3-first
+attempt (identical flags); order the Q-a tier `lo,p3` → `cu,lo` → `it,p3`. Incremental corpus runs are
+proposed (registry replay; validation: row-identical to a full run). A per-declaration progress log
+(`R2L_PROGRESS`) is added for long runs (diagnostics only).
+
+### (8) Validation and process
+
+* **Frozen worktree `r2l-B-test`:** 17 statement suites (new: `test-prop-lift` 19, `test-phantom-sort` 12,
+  `test-coinductive` 10) and `test-all` 18/18 at `107ab09` and at the measured `38df8a9` (§ log of the
+  suite run). Earlier: `test-all` at `a780ad1` failed `test-m6` — the proof-mode audit crash fixed in
+  `6351998`.
+* **Subset identity checks** for the exact speed gates (CoqEAL subset: 0 rows worse, 7 improved, all other
+  terms equal modulo the level normal form).
+* The branch's history is squashed into `main`; the debugging traces used for the S15 bisection were never
+  committed (only an optional progress log, merged next stage).
+
+### (9) Evidence
+
+* `coverage/{S10,S17}.json`, `coverage/transitions-{S10,S8}-to-S17.json`;
+* `RULE_BACKLOG.{md,json}`, `PROOF_TASKS.jsonl`, `provenance/CORPUS_MANIFEST.json` (S17);
+* `termination/CONVERSION_DEPENDENCE{,-S17}.json`;
+* `timing/translation_timing-S17.json`, `timing/TIER_SUMMARY-S17.txt`;
+* `test_{prop_lift,phantom_sort,coinductive}.json` and the frozen-suite reports.
