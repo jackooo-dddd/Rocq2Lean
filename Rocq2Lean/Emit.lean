@@ -121,6 +121,8 @@ structure DeclResult where
   propLiftCoercions : Nat := 0
   /-- Rule P, statements: the head-δ chain δβ-inlined to state a lifted codomain as its proposition. -/
   propLiftUnfold : Array String := #[]
+  /-- Rule T (docs/COINDUCTIVE.md): a non-recursive coinductive block translated as an inductive. -/
+  coinductiveAsInductive : Bool := false
   /-- Rule Q-a: the levels that occurred only as sort arguments of phantom checks (lowered per occurrence). -/
   phantomLowered : Array String := #[]
   /-- Timing (entry 14): the declaration's translation time and its attempts (tier, ms, status). -/
@@ -1268,7 +1270,9 @@ def processInductiveCore (genv : GEnv) (results : Std.HashMap String DeclResult)
       return ({ base with status := "BOOTSTRAP_RESOLVED", rule := rule.id, target := rule.target.types[0]?,
                           targetKind := "inductive (bootstrap)" }, some rule.target)
     | .error msg => return ({ base with status := "AUDIT_REJECTED", rule := rule.id, message := msg }, none)
-  | none => generateInductive base i hypsRef?
+  | none => do
+    let (r, t) ← generateInductive base i hypsRef?
+    pure ({ r with coinductiveAsInductive := i.finite == "CoFinite" }, t)
 
 where
   /-- M3a: emit a fresh Lean inductive for a single-body, monomorphic, non-coinductive block. -/
@@ -1276,7 +1280,10 @@ where
       MetaM (DeclResult × Option IndTarget) := do
     let unsupported (msg : String) := ({ base with status := "UNSUPPORTED_FEATURE", message := msg }, none)
     if let .polymorphic .. := i.universes then return unsupported "universe-polymorphic inductive"
-    if i.finite == "CoFinite" then return unsupported "coinductive type"
+    -- rule T (docs/COINDUCTIVE.md, approved 2026-10-15): a non-recursive coinductive block (one body, no
+    -- constructor argument or index mentions it) is its least fixed point too; translated as the inductive
+    -- (a `cofix` stays refused by the term translation)
+    if i.finite == "CoFinite" && !nonRecursiveBlock i then return unsupported "recursive coinductive type"
     unless i.bodies.size == 1 do return unsupported s!"mutual block of {i.bodies.size} inductives"
     let body := i.bodies[0]!
     -- Primitive records (M5): structure-like (one constructor, no indices, non-recursive), so Lean's
@@ -1715,6 +1722,7 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("prop_lift_coercions", Json.num r.propLiftCoercions),
     ("prop_lift_unfold", Json.arr (r.propLiftUnfold.map Json.str)),
     ("phantom_lowered", Json.arr (r.phantomLowered.map Json.str)),
+    ("coinductive_as_inductive", Json.bool r.coinductiveAsInductive),
 
     ("delta_inlined", Json.arr (r.deltaInlined.map Json.str)),
     ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>

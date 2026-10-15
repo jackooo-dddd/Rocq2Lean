@@ -1886,6 +1886,30 @@ def peel_lift_coercion(e):
     return e["a"]
 
 
+def check_coinductive(d, r):
+    """Rule T (docs/COINDUCTIVE.md), independently: a coinductive block is accepted as an inductive only when
+    the row reports it and the block has one body, no constructor argument or index mentioning the block
+    (the arguments are stored innermost first: args[k] lies under the block, the parameters and the
+    len(args) - 1 - k earlier arguments)."""
+    co = d.get("finite") == "CoFinite"
+    if bool(r.get("coinductive_as_inductive")) != co:
+        raise Mismatch("coinductive_as_inductive differs from the source block's kind")
+    if not co:
+        return
+    if len(d["bodies"]) != 1:
+        raise Mismatch("rule T: a mutual coinductive block")
+    npars, nb = d["npars"], len(d["bodies"])
+    for b in d["bodies"]:
+        for c in b["ctors"]:
+            n_ = len(c["args"])
+            for k, a in enumerate(c["args"]):
+                if mentions_rels(a["ty"], n_ - 1 - k + npars, nb):
+                    raise Mismatch(f"rule T: constructor {c['name']} is recursive (an argument mentions the block)")
+            for x in c.get("indices") or []:
+                if mentions_rels(x, len(c["args"]) + npars, nb):
+                    raise Mismatch(f"rule T: constructor {c['name']} has an index mentioning the block")
+
+
 def peel_eta(e):
     """`fun x₀ … xₙ₋₁ => c (f a… c x₀ … c xₙ₋₁)` (c: optional lift coercions) -> (f a…, n); otherwise None."""
     n, b = 0, e
@@ -3542,6 +3566,7 @@ def main(src_path, contract_path, report_path, out_path, metadata_path=None, ass
             if r is None:
                 raise Mismatch("no unique result row")
             if r["status"] == "TRANSLATED_AND_CHECKED" and d["kind"] == "inductive":
+                check_coinductive(d, r)
                 if len(d["bodies"]) != 1:
                     raise Mismatch("UNAUDITABLE: mutual block")
                 b = d["bodies"][0]
@@ -4310,6 +4335,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             aud.wf_used = []
             tele_rows = vrows if (assembly and pending) else rows
             if d["kind"] == "inductive":
+                check_coinductive(d, r)
                 b = d["bodies"][0]
                 if len(d["bodies"]) != 1:
                     raise Mismatch("UNAUDITABLE: mutual block")

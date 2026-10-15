@@ -1,6 +1,8 @@
-# Proposal (NOT adopted): rule T, non-recursive coinductive types as inductive types
+# Rule T: non-recursive coinductive types as inductive types
 
-Status: **proposal awaiting a decision** (2026-10-15, stage 5). Nothing here is implemented.
+Status: **adopted** (proposed and approved 2026-10-15; ITERATION_LOG entry 16). Implementation:
+`nonRecursiveBlock` (`Rocq2Lean/Translate.lean`), the block emission (`Rocq2Lean/Emit.lean`), and the
+independent audit check `check_coinductive` (`tools/audit.py`). Test: `scripts/test-coinductive`.
 
 ## 1. Measured frontier
 
@@ -43,7 +45,11 @@ the translator and, independently, by the audit:
    It stays refused, as today, so no definitional surplus arises from it.
 
 The row reports `coinductive_as_inductive: true`. The audit accepts the Lean inductive for a `CoFinite`
-source block only with this flag and under the three conditions; today it accepts only `Finite` blocks.
+source block only with this flag and under conditions 1–2 (recomputed; constructor arguments are stored
+innermost first, so `args[k]` lies under the parameters and `len(args) − 1 − k` earlier arguments), and
+rejects the flag on any other block. Condition 3 holds because the term translation refuses every `cofix`.
+Before rule T, the audit had no check on a block's kind (the translator refused every coinductive); it now
+checks it for every claimed block.
 
 ## 4. Correspondence obligations
 
@@ -55,15 +61,27 @@ source block only with this flag and under the three conditions; today it accept
 | T4 | **Universes and positivity.** As for any inductive (R2T/R5): `Task_T : Set` becomes `Type`, and positivity is checked by Lean's kernel (trivial: non-recursive). | Existing checks. |
 | T5 | **Protected interfaces.** `Task_T` is protected. Its interface (`Task_T : Set`, `build_task : nat → nat → nat → nat → Task_T`) is translated unchanged; only the fixed-point kind differs, which is unobservable for a non-recursive type (T1). | The protection listing names the row (`coinductive_as_inductive`). |
 
-## 5. Negative controls (planned)
+## 5. Negative controls (`scripts/test-coinductive`, fixture `fixtures/stmt/coind`)
 
 * a recursive coinductive (a stream) stays refused;
 * a non-recursive coinductive with a `cofix` in a dependent stays refused;
 * a forged row claiming the flag on a recursive block is audit-rejected;
 * a forged row translating a coinductive without the flag is audit-rejected, as today.
 
-## 6. Decision requested
+In the test: the recursive `stream` refused and its cofixpoint not claimed; a non-recursive cofixpoint
+refused; forged rows (`Task_T` without the flag, an inductive with it) audit-rejected; unit controls on the
+audit criterion. The first fixture run caught a wrong argument-order assumption in both copies (the
+recursive `stream` was accepted); fixed before anything was committed.
 
-Approve or reject rule T: non-recursive coinductive types (no constructor argument mentions the block, no
-`cofix`), translated as Lean inductive types, with obligations T1–T5. Expected effect: the 13 protected
-roots of `extraction_tdma`. Recursive coinductive types would remain refused; the corpus has none.
+## 6. Correspondence proofs
+
+`tests/statement/proofs/coinductive_correspondence.lean` (axiom-free): the translated `Task_T` is
+isomorphic to `Nat × Nat × Nat × Nat` (both round trips), the translated statement of the Rocq-proved η
+lemma holds (T1, Lean side; the Rocq side is proved by Rocq in the fixture), and the eliminations compute
+as in the source (T2).
+
+## 7. Decision
+
+Approved 2026-10-15: non-recursive coinductive types translated as Lean inductive types, with T1–T5.
+Expected effect: the 13 protected roots of `extraction_tdma`. Recursive coinductive types remain refused;
+the corpus has none.

@@ -807,6 +807,18 @@ def erasingPolyBody? (c : IR.ConstantDecl) : Option IR.Term := do
   if n == 0 || termHasUnivVar t then none
   some b
 
+/-- Rule T (docs/COINDUCTIVE.md): one body, and no constructor argument or index mentions the block.
+The arguments are stored innermost first: `args[k]` lies under the block, the `npars` parameters and the
+`args.size - 1 - k` earlier arguments; the indices under all arguments. -/
+def nonRecursiveBlock (i : IR.InductiveDecl) : Bool :=
+  i.bodies.size == 1 && i.bodies.all fun b => b.ctors.all fun c =>
+    (Id.run do
+      let mut ok := true
+      for h : k in [0:c.args.size] do
+        if c.args[k].type.mentionsRels (c.args.size - 1 - k + i.npars) i.bodies.size then ok := false
+      return ok) &&
+    c.indices.all fun x => !x.mentionsRels (c.args.size + i.npars) i.bodies.size
+
 /-- Rule Q-a (docs/PHANTOM_SORT.md): a *phantom definition* is a transparent monomorphic constant whose
 body, after its λs, is a chain of non-dependent products of `phantom X x` (Corelib's
 `ssreflect_rw.phantom : ∀ T : Type, T → Prop`, one constructor without fields), each `X` a λ-bound

@@ -1,0 +1,1 @@
+{"name": "stmt-coind", "load_paths": [["-Q", ".", "SF"]], "files": ["Coind.v"], "requires": ["SF.Coind"]}
