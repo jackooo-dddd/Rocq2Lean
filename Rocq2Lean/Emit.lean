@@ -475,6 +475,19 @@ partial def mvarSummands : Level → Array (LMVarId × Nat) × Bool
   | .imax a b => let (x, _) := mvarSummands a; let (y, _) := mvarSummands b; (x ++ y, true)
   | _ => (#[], false)
 
+/-- A level metavariable assignment chain followed at most `fuel` steps: `none` on a cycle (`?u := max ?u …`,
+which `instantiateLevelMVars` would follow without end — the constant discovery pass, which runs before level
+solving, met one on CoqEAL's `refines_apply`, aborting a whole run). -/
+partial def levelMVarsAcyclic (l : Level) (fuel : Nat := 256) : MetaM Bool := do
+  if fuel == 0 then return false
+  match l with
+  | .succ a => levelMVarsAcyclic a fuel
+  | .max a b | .imax a b => return (← levelMVarsAcyclic a fuel) && (← levelMVarsAcyclic b fuel)
+  | .mvar m => match ← getLevelMVarAssignment? m with
+    | some v => levelMVarsAcyclic v (fuel - 1)
+    | none => return true
+  | _ => return true
+
 /-- `l` instantiated; a `max` of one metavariable with itself (after identification) is that
 metavariable. -/
 def instCollapse (l : Level) : MetaM Level := do
@@ -717,6 +730,16 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       -- references (a level below every other level of its class, not own, not template, whose
       -- every argument still contains a free metavariable); nothing is assigned
       if discover then
+        -- (a cyclic level assignment left by unification before solving: no implicit level is discovered, rather
+        -- than following it without end)
+        let mut acyclic := true
+        for e in #[ty, val] do
+          for (_, ls) in constOccurrences e do
+            for l in ls do
+              if !(← levelMVarsAcyclic l) then acyclic := false
+        unless acyclic do
+          implicitRef.set #[]
+          return
         -- (C: a statement row's statement is its value: implicit levels are read there)
         let tyI ← instLevelMVars (if stmt then val else ty)
         let valI ← instLevelMVars val
@@ -746,7 +769,9 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
             cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) && (all.filter (·.1 == l)).all (·.2.hasMVar)
           if let some l := pick then picks := picks.push l
         implicitRef.set picks
-        return
+        -- (entry 16: the picks are all a discovery pass computes; the rest of the solving — defaulting, the R2S checks —
+        -- on a state discovery left unsolved is skipped: on CoqEAL's `refines_apply` it recursed without bound)
+        throwError "‗rocq2lean-discovered‗"
       -- (P2: jointly occurring metavariables are one class — in statements, where no level may be
       -- defaulted away; a definition keeps the residual-default path, R3↓ at 0)
       -- (definitions: only on the retry tier `joint`, when the first accepted translation defaulted levels)
@@ -921,6 +946,10 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let rebindThenKeep : MetaM Unit := do
       if let some ref := sharedRef? then rebindShared ref gl genv.facts
       keepParams
+    if discover then
+      try discard <| solveLevels ty val dflt rebindThenKeep (solve := lower || joint)
+      catch _ => pure ()
+      return { base with status := "DISCOVERED", implicitLevels := (← implicitRef.get).qsort (· < ·) }
     let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt rebindThenKeep (solve := lower || joint)
     unless (← cycleRef.get).isEmpty do
       return { base with status := "UNIVERSE_REJECTED", message := s!"coherence by unification: {← cycleRef.get}" }
@@ -2434,7 +2463,10 @@ where
           -- cumulativity, HB builders using `axioms_@{563}` through their obligations; these builders are large,
           -- so the tier gets the full heartbeat budget there)
           let notEntailed := (msgs.splitOn "is not entailed by the source universe graph").length > 1
-          let zeroDefault := (msgs.splitOn "(some 0)").length > 1 || (msgs.splitOn "argument is 0").length > 1 || notEntailed
+          -- (and residual defaults not justified: levels left free, defaulted, the generic version kernel-rejected —
+          -- CoqEAL's `refines_abstr`/`refines_apply`, whose relation levels belong to `refines`)
+          let zeroDefault := (msgs.splitOn "(some 0)").length > 1 || (msgs.splitOn "argument is 0").length > 1 || notEntailed ||
+            (msgs.splitOn "defaulted universe level(s)").length > 1
           if !r.accepted && !isStmt && genv.stmtMode && gone.isEmpty && zeroDefault &&
               (retry r.status || r.status == "INTERFACE_REJECTED" || r.status == "TRANSLATION_FAILED") then
             let sD ← saveState
