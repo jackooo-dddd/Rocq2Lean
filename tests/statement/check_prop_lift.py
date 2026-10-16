@@ -41,7 +41,7 @@ _spec.loader.exec_module(A)
 OUT = {}
 RUN = ROOT / "runs" / "st-plift"
 F = "SF.Plift."
-ROOTS = [F + x for x in ("frel", "R", "r1", "back", "r_succ", "refine_one", "refine_back", "r2", "dmatch")]
+ROOTS = [F + x for x in ("frel", "R", "r1", "back", "r_succ", "refine_one", "refine_back", "r2", "dmatch", "rel_stmt")]
 CLAIMED = ("TRANSLATED_AND_CHECKED", "STATEMENT_KERNEL_CHECKED", "PENDING_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
 
 # 1. pipeline
@@ -60,7 +60,7 @@ fx = {n: r for n, r in R.items() if n.startswith(F)}
 OUT["rows"] = {n: {k: r.get(k) for k in ("status", "prop_lift", "prop_lift_coercions", "prop_lift_unfold")} for n, r in fx.items()}
 check(all(r["status"] in CLAIMED for r in fx.values()), f"every fixture declaration claimed ({len(fx)})")
 check(R[F + "frel"].get("prop_lift") == 5, "frel: value lifted under its 5 binders (prop_lift = 5)")
-for n in ("r1", "r2", "r_succ", "dmatch"):
+for n in ("r1", "r2", "r_succ", "dmatch", "rel_stmt"):
     check((R[F + n].get("prop_lift_coercions") or 0) >= 1, f"{n}: term-level coercion inserted ({R[F + n].get('prop_lift_coercions')})")
 check(R[F + "r2__rocq2lean_obligation_1"].get("prop_lift_unfold") == [F + "R", F + "frel"],
       "r2's obligation (expected type R 1 0): stated as the proposition, head chain [R, frel] inlined")
@@ -135,6 +135,14 @@ def up_non_prop(r):
 k, rc, probs = forge("coercion-non-prop", F + "r1", up_non_prop)
 check(k != "ACCEPTED" and rc == 2 and any("non-Prop universe" in p for p in probs),
       f"r1's coercion at a non-Prop universe: kernel- and audit-rejected (forged row kernel: {k})")
+def rel_lift_non_prop(r):
+    pl = nodes(r["target_value"], is_const("PULift"))
+    pl[0]["u"][1] = {"k": "succ", "l": {"k": "zero"}}
+
+
+k, rc, probs = forge("relation-lift-non-prop", F + "rel_stmt", rel_lift_non_prop)
+check(k != "ACCEPTED" and rc == 2 and any("non-Prop universe" in p for p in probs),
+      f"rel_stmt's relation lift at a non-Prop universe: kernel- and audit-rejected (forged row kernel: {k})")
 k, rc, probs = forge("unfold-not-head-chain", F + "r2__rocq2lean_obligation_1", lambda r: r.update(prop_lift_unfold=[F + "R"]))
 check(rc == 2 and any("head chain" in p for p in probs), "r2's obligation with an unfolding that is not the head chain: audit-rejected")
 k, rc, probs = forge("unfold-on-definition", F + "pick", lambda r: r.update(prop_lift_unfold=[F + "R", F + "frel"]))

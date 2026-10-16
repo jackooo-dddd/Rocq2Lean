@@ -1875,7 +1875,13 @@ def erase_phantom_sorts(t, pd):
 
 
 def peel_lift_coercion(e):
-    """`PULift.up X t` or `PULift.down X t` with universe instance [r, 0] -> t; otherwise None."""
+    """`PULift.up X t` or `PULift.down X t` with universe instance [r, 0] -> t; `PULift.{r, 0} X` -> X (entry 16: a
+    proposition lifted where a type is expected, e.g. under the λs of a Prop-valued relation used as a Type-valued
+    one; the kernel checks X : Prop and that the position expects exactly `Sort r`); otherwise None."""
+    if e.get("k") == "app" and e["f"].get("k") == "const" and e["f"].get("n") == "PULift" and len(e["f"].get("u") or []) == 2:
+        if level_nf(e["f"]["u"][1]) != level_nf({"k": "zero"}):
+            raise Mismatch(f"rule P: PULift at a non-Prop universe {e['f']['u'][1]}")
+        return e["a"]
     if e.get("k") != "app" or e["f"].get("k") != "app":
         return None
     h = e["f"]["f"]

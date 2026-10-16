@@ -2303,7 +2303,9 @@ where
             r.message.startsWith "scrutinee type is not an application of")
           -- (speed, exact gate: coercions need a dependency reaching a lifted definition; a value lift needs a
           -- definition declared at a `Type`)
-          let liftPossible := (c0.typeDeps ++ c0.bodyDeps).any genv.liftReach.contains || (!isStmt && irEndsInSort c0.type)
+          -- (entry 16: or the kernel saw a Prop-valued relation where a Type-valued one is expected)
+          let relMismatch := r.status == "KERNEL_REJECTED" && (r.message.splitOn "→ Prop").length > 1
+          let liftPossible := (c0.typeDeps ++ c0.bodyDeps).any genv.liftReach.contains || (!isStmt && irEndsInSort c0.type) || relMismatch
           if !r.accepted && c0.bodyState != "opaque_interface" && (retry r.status || castFail) && liftPossible then
             -- (with the ladder's variants: R2F-c, cumulativity, R3↓, per-occurrence coherence)
             for (it, cu, lo, un) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),

@@ -1464,6 +1464,29 @@ def coerceArgs (f : Expr) (args : Array Expr) (cnt : IO.Ref Nat) (lifted : Std.H
     let .forallE _ d b _ := fty | return out ++ args.extract out.size args.size
     let a' ← do
       let aty ← inferType a
+      -- (entry 16, rule P under η: a Prop-valued relation where a Type-valued one is expected — the two telescopes
+      -- end in `Prop` and in `Type u`, syntactically, a cheap test: `fun xs => PULift.{u+1,0} (a xs)`)
+      let rec cod : Expr → Expr
+        | .forallE _ _ b _ => cod b
+        | e => e
+      let (ca, cd) := (cod (← instantiateMVars aty), cod (← instantiateMVars d))
+      if ca.isSort && ca.sortLevel!.isZero && cd.isSort && !cd.sortLevel!.isZero && aty.isForall then
+        let lifted ← forallTelescope d fun ys cd' => do
+          let body := mkAppN a ys
+          let bt ← whnf (← inferType body)
+          let cd'' ← whnf cd'
+          if bt.isSort && bt.sortLevel!.isZero && cd''.isSort then
+            match cd''.sortLevel!.normalize.dec with
+            | some r => return some (← mkLambdaFVars ys (mkApp (mkConst ``PULift [.succ r, .zero]) body))
+            | none => return none
+          else return none
+        match lifted with
+        | some x =>
+          if ← isDefEq (← inferType x) d then
+            cnt.modify (· + 1); pure x
+          else pure a
+        | none => pure a
+      else
       if !(← mayLift d) && !(← mayLift aty) then pure a else
       if ← isDefEq aty d then pure a else
         match ← liftCoerce a aty d with
