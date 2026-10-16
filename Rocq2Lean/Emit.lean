@@ -1006,7 +1006,16 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       if s == .param (levelParamName m) then paramLevels := paramLevels.push m
       else sol := sol.insert m s.normalize
     let implicitLevels := ((← implicitRef.get) ++ extraOwn.filter (!explicitTy.contains ·)).toList.eraseDups.toArray.qsort (· < ·)
-    let globals := (paramLevels ++ implicitLevels ++ levelInterp.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
+    -- (an implicit level whose parameter occurs nowhere in the final type and value — its class was merged into
+    -- another level's by unification — is not a level of the declaration: dropped. Never a level the source
+    -- names. Entry 16: `Algebra_isZmodule__to__Algebra_hasOpp`'s 1691, every argument of which is `u_333`)
+    let usedPs := (collectLevelParams (collectLevelParams {} (← instantiateMVars ty)) (← instantiateMVars val)).params
+    let unusedImplicit := implicitLevels.filter fun l => !explicitTy.contains l && !sol.contains l && !usedPs.contains (levelParamName l)
+    let implicitLevels := implicitLevels.filter (!unusedImplicit.contains ·)
+    paramLevels := paramLevels.filter (!unusedImplicit.contains ·)
+    -- (an implicit level that typing solved is an own level with a solution, not also a parameter: parameters and
+    -- solved levels partition the own levels — entry 16, found by the audit on the R3G-for-definitions tier)
+    let globals := (paramLevels ++ implicitLevels.filter (!sol.contains ·) ++ levelInterp.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
     let lparams := polyNames ++ globals.toList.map levelParamName
     -- R3 coherence for R2F-c own levels: an argument for `l` must be ι l
     let solι := levelInterp.foldl (fun (m : Std.HashMap String Level) (l, x) => m.insert l x) sol
@@ -2210,7 +2219,7 @@ where
             let mut better := false
             for it in [false, true] do
               sBefore.restore
-              let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+              let r' ← budgeted c.name "constant" (divisor := 1) <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
                 (interp := it) (extraOwn := eo) (joint := true)
               -- (only parameters of the type: a level of the value alone generalizes nothing a use can see,
               -- and its argument at uses is then undetermined — e.g. ssrnat.leq inside fintype.ordinal)
@@ -2397,18 +2406,23 @@ where
           -- (speed, entry 16: only when a failure shows the symptom it addresses, a level defaulted to 0 — no claim
           -- that existed before the tier depends on it)
           let msgs := r.message ++ ((lastTier.map (·.message)).getD "")
-          let zeroDefault := (msgs.splitOn "(some 0)").length > 1 || (msgs.splitOn "argument is 0").length > 1
+          -- (entry 16: or R3 refused an argument at a reference for a level the declaration does not own — an
+          -- implicit level fixed by unification where Rocq used the referenced declaration at its own level by
+          -- cumulativity, HB builders using `axioms_@{563}` through their obligations; these builders are large,
+          -- so the tier gets the full heartbeat budget there)
+          let notEntailed := (msgs.splitOn "is not entailed by the source universe graph").length > 1
+          let zeroDefault := (msgs.splitOn "(some 0)").length > 1 || (msgs.splitOn "argument is 0").length > 1 || notEntailed
           if !r.accepted && !isStmt && genv.stmtMode && gone.isEmpty && zeroDefault &&
               (retry r.status || r.status == "INTERFACE_REJECTED" || r.status == "TRANSLATION_FAILED") then
             let sD ← saveState
-            let dsc ← budgeted c.name "constant" <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
+            let dsc ← budgeted c.name "constant" (divisor := if notEntailed then 1 else 5) <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
               (discover := true)
             sD.restore
             if dsc.status == "DISCOVERED" && !dsc.implicitLevels.isEmpty then
               let eoD := (eo ++ dsc.implicitLevels).toList.eraseDups.toArray
               for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, true, false),
                                        (false, false, false, true)] do
-                let r' ← budgeted c.name "constant" <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
+                let r' ← budgeted c.name "constant" (divisor := if notEntailed then 1 else 5) <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
                   (interp := it) (cumul := cu) (lower := lo) (hypExact := p3) (extraOwn := eoD)
                 if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
                 if r'.status == "RESOURCE_LIMIT" then break
@@ -2429,7 +2443,16 @@ where
             -- `factory_89` passing `id_phant` to `factory_83`'s obligation — only P3 can succeed: its attempts get
             -- the full heartbeat budget, not the late tiers' fifth; this only adds successes)
             let hm := r.message ++ ((lastTier.map (·.message)).getD "")
-            let hypMismatch := (hm.splitOn "application type mismatch").length > 1 && (hm.splitOn " h_").length > 1
+            -- (speed, entry 16: exactly the shape P3 resolves — a dependency whose pending artifact carries several
+            -- per-instance hypotheses for one prerequisite; the broad message test made S19 36% slower)
+            let dupOf (d : String) : Bool := match results[d]? with
+              | some x => x.pendingHyps.size > (x.pendingHyps.toList.eraseDups).length
+              | none => false
+            -- (a direct dependency, or a prerequisite leaf it carries as a hypothesis: `factory_89` meets
+            -- `factory_83`'s obligation 23 — seven `id_phant` hypotheses — through a pending dependency)
+            let dupHyps := (c0.typeDeps ++ c0.bodyDeps).any fun d =>
+              dupOf d || (match results[d]? with | some x => x.pendingHyps.any dupOf | none => false)
+            let hypMismatch := dupHyps && (hm.splitOn "application type mismatch").length > 1 && (hm.splitOn " h_").length > 1
             for (fr, it, cu, lo) in [(false, false, false, false), (false, true, false, false), (false, false, false, true)] do
               if noHyps && !lo then continue
               let r' ← budgeted c.name "constant" (divisor := if hypMismatch then 1 else 5) (factor := if hypMismatch then 5 else 1) <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
@@ -2464,7 +2487,9 @@ where
               let mut better := false
               for it in [false, true] do
                 sBefore.restore
-                let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+                -- (budgeted, entry 16: an improvement attempt after acceptance must not lose the accepted row to the
+                -- declaration's cumulative heartbeat count — HB builder `Algebra_isZmodule__to__Algebra_hasOpp`)
+                let r' ← budgeted c.name "constant" (divisor := 1) <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
                   (interp := it) (extraOwn := eo) (unify := true)
                 if r'.accepted && solvedTy r' < solvedTy r && r'.levelDefaults ≤ r.levelDefaults then
                   r := { r' with levelDiagnostics := r'.levelDiagnostics.push s!"generality: {solvedTy r} solved type level(s) reduced to {solvedTy r'} (shared levels per occurrence)" }

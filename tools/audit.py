@@ -3318,7 +3318,9 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                     # R3G: an implicit level must be the source level of a parameter of a referenced
                     # declaration, and occur as that parameter's argument in the accepted terms
                     for l in r_.get("implicit_levels") or []:
-                        want = level_nf(interp_[l] if l in interp_ else {"k": "param", "n": level_param(l)})
+                        # (at its value: its R2F-c interpretation, its solution when typing solved it — then a solved,
+                        # fact-checked own level, not a parameter — or its parameter; as for blocks, below)
+                        want = level_nf(interp_[l] if l in interp_ else sol_only[l] if l in sol_only else {"k": "param", "n": level_param(l)})
                         if not any(len(us) - (poly or {}).get(nm, 0) == len(gen[nm]) and any(
                                 g == SPLIT_COPIES.get(l, l) and level_nf(u) == want
                                 for g, u in zip(gen[nm], us[(poly or {}).get(nm, 0):]))
