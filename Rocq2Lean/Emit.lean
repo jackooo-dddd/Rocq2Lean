@@ -121,6 +121,8 @@ structure DeclResult where
   propLiftCoercions : Nat := 0
   /-- Rule P, statements: the head-δ chain δβ-inlined to state a lifted codomain as its proposition. -/
   propLiftUnfold : Array String := #[]
+  /-- Rule E (docs/EQ_LOWERING.md): the number of equalities stated at their operands' type (0 or 1). -/
+  eqLowered : Nat := 0
   /-- Rule T (docs/COINDUCTIVE.md): a non-recursive coinductive block translated as an inductive. -/
   coinductiveAsInductive : Bool := false
   /-- Rule Q-a: the levels that occurred only as sort arguments of phantom checks (lowered per occurrence). -/
@@ -558,7 +560,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
     (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
     (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) (propLift : Bool := false)
-    (phantom : Bool := false) :
+    (phantom : Bool := false) (eqLower : Bool := false) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
@@ -638,14 +640,15 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     -- coherence by unification (docs/COHERENCE_READINGS.md §6): per-occurrence shared levels
     let sharedRef? : Option (IO.Ref (Array (LMVarId × String))) ← if unify then some <$> IO.mkRef #[] else pure none
     let coerceRef? : Option (IO.Ref Nat) ← if propLift then some <$> IO.mkRef 0 else pure none
-    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom with
+    let eqRef? : Option (IO.Ref Nat) ← if eqLower then some <$> IO.mkRef 0 else pure none
+    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef? with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom with
+    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef? with
       | .ok e => pure e
       | .error e =>
         if e.msg.startsWith "termination obligation required" && !wfTerm && genv.stmtMode then
-          return ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify) (propLift := propLift) (phantom := phantom)
+          return ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify) (propLift := propLift) (phantom := phantom) (eqLower := eqLower)
         return fromTransError base e
     -- pending validation: the hypotheses become the artifact's leading binders *before* universe
     -- solving, so that the levels of their types (references to prerequisite statements) are
@@ -1209,6 +1212,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
                                       pendingHyps := hyps.map (·.2), targetType := ty, targetValue := val,
                                       levelParams := lparams, paramLevels := globals.map backCopy, levelCopies := splits, polyParams := polyNames.length,
                                       factReduced := factReduce, implicitLevels, levelInterp, propLift := propLiftDepth, propLiftCoercions := coercions,
+                                      eqLowered := ← (match eqRef? with | some r => r.get | none => pure 0),
                                       admittingLevels := admitLv, cumulativity := cumul, r2bpLevels := r2bp, sortLevels := sortLv, resultSortInherited := inherited,
                                       r2bpInType := (r2bp.map (·.1)).filter (globalsOf c.type).contains,
                                       universeLowered := lower, deltaInlined := inlinedA }
@@ -1676,19 +1680,19 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
     (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
     (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) (propLift : Bool := false)
-    (phantom : Bool := false) :
+    (phantom : Bool := false) (eqLower : Bool := false) :
     MetaM DeclResult := do
   let t0 ← IO.monoMsNow
   let lbl0 := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
-      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom)] extraOwn.size
+      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom), ("eq", eqLower)] extraOwn.size
   -- (an attempt aborted by its budget is logged too, then the exception goes on to `budgeted`)
   let r ← tryCatchRuntimeEx (processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort
-      wfTerm inheritSort hypExact joint unify propLift phantom) fun e => do
+      wfTerm inheritSort hypExact joint unify propLift phantom eqLower) fun e => do
     if let some ref := genv.tierLog then ref.modify (·.push (lbl0, (← IO.monoMsNow) - t0, "RESOURCE_LIMIT | aborted"))
     throw e
   if let some ref := genv.tierLog then
     let lbl := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
-      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom)] extraOwn.size
+      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom), ("eq", eqLower)] extraOwn.size
     -- (a refused attempt's reason, abbreviated: diagnostics only, the timing file is not the report)
     let st := if r.accepted || r.status == "UNSUPPORTED_FEATURE" then r.status else s!"{r.status} | {r.message.take 600}"
     ref.modify (·.push (lbl, (← IO.monoMsNow) - t0, st))
@@ -1742,6 +1746,7 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("prop_lift_unfold", Json.arr (r.propLiftUnfold.map Json.str)),
     ("phantom_lowered", Json.arr (r.phantomLowered.map Json.str)),
     ("coinductive_as_inductive", Json.bool r.coinductiveAsInductive),
+    ("eq_lowered", Json.num r.eqLowered),
 
     ("delta_inlined", Json.arr (r.deltaInlined.map Json.str)),
     ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>
@@ -2378,6 +2383,22 @@ where
                       r := { r' with phantomLowered := gone }
                       iface := none
                       break
+          -- rule E (docs/EQ_LOWERING.md, approved 2026-10-17): an unprotected statement whose conclusion is an equality
+          -- of convertible terms at a larger universe than theirs (CoqEAL's `refines A B R = R` at `A → B → Type@{l}`)
+          -- is stated at the operands' type; convertibility is checked here and re-checked by the consumer
+          if !r.accepted && isStmt && c0.bodyState != "opaque_interface" && !genv.protectedNames.contains c0.name && (retry r.status) then
+            if let some bM := c.body.bind eqLowerMark then
+              let cEq := { c with body := some bM }
+              let eoE := eo.filter (globalsOf bM).contains
+              for (it, lo, p3) in [(false, false, false), (true, false, false), (false, true, false), (false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results cEq (stmt := true)
+                  (interp := it) (lower := lo) (hypExact := p3) (extraOwn := eoE) (eqLower := true)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                if r'.status == "RESOURCE_LIMIT" || r'.status == "UNSUPPORTED_FEATURE" then break
+                if r'.accepted && r'.eqLowered == 1 then
+                  r := r'
+                  iface := none
+                  break
           -- R-CARRIER without the P2 operand split (entry 16), last resort for unprotected declarations: the
           -- carriers of independent operands identified again, the translation before P2 (docs/CARRIER_LEVELS.md).
           -- A proof-local level solved through one operand copy cannot satisfy the copied bound of another

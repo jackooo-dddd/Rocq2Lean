@@ -528,6 +528,16 @@ class Auditor:
                 if eta is not None:
                     head, n = eta
                     return self.check(s, head, path + ["eta"], Auditor.shift(env, n))
+        if k == "eq_lowered_type":        # rule E: an equality's type argument at its operands' universe
+            t = json.loads(s["t_json"])
+            if t["k"] == "prod":
+                if e["k"] != "forall":
+                    raise Mismatch(f"{path}: rule E: the lowered type argument is not a product like the source's")
+                C(t["ty"], e["t"], "eqT.ty")
+                return self.check({"k": "eq_lowered_type", "t_json": json.dumps(t["b"])}, e["b"], path + ["eqT.b"], self.push(env))
+            if t["k"] != "sort" or t["s"].get("k") != "type" or e["k"] != "sort":
+                raise Mismatch(f"{path}: rule E: the lowered type argument does not end in a sort as the source's does")
+            return                         # (its sort is the operands' type's: fixed by the kernel)
         if k == "phantom_sort":           # rule Q-a: a phantom check's sort argument, lowered per occurrence
             if e["k"] != "sort":
                 raise Mismatch(f"{path}: a phantom check's sort argument is not a sort")
@@ -3947,6 +3957,35 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             problem("structure", f"{n}: phantom-lowered levels {pl_} are not the levels occurring only in phantom checks {sorted(gone)}")
             continue
         decls[n] = dict(d, type=er[0], **({} if len(er) == 1 else {"body": er[1]}))
+    # rule E (docs/EQ_LOWERING.md): an unprotected statement reporting a lowered equality is audited with its
+    # conclusion's `@eq T a b` type argument marked (the shape recomputed here; the consumer re-checks that the
+    # operands are convertible)
+    def sort_ended(t):
+        while t.get("k") == "prod":
+            t = t["b"]
+        return t.get("k") == "sort" and t["s"].get("k") == "type"
+    for n, r in sorted(rows.items()):
+        if not r.get("eq_lowered"):
+            continue
+        try:
+            d = decls.get(n)
+            if d is None or d["kind"] != "constant" or d.get("body_state") not in ("statement_only", "obligation"):
+                raise Mismatch("rule E reported for a row that is not a statement")
+            if n in prot_pin:
+                raise Mismatch("rule E reported for a protected declaration")
+            if r.get("eq_lowered") != 1:
+                raise Mismatch("rule E: exactly the conclusion's equality may be lowered")
+            ty = copy.deepcopy(d["type"])
+            t = ty
+            while t.get("k") == "prod":
+                t = t["b"]
+            if not (t.get("k") == "app" and t["f"].get("k") == "ind" and t["f"]["ind"] == {"mind": "Corelib.Init.Logic.eq", "i": 0}
+                    and len(t["args"]) == 3 and sort_ended(t["args"][0])):
+                raise Mismatch("rule E: the source conclusion is not an equality at a sort-ended type")
+            t["args"][0] = {"k": "eq_lowered_type", "t_json": json.dumps(t["args"][0])}
+            decls[n] = dict(d, type=ty)
+        except Mismatch as e:
+            problem("structure", f"{n}: {e}")
     for n, r in sorted(rows.items()):
         ch = r.get("prop_lift_unfold") or []
         if not ch:

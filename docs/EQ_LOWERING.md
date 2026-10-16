@@ -1,6 +1,15 @@
-# Proposal (NOT adopted): rule E, equalities of convertible terms stated at a cumulative universe
+# Rule E: equalities of convertible terms stated at a cumulative universe
 
-Status: **proposal awaiting a decision** (2026-10-16, stage 6). Nothing here is implemented.
+Status: **adopted** (proposed 2026-10-16, approved 2026-10-17; ITERATION_LOG entry 16). Implementation:
+`eqLowerMark` and the marked-conclusion case of `trans` (`Rocq2Lean/Translate.lean`), the statement tier
+(`Rocq2Lean/Emit.lean`), the consumer's E1 re-check `checkEqLowered` (`Rocq2Lean/Verify.lean`), the audit's
+shape recomputation and `eq_lowered_type` marker (`tools/audit.py`). Test: `scripts/test-eq-lowering`.
+
+**Implementation choices (within the approved rule).** Only the statement's *conclusion* (after its
+products) is lowered, which is the shape of all four CoqEAL obligations and is simple to re-check. E1 is
+discharged **without writing any proof**: the translator checks the operands' convertibility (`isDefEq`), and
+the consumer re-checks it independently in its own Lean process; no `rfl` term enters the library (Rocq2Lean
+writes no corpus proofs).
 
 ## 1. Measured frontier
 
@@ -59,9 +68,9 @@ Negative controls: a lowered equality whose operands are not convertible (kernel
 refused); a lowered type argument that changes more than the final sort (audit-rejected); `eq_lowered` on a
 row without such an equality (audit-rejected).
 
-## 6. Decision requested
+## 6. Decision
 
-Approve or reject rule E: lowering `eq`'s type argument to the operands' universe for equalities of
-**convertible** terms in (unprotected) statements, with E1–E4. Expected effect: CoqEAL's `refines_abstr` /
+Approved 2026-10-17: lowering `eq`'s type argument to the operands' universe for equalities of **convertible**
+terms in unprotected statements, with E1–E4. Expected effect: CoqEAL's `refines_abstr` /
 `refines_apply` obligations, unblocking up to 49 protected roots together with the remaining CoqEAL work
 (7 by this rule alone).

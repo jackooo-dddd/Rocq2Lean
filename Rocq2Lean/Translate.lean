@@ -236,6 +236,9 @@ structure TCtx where
   /-- Rule Q-a: at an application of a phantom definition, a sort argument at a sort-parameter position
   is the type of the paired value argument (per occurrence). -/
   phantomLower : Bool := false
+  /-- Rule E (docs/EQ_LOWERING.md): the statement's conclusion `@eq T a b`, its type argument marked
+  (`eqLowerMark`), is stated at the operands' own type when they are convertible (counted here). -/
+  eqLower : Option (IO.Ref Nat) := none
 
 abbrev TransM := ReaderT TCtx (ExceptT TransError MetaM)
 
@@ -806,6 +809,21 @@ def erasingPolyBody? (c : IR.ConstantDecl) : Option IR.Term := do
   let (t, n) := peel b 0
   if n == 0 || termHasUnivVar t then none
   some b
+
+/-- Rule E (docs/EQ_LOWERING.md): the statement's conclusion (after its products) `@eq T a b` with `T` a product
+ending in a `Type` sort, its `T` replaced by the marker `.evar 424242 #[]`; `none` otherwise. -/
+partial def eqLowerMark (t : IR.Term) : Option IR.Term :=
+  match t with
+  | .prod n ty b => (eqLowerMark b).map (.prod n ty ·)
+  | .app (.ind i u) args =>
+    let rec sortEnded : IR.Term → Bool
+      | .prod _ _ b => sortEnded b
+      | .sort (.type _) => true
+      | _ => false
+    if i.mind == "Corelib.Init.Logic.eq" && i.idx == 0 && args.size == 3 && sortEnded args[0]! then
+      some (.app (.ind i u) (args.set! 0 (.evar 424242 #[])))
+    else none
+  | _ => none
 
 /-- Rule T (docs/COINDUCTIVE.md): one body, and no constructor argument or index mentions the block.
 The arguments are stored innermost first: `args[k]` lies under the block, the `npars` parameters and the
@@ -1558,6 +1576,22 @@ partial def trans (t : IR.Term) : TransM Expr := do
       let b' ← withPath "b" (withLocal x (trans b))
       bindFVars true #[x] b'
   | .app f args => withPath "app" do
+    -- rule E (docs/EQ_LOWERING.md, approved 2026-10-17): the marked conclusion `@eq T a b` of a statement, its
+    -- operands convertible, stated at their own type (Rocq types them at the larger `T` by cumulativity)
+    if let some cnt := (← read).eqLower then
+      if let .ind ⟨"Corelib.Init.Logic.eq", 0⟩ _ := f then
+        if h : args.size = 3 then
+          if let .evar 424242 _ := args[0] then
+            let a' ← withPath "arg1" (trans args[1])
+            let b' ← withPath "arg2" (trans args[2])
+            let t' ← liftMeta (do instantiateMVars (← inferType a'))
+            unless ← liftMeta (do isDefEq (← inferType b') t') do
+              failT "UNSUPPORTED_FEATURE" "rule E: the operands of the equality have different types"
+            unless ← liftMeta (isDefEq a' b') do
+              failT "UNSUPPORTED_FEATURE" "rule E: the operands of the equality are not convertible"
+            let u ← liftMeta (getLevel t')
+            cnt.modify (· + 1)
+            return mkApp3 (mkConst ``Eq [u]) t' a' b'
     let args' ← args.mapIdxM fun k a => withPath s!"arg{k}" (trans a)
     -- M6: a recursive call of an accessibility-lowered fixpoint
     if let .rel i := f then
@@ -2591,9 +2625,9 @@ def runTrans {α} (genv : GEnv) (x : TransM α) (globalLevels : Std.HashMap Stri
     (lowerShared : Bool := false) (hyps : Option (IO.Ref (Array (MVarId × String))) := none)
     (declKey : String := "") (hypExact : Bool := false)
     (sharedFresh : Option (IO.Ref (Array (LMVarId × String))) := none)
-    (propCoerce : Option (IO.Ref Nat) := none) (phantomLower : Bool := false) :
+    (propCoerce : Option (IO.Ref Nat) := none) (phantomLower : Bool := false) (eqLower : Option (IO.Ref Nat) := none) :
     MetaM (Except TransError α) :=
-  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact, sharedFresh, propCoerce, phantomLower }).run
+  (x { genv, globalLevels, polyLevels, factReduce, admitLevels, lowerShared, hyps, declKey, hypExact, sharedFresh, propCoerce, phantomLower, eqLower }).run
 
 /-- Pending validation: the hypothesis metavariables (in creation order) become binders of the
 declaration, `∀ hs, e` (`lam := false`) or `fun hs => e` (Lean's binding abstraction handles their

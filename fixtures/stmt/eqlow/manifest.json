@@ -1,0 +1,1 @@
+{"name": "stmt-eqlow", "load_paths": [["-Q", ".", "SF"]], "files": ["Eqlow.v"], "requires": ["SF.Eqlow"]}
