@@ -8,7 +8,7 @@
   "validation": "STATEMENT_VALIDATED",
   "by_validation": {
    "DEFINITION_AUDITED": 56,
-   "DEFINITION_AUDITED_PENDING": 30,
+   "DEFINITION_AUDITED_PENDING": 31,
    "STATEMENT_AUDITED": 20,
    "STATEMENT_AUDITED_PENDING": 10
   }
@@ -157,6 +157,22 @@
     "prosa.implementation.definitions.task.concrete_job: inlined prosa.behavior.job.JobType is not an erasing polymorphic definition",
     "prosa.implementation.definitions.task.concrete_job: implicit levels ['mathcomp.boot.eqtype.58'] occur explicitly in the source",
     "prosa.implementation.definitions.task.concrete_job: implicit levels ['mathcomp.boot.eqtype.58'] occur explicitly in the source"
+   ]
+  },
+  "delta-not-erasing-constant": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "prosa.implementation.definitions.task.job_task: implicit levels ['mathcomp.boot.eqtype.58'] occur explicitly in the source",
+    "prosa.implementation.definitions.task.job_task: implicit levels ['mathcomp.boot.eqtype.58'] occur explicitly in the source"
+   ]
+  },
+  "delta-hidden-constant": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "prosa.implementation.definitions.task.job_task: implicit levels ['mathcomp.boot.eqtype.58'] occur explicitly in the source",
+    "prosa.implementation.definitions.task.job_task: implicit levels ['mathcomp.boot.eqtype.58'] occur explicitly in the source"
    ]
   },
   "delta-hidden": {

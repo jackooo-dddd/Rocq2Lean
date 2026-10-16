@@ -1,0 +1,124 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   0,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 7,
+   "STATEMENT_AUDITED": 3,
+   "STATEMENT_AUDITED_PENDING": 1
+  }
+ },
+ "rows": {
+  "SF.Phant.unify": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "level_params": [
+    "u_SF_Phant_21",
+    "u_SF_Phant_22"
+   ],
+   "phantom_lowered": []
+  },
+  "SF.Phant.chk": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "level_params": [
+    "u_SF_Phant_25",
+    "u_SF_Phant_26"
+   ],
+   "phantom_lowered": [
+    "SF.Phant.27"
+   ]
+  },
+  "SF.Phant.chk_stmt": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "level_params": [
+    "u_SF_Phant_25",
+    "u_SF_Phant_26"
+   ],
+   "phantom_lowered": [
+    "SF.Phant.27"
+   ]
+  },
+  "SF.Phant.notph": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "level_params": [
+    "u_SF_Phant_30"
+   ],
+   "phantom_lowered": []
+  },
+  "SF.Phant.chk_np": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "level_params": [
+    "u_SF_Phant_25"
+   ],
+   "phantom_lowered": []
+  },
+  "SF.Phant.id_ph": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "level_params": [
+    "u_SF_Phant_32"
+   ],
+   "phantom_lowered": []
+  },
+  "SF.Phant.chk_id__rocq2lean_obligation_1": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "level_params": [
+    "u_SF_Phant_25"
+   ],
+   "phantom_lowered": [
+    "SF.Phant.27"
+   ]
+  },
+  "SF.Phant.chk_id": {
+   "status": "STATEMENT_PENDING_KERNEL_CHECKED",
+   "level_params": [
+    "u_SF_Phant_25"
+   ],
+   "phantom_lowered": []
+  }
+ },
+ "negative": {
+  "levels-not-phantom-only": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Phant.chk: phantom-lowered levels ['SF.Phant.25', 'SF.Phant.27'] are not the levels occurring only in phantom checks ['SF.Phant.27']",
+    "SF.Phant.chk: parameters ['SF.Phant.25', 'SF.Phant.26'] and solved levels [] do not partition the own levels ['SF.Phant.25', 'SF.Phant.26', 'SF.Phant.27'] (a parameter must be a type level or occur in a type level's solution)",
+    "SF.Phant.chk: parameters ['SF.Phant.25', 'SF.Phant.26'] and solved levels [] do not partition the own levels ['SF.Phant.25', 'SF.Phant.26', 'SF.Phant.27'] (a parameter must be a type level or occur in a type level's solution)"
+   ]
+  },
+  "lowering-without-check": {
+   "forged_row_kernel": "ACCEPTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Phant.chk_np: phantom-lowered levels ['SF.Phant.27'] are not the levels occurring only in phantom checks []"
+   ]
+  },
+  "phantom-arg-not-sort": {
+   "forged_row_kernel": "REJECTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Phant.chk: ['type', 'prod.b', 'prod.b', 'prod.ty', 'arg0']: a phantom check's sort argument is not a sort"
+   ]
+  },
+  "phantom-sort-not-value-type": {
+   "forged_row_kernel": "REJECTED",
+   "validate_exit": 2,
+   "audit_problems": []
+  }
+ },
+ "equivalence": {
+  "exit": 0,
+  "theorems_without_axioms": 6,
+  "output": "'PhantomSortEquivalence.phantom_holds' does not depend on any axioms\n'PhantomSortEquivalence.unify_holds' does not depend on any axioms\n'PhantomSortEquivalence.unify_equiv' does not depend on any axioms\n'PhantomSortEquivalence.chk_hyp_equiv' does not depend on any axioms\n'PhantomSortEquivalence.chk_stmt_hyp_irrelevant' does not depend on any axioms\n'PhantomSortEquivalence.chk_hyp_dischargeable' does not depend on any axioms\n"
+ },
+ "unit": {
+  "unify_pairs": true,
+  "id_ph_pairs": true,
+  "notph_none": true,
+  "chk_none": true,
+  "mismatched_value_none": true
+ }
+}

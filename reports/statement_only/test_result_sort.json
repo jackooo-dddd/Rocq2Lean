@@ -2,7 +2,7 @@
  "pipeline": {
   "exit_codes": [
    0,
-   2,
+   0,
    0
   ],
   "validation": "STATEMENT_VALIDATED",

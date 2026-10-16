@@ -1,0 +1,85 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   2,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 6,
+   "NOT_TRANSLATED": 3,
+   "STATEMENT_AUDITED": 2
+  }
+ },
+ "rows": {
+  "SF.Coind.Task_T": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "coinductive_as_inductive": true,
+   "message": ""
+  },
+  "SF.Coind.get_P": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "coinductive_as_inductive": false,
+   "message": ""
+  },
+  "SF.Coind.get_C": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "coinductive_as_inductive": false,
+   "message": ""
+  },
+  "SF.Coind.get_P_build": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "coinductive_as_inductive": false,
+   "message": ""
+  },
+  "SF.Coind.Task_T_eta": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "coinductive_as_inductive": false,
+   "message": ""
+  },
+  "SF.Coind.stream": {
+   "status": "UNSUPPORTED_FEATURE",
+   "coinductive_as_inductive": true,
+   "message": "recursive coinductive type"
+  },
+  "SF.Coind.zeros": {
+   "status": "BLOCKED_DEPENDENCY",
+   "coinductive_as_inductive": false,
+   "message": "failed dependencies: #[SF.Coind.stream, SF.Coind.stream]"
+  },
+  "SF.Coind.task0": {
+   "status": "UNSUPPORTED_FEATURE",
+   "coinductive_as_inductive": false,
+   "message": "cofixpoint"
+  },
+  "SF.Coind.fin2": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "coinductive_as_inductive": false,
+   "message": ""
+  }
+ },
+ "negative": {
+  "flag-dropped": {
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Coind.Task_T: coinductive_as_inductive differs from the source block's kind"
+   ]
+  },
+  "flag-on-inductive": {
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Coind.fin2: coinductive_as_inductive differs from the source block's kind"
+   ]
+  }
+ },
+ "unit": {
+  "stream_rejected": true,
+  "task_accepted": true
+ },
+ "correspondence": {
+  "exit": 0,
+  "theorems_without_axioms": 4,
+  "output": "'CoinductiveCorrespondence.ofTuple_toTuple' does not depend on any axioms\n'CoinductiveCorrespondence.toTuple_ofTuple' does not depend on any axioms\n'CoinductiveCorrespondence.Task_T_eta_holds' does not depend on any axioms\n'CoinductiveCorrespondence.get_P_build_holds' does not depend on any axioms\n"
+ }
+}
