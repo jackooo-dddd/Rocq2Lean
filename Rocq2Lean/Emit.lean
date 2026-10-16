@@ -987,11 +987,21 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           unless (← instantiateLevelMVars v).normalize == x.normalize do
             return { base with status := "UNIVERSE_REJECTED",
                                message := s!"R2F-c: own level {m} was identified with another own level by unification; it is not its own reading" }
+    -- (R2B-V: the declared result sort is the value's; its level, read back as a source level `Type@{σ}`)
+    let rec codSort : Expr → Option Level
+      | .forallE _ _ b _ => codSort b
+      | .sort l => some l
+      | _ => none
+    let resultSortσ : Level := match codSort (← instantiateMVars ty) with
+      | some l => (l.normalize.dec).getD .zero
+      | none => .zero
     for (m, v) in ownMVars do
       let s ← instantiateLevelMVars v
       -- (R2B-V: a result-sort level that no longer occurs anywhere — the result sort is the value's —
-      -- has no counterpart in the target: recorded at 0, a lowering)
-      let s := if resultLv.contains m && s.isMVar then .zero else s
+      -- stands for the value's sort, `Type@{σ}` with `Sort (σ+1)` the declared result sort; before entry 16
+      -- it was recorded at 0, which is the same σ for a value in `Type 0` and wrong otherwise (HB's
+      -- `phant_axioms` with Q-a: the audit rejected the mismatch); checked as a lowering below)
+      let s := if resultLv.contains m && s.isMVar then resultSortσ else s
       if levelInterp.any (·.1 == m) then continue        -- R2F-c own level: a parameter, read through ι
       if s == .param (levelParamName m) then paramLevels := paramLevels.push m
       else sol := sol.insert m s.normalize
