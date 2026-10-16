@@ -1615,10 +1615,10 @@ partial def termHasFix : IR.Term → Bool
 /-- Speed (entry 14): a late, last-resort tier with its own, smaller heartbeat budget (a fifth of the
 declaration's) under a fresh counter; an attempt exhausting it is a failed attempt (`RESOURCE_LIMIT`,
 state restored), not the end of the declaration's other tiers. -/
-def budgeted (src kind : String) (x : MetaM DeclResult) : MetaM DeclResult := do
+def budgeted (src kind : String) (x : MetaM DeclResult) (divisor : Nat := 5) (factor : Nat := 1) : MetaM DeclResult := do
   let saved ← saveState
   tryCatchRuntimeEx
-    (withTheReader Core.Context (fun c => { c with maxHeartbeats := c.maxHeartbeats / 5 }) (withCurrHeartbeats x))
+    (withTheReader Core.Context (fun c => { c with maxHeartbeats := c.maxHeartbeats * factor / divisor }) (withCurrHeartbeats x))
     fun e => do
       saved.restore
       pure { source := src, kind, status := if e.isRuntime then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
@@ -2343,6 +2343,20 @@ where
                     r := { r' with phantomLowered := gone }
                     iface := none
                     break
+                -- (entry 16) Q-a with R2B-V: a type-valued definition (HB's `phant_axioms : … → Type@{l}`, its value an
+                -- `axioms_` record type) whose result sort Rocq reaches by cumulativity: the result sort is the value's
+                -- sort (R2B-V, unchanged checks), together with the lowered phantom checks; the two tiers were only
+                -- ever tried apart
+                if !r.accepted && !isStmt && irEndsInSort c0.type then
+                  for (it, lo, p3) in [(false, false, false), (false, false, true), (false, true, false), (true, false, false)] do
+                    let r' ← budgeted c.name "constant" <| processConstant genv results cQ (inferSort := false)
+                      (interp := it) (extraOwn := eoQ) (lower := lo) (hypExact := p3) (inheritSort := true) (phantom := true)
+                    if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                    if r'.status == "RESOURCE_LIMIT" || r'.status == "UNSUPPORTED_FEATURE" then break
+                    if r'.accepted then
+                      r := { r' with phantomLowered := gone }
+                      iface := none
+                      break
           -- R-CARRIER without the P2 operand split (entry 16), last resort for unprotected declarations: the
           -- carriers of independent operands identified again, the translation before P2 (docs/CARRIER_LEVELS.md).
           -- A proof-local level solved through one operand copy cannot satisfy the copied bound of another
@@ -2400,9 +2414,15 @@ where
             -- variants are exactly earlier tiers)
             let (_, _, cPend) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
             let noHyps := cPend.isEmpty && !((c.body.map termHasFix).getD false)
+            -- (entry 16: when the failure is the kernel rejecting a prerequisite hypothesis passed to a pending
+            -- statement — one shared hypothesis where the statement has several per-instance ones, HB's
+            -- `factory_89` passing `id_phant` to `factory_83`'s obligation — only P3 can succeed: its attempts get
+            -- the full heartbeat budget, not the late tiers' fifth; this only adds successes)
+            let hm := r.message ++ ((lastTier.map (·.message)).getD "")
+            let hypMismatch := (hm.splitOn "application type mismatch").length > 1 && (hm.splitOn " h_").length > 1
             for (fr, it, cu, lo) in [(false, false, false, false), (false, true, false, false), (false, false, false, true)] do
               if noHyps && !lo then continue
-              let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+              let r' ← budgeted c.name "constant" (divisor := if hypMismatch then 1 else 5) (factor := if hypMismatch then 5 else 1) <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
                 (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := true)
               if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
               if r'.accepted then
