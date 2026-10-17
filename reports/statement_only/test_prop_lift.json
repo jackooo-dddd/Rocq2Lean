@@ -7,9 +7,9 @@
   ],
   "validation": "STATEMENT_VALIDATED",
   "by_validation": {
-   "DEFINITION_AUDITED": 7,
+   "DEFINITION_AUDITED": 9,
    "DEFINITION_AUDITED_PENDING": 4,
-   "STATEMENT_AUDITED": 5
+   "STATEMENT_AUDITED": 6
   }
  },
  "rows": {
@@ -99,6 +99,18 @@
    "prop_lift": null,
    "prop_lift_coercions": 1,
    "prop_lift_unfold": []
+  },
+  "SF.Plift.urel": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 0,
+   "prop_lift_unfold": []
+  },
+  "SF.Plift.rel_stmt": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "prop_lift": null,
+   "prop_lift_coercions": 1,
+   "prop_lift_unfold": []
   }
  },
  "negative": {
@@ -147,6 +159,14 @@
    "validate_exit": 2,
    "audit_problems": [
     "SF.Plift.r1: rule P: PULift.up at a non-Prop universe {'k': 'succ', 'l': {'k': 'zero'}}"
+   ],
+   "consumer": "AUDIT_REJECTED"
+  },
+  "relation-lift-non-prop": {
+   "forged_row_kernel": "REJECTED",
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Plift.rel_stmt: rule P: PULift at a non-Prop universe {'k': 'succ', 'l': {'k': 'zero'}}"
    ],
    "consumer": "AUDIT_REJECTED"
   },

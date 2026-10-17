@@ -105,6 +105,15 @@ partial def proofDependentElims (env : Environment) (proofs : Std.HashSet Name) 
   out ← go e out
   return out
 
+/-- Rule E, E1 (docs/EQ_LOWERING.md), independently of the translator: a statement reporting a lowered
+equality has, under its hypotheses and binders, the conclusion `@Eq T a b` with `a` and `b` convertible
+(checked here; no proof is constructed). -/
+def checkEqLowered (v : Expr) : MetaM Bool := do
+  lambdaTelescope v fun _ b => forallTelescope b fun _ c => do
+    let c ← whnfR c
+    unless c.isAppOfArity ``Eq 3 do return false
+    isDefEq c.appFn!.appArg! c.appArg!
+
 /-- Obligation for every recursor application `I.rec params motive minors idx major` occurring in
 an accepted value: `idx` are exactly the indices of the (weak-head normalized) type of `major`.
 Returns the number of checked applications and any violations. -/
@@ -455,6 +464,13 @@ partial def splitPositionOk (ty : Expr) (nh pos : Nat) (p : Name) : Bool :=
       let (n, bad) ← liftTermElabM (checkRecIndices v)
       recApps := recApps + n
       for b in bad do problems := note "rec_indices" s!"{tgt}: {b}" problems
+    -- rule E (E1): the lowered equality's operands are convertible
+    if ((r.getObjValAs? Nat "eq_lowered").toOption.getD 0) > 0 then
+      match ci.value? (allowOpaque := true) with
+      | some v =>
+        unless ← liftTermElabM (checkEqLowered v) do
+          problems := note "rule_e" s!"{tgt}: a lowered equality whose operands are not convertible" problems
+      | none => problems := note "rule_e" s!"{tgt}: a lowered equality on a declaration without a value" problems
     for e in ci.type :: (ci.value? (allowOpaque := true)).toList do
       let (n, bad) ← liftTermElabM (checkInstanceLevels tmpl e)
       instChecked := instChecked + n
@@ -624,7 +640,7 @@ partial def splitPositionOk (ty : Expr) (nh pos : Nat) (p : Name) : Bool :=
             problems := note "levels" s!"{s}: level copy {c} is not a universe parameter occurring in the declaration's type" problems
   for (d, _) in problems do detectors := detectors.insert d (detectors.getD d 0 + 1)
   let dets := ["binding", "coverage", "roots", "presence", "kind", "safety", "levels", "type", "value", "ctors",
-               "target_deps", "axioms", "rec_indices", "residual_levels", "instance_levels", "interface"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
+               "target_deps", "axioms", "rec_indices", "residual_levels", "instance_levels", "interface", "rule_e"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL"))
   let dets := if stmtMode then dets ++ ["namespaces", "statements"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL")) else dets
   let dets := if asm then dets ++ ["proofs", "assembly"].map fun d => (d, Json.str (if detectors.getD d 0 == 0 then "OK" else "FAIL")) else dets
   let asmFields : List (String × Json) := if asm then [("assembly", Json.bool true), ("proofs_checked", proofsChecked),

@@ -129,7 +129,7 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
     s == "STATEMENT_PENDING_KERNEL_CHECKED"
   let bad := roots.filter fun r => !(r.2.2 == "TRANSLATED_AND_CHECKED" || r.2.2 == "STATEMENT_KERNEL_CHECKED" || pendingSt r.2.2)
   let pendingRoots := roots.filter (pendingSt ·.2.2)
-  let report := Json.mkObj [
+  let head : List (String × Json) := [
     ("report", "rocq2lean-translation/0.3"),
     ("status", if !bad.isEmpty then "ROOTS_NOT_TRANSLATED" else if pendingRoots.isEmpty then "OK" else "OK_OBLIGATIONS_PENDING"),
     ("lean_version", Lean.versionString),
@@ -139,9 +139,24 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
     ("source_header", source.header),
     ("protection", protJson),
     ("roots", Json.arr (roots.map fun (q, n, s) => Json.mkObj [("requested", q), ("name", n), ("status", s)])),
-    ("summary", summary),
-    ("results", Json.arr (results.map (·.toJson)))]
-  IO.FS.writeFile repPath (report.pretty ++ "\n")
+    ("summary", summary)]
+  -- the report is streamed, one row per line (the same JSON value as one `Json.mkObj` with a `results`
+  -- array): a corpus report is several GB, and building it as one tree and one string exhausted the memory
+  -- (S21, exit 137 after translation). Each value is rendered by the pretty printer on one line, so object
+  -- keys keep the pretty printer's order (`compress` orders them differently; the hardening suites' targeted
+  -- mutations walk the report in key order)
+  let line (j : Json) : String := j.pretty (lineWidth := 1000000000)
+  IO.FS.withFile repPath .write fun h => do
+    h.putStr "{"
+    for (k, v) in head do
+      h.putStr s!"{(Json.str k).compress}: {line v},\n"
+    h.putStr "\"results\": ["
+    let mut first := true
+    for r in results do
+      h.putStr (if first then "\n" else ",\n")
+      h.putStr (line r.toJson)
+      first := false
+    h.putStr "]}\n"
   -- statement mode: the module of the claimed rows is still produced (validated row by row); the
   -- report's status records the untranslated roots and the CLI exits non-zero
   let stmtMode := (source.header.getObjValAs? String "mode").toOption.isNone &&

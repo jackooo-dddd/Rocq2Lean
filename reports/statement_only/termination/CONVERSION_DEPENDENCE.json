@@ -1,7 +1,7 @@
 {
  "schema": "rocq2lean-conversion-dependence/1",
- "run": "/home/shunqwang4/research/r2l-run-S17/runs/st-corpus-S17",
- "translation_report_sha256": "fde0c111cfea7a6b8bc476129e876b26c48ae7e5f5691381fe15a81063640741",
+ "run": "/home/shunqwang4/research/r2l-run-S21b/runs/st-corpus-S21b",
+ "translation_report_sha256": "7a2c87d24afd336bcbf072ed288b98da2ae151186b11ed1827c069dc8c6a17b5",
  "lowered": [
   "mathcomp.boot.div.edivn_rec",
   "mathcomp.boot.div.gcdn",
@@ -14,7 +14,7 @@
   {
    "part": 0,
    "exit": 0,
-   "seconds": 8.6
+   "seconds": 8.7
   },
   {
    "part": 1,

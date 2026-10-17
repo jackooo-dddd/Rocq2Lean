@@ -528,6 +528,16 @@ class Auditor:
                 if eta is not None:
                     head, n = eta
                     return self.check(s, head, path + ["eta"], Auditor.shift(env, n))
+        if k == "eq_lowered_type":        # rule E: an equality's type argument at its operands' universe
+            t = json.loads(s["t_json"])
+            if t["k"] == "prod":
+                if e["k"] != "forall":
+                    raise Mismatch(f"{path}: rule E: the lowered type argument is not a product like the source's")
+                C(t["ty"], e["t"], "eqT.ty")
+                return self.check({"k": "eq_lowered_type", "t_json": json.dumps(t["b"])}, e["b"], path + ["eqT.b"], self.push(env))
+            if t["k"] != "sort" or t["s"].get("k") != "type" or e["k"] != "sort":
+                raise Mismatch(f"{path}: rule E: the lowered type argument does not end in a sort as the source's does")
+            return                         # (its sort is the operands' type's: fixed by the kernel)
         if k == "phantom_sort":           # rule Q-a: a phantom check's sort argument, lowered per occurrence
             if e["k"] != "sort":
                 raise Mismatch(f"{path}: a phantom check's sort argument is not a sort")
@@ -1875,7 +1885,13 @@ def erase_phantom_sorts(t, pd):
 
 
 def peel_lift_coercion(e):
-    """`PULift.up X t` or `PULift.down X t` with universe instance [r, 0] -> t; otherwise None."""
+    """`PULift.up X t` or `PULift.down X t` with universe instance [r, 0] -> t; `PULift.{r, 0} X` -> X (entry 16: a
+    proposition lifted where a type is expected, e.g. under the λs of a Prop-valued relation used as a Type-valued
+    one; the kernel checks X : Prop and that the position expects exactly `Sort r`); otherwise None."""
+    if e.get("k") == "app" and e["f"].get("k") == "const" and e["f"].get("n") == "PULift" and len(e["f"].get("u") or []) == 2:
+        if level_nf(e["f"]["u"][1]) != level_nf({"k": "zero"}):
+            raise Mismatch(f"rule P: PULift at a non-Prop universe {e['f']['u'][1]}")
+        return e["a"]
     if e.get("k") != "app" or e["f"].get("k") != "app":
         return None
     h = e["f"]["f"]
@@ -3318,7 +3334,9 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                     # R3G: an implicit level must be the source level of a parameter of a referenced
                     # declaration, and occur as that parameter's argument in the accepted terms
                     for l in r_.get("implicit_levels") or []:
-                        want = level_nf(interp_[l] if l in interp_ else {"k": "param", "n": level_param(l)})
+                        # (at its value: its R2F-c interpretation, its solution when typing solved it — then a solved,
+                        # fact-checked own level, not a parameter — or its parameter; as for blocks, below)
+                        want = level_nf(interp_[l] if l in interp_ else sol_only[l] if l in sol_only else {"k": "param", "n": level_param(l)})
                         if not any(len(us) - (poly or {}).get(nm, 0) == len(gen[nm]) and any(
                                 g == SPLIT_COPIES.get(l, l) and level_nf(u) == want
                                 for g, u in zip(gen[nm], us[(poly or {}).get(nm, 0):]))
@@ -3939,6 +3957,35 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             problem("structure", f"{n}: phantom-lowered levels {pl_} are not the levels occurring only in phantom checks {sorted(gone)}")
             continue
         decls[n] = dict(d, type=er[0], **({} if len(er) == 1 else {"body": er[1]}))
+    # rule E (docs/EQ_LOWERING.md): an unprotected statement reporting a lowered equality is audited with its
+    # conclusion's `@eq T a b` type argument marked (the shape recomputed here; the consumer re-checks that the
+    # operands are convertible)
+    def sort_ended(t):
+        while t.get("k") == "prod":
+            t = t["b"]
+        return t.get("k") == "sort" and t["s"].get("k") == "type"
+    for n, r in sorted(rows.items()):
+        if not r.get("eq_lowered"):
+            continue
+        try:
+            d = decls.get(n)
+            if d is None or d["kind"] != "constant" or d.get("body_state") not in ("statement_only", "obligation"):
+                raise Mismatch("rule E reported for a row that is not a statement")
+            if n in prot_pin:
+                raise Mismatch("rule E reported for a protected declaration")
+            if r.get("eq_lowered") != 1:
+                raise Mismatch("rule E: exactly the conclusion's equality may be lowered")
+            ty = copy.deepcopy(d["type"])
+            t = ty
+            while t.get("k") == "prod":
+                t = t["b"]
+            if not (t.get("k") == "app" and t["f"].get("k") == "ind" and t["f"]["ind"] == {"mind": "Corelib.Init.Logic.eq", "i": 0}
+                    and len(t["args"]) == 3 and sort_ended(t["args"][0])):
+                raise Mismatch("rule E: the source conclusion is not an equality at a sort-ended type")
+            t["args"][0] = {"k": "eq_lowered_type", "t_json": json.dumps(t["args"][0])}
+            decls[n] = dict(d, type=ty)
+        except Mismatch as e:
+            problem("structure", f"{n}: {e}")
     for n, r in sorted(rows.items()):
         ch = r.get("prop_lift_unfold") or []
         if not ch:
@@ -4527,4 +4574,13 @@ if __name__ == "__main__":
         print("usage: audit.py SOURCE.ndjson CONTRACT.json TRANSLATION_REPORT.json AUDIT_OUT.json [TARGET_METADATA.json] "
               "[--assembly PROOFS.json --validated VALIDATED_REPORT.json]", file=sys.stderr)
         sys.exit(2)
-    sys.exit(main(*args, **opts))
+    # (deep target terms: the structural walks recurse once per term node; run in a thread with a large
+    # stack so a deep but finite term is audited instead of aborting with RecursionError)
+    import threading
+    sys.setrecursionlimit(200000)
+    threading.stack_size(1 << 30)
+    res = []
+    t = threading.Thread(target=lambda: res.append(main(*args, **opts)))
+    t.start()
+    t.join()
+    sys.exit(res[0] if res else 3)

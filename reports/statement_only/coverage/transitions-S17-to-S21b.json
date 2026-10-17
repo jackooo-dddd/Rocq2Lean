@@ -1,0 +1,31 @@
+{
+ "before": {
+  "Accepted": 685,
+  "Audited Pending": 3584,
+  "Blocked Dependency": 184,
+  "Direct Failure": 21
+ },
+ "after": {
+  "Accepted": 685,
+  "Audited Pending": 3585,
+  "Blocked Dependency": 180,
+  "Direct Failure": 24
+ },
+ "delta": {
+  "Accepted": 0,
+  "Audited Pending": 1,
+  "Blocked Dependency": -4,
+  "Direct Failure": 3
+ },
+ "moves": {
+  "Blocked Dependency -> Audited Pending": 1,
+  "Blocked Dependency -> Direct Failure": 3
+ },
+ "status_changes": 4,
+ "newly_accepted": [],
+ "newly_unblocked": [
+  "prosa.results.generality.gel.pp_delta"
+ ],
+ "regressions_previously_accepted": [],
+ "same_protected_set": true
+}

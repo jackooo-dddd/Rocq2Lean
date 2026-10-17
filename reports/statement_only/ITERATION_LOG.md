@@ -1922,3 +1922,111 @@ proposed (registry replay; validation: row-identical to a full run). A per-decla
 * `termination/CONVERSION_DEPENDENCE{,-S17}.json`;
 * `timing/translation_timing-S17.json`, `timing/TIER_SUMMARY-S17.txt`;
 * `test_{prop_lift,phantom_sort,coinductive}.json` and the frozen-suite reports.
+
+## Entry 16 — Stage 6: the GEL/HB frontier (shapes A–D), rule P under η, rule E, report streaming (2026-10-16/17)
+
+Branch `rules-s6`, from the Stage 5 implementation `38df8a9` (= `main`'s squash `15b818f`, docs aside).
+Thirteen commits, `7338d12` … `68f4bdc`, and the evidence commit. Measured implementation: `b46916c` (S21b);
+`68f4bdc` changes only the report's serialization (§5).
+
+### (1) Changes
+
+| Commit | Change | Kind |
+|---|---|---|
+| `7338d12` | optional per-declaration progress log (`R2L_PROGRESS`) | diagnostics only |
+| `5489f8d` | speed from S17 data: Q-a tier order, no repeat of the P3-first attempt, no generic P3 tier where Q-a applies | exact / order only |
+| `cb8523e` | **R-CARRIER no-split**, last resort for unprotected declarations (frontier shape A: a proof-local level solved through one operand copy fails the copied fact of another); audit runs with a large stack | rule tier |
+| `1778f28` | P3 with 5× budget on a hypothesis mismatch at a pending statement (`factory_89`); Q-a combined with R2B-V for type-valued definitions (`phant_axioms`, shape B) | budget / combination |
+| `7744580` | R2B-V: an unassigned result-sort level stands for the value's sort level (was 0; the audit rejected Q-a+R2B-V rows) | fix |
+| `9355bc2` | **shape D**: R3G-for-definitions on not-entailed references (full budget), budgeted post-acceptance retries, implicit levels solved or unused are not parameters; audit: an implicit level's argument is its value; 5× P3 budget gated on duplicated per-instance hypotheses | rule tier + audit |
+| `51a0a9e` | **rule P under η**: a Prop-valued relation used where a Type-valued one is expected (CoqEAL `refines … (unify N)`); fixture, negative control, docs | rule P extension |
+| `a9546ca`, `16af815` | **rule E** (proposed, then approved 2026-10-17; `docs/EQ_LOWERING.md`): an equality of convertible terms at a cumulative universe is stated at the operands' universe; consumer E1 re-check, audit shape check, `scripts/test-eq-lowering` | new rule (approved) |
+| `e9885fe` | constant discovery ends once its implicit levels are picked (unbounded recursion on an unsolved state: S15, `refines_apply`); R3G-for-definitions gate includes unjustified residual defaults | fix |
+| `b46916c` | translation report written as a stream, one compact row per line (S21 was OOM-killed at 47.8 GB writing the report after translating all 10,972 declarations); 690/690 rows identical to the old writer on a subset, file 7.3× smaller | fix (I/O) |
+| `68f4bdc` | streamed rows keep the pretty printer's key order: `Json.compress` orders object keys differently, and the targeted mutations of `test-m3`, `test-lowering-audit` and `test-m6` walk the report in key order (test-all 15/18 at `b46916c`) | fix (I/O) |
+
+### (2) Coverage — FULL CORPUS, same 4,474 protected roots
+
+| Run | Impl | Accepted | Audited Pending | Blocked | Direct Failure | Unclaimed | Translation |
+|---|---|---|---|---|---|---|---|
+| S8 (entry 14) | `f5e373c` | 676 | 3,538 | 235 | 25 | 260 | 22.5 min |
+| S17 (entry 15) | `38df8a9` | 685 | 3,584 | 184 | 21 | 205 | 4 h 36 min |
+| S21 | `e9885fe` | — | — | — | — | — | OOM-killed writing the report (fixed in `b46916c`) |
+| **S21b** | **`b46916c`** | **685** | **3,585** | **180** | **24** | **204** | **6 h 57 min** (peak RSS 21.6 GB) |
+
+* **Validation (S21b):** consumer OK (10,199 accepted declarations of the required closure, no axioms), audit OK
+  (0 problems), source instances OK, `CORPUS_PROVENANCE_BOUND` (10,966 declarations = chunk copies, 260,885
+  universe facts, 4,474 roots covered; evidence `provenance-aprime`, same IR as S17: SHA-256 identical) and
+  `check` OK, conversion dependence (886 dependents of the 3 lowered definitions, all `CONV_OK`, `needs
+  unfolding: []`), 7,524 proof tasks rendered.
+* **Protected transitions S17 → S21b:** 0 regressions, 0 newly accepted; `gel.pp_delta` Blocked → Audited
+  Pending; `refine_task`, `refine_Periodic`, `refine_Sporadic` Blocked → Direct Failure (their obligations now
+  translate, by rule E; see §4).
+* **All rows S17 → S21b:** claimed 9,804 → 10,200 (**+396, 0 lost**): 362 Blocked → claimed, 29 universe and
+  5 kernel rejections → claimed. Blocked 923 → 533. Direct failures 245 → 238 (28 Blocked → Direct Failure:
+  CoqEAL `refines_apply`/`refines_abstr` (2), HB builders `factory_69`, `_78`, `_411` obligation 109 (3), `ssrint`
+  specialization refusals (6), refinement casts (5, §4), CoqEAL `38663` obligations of the arrival-curve
+  refinements (12)).
+* **GEL roots** (`GEL`, `GEL_is_total`, `ELF`) remain blocked: the frontier shrank from 23 to 16 declarations
+  (`docs/ULIFT_PROPOSAL.md` §9).
+* **Translation time 4 h 36 min → 6 h 57 min (+51%).** More HB declarations reach the late tiers (shape D
+  retries, R-CARRIER no-split with 5 variants). Measured separately on S21 (not part of this stage,
+  `docs/SOLVER_STAGE_A.md`): late-tier attempts that repeat an earlier attempt of the same declaration take
+  3,211 s (99 budget aborts after a completed attempt 2,481 s, 530 repeated completed failures 468 s, other
+  262 s), about 38% of the 2 h 21 min growth.
+
+### (3) Remaining blockers (S21b, `RULE_BACKLOG`)
+
+204 protected roots unclaimed (181 modern, 23 Classic); 238 direct failures.
+
+| Family | Members (protected) | Affected roots | Only this family |
+|---|---|---|---|
+| UNIVERSE_OTHER | 47 (8) | 137 | 30 |
+| SOLUTION_FACT_VIOLATED | 123 (4) | 102 | 15 |
+| STATEMENT_FREE_LEVEL_PINNED | 9 (1) | 91 | 11 |
+| REFERENCE_RAISING | 8 (0) | 83 | 0 |
+| COUPLED_BINDER_LEVELS | 4 (0) | 71 | 0 |
+| COURSE_OF_VALUES | 8 (0) | 39 | 6 |
+| UNCLASSIFIED | 8 (3) | 19 | 3 |
+| PROP_TYPE_CUMULATIVITY | 7 (6) | 16 | 15 |
+| PROTECTED_RANGE_NARROWED | 1 (1) | 9 | 2 |
+| KERNEL_OTHER | 20 (1) | 6 | 1 |
+| POLYMORPHIC_INSTANCE, REFERENCE_COHERENCE | 1, 2 | 1, 1 | 0 |
+
+### (4) The three refinement declarations (diagnosed 2026-10-18)
+
+`refine_task`, `refine_Periodic`, `refine_Sporadic` (and the unprotected `refine_task'`, `refine_task_set'`)
+report "default cast annotation is not convertible in Lean". Reproduced alone (124-declaration closure, with
+the cast's two types printed):
+
+* The proof casts `erefl : x = x` to `Rtask_ab x y` (resp. `Rtask`), which unfolds to CoqEAL's `fun_hrel`,
+  translated since Stage 5 by rule P as `PULift (f y = x)`. Rocq accepts the cast by Prop ≤ Type; Lean needs
+  `PULift.up`.
+* Rule P's tier does insert it (`liftCoerce`), and all 7 of its variants then fail on universes: proof-local
+  `CoqEAL.refinements.refinements.38671` solved as `max(binnat.47805, hrel.1062)`, violating the native fact
+  `extrapolated_arrival_curve.21 ≤ 38671`. That is the same level that rejected these obligations in S17.
+* A later tier without rule P repeats the cast failure and its message is the one reported. **The row's
+  reason is misleading** (the real one is the universe rejection of the rule P tier). Not a regression:
+  the cast check is unchanged since Stage 5, and the declarations were never attempted before.
+
+### (5) Validation and process
+
+* **Frozen worktree `r2l-B-test6` at `68f4bdc`:** the 18 statement suites (new: `test-eq-lowering`) and
+  `test-all` **18/18**. At `b46916c` the statement suites passed and `test-all` was 15/18: `test-m3`,
+  `test-lowering-audit` and `test-m6` failed on "mutation … did not change anything" — the same JSON values,
+  object keys in another order (bisected: `test-lowering-audit` passes at `e9885fe`); fixed in `68f4bdc`.
+* **`68f4bdc` vs S21b rows:** on the 690-declaration `prof-A` subset, 688 rows identical to S21b's and 2 failing
+  rows differ in their last-tier text only (a metavariable number; the position of a budget timeout), so the
+  S21b evidence stands for `68f4bdc`.
+* S21 (OOM), the report-streaming fix, and S21b's frozen worktree `r2l-run-S21b`; post-run checks by
+  `post-S21b.sh` (tasks, provenance manifest + check, conversion dependence, backlog).
+* The branch is merged into `main` after `main` is merged into it (entries 12, 13, 15 are on `main` only; the
+  stage squash would otherwise revert them).
+
+### (6) Evidence
+
+* `coverage/S21b.json`, `coverage/transitions-S17-to-S21b.json`;
+* `RULE_BACKLOG.{md,json}`, `PROOF_TASKS.jsonl`, `provenance/CORPUS_MANIFEST.json` (S21b);
+* `termination/CONVERSION_DEPENDENCE-S21b.json`;
+* `timing/translation_timing-S21b.json`;
+* `test_eq_lowering.json` and the frozen-suite reports.

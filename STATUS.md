@@ -1,5 +1,22 @@
 # Status
 
+**2026-10-18 — Stage 6: the GEL/HB frontier, rule P under η, rule E, report streaming (merged into `main` after
+validation).**
+* **Rule adopted (approved 2026-10-17):** rule E, equalities of convertible terms at a cumulative universe stated
+  at the operands' universe (`docs/EQ_LOWERING.md`; consumer E1 re-check, audit shape check, `test-eq-lowering`).
+  Rule P extended under η (a Prop-valued relation where a Type-valued one is expected).
+* **Frontier tiers (no new policy):** R-CARRIER no-split last resort, R3G for definitions on not-entailed
+  references, Q-a with R2B-V, P3 budget on hypothesis mismatches; fixes to R2B-V's result-sort level and to
+  constant discovery (S15's recursion); the report is written as a stream (S21 was killed for memory writing it).
+* **Corpus** at `b46916c` (run `r2l-run-S21b`; consumer, audit, provenance, conversion and tasks OK):
+  **685 Accepted / 3,585 Audited Pending / 180 Blocked / 24 Direct Failure**, 204 unclaimed (S17: 685 /
+  3,584 / 184 / 21, 205 unclaimed). 0 regressions; all rows 9,804 → 10,200 claimed (+396, 0 lost); blocked rows
+  923 → 533. The GEL roots stay blocked by a 16-declaration frontier (23 at S17). Translation 6 h 57 min.
+* **Suites** at `68f4bdc` (serialization fix): 18 statement suites and `test-all` 18/18.
+* **Proposals:** 1 (rule U) not implemented — no conflict at a local position (`docs/ULIFT_PROPOSAL.md` §9);
+  2 (universe solver) in progress, stage A records and stage B experiments.
+* ITERATION_LOG entry 16.
+
 **2026-10-16 — Stage 5: job_task, rule P, rule Q-a, rule T, speed (merged into `main` after validation).**
 * **Rules adopted (approved 2026-10-15):** rule P, `PULift` for a proposition used at a type
   (`docs/PROP_LIFT.md`, C1–C5 proofs); rule Q-a, phantom-only sort lowering for HB's `unify`/`id_phant`

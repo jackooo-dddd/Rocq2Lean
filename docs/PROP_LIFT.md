@@ -52,7 +52,13 @@ Type-directed, only where the kernel would otherwise see a lifted type against t
   (an η-reduced proof body, `eq_SnPos_to_nPred := o` with `o`'s statement the proposition) is
   η-expanded with its arguments and result coerced: `fun xs => PULift.up (o (PULift.down x) …)`.
 
-`up`/`down` are only inserted at `PULift.{_, 0}`: the lifted term is a proposition.
+* a **Prop-valued relation** used where a Type-valued one is expected (CoqEAL's `refines N N (unify N)`, with
+  `unify N : N → N → Prop` at `R : N → N → Type`; Rocq's cumulativity on the codomain) becomes
+  `fun xs => PULift.{u+1, 0} (r xs)`: the lift of the proposition `r xs` used at `Type u`, under the relation's
+  binders (entry 16). The audit accepts it as η plus a peeled `PULift.{_, 0}` wrapper; the kernel checks that
+  the wrapped term is a proposition and that the position expects exactly that `Type`.
+
+`up`/`down`/`PULift` are only inserted at `PULift.{_, 0}`: the lifted term is a proposition.
 
 ### 2.3 Statements with a lifted codomain (`prop_lift_unfold = [c₁, …, cₙ]`)
 

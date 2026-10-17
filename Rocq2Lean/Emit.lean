@@ -121,6 +121,8 @@ structure DeclResult where
   propLiftCoercions : Nat := 0
   /-- Rule P, statements: the head-δ chain δβ-inlined to state a lifted codomain as its proposition. -/
   propLiftUnfold : Array String := #[]
+  /-- Rule E (docs/EQ_LOWERING.md): the number of equalities stated at their operands' type (0 or 1). -/
+  eqLowered : Nat := 0
   /-- Rule T (docs/COINDUCTIVE.md): a non-recursive coinductive block translated as an inductive. -/
   coinductiveAsInductive : Bool := false
   /-- Rule Q-a: the levels that occurred only as sort arguments of phantom checks (lowered per occurrence). -/
@@ -473,6 +475,19 @@ partial def mvarSummands : Level → Array (LMVarId × Nat) × Bool
   | .imax a b => let (x, _) := mvarSummands a; let (y, _) := mvarSummands b; (x ++ y, true)
   | _ => (#[], false)
 
+/-- A level metavariable assignment chain followed at most `fuel` steps: `none` on a cycle (`?u := max ?u …`,
+which `instantiateLevelMVars` would follow without end — the constant discovery pass, which runs before level
+solving, met one on CoqEAL's `refines_apply`, aborting a whole run). -/
+partial def levelMVarsAcyclic (l : Level) (fuel : Nat := 256) : MetaM Bool := do
+  if fuel == 0 then return false
+  match l with
+  | .succ a => levelMVarsAcyclic a fuel
+  | .max a b | .imax a b => return (← levelMVarsAcyclic a fuel) && (← levelMVarsAcyclic b fuel)
+  | .mvar m => match ← getLevelMVarAssignment? m with
+    | some v => levelMVarsAcyclic v (fuel - 1)
+    | none => return true
+  | _ => return true
+
 /-- `l` instantiated; a `max` of one metavariable with itself (after identification) is that
 metavariable. -/
 def instCollapse (l : Level) : MetaM Level := do
@@ -558,7 +573,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
     (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
     (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) (propLift : Bool := false)
-    (phantom : Bool := false) :
+    (phantom : Bool := false) (eqLower : Bool := false) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
@@ -638,14 +653,15 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     -- coherence by unification (docs/COHERENCE_READINGS.md §6): per-occurrence shared levels
     let sharedRef? : Option (IO.Ref (Array (LMVarId × String))) ← if unify then some <$> IO.mkRef #[] else pure none
     let coerceRef? : Option (IO.Ref Nat) ← if propLift then some <$> IO.mkRef 0 else pure none
-    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom with
+    let eqRef? : Option (IO.Ref Nat) ← if eqLower then some <$> IO.mkRef 0 else pure none
+    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef? with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom with
+    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef? with
       | .ok e => pure e
       | .error e =>
         if e.msg.startsWith "termination obligation required" && !wfTerm && genv.stmtMode then
-          return ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify) (propLift := propLift) (phantom := phantom)
+          return ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify) (propLift := propLift) (phantom := phantom) (eqLower := eqLower)
         return fromTransError base e
     -- pending validation: the hypotheses become the artifact's leading binders *before* universe
     -- solving, so that the levels of their types (references to prerequisite statements) are
@@ -714,6 +730,16 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       -- references (a level below every other level of its class, not own, not template, whose
       -- every argument still contains a free metavariable); nothing is assigned
       if discover then
+        -- (a cyclic level assignment left by unification before solving: no implicit level is discovered, rather
+        -- than following it without end)
+        let mut acyclic := true
+        for e in #[ty, val] do
+          for (_, ls) in constOccurrences e do
+            for l in ls do
+              if !(← levelMVarsAcyclic l) then acyclic := false
+        unless acyclic do
+          implicitRef.set #[]
+          return
         -- (C: a statement row's statement is its value: implicit levels are read there)
         let tyI ← instLevelMVars (if stmt then val else ty)
         let valI ← instLevelMVars val
@@ -743,7 +769,9 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
             cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) && (all.filter (·.1 == l)).all (·.2.hasMVar)
           if let some l := pick then picks := picks.push l
         implicitRef.set picks
-        return
+        -- (entry 16: the picks are all a discovery pass computes; the rest of the solving — defaulting, the R2S checks —
+        -- on a state discovery left unsolved is skipped: on CoqEAL's `refines_apply` it recursed without bound)
+        throwError "‗rocq2lean-discovered‗"
       -- (P2: jointly occurring metavariables are one class — in statements, where no level may be
       -- defaulted away; a definition keeps the residual-default path, R3↓ at 0)
       -- (definitions: only on the retry tier `joint`, when the first accepted translation defaulted levels)
@@ -918,6 +946,10 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let rebindThenKeep : MetaM Unit := do
       if let some ref := sharedRef? then rebindShared ref gl genv.facts
       keepParams
+    if discover then
+      try discard <| solveLevels ty val dflt rebindThenKeep (solve := lower || joint)
+      catch _ => pure ()
+      return { base with status := "DISCOVERED", implicitLevels := (← implicitRef.get).qsort (· < ·) }
     let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt rebindThenKeep (solve := lower || joint)
     unless (← cycleRef.get).isEmpty do
       return { base with status := "UNIVERSE_REJECTED", message := s!"coherence by unification: {← cycleRef.get}" }
@@ -987,16 +1019,35 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           unless (← instantiateLevelMVars v).normalize == x.normalize do
             return { base with status := "UNIVERSE_REJECTED",
                                message := s!"R2F-c: own level {m} was identified with another own level by unification; it is not its own reading" }
+    -- (R2B-V: the declared result sort is the value's; its level, read back as a source level `Type@{σ}`)
+    let rec codSort : Expr → Option Level
+      | .forallE _ _ b _ => codSort b
+      | .sort l => some l
+      | _ => none
+    let resultSortσ : Level := match codSort (← instantiateMVars ty) with
+      | some l => (l.normalize.dec).getD .zero
+      | none => .zero
     for (m, v) in ownMVars do
       let s ← instantiateLevelMVars v
       -- (R2B-V: a result-sort level that no longer occurs anywhere — the result sort is the value's —
-      -- has no counterpart in the target: recorded at 0, a lowering)
-      let s := if resultLv.contains m && s.isMVar then .zero else s
+      -- stands for the value's sort, `Type@{σ}` with `Sort (σ+1)` the declared result sort; before entry 16
+      -- it was recorded at 0, which is the same σ for a value in `Type 0` and wrong otherwise (HB's
+      -- `phant_axioms` with Q-a: the audit rejected the mismatch); checked as a lowering below)
+      let s := if resultLv.contains m && s.isMVar then resultSortσ else s
       if levelInterp.any (·.1 == m) then continue        -- R2F-c own level: a parameter, read through ι
       if s == .param (levelParamName m) then paramLevels := paramLevels.push m
       else sol := sol.insert m s.normalize
     let implicitLevels := ((← implicitRef.get) ++ extraOwn.filter (!explicitTy.contains ·)).toList.eraseDups.toArray.qsort (· < ·)
-    let globals := (paramLevels ++ implicitLevels ++ levelInterp.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
+    -- (an implicit level whose parameter occurs nowhere in the final type and value — its class was merged into
+    -- another level's by unification — is not a level of the declaration: dropped. Never a level the source
+    -- names. Entry 16: `Algebra_isZmodule__to__Algebra_hasOpp`'s 1691, every argument of which is `u_333`)
+    let usedPs := (collectLevelParams (collectLevelParams {} (← instantiateMVars ty)) (← instantiateMVars val)).params
+    let unusedImplicit := implicitLevels.filter fun l => !explicitTy.contains l && !sol.contains l && !usedPs.contains (levelParamName l)
+    let implicitLevels := implicitLevels.filter (!unusedImplicit.contains ·)
+    paramLevels := paramLevels.filter (!unusedImplicit.contains ·)
+    -- (an implicit level that typing solved is an own level with a solution, not also a parameter: parameters and
+    -- solved levels partition the own levels — entry 16, found by the audit on the R3G-for-definitions tier)
+    let globals := (paramLevels ++ implicitLevels.filter (!sol.contains ·) ++ levelInterp.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
     let lparams := polyNames ++ globals.toList.map levelParamName
     -- R3 coherence for R2F-c own levels: an argument for `l` must be ι l
     let solι := levelInterp.foldl (fun (m : Std.HashMap String Level) (l, x) => m.insert l x) sol
@@ -1190,6 +1241,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
                                       pendingHyps := hyps.map (·.2), targetType := ty, targetValue := val,
                                       levelParams := lparams, paramLevels := globals.map backCopy, levelCopies := splits, polyParams := polyNames.length,
                                       factReduced := factReduce, implicitLevels, levelInterp, propLift := propLiftDepth, propLiftCoercions := coercions,
+                                      eqLowered := ← (match eqRef? with | some r => r.get | none => pure 0),
                                       admittingLevels := admitLv, cumulativity := cumul, r2bpLevels := r2bp, sortLevels := sortLv, resultSortInherited := inherited,
                                       r2bpInType := (r2bp.map (·.1)).filter (globalsOf c.type).contains,
                                       universeLowered := lower, deltaInlined := inlinedA }
@@ -1615,10 +1667,10 @@ partial def termHasFix : IR.Term → Bool
 /-- Speed (entry 14): a late, last-resort tier with its own, smaller heartbeat budget (a fifth of the
 declaration's) under a fresh counter; an attempt exhausting it is a failed attempt (`RESOURCE_LIMIT`,
 state restored), not the end of the declaration's other tiers. -/
-def budgeted (src kind : String) (x : MetaM DeclResult) : MetaM DeclResult := do
+def budgeted (src kind : String) (x : MetaM DeclResult) (divisor : Nat := 5) (factor : Nat := 1) : MetaM DeclResult := do
   let saved ← saveState
   tryCatchRuntimeEx
-    (withTheReader Core.Context (fun c => { c with maxHeartbeats := c.maxHeartbeats / 5 }) (withCurrHeartbeats x))
+    (withTheReader Core.Context (fun c => { c with maxHeartbeats := c.maxHeartbeats * factor / divisor }) (withCurrHeartbeats x))
     fun e => do
       saved.restore
       pure { source := src, kind, status := if e.isRuntime then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
@@ -1657,19 +1709,19 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
     (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
     (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) (propLift : Bool := false)
-    (phantom : Bool := false) :
+    (phantom : Bool := false) (eqLower : Bool := false) :
     MetaM DeclResult := do
   let t0 ← IO.monoMsNow
   let lbl0 := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
-      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom)] extraOwn.size
+      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom), ("eq", eqLower)] extraOwn.size
   -- (an attempt aborted by its budget is logged too, then the exception goes on to `budgeted`)
   let r ← tryCatchRuntimeEx (processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort
-      wfTerm inheritSort hypExact joint unify propLift phantom) fun e => do
+      wfTerm inheritSort hypExact joint unify propLift phantom eqLower) fun e => do
     if let some ref := genv.tierLog then ref.modify (·.push (lbl0, (← IO.monoMsNow) - t0, "RESOURCE_LIMIT | aborted"))
     throw e
   if let some ref := genv.tierLog then
     let lbl := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
-      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom)] extraOwn.size
+      ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom), ("eq", eqLower)] extraOwn.size
     -- (a refused attempt's reason, abbreviated: diagnostics only, the timing file is not the report)
     let st := if r.accepted || r.status == "UNSUPPORTED_FEATURE" then r.status else s!"{r.status} | {r.message.take 600}"
     ref.modify (·.push (lbl, (← IO.monoMsNow) - t0, st))
@@ -1723,6 +1775,7 @@ def DeclResult.toJson (r : DeclResult) : Json :=
     ("prop_lift_unfold", Json.arr (r.propLiftUnfold.map Json.str)),
     ("phantom_lowered", Json.arr (r.phantomLowered.map Json.str)),
     ("coinductive_as_inductive", Json.bool r.coinductiveAsInductive),
+    ("eq_lowered", Json.num r.eqLowered),
 
     ("delta_inlined", Json.arr (r.deltaInlined.map Json.str)),
     ("r2bp_levels", Json.arr (r.r2bpLevels.map fun (m, l) =>
@@ -2012,6 +2065,10 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
            message := if rt then s!"resource limit per declaration: {msg.take 300}" else s!"internal error: {msg.take 600}" }, none)
     let mut r := r
     r := { r with timeMs := (← IO.monoMsNow) - tDecl, tierTimes := ← match genv.tierLog with | some ref => ref.get | none => pure #[] }
+    -- (diagnostics: `R2L_PROGRESS=<file>` appends each finished declaration, so a long run can be followed;
+    -- not part of any report)
+    if let some f := (← IO.getEnv "R2L_PROGRESS") then
+      IO.FS.withFile f .append fun h => h.putStrLn s!"{r.timeMs}\t{r.status}\t{r.source}"
     match asm? with
     | none => if let some g := genv? then genv := g
     | some a =>
@@ -2196,7 +2253,7 @@ where
             let mut better := false
             for it in [false, true] do
               sBefore.restore
-              let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+              let r' ← budgeted c.name "constant" (divisor := 1) <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
                 (interp := it) (extraOwn := eo) (joint := true)
               -- (only parameters of the type: a level of the value alone generalizes nothing a use can see,
               -- and its argument at uses is then undetermined — e.g. ssrnat.leq inside fintype.ordinal)
@@ -2280,7 +2337,9 @@ where
             r.message.startsWith "scrutinee type is not an application of")
           -- (speed, exact gate: coercions need a dependency reaching a lifted definition; a value lift needs a
           -- definition declared at a `Type`)
-          let liftPossible := (c0.typeDeps ++ c0.bodyDeps).any genv.liftReach.contains || (!isStmt && irEndsInSort c0.type)
+          -- (entry 16: or the kernel saw a Prop-valued relation where a Type-valued one is expected)
+          let relMismatch := r.status == "KERNEL_REJECTED" && (r.message.splitOn "→ Prop").length > 1
+          let liftPossible := (c0.typeDeps ++ c0.bodyDeps).any genv.liftReach.contains || (!isStmt && irEndsInSort c0.type) || relMismatch
           if !r.accepted && c0.bodyState != "opaque_interface" && (retry r.status || castFail) && liftPossible then
             -- (with the ladder's variants: R2F-c, cumulativity, R3↓, per-occurrence coherence)
             for (it, cu, lo, un) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
@@ -2319,13 +2378,16 @@ where
                 let eoQ := eo.filter (!gone.contains ·)
                 -- (with per-instance prerequisite hypotheses, P3: a proof of a phantom check, HB's `id_phant`,
                 -- is a prerequisite used at a different lowered sort at each occurrence)
-                -- (order from the timing data, GEL frontier: P3 587/608 successes, cu+lo 38, cu 1, it+P3 2; it, un
-                -- and it+un 0/647 each — tried last, not pruned: no claim depends on the order)
-                for (it, cu, lo, un, p3) in [(false, false, false, false, true), (false, true, true, false, false),
-                                             (false, true, false, false, false), (true, false, false, false, true),
-                                             (true, false, false, false, false), (false, false, false, true, false),
-                                             (true, false, false, true, false), (false, false, true, false, true),
+                -- (order from the timing data, S17: lo+P3 232 successes, cu+lo 108, it+P3 2, cu 1; P3 alone repeats the
+                -- first attempt for a declaration using `id_phant` (identical flags), so it is skipped there; it, un
+                -- and it+un succeeded nowhere — tried last, not pruned)
+                let p3First := (c0.typeDeps ++ c0.bodyDeps).any genv.phantomProofs.contains
+                for (it, cu, lo, un, p3) in [(false, false, true, false, true), (false, true, true, false, false),
+                                             (true, false, false, false, true), (false, true, false, false, false),
+                                             (false, false, false, false, true), (true, false, false, false, false),
+                                             (false, false, false, true, false), (true, false, false, true, false),
                                              (false, false, false, true, true)] do
+                  if p3First && p3 && !it && !cu && !lo && !un then continue
                   let r' ← budgeted c.name "constant" <| processConstant genv results cQ (stmt := isStmt)
                     (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eoQ)
                     (lower := lo) (unify := un) (hypExact := p3) (phantom := true)
@@ -2336,6 +2398,56 @@ where
                     r := { r' with phantomLowered := gone }
                     iface := none
                     break
+                -- (entry 16) Q-a with R2B-V: a type-valued definition (HB's `phant_axioms : … → Type@{l}`, its value an
+                -- `axioms_` record type) whose result sort Rocq reaches by cumulativity: the result sort is the value's
+                -- sort (R2B-V, unchanged checks), together with the lowered phantom checks; the two tiers were only
+                -- ever tried apart
+                if !r.accepted && !isStmt && irEndsInSort c0.type then
+                  for (it, lo, p3) in [(false, false, false), (false, false, true), (false, true, false), (true, false, false)] do
+                    let r' ← budgeted c.name "constant" <| processConstant genv results cQ (inferSort := false)
+                      (interp := it) (extraOwn := eoQ) (lower := lo) (hypExact := p3) (inheritSort := true) (phantom := true)
+                    if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                    if r'.status == "RESOURCE_LIMIT" || r'.status == "UNSUPPORTED_FEATURE" then break
+                    if r'.accepted then
+                      r := { r' with phantomLowered := gone }
+                      iface := none
+                      break
+          -- rule E (docs/EQ_LOWERING.md, approved 2026-10-17): an unprotected statement whose conclusion is an equality
+          -- of convertible terms at a larger universe than theirs (CoqEAL's `refines A B R = R` at `A → B → Type@{l}`)
+          -- is stated at the operands' type; convertibility is checked here and re-checked by the consumer
+          if !r.accepted && isStmt && c0.bodyState != "opaque_interface" && !genv.protectedNames.contains c0.name && (retry r.status) then
+            if let some bM := c.body.bind eqLowerMark then
+              let cEq := { c with body := some bM }
+              let eoE := eo.filter (globalsOf bM).contains
+              for (it, lo, p3) in [(false, false, false), (true, false, false), (false, true, false), (false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results cEq (stmt := true)
+                  (interp := it) (lower := lo) (hypExact := p3) (extraOwn := eoE) (eqLower := true)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
+                if r'.status == "RESOURCE_LIMIT" || r'.status == "UNSUPPORTED_FEATURE" then break
+                if r'.accepted && r'.eqLowered == 1 then
+                  r := r'
+                  iface := none
+                  break
+          -- R-CARRIER without the P2 operand split (entry 16), last resort for unprotected declarations: the
+          -- carriers of independent operands identified again, the translation before P2 (docs/CARRIER_LEVELS.md).
+          -- A proof-local level solved through one operand copy cannot satisfy the copied bound of another
+          -- (`BaseAddMagma_isAddMagma.phant_Build`: `25__c1 ≤ 158` against `158 := max (25__c0, …)`); with one
+          -- carrier the source fact holds. Never for a protected declaration; a protected dependant is still held to
+          -- the generality check. Reported (`level_diagnostics`: no-split).
+          if !r.accepted && !genv.protectedNames.contains c0.name && (retry r.status) then
+            let genvNS := { genv with carrierSplit := false }
+            for (ph, p3, lo) in [(true, false, false), (true, true, false), (true, true, true), (false, false, false), (false, true, false)] do
+              if ph && gone.isEmpty then continue
+              let r' ← budgeted c.name "constant" <| processConstant genvNS results (if ph then cQ else c) (stmt := isStmt)
+                (inferSort := c0.bodyState == "opaque_interface") (extraOwn := if ph then eo.filter (!gone.contains ·) else eo)
+                (hypExact := p3) (lower := lo) (phantom := ph)
+              if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[no-split] {r'.message}" }
+              if r'.status == "RESOURCE_LIMIT" then break
+              if r'.accepted then
+                r := if ph then { r' with phantomLowered := gone, levelDiagnostics := r'.levelDiagnostics.push "no-split" } else
+                  { r' with levelDiagnostics := r'.levelDiagnostics.push "no-split" }
+                iface := none
+                break
           -- R3G for definitions, last resort (entry 15): a failing definition is retried with the implicit levels
           -- of its references (discovery pass) as its own levels, instead of leaving those references' levels
           -- to their defaults (`refines`' relation level forced to 0 below `Set < l`; Classic `job_eqdef`'s
@@ -2346,18 +2458,26 @@ where
           -- (speed, entry 16: only when a failure shows the symptom it addresses, a level defaulted to 0 — no claim
           -- that existed before the tier depends on it)
           let msgs := r.message ++ ((lastTier.map (·.message)).getD "")
-          let zeroDefault := (msgs.splitOn "(some 0)").length > 1 || (msgs.splitOn "argument is 0").length > 1
+          -- (entry 16: or R3 refused an argument at a reference for a level the declaration does not own — an
+          -- implicit level fixed by unification where Rocq used the referenced declaration at its own level by
+          -- cumulativity, HB builders using `axioms_@{563}` through their obligations; these builders are large,
+          -- so the tier gets the full heartbeat budget there)
+          let notEntailed := (msgs.splitOn "is not entailed by the source universe graph").length > 1
+          -- (and residual defaults not justified: levels left free, defaulted, the generic version kernel-rejected —
+          -- CoqEAL's `refines_abstr`/`refines_apply`, whose relation levels belong to `refines`)
+          let zeroDefault := (msgs.splitOn "(some 0)").length > 1 || (msgs.splitOn "argument is 0").length > 1 || notEntailed ||
+            (msgs.splitOn "defaulted universe level(s)").length > 1
           if !r.accepted && !isStmt && genv.stmtMode && gone.isEmpty && zeroDefault &&
               (retry r.status || r.status == "INTERFACE_REJECTED" || r.status == "TRANSLATION_FAILED") then
             let sD ← saveState
-            let dsc ← budgeted c.name "constant" <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
+            let dsc ← budgeted c.name "constant" (divisor := if notEntailed then 1 else 5) <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
               (discover := true)
             sD.restore
             if dsc.status == "DISCOVERED" && !dsc.implicitLevels.isEmpty then
               let eoD := (eo ++ dsc.implicitLevels).toList.eraseDups.toArray
               for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, true, false),
                                        (false, false, false, true)] do
-                let r' ← budgeted c.name "constant" <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
+                let r' ← budgeted c.name "constant" (divisor := if notEntailed then 1 else 5) <| processConstant genv results c (inferSort := c0.bodyState == "opaque_interface")
                   (interp := it) (cumul := cu) (lower := lo) (hypExact := p3) (extraOwn := eoD)
                 if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
                 if r'.status == "RESOURCE_LIMIT" then break
@@ -2367,14 +2487,30 @@ where
                   break
           -- P3 (ITERATION_LOG entry 8): per-instance prerequisite hypotheses (no level unified across uses;
           -- duplicates collapsed after solving), when the attempts above failed
-          if !r.accepted && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then
+          -- (speed, entry 16: not where Q-a applies — S17: 0 successes there in 3,821 s; Q-a's own P3 variants cover it)
+          if !r.accepted && genv.stmtMode && gone.isEmpty && (retry r.status || r.status == "TRANSLATION_FAILED") then
             -- (speed, entry 14: without pending prerequisites or a fixpoint no hypothesis exists, and the first two
             -- variants are exactly earlier tiers)
             let (_, _, cPend) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
             let noHyps := cPend.isEmpty && !((c.body.map termHasFix).getD false)
+            -- (entry 16: when the failure is the kernel rejecting a prerequisite hypothesis passed to a pending
+            -- statement — one shared hypothesis where the statement has several per-instance ones, HB's
+            -- `factory_89` passing `id_phant` to `factory_83`'s obligation — only P3 can succeed: its attempts get
+            -- the full heartbeat budget, not the late tiers' fifth; this only adds successes)
+            let hm := r.message ++ ((lastTier.map (·.message)).getD "")
+            -- (speed, entry 16: exactly the shape P3 resolves — a dependency whose pending artifact carries several
+            -- per-instance hypotheses for one prerequisite; the broad message test made S19 36% slower)
+            let dupOf (d : String) : Bool := match results[d]? with
+              | some x => x.pendingHyps.size > (x.pendingHyps.toList.eraseDups).length
+              | none => false
+            -- (a direct dependency, or a prerequisite leaf it carries as a hypothesis: `factory_89` meets
+            -- `factory_83`'s obligation 23 — seven `id_phant` hypotheses — through a pending dependency)
+            let dupHyps := (c0.typeDeps ++ c0.bodyDeps).any fun d =>
+              dupOf d || (match results[d]? with | some x => x.pendingHyps.any dupOf | none => false)
+            let hypMismatch := dupHyps && (hm.splitOn "application type mismatch").length > 1 && (hm.splitOn " h_").length > 1
             for (fr, it, cu, lo) in [(false, false, false, false), (false, true, false, false), (false, false, false, true)] do
               if noHyps && !lo then continue
-              let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+              let r' ← budgeted c.name "constant" (divisor := if hypMismatch then 1 else 5) (factor := if hypMismatch then 5 else 1) <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
                 (factReduce := fr) (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := true)
               if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some r'
               if r'.accepted then
@@ -2406,7 +2542,9 @@ where
               let mut better := false
               for it in [false, true] do
                 sBefore.restore
-                let r' ← processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+                -- (budgeted, entry 16: an improvement attempt after acceptance must not lose the accepted row to the
+                -- declaration's cumulative heartbeat count — HB builder `Algebra_isZmodule__to__Algebra_hasOpp`)
+                let r' ← budgeted c.name "constant" (divisor := 1) <| processConstant genv results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
                   (interp := it) (extraOwn := eo) (unify := true)
                 if r'.accepted && solvedTy r' < solvedTy r && r'.levelDefaults ≤ r.levelDefaults then
                   r := { r' with levelDiagnostics := r'.levelDiagnostics.push s!"generality: {solvedTy r} solved type level(s) reduced to {solvedTy r'} (shared levels per occurrence)" }

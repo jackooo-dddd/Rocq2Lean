@@ -18,3 +18,8 @@ Definition pick (a b : nat) (h : R a b) : nat := b.
 Definition r2 : nat := pick 1 0 eq_refl.
 (* a match on an inhabitant of the lifted type, as the equation it lifts (PULift.down) *)
 Definition dmatch (a b : nat) (h : R a b) : nat := match h with eq_refl => b end.
+(* a Prop-valued relation used where a Type-valued one is expected (CoqEAL's `refines … (unify N)`): its
+   propositions lifted under its binders, `fun x y => PULift (urel x y)` *)
+Definition urel (x y : nat) : Prop := x = y.
+Lemma rel_stmt (h : refines nat nat urel 1 1) : True.
+Proof. exact I. Qed.
