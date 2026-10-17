@@ -1,5 +1,39 @@
 # Status
 
+**2026-10-18 — Stage 6: the GEL/HB frontier, rule P under η, rule E, report streaming (merged into `main` after
+validation).**
+* **Rule adopted (approved 2026-10-17):** rule E, equalities of convertible terms at a cumulative universe stated
+  at the operands' universe (`docs/EQ_LOWERING.md`; consumer E1 re-check, audit shape check, `test-eq-lowering`).
+  Rule P extended under η (a Prop-valued relation where a Type-valued one is expected).
+* **Frontier tiers (no new policy):** R-CARRIER no-split last resort, R3G for definitions on not-entailed
+  references, Q-a with R2B-V, P3 budget on hypothesis mismatches; fixes to R2B-V's result-sort level and to
+  constant discovery (S15's recursion); the report is written as a stream (S21 was killed for memory writing it).
+* **Corpus** at `b46916c` (run `r2l-run-S21b`; consumer, audit, provenance, conversion and tasks OK):
+  **685 Accepted / 3,585 Audited Pending / 180 Blocked / 24 Direct Failure**, 204 unclaimed (S17: 685 /
+  3,584 / 184 / 21, 205 unclaimed). 0 regressions; all rows 9,804 → 10,200 claimed (+396, 0 lost); blocked rows
+  923 → 533. The GEL roots stay blocked by a 16-declaration frontier (23 at S17). Translation 6 h 57 min.
+* **Suites** at `68f4bdc` (serialization fix): 18 statement suites and `test-all` 18/18.
+* **Proposals:** 1 (rule U) not implemented — no conflict at a local position (`docs/ULIFT_PROPOSAL.md` §9);
+  2 (universe solver) in progress, stage A records and stage B experiments.
+* ITERATION_LOG entry 16.
+
+**2026-10-16 — Stage 5: job_task, rule P, rule Q-a, rule T, speed (merged into `main` after validation).**
+* **Rules adopted (approved 2026-10-15):** rule P, `PULift` for a proposition used at a type
+  (`docs/PROP_LIFT.md`, C1–C5 proofs); rule Q-a, phantom-only sort lowering for HB's `unify`/`id_phant`
+  (`docs/PHANTOM_SORT.md`, equivalence proofs; **Q-b not adopted**); rule T, non-recursive coinductive types
+  as inductives (`docs/COINDUCTIVE.md`, T1–T5). New suites: `test-prop-lift`, `test-phantom-sort`,
+  `test-coinductive`.
+* **No-policy fixes:** `job_task` (δβ-inlining of erasing definitions for constants), the erasing tier's own
+  levels, R3G for definitions as a last resort (`refine_maxn`/`refine_minn`), P3 collapse with normalized
+  levels, a proof-mode audit crash.
+* **Corpus** at `38df8a9` (run `r2l-run-S17`; all checks OK): **685 Accepted / 3,584 Audited Pending / 184
+  Blocked / 21 Direct Failure**, 205 unclaimed (S8: 676 / 3,538 / 235 / 25, 260 unclaimed).
+  * 55 protected roots newly supported since S8; 0 regressions; all rows +1,965 claimed, 0 lost.
+* **Open:** the GEL/order group (79 roots) behind a 23-declaration HB frontier (R-CARRIER copies × copied
+  facts), next; Classic `job_eqdef` needs a representation decision; translation time (4 h 36 min, P3
+  attempts) is the next speed target.
+* ITERATION_LOG entry 15.
+
 **2026-10-15 — Stage 4: blocks, terminations and translator speed (merged into `main` after validation).**
 * `gcdn` (B-P termination statements), R3G for template blocks and field-only classes, δβ-inlining of
   erasing polymorphic definitions, native compilation and conditional tiers.
@@ -8,12 +42,38 @@
   / 25).
   * 558 protected roots newly supported since RH2; 0 regressions; all rows +1,988 since S3, 0 lost.
 * Full-corpus translation takes 22.5 min, native (S4 interpreted: more than 106 min).
-* **Awaiting decisions:** rule P (`docs/PROP_LIFT_PROPOSAL.md`), rule Q
-  (`docs/PHANTOM_SORT_PROPOSAL.md`), and coinductive `Task_T`.
+* **Awaiting decisions (decided in stage 5):** rule P (now `docs/PROP_LIFT.md`), rule Q (now
+  `docs/PHANTOM_SORT.md`, Q-a), and coinductive `Task_T` (now `docs/COINDUCTIVE.md`, rule T).
 * ITERATION_LOG entry 14.
 
-**2026-10-15 — R-CARRIER, case B Option 2 (branch `rules-carrier`, experimental; committed locally,
-not merged or pushed, pending review).**
+**2026-10-15 — Stage 3: coherence by unification, shared levels per occurrence (branch
+`rules-occurrence`; merged into `main` after validation).**
+* `docs/COHERENCE_READINGS.md` §6, with rule R in its general form (equality at every source model).
+* **Corpus** at `2c78107` (run `r2l-run-S3`; consumer, audit, instances, provenance and tasks OK):
+  **673 Accepted / 3,477 Audited Pending / 299 Blocked / 25 Direct Failure** (RH2: 673 / 2,983 / 785
+  / 33).
+  * 494 protected roots newly supported; 0 regressions; all rows +531 claimed, 0 lost.
+* 324 protected roots remain unclaimed.
+* `fun_hrel` (Prop ≤ Type) and `Task_T` (coinductive) need representation decisions.
+* ITERATION_LOG entry 13.
+
+**2026-10-15 — Rules R and H (branch `rules-coherence`; merged into `main` after validation).**
+* **Rule R** (`docs/COHERENCE_READINGS.md`): shared-level coherence modulo an R2F reading. An argument
+  `max (u_l, s…)` whose other summands pass R3 equals `l` at every model of the source facts.
+* **Rule H** (same document, §5): R3↓ at proof tasks' statements, the types of generated prerequisite
+  hypotheses, on every tier. It fixes R's one regression (Classic `Affinity.task_affinity`).
+* **Corpus** at `2e46cbf` (run `r2l-run-RH2`; consumer, audit, source instances, provenance and task
+  rendering OK): **673 Accepted / 2,983 Audited Pending / 785 Blocked / 33 Direct Failure** (from CB3's
+  673 / 2,260 / 1,494 / 47).
+  * 723 protected roots newly supported (702 Classic); 0 protected regressions;
+  * all rows: +737 claimed, 0 lost.
+  * R alone (run RR, `b915360`): 673 / 2,834 / 933 / 34 (+575, one regression); H adds +149.
+* REFERENCE_COHERENCE is gone. The largest remaining family is PROTECTED_RANGE_NARROWED: 11 members,
+  597 roots blocked by it alone.
+* ITERATION_LOG entry 12.
+
+**2026-10-15 — R-CARRIER, case B Option 2 (branch `rules-carrier`; merged into `main` and pushed on
+2026-10-15).**
 * Per-operand carrier universe levels: P1 decoupled parameter carriers, P2 implicit operand copies
   `l__c<k>`, P3 proof-local levels never represent a class, and refinements 1–5
   (`docs/CARRIER_LEVELS.md`).

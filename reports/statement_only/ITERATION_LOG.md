@@ -1310,6 +1310,329 @@ ideal `processor_state` and `task_affinity` among them.
 * A second variant measured on subsets (H: copy semantics at prerequisite-statement hypotheses) gained
   nothing on its own.
 
+## Entry 12 — Rules R and H: shared-level coherence modulo an R2F reading; prerequisite instances (2026-10-15)
+
+Request: merge case B and push; adopt rule R (entry 11 §9) with an independent audit, negative
+controls and full regression testing; investigate and fix the `Affinity.task_affinity` regression.
+Then find the next blocker family by measurement. Branch `rules-coherence`, from `main` = `74ca20b`
+(case B, merged and pushed at the start of this round).
+
+### (1) What was changed
+
+* **Rule R** (`b915360`, `docs/COHERENCE_READINGS.md` §1–4). At a reference, an argument for a shared
+  level `l` may be `max (u_l, s₁, …)` when every other summand passes R3 (no raising). This is not
+  allowed for motive-level (R8) or proof-local levels.
+  * Translator: `checkInstantiation`. Audit: `check_universe_args`.
+  * It is always on; the experiment's environment flags were removed.
+* **Rule H** (`892699a`, §5). At a reference to a proof task's statement (the type of a generated
+  prerequisite hypothesis), an argument for a shared level may lie below it. This is R3↓, on every
+  tier.
+  * Translator: `GEnv.leafStmtTargets`, filled where `leafStmt` is registered.
+  * Audit: `HYP_STATEMENTS`, derived from the source's proof tasks (`is_leaf` plus the generated
+    statements) under both target namings.
+* **Task rendering** (`2e46cbf`): the heartbeat limit applies per task. Before, it applied to the
+  whole `#rocq2lean_render_tasks` command, and 3,186 tasks exceeded it in run RH. Translation and
+  checks are unchanged.
+
+### (2) The `task_affinity` regression (diagnosis and fix)
+
+`Affinity.task_affinity (T : eqType) (n : nat) := T -> affinity n` shares `eqtype.51` with its
+binder `T`.
+* `affinity`'s prerequisite hypothesis `inj_eqAxiom`'s obligation 1 is used at `nat_eqType`, whose
+  carrier is 0. `task_affinity` inherits that hypothesis at `…, 0, …`, and coherence refused the plain
+  tiers.
+* On the R3↓ tier, `T`'s carrier was solved to 0: a narrowing, refused for this protected definition.
+* Under R the dependency chain became general, which exposed this; before R it was specialized
+  enough to hide it.
+* H accepts the hypothesis instance (R3-checked). The fixture `task_ord_affinity` reproduces the
+  shape: without H it is accepted only on R3↓ with `T : Equality.type.{…, 0, …}`; with H it is on a
+  plain tier with `u_51`.
+
+### (3) Independent checks and controls
+
+* `scripts/test-coherence` (16 checks; fixture `fixtures/stmt/coh`: real exporter, real MathComp
+  declarations, synthetic statements):
+  * Positive: the `choice` sub-type Countable instance has no defaulted level, and its references
+    read 299 as `max (u_299, u_577)`. `factory_66`, its obligation 1, `ord_pickle_refl` and
+    `sub_pickle_refl` are claimed. Before R (checked at `74ca20b`), the obligation was refused and
+    the others blocked.
+  * Negative forged rows, audit-rejected (the kernel rejected the forged rows too):
+    * `max (u_299, u_1007)`, which raises;
+    * `u_577` for the shared 299 on a plain tier, which specializes.
+  * Rule H: `task_ord_affinity` as above. Its hypotheses forged at `u_51 + 1` (raising) are
+    audit-rejected.
+  * Unit controls on the audit:
+    * R: readings accepted; rejected are a raising summand, an offset, `Set + 2`, `u_l + 1`, no `u_l`
+      summand, a motive level and a proof-local level;
+    * H: a lower argument is accepted at a statement only; raising and offset arguments are rejected
+      there.
+* `tests/smoke/UniverseRules.lean`: the same R cases as `#guard`s on the translator's
+  `checkInstantiation`.
+
+### (4) Coverage — FULL CORPUS, same 4,474 protected roots
+
+| Run | Impl | Accepted | Audited Pending | Blocked | Direct Failure |
+|---|---|---|---|---|---|
+| CB3 (entry 11) | `ee4e779` | 673 | 2,260 | 1,494 | 47 |
+| RR (R) | `b915360` | 673 | 2,834 | 933 | 34 |
+| RH (R + H) | `892699a` | 673 | 2,983 | 785 | 33 |
+| **RH2 (R + H + task fix)** | `2e46cbf` | **673** | **2,983** | **785** | **33** |
+
+All four runs were validated: consumer, audit, source instances (R2B-P), `CORPUS_PROVENANCE_BOUND`
+and conversion dependence. RH's task rendering failed, which is the fix in `2e46cbf`; RH2 renders
+3,156 tasks.
+
+**Protected transitions:**
+
+| Transition | Newly supported | Classic | Genuine regressions | Moved between unclaimed categories |
+|---|---|---|---|---|
+| CB3 → RH2 | 723 | 702 | 0 | 2 |
+| CB3 → RR | 575 | — | 1 (`task_affinity`) | — |
+| RR → RH2 | 149 | 149 | 0 | — |
+
+**All rows (10,966):**
+
+| Transition | Claimed gained | Claimed lost |
+|---|---|---|
+| CB3 → RH2 | 737 | 0 |
+| CB3 → RR | 589 | 1 |
+| RR → RH2 | 149 | 0 |
+
+Old false acceptances: 0.
+
+### (5) Remaining blockers (RH2 backlog)
+
+818 protected roots are unclaimed (756 modern, 62 Classic). REFERENCE_COHERENCE no longer occurs.
+
+| Family | Members | Roots affected | Roots blocked by it alone |
+|---|---|---|---|
+| PROTECTED_RANGE_NARROWED | 11 | 623 | 597 |
+| SOLUTION_FACT_VIOLATED | 312 | 139 | 11 |
+| PROP_TYPE_CUMULATIVITY | 10 | 82 | 1 |
+
+Measured on the dependency frontier of the unclaimed protected roots, PROTECTED_RANGE_NARROWED has
+two mechanisms:
+
+* **(a)** `JobType`'s carrier 51 pinned to 0: the processor-state instances (`ideal.processor_state`
+  and 5 more), plus `schedule_up_to`. 280 roots have `processor_state` on their frontier.
+  * `ProcessorState`'s parameter `Job` and field `Core` get the R2F reading `max (u51, u101)`, because
+    51 and 101 are mutually equal in the source graph.
+  * A concrete `Core := unit` therefore pins `Job`'s carrier.
+* **(b)** `JobType`'s level 32 pinned to 0: `JobReady`, `SystemEvolutions`, `concrete_job`. 332 roots
+  have `JobReady` on their frontier.
+  * Upstream, the protected `schedule` was accepted with its result-sort level 22 *solved* to
+    `max (u51, u101)`. The source has only `51 ≤ 22`, so this ties `PState`'s `State` universe to the
+    job carrier.
+  * Cause: coherence by construction makes the declared sort `?22` and `ProcessorState`'s reading
+    `max (?22, ?51, ?101)` one cyclic equation, which the bounded solver settles at `max (51, 101)`.
+  * Both checks (R2S facts and generality) accept this solution, because typing forced it under the
+    single-variable representation.
+
+Stage 3 (per-occurrence shared levels) is in progress on branch `rules-occurrence`. It is not
+adopted and is measured separately (entry 13).
+
+### (6) Process corrections in this round
+
+* The frozen suite worktree `r2l-B-test` held a copied fixture (from the pre-change baseline check
+  of `fixtures/stmt/coh` at `74ca20b`) that blocked the checkout. That first suite job was stopped
+  and the tree cleaned before the recorded runs. Baselines are now taken only in throwaway
+  directories.
+* A `pkill -f` pattern matched the shell running it. Jobs are now stopped by PID.
+* Pushes over SSH stall in the machine's proxy (fake-IP TUN routing of `github.com`); the push
+  output is authoritative. Memory note `github-push-proxy`.
+
+### (7) Regressions and validation
+
+* Frozen worktree `r2l-B-test`:
+
+  | Commit | Statement suites | `test-all` |
+  |---|---|---|
+  | `b915360` | all 12 pass (`test-coherence` 12) | 18/18 |
+  | `892699a` | all 12 pass (`test-coherence` 16) | 18/18 |
+  | `2e46cbf` | all 12 pass | 18/18 |
+
+  The statement suites are `test-statement` 30, `test-termination` 22, `test-assembly` 34,
+  `test-opaque` 16, `test-universe-c` 22, `test-universe-r2` 9, `test-multi-instance` 8,
+  `test-level-split` 18, `test-result-sort` 15, `test-carrier` 20, `test-coherence` and
+  `test-provenance` 5. The reports in `reports/statement_only/test_*.json` and
+  `reports/test_all.json` are from the `2e46cbf` run.
+* Corpus as in (4). No protected regression in RH or RH2.
+
+### (8) Commands and evidence
+
+Corpus runs in frozen worktrees `r2l-run-RR`, `r2l-run-RH` and `r2l-run-RH2`, as in entry 11
+(`statement_run.py merge / translate / check / instances / tasks`, `conversion_deps.py`,
+`coverage_delta.py snapshot`, `statement_provenance.py manifest / check`, `c1_transitions.py`,
+`rule_backlog.py`).
+
+Evidence:
+* `coverage/{RR,RH,RH2}.json`;
+* `coverage/transitions-CB3-to-{RR,RH2}.json` and `coverage/transitions-RR-to-RH2.json`;
+* `RULE_BACKLOG.{md,json}` and `PROOF_TASKS.jsonl` (RH2);
+* `provenance/CORPUS_MANIFEST.json` (RH2; `-CB3` kept);
+* `termination/CONVERSION_DEPENDENCE{,-RH2}.json`;
+* `test_coherence.json` and the other frozen-suite reports.
+
+## Entry 13 — Stage 3: coherence by unification (shared levels per occurrence) (2026-10-15)
+
+Request: identify the mechanism that unblocks the most protected roots on the full-corpus dependency
+frontier after rules R and H, and design, implement and validate a general solution. Branch
+`rules-occurrence`, from `main` = `28c477a`; one squashed commit (tree identical to the measured
+`2c78107`). Rule document: `docs/COHERENCE_READINGS.md` §6.
+
+### (1) Measured frontier (RH2) and diagnosis
+
+PROTECTED_RANGE_NARROWED was the largest family: 11 members, 597 roots blocked by it alone. On the
+frontier of the 818 unclaimed protected roots, its members split into:
+* `JobReady` (332 roots) and `ideal.processor_state` (280), with 144 roots needing both;
+* `concrete_job` (48), `concrete_task` (36) and `SystemEvolutions` (19).
+
+All of them were coherence *by construction*: every reference to a shared level used the
+declaration's one level variable. Three shapes:
+
+* **`JobType := Equality.type`** reads its level 58 as `max (u32, u51+1, u55, u58)`.
+  * `Equality.sort Job` needs that reading at its 58 position, while the binder has `u58`.
+  * Every plain attempt was ill-typed: the kernel reported an application type mismatch, from
+    `?58 =?= max (…, ?58)`.
+* **`schedule`**: the declared result sort `?22` had to equal `ProcessorState`'s reading
+  `max (?22, ?51, ?101)`.
+  * The bounded solver chose `22 := max (51, 101)`. The source has only `51 ≤ 22`, so `PState`'s
+    `State` universe was tied to the job carrier.
+  * Both checks accepted this because typing forced it. `JobReady` inherited the narrowing.
+* **`ProcessorState`**: its R2F interpretation read `Job`'s and `Core`'s carriers both as
+  `max (u51, u101)`, because 51 and 101 are mutually equal in the source graph.
+  * `Core := unit` therefore pinned `Job`'s carrier.
+  * The plain attempt failed only through the first shape.
+
+### (2) What was changed (§6 of the rule document)
+
+1. **Per-occurrence shared levels** (new retry tier).
+   * Every reference to a level shared with the declaration takes its own level metavariable,
+     including universe-polymorphic instance levels on the stage-4 branch only.
+   * After `solveLevels` has unified the value's type with the declared type, the free ones are bound
+     back to the declaration's own variable (`rebindShared`).
+   * A level that typing solved through one of its own occurrences becomes its parameter. It is then
+     booked as *interpreted*, and its solution must equal its R2F reading exactly
+     (`ownLevelInterp`), or the tier is refused.
+   * Constants try the tier after the strict tiers. Blocks try plain parameters per occurrence before
+     R2F (M6's order).
+2. **Blocks with plain parameters per occurrence**: the arity's final sort is read through R2F
+   (`sort_interp`, reported). The audit recomputes the R2F image for that sort and checks every other
+   part of the arity with plain levels (`split_sort_interp`).
+3. **Generality retry for definitions**: a definition accepted with an own type level solved by typing
+   is retried per occurrence. The retry is kept only if it has fewer solved type levels and no more
+   defaults.
+4. **Discovery modulo readings** (blocks):
+   * a metavariable summand of an arity argument `max (?x, …)` is a candidate for its source level;
+   * prerequisite statements (rule H) decide no class.
+5. **Rule R in its general form**: equality at every model of the source facts. This is
+   `equalAtModels` in the translator and `equal_at_models` in the audit, implemented independently.
+   It applies to:
+   * the argument for a shared level;
+   * the argument for a solved or interpreted own level;
+   * generality (`freeLevelRef` / `check_statement_generality`), which extends R-CARRIER refinement 5.
+
+   The justification is unchanged: an argument equal to the level at every model is the source's
+   level, not a specialization.
+
+### (3) Controls
+
+* `scripts/test-occurrence` (10 checks; fixture `fixtures/stmt/occ`, the real Prosa `schedule`,
+  `JobReady` and `ideal.processor_state` with their MathComp closure):
+  * Positive (generality checked directly, since fixture rows are not protected): every universe
+    argument in the parameter types of `JobReady` and `processor_state` equals its level at every
+    source model. `schedule` has no solved level. `ProcessorState` is `plain_levels` with
+    `sort_interp`.
+  * Forged rows, all audit-rejected:
+
+    | Forgery | Kernel |
+    |---|---|
+    | A sort that is not the R2F reading | rejected |
+    | `sort_interp` on a template block | accepted |
+    | `JobReady`'s `Job` binder with 58's reading lacking `u58` | rejected |
+    | A reported interpretation of 22 that is not R2F | accepted |
+
+  * Unit controls on `equal_at_models`: identity, readings `a ≤ l` and `a + 1 ≤ l`, and a
+    source-equal level are accepted; raising, below-only and foreign parameters are rejected.
+* `tests/smoke/UniverseRules.lean`: `equalAtModels` `#guard`s.
+* Suite expectations updated to the stricter results:
+  * `test-universe-c`: `processor_state` is now claimed *generic* (`Job`'s carrier equal to
+    `eqtype.51` at every model). Before, it was refused.
+  * `test-carrier`: refinement 5 in the general form. "One summand only below" (`a = l`, `b ≤ l`) is
+    accepted; a new negative, "all summands only below", is rejected.
+  * `test-coherence`: the Countable instance is now on a plain tier, so the raising forgery is refused
+    by coherence or by R3.
+
+### (4) Coverage — FULL CORPUS, same 4,474 protected roots
+
+| Run | Impl | Accepted | Audited Pending | Blocked | Direct Failure |
+|---|---|---|---|---|---|
+| RH2 (entry 12) | `2e46cbf` | 673 | 2,983 | 785 | 33 |
+| U3 (measurement) | `5e88da0` | 673 | 3,477 | 299 | 25 |
+| **S3** | `2c78107` (= `bd1a71e` tree) | **673** | **3,477** | **299** | **25** |
+
+Validation (S3): consumer OK, audit OK, source instances OK, `CORPUS_PROVENANCE_BOUND`, conversion
+dependence OK, 3,576 proof tasks rendered.
+
+* **Protected transitions RH2 → S3:** 494 newly supported (all modern), 0 genuine regressions, 1
+  moved between unclaimed categories. That root is `slackless_interval_continuation`: its
+  dependencies now translate, and its own statement is refused honestly.
+* **All rows:** 531 claimed rows gained, 0 lost. Old false acceptances: 0.
+* **Cumulative since case B (CB3 → S3):**
+
+  | | Accepted | Audited Pending | Blocked | Direct Failure |
+  |---|---|---|---|---|
+  | CB3 | 673 | 2,260 | 1,494 | 47 |
+  | S3 | 673 | 3,477 | 299 | 25 |
+
+### (5) Remaining blockers (S3)
+
+324 protected roots are unclaimed (262 modern, 62 Classic). Grouped by the exact set of failing
+frontier members:
+
+| Roots | Frontier | Status |
+|---|---|---|
+| 71 | MathComp `order`/`nmodule` HB obligations (13 members: SOLUTION_FACT_VIOLATED and a kernel rejection of `axioms_`) | Proof-local levels solved to a type level, violating a native fact. |
+| 48 | `concrete_job` | Stage-4 work in progress, below. |
+| 36 | Classic `concrete_task` | Fixed on the stage-4 branch (R3G for field-only classes), not yet measured on the corpus. |
+| 25 | `div.gcdn` (INTERNAL_ERROR) | A translator bug: an unknown metavariable in the body translation of the termination-lowered fixpoint; bisected to the body's `runTrans`. |
+| 19 | `SystemEvolutions` (template block) | R3G discovery is not run for template blocks, so `JobType`'s 32 is defaulted. |
+| 17+ | CoqEAL `fun_hrel` | **Needs a decision.** A `Prop`-valued body declared at `Type` (Prop ≤ Type cumulativity), which Lean can only represent with a lift (`PLift`/`ULift`): a new representation policy. |
+| 13 | Classic `Task_T` | **Needs a decision.** Coinductive; Lean has no coinductive types. |
+
+### (6) Process corrections
+
+* A pattern-based `pkill`/`pgrep -f` killed the tool's own shell twice: the pattern was in its
+  command line, and a following commit silently did not run. Jobs are now stopped by PID (memory note
+  `no-pkill-f-self-match`).
+* Intermediate WIP commits carried temporary debug traces. The branch was squashed before merging, so
+  no trace is in the merged history, and the merged tree is byte-identical to the measured one.
+
+### (7) Regressions and validation
+
+* Frozen worktree `r2l-B-test` at `2c78107`: all 13 statement suites pass.
+
+  | Suite | Checks | Suite | Checks |
+  |---|---|---|---|
+  | `test-statement` | 30 | `test-level-split` | 18 |
+  | `test-termination` | 22 | `test-result-sort` | 15 |
+  | `test-assembly` | 34 | `test-carrier` | 20 |
+  | `test-opaque` | 16 | `test-coherence` | 15 |
+  | `test-universe-c` | 22 | `test-occurrence` | 10 |
+  | `test-universe-r2` | 9 | `test-provenance` | 5 |
+  | `test-multi-instance` | 8 | | |
+
+  `test-all` is 18/18 (`reports/test_all.json`).
+* Corpus as in (4).
+
+### (8) Evidence
+
+* `coverage/{U3,S3}.json` and `coverage/transitions-RH2-to-S3.json`;
+* `RULE_BACKLOG.{md,json}` and `PROOF_TASKS.jsonl` (S3);
+* `provenance/CORPUS_MANIFEST.json` (S3; `-RH2` kept);
+* `termination/CONVERSION_DEPENDENCE{,-S3}.json`;
+* `test_occurrence.json`, `test_coherence.json` and the other frozen-suite reports.
+
 ## Entry 14 — Stage 4 (blocks and terminations) and translator speed (2026-10-15)
 
 Request, in order:
@@ -1364,9 +1687,9 @@ Branch `rules-speed`: `rules-fields`, stage 4, followed by the speed changes.
 
 ### (3) Proposals awaiting decisions (not implemented)
 
-* `docs/PROP_LIFT_PROPOSAL.md`, **rule P**: `PULift` for Prop ≤ Type cumulativity, with
+* `docs/PROP_LIFT_PROPOSAL.md` (now `docs/PROP_LIFT.md`), **rule P**: `PULift` for Prop ≤ Type cumulativity, with
   correspondence obligations C1–C5. Measured: `fun_hrel` (17 roots alone).
-* `docs/PHANTOM_SORT_PROPOSAL.md`, **rule Q**: sort arguments of HB phantom checks.
+* `docs/PHANTOM_SORT_PROPOSAL.md` (now `docs/PHANTOM_SORT.md`), **rule Q**: sort arguments of HB phantom checks.
   * The complete frontier of `GEL`, shared by the 79-root group, is 315 failing declarations.
   * 306 of them are SOLUTION_FACT_VIOLATED in declarations whose type contains
     `HB.structures.unify`. Their levels occur only as type arguments of that check, and Rocq types
@@ -1445,3 +1768,265 @@ Other findings:
 * `termination/CONVERSION_DEPENDENCE{,-S8}.json`;
 * `timing/translation_timing-S8.json` and `timing/TIER_SUMMARY-S8.txt`;
 * the frozen-suite reports.
+
+---
+
+## Entry 15 — Stage 5: job_task, rule P, rule Q-a, rule T, speed (2026-10-15/16)
+
+Request (stage 5): (1) fix `job_task` and other no-policy blockers; (2) rule P (approved): scoped `PULift`
+Prop-to-Type translation with correspondence C1–C5; (3) rule Q-a only (approved; Q-b not adopted):
+phantom-only sort lowering with equivalence proofs; (4) `Task_T`: propose a sound coinductive encoding
+before implementing. Then, on request, speed (exact gates only) and diagnosis of the next blockers.
+Branch `rules-s5` (from `main` = `44bf88b`).
+
+### (1) `job_task` and no-policy fixes
+
+* **δβ-inlining of erasing polymorphic definitions for constants** (`a3ecbc9`), as stage 4 did for blocks:
+  `definitions.task.job_task` (43 protected roots) is claimed. Audit: the inlined names are recomputed as
+  erasing (`erasing_poly_body`), and the row is audited against the inlined source.
+* **Erasing tier, own levels** (S9 audit finding): a statement's own levels are those of the *inlined*
+  statement; a level that occurred only in `reverse_coercion`'s instance is no longer one. S9 was
+  audit-rejected on 13 rows for this ("implicit level … is not the argument of a reference"); fixed, and
+  the 12 affected roots (Classic `periodic_arrivals_*`, `ts_is_schedulable`, `job_generation_valid_jobs`)
+  are claimed with the audit OK.
+* **R3G for definitions, last resort** (`8440a83`): a failing definition is retried with its references'
+  implicit levels as its own (the discovery pass), instead of their defaults. `refine_maxn`/`refine_minn`:
+  `Rnat`'s level 47805 (`Set < 47805`) was defaulted to 0, forcing `refines`' level 38671 to 0 against
+  `Set < 38671`; now a parameter. Only declarations that fail without it are retried, so no accepted row
+  changes (the reason the pass is not used in place).
+* **Proof-mode audit crash** (`6351998`): a variable of the stage-5 δ check (`s_` for `s`) broke proof-mode
+  audits; caught by `test-m6` in the frozen suites.
+* **P3 collapse with normalized levels** (`ac525ad`): two hypotheses of one prerequisite at `Type (max a b)`
+  and `Type (max b a)` were not collapsed; the audit (comparing modulo the level normal form) rejected 3
+  rows of the GEL subset. The translator now compares with normalized levels.
+
+### (2) Rule P (docs/PROP_LIFT.md, adopted)
+
+* Value lift `PULift.{u_l+1,0} P` for a proposition used at `Type@{l}` (`fun_hrel`); term-level
+  `PULift.up`/`PULift.down` at casts, application arguments, the value against its declared type (with
+  η-transport of an η-reduced proof body) and `match` scrutinees; an unprotected statement whose codomain is
+  a lifted type is stated as its proposition (head chain δβ-inlined). Consumer allows `PULift` (+ `up`,
+  `down`) as construction primitives (docs/TRUST.md).
+* Audit, independent: `strip_prop_lift` (depth, source `Type` sort, level image), `peel_lift_coercion`
+  (only in rows reporting coercions, only `PULift.{_, 0}`), `peel_eta`, the recomputed head chain of a lifted
+  statement (never protected), and the C5 listing `prop_lift_protected`.
+* C1–C5: `tests/statement/proofs/prop_lift_correspondence.lean` (12 theorems, axiom-free); fixture
+  `fixtures/stmt/plift`; `scripts/test-prop-lift` (19 checks: every shape, 8 forged-row negatives — wrong
+  level, depth, no cumulativity, lift of a type, unreported/non-Prop coercion, wrong head chain, unfolding on
+  a definition — and unit controls).
+
+### (3) Rule Q-a (docs/PHANTOM_SORT.md, adopted; Q-b not adopted)
+
+* Phantom definitions (body after its λs a chain of `phantom X x`, HB's `unify`; or a statement of that
+  shape, HB's `id_phant`), recomputed from the source by translator and audit. At their applications a sort
+  argument at a sort-parameter position is the type of the paired value; levels occurring only there leave
+  the declaration (`phantom_lowered`). Tried first when it applies (strictly more general); for declarations
+  using `id_phant`, with per-instance hypotheses (P3) first.
+* Equivalence: every instance of a phantom check holds, so any two instances are equivalent
+  (`tests/statement/proofs/phantom_sort_equivalence.lean`, 6 theorems, axiom-free). Fixture
+  `fixtures/stmt/phant`; `scripts/test-phantom-sort` (12 checks: independent carriers kept, the `id_phant`
+  shape, 4 forged-row negatives, criterion units).
+* GEL subset (3,382 declarations, roots `GEL`, `GEL_is_total`, `ELF`): claimed 2,423 → 3,050, direct
+  failures 345 → ~20, audit OK. The three roots remain blocked by a 23-declaration frontier (§6).
+
+### (4) Rule T (docs/COINDUCTIVE.md) — proposed, approved, adopted
+
+* `Task_T` is the corpus's only coinductive type and is **non-recursive** (`build_task : nat → nat → nat →
+  nat → Task_T`); no `cofix` occurs in the export. Proposed as rule T with obligations T1–T5 (same carrier,
+  eliminations, no definitional surplus that changes a statement, universes, protection); approved by the
+  user; implemented (`cba01c6`).
+* A coinductive block is the Lean inductive when it has one body and no constructor argument or index
+  mentions it (`nonRecursiveBlock`); `cofix` stays refused. The audit now checks every claimed block's kind
+  (`check_coinductive`: flag ⇔ `CoFinite`, the criterion recomputed) — before, it had no check on it.
+* Fixture `fixtures/stmt/coind` (with the Rocq-proved η lemma, T1's Rocq side), `scripts/test-coinductive`
+  (10 checks), `tests/statement/proofs/coinductive_correspondence.lean` (4 theorems, axiom-free). The first
+  fixture run found a wrong argument-order assumption in **both** copies (constructor arguments are stored
+  innermost first): the recursive `stream` was accepted. Fixed before commit; the negative control keeps it.
+* Corpus: the 13 protected roots of `extraction_tdma` are claimed (S17).
+
+### (5) Speed (exact gates; user's suggestions evaluated)
+
+| Change | Kind | Effect |
+|---|---|---|
+| Rule-P gate: dependency closure reaches a `prop_lift` definition, or a value lift is possible | exact | CoqEAL subset 244 s → 76 s; 0 rows worse, 7 improved (now within budget), other terms equal modulo level normalization; audit OK |
+| Coercion prefilter: only arguments whose type mentions a lifted constant | exact | (same measurement) |
+| Stop variants after an exhausted budget; log aborted attempts | exact | aborted attempts were invisible (~1,400 s of S10) |
+| Q-a variants ordered by measured success, P3 first for `id_phant` users | order only | GEL subset 4,589 s → 1,249 s, same claims |
+| "Stop after a repeated identical failure" | **rejected by data** | on S10 it would lose 87 claimed declarations (incl. `fun_hrel`) to save 53 s |
+| Failure kind → variant map | not adopted | only "coherence on a shared level" maps cleanly (179/181 by `cu,lo`) |
+| Per-declaration memoization of subterm translations | not adopted | a subterm's translation depends on the attempt's level metavariables and registries |
+| Incremental corpus runs | proposed (next) | needs exact replay of per-declaration registries; validation: row-identical to a full run |
+
+### (6) Coverage — FULL CORPUS, same 4,474 protected roots
+
+| Run | Impl | Accepted | Audited Pending | Blocked | Direct Failure | Unclaimed | Translation |
+|---|---|---|---|---|---|---|---|
+| S8 (entry 14) | `f5e373c` | 676 | 3,538 | 235 | 25 | 260 | 22.5 min |
+| S9 | `a3ecbc9` (job_task) | — | — | — | — | 231 | audit-rejected (13 rows, fixed) |
+| S10 | `39d6b57` (+ rule P) | 678 | 3,576 | 196 | 24 | 220 | 50 min |
+| **S17** | **`38df8a9`** (= merged tree, docs aside) | **685** | **3,584** | **184** | **21** | **205** | 4 h 36 min |
+
+* **Validation (S17):** consumer OK, audit OK, source instances OK, `CORPUS_PROVENANCE_BOUND`, conversion
+  dependence (`needs unfolding: []`), 7,180 proof tasks rendered.
+* **Protected transitions S8 → S17:** 55 newly supported (31 modern, 24 Classic), **0 regressions**, 0 old
+  false acceptances; 9 moved from Blocked to Direct Failure (their dependencies now translate: the
+  `job_constructor` uniqueness facts, the refinement `*_ready_instance`s, Classic `powerset`,
+  `refine_ArrivalPrefix`).
+* **All rows S8 → S17:** claimed 7,839 → 9,804 (**+1,965, 0 lost**). Q-a accounts for most of them (MathComp
+  HB builders, `phant_*` constants and obligations); direct failures 793 (S10) → 245.
+* **Runs that did not complete:** S11–S14 were stopped to measure later commits; **S15 aborted** (stack
+  overflow: the R3G-for-definitions tier's constant discovery recursed without bound on HB's
+  `BaseAddMagma_isAddMagma.phant_Build`; bisected to `8440a83`, fixed in `107ab09` by excluding declarations
+  with phantom checks); **S16** was killed at the tool's 2 h background limit (long runs are now detached).
+* **Translation time 4 h 36 min** (timing/TIER_SUMMARY-S17.txt): P3 attempts dominate. With Q-a, about a
+  thousand more HB declarations reach the late tiers. The Q-a first attempt with P3 succeeds 587/1,232; the
+  non-Q-a P3 tier never succeeds on declarations where Q-a applies (0 successes, 3,821 s); the Q-a tier's
+  winners are `lo,p3,ph` (232) and `cu,lo,ph` (108). These data drive the next speed step (§7).
+
+### (7) Remaining blockers and diagnoses (S17)
+
+205 protected roots are unclaimed (182 modern, 23 Classic).
+
+| Family | Members | Affected roots | Diagnosis / next |
+|---|---|---|---|
+| SOLUTION_FACT_VIOLATED | 138 | 144 (26 alone) | GEL/order HB frontier (23 declarations at the GEL roots): (A) R-CARRIER copies — a proof-local level solved through one operand copy fails the copied fact of another (`25__c1 ≤ 158`); (B) R2F-c identification in `phant_axioms`; (C) `order.HB_unnamed_factory_64` obligations ("binder levels forced"); (D) budget exhaustion in `rings_modules` builders. Also `refines_abstr`/`refines_apply` obligations. **Next stage.** |
+| UNIVERSE_OTHER | 42 | 125 | CMorphisms (`iffT_flip_arrow_subrelation`) |
+| REFERENCE_RAISING | 11 | 83 | refinement obligations (`refine_search_space_emax_EDF`) |
+| COUPLED_BINDER_LEVELS | 4 | 71 | `order.HB_unnamed_factory_64` obligations (shape C) |
+| COURSE_OF_VALUES | 8 | 39 | CoqEAL `param.*_R` |
+| PROP_TYPE_CUMULATIVITY | 12 | 28 (15 alone) | `CMorphisms.respectful` and the `job_constructor` uniqueness facts (rule P does not apply: polymorphic relation classes) |
+| STATEMENT_FREE_LEVEL_PINNED | 3 | 13 | Classic `ts_obligation_1` |
+| PROTECTED_RANGE_NARROWED | 1 | 9 (2 alone) | Classic `job_eqdef`: `concrete_job`'s generalized field carrier `eqtype.51` is pinned to `Set` by the concrete `concrete_task` instance; all instances are plausibly isomorphic, but accepting the specialization needs a correspondence argument — **a representation decision** (booked, not changed). |
+
+Speed, next (data from S17; order-only changes and redundancy are exact, prunings are measured): skip the
+non-Q-a P3 tier where Q-a applies (0/… successes, 3,821 s); drop the Q-a tier's repeat of the P3-first
+attempt (identical flags); order the Q-a tier `lo,p3` → `cu,lo` → `it,p3`. Incremental corpus runs are
+proposed (registry replay; validation: row-identical to a full run). A per-declaration progress log
+(`R2L_PROGRESS`) is added for long runs (diagnostics only).
+
+### (8) Validation and process
+
+* **Frozen worktree `r2l-B-test`:** 17 statement suites (new: `test-prop-lift` 19, `test-phantom-sort` 12,
+  `test-coinductive` 10) and `test-all` 18/18 at `107ab09` and at the measured `38df8a9` (§ log of the
+  suite run). Earlier: `test-all` at `a780ad1` failed `test-m6` — the proof-mode audit crash fixed in
+  `6351998`.
+* **Subset identity checks** for the exact speed gates (CoqEAL subset: 0 rows worse, 7 improved, all other
+  terms equal modulo the level normal form).
+* The branch's history is squashed into `main`; the debugging traces used for the S15 bisection were never
+  committed (only an optional progress log, merged next stage).
+
+### (9) Evidence
+
+* `coverage/{S10,S17}.json`, `coverage/transitions-{S10,S8}-to-S17.json`;
+* `RULE_BACKLOG.{md,json}`, `PROOF_TASKS.jsonl`, `provenance/CORPUS_MANIFEST.json` (S17);
+* `termination/CONVERSION_DEPENDENCE{,-S17}.json`;
+* `timing/translation_timing-S17.json`, `timing/TIER_SUMMARY-S17.txt`;
+* `test_{prop_lift,phantom_sort,coinductive}.json` and the frozen-suite reports.
+
+## Entry 16 — Stage 6: the GEL/HB frontier (shapes A–D), rule P under η, rule E, report streaming (2026-10-16/17)
+
+Branch `rules-s6`, from the Stage 5 implementation `38df8a9` (= `main`'s squash `15b818f`, docs aside).
+Thirteen commits, `7338d12` … `68f4bdc`, and the evidence commit. Measured implementation: `b46916c` (S21b);
+`68f4bdc` changes only the report's serialization (§5).
+
+### (1) Changes
+
+| Commit | Change | Kind |
+|---|---|---|
+| `7338d12` | optional per-declaration progress log (`R2L_PROGRESS`) | diagnostics only |
+| `5489f8d` | speed from S17 data: Q-a tier order, no repeat of the P3-first attempt, no generic P3 tier where Q-a applies | exact / order only |
+| `cb8523e` | **R-CARRIER no-split**, last resort for unprotected declarations (frontier shape A: a proof-local level solved through one operand copy fails the copied fact of another); audit runs with a large stack | rule tier |
+| `1778f28` | P3 with 5× budget on a hypothesis mismatch at a pending statement (`factory_89`); Q-a combined with R2B-V for type-valued definitions (`phant_axioms`, shape B) | budget / combination |
+| `7744580` | R2B-V: an unassigned result-sort level stands for the value's sort level (was 0; the audit rejected Q-a+R2B-V rows) | fix |
+| `9355bc2` | **shape D**: R3G-for-definitions on not-entailed references (full budget), budgeted post-acceptance retries, implicit levels solved or unused are not parameters; audit: an implicit level's argument is its value; 5× P3 budget gated on duplicated per-instance hypotheses | rule tier + audit |
+| `51a0a9e` | **rule P under η**: a Prop-valued relation used where a Type-valued one is expected (CoqEAL `refines … (unify N)`); fixture, negative control, docs | rule P extension |
+| `a9546ca`, `16af815` | **rule E** (proposed, then approved 2026-10-17; `docs/EQ_LOWERING.md`): an equality of convertible terms at a cumulative universe is stated at the operands' universe; consumer E1 re-check, audit shape check, `scripts/test-eq-lowering` | new rule (approved) |
+| `e9885fe` | constant discovery ends once its implicit levels are picked (unbounded recursion on an unsolved state: S15, `refines_apply`); R3G-for-definitions gate includes unjustified residual defaults | fix |
+| `b46916c` | translation report written as a stream, one compact row per line (S21 was OOM-killed at 47.8 GB writing the report after translating all 10,972 declarations); 690/690 rows identical to the old writer on a subset, file 7.3× smaller | fix (I/O) |
+| `68f4bdc` | streamed rows keep the pretty printer's key order: `Json.compress` orders object keys differently, and the targeted mutations of `test-m3`, `test-lowering-audit` and `test-m6` walk the report in key order (test-all 15/18 at `b46916c`) | fix (I/O) |
+
+### (2) Coverage — FULL CORPUS, same 4,474 protected roots
+
+| Run | Impl | Accepted | Audited Pending | Blocked | Direct Failure | Unclaimed | Translation |
+|---|---|---|---|---|---|---|---|
+| S8 (entry 14) | `f5e373c` | 676 | 3,538 | 235 | 25 | 260 | 22.5 min |
+| S17 (entry 15) | `38df8a9` | 685 | 3,584 | 184 | 21 | 205 | 4 h 36 min |
+| S21 | `e9885fe` | — | — | — | — | — | OOM-killed writing the report (fixed in `b46916c`) |
+| **S21b** | **`b46916c`** | **685** | **3,585** | **180** | **24** | **204** | **6 h 57 min** (peak RSS 21.6 GB) |
+
+* **Validation (S21b):** consumer OK (10,199 accepted declarations of the required closure, no axioms), audit OK
+  (0 problems), source instances OK, `CORPUS_PROVENANCE_BOUND` (10,966 declarations = chunk copies, 260,885
+  universe facts, 4,474 roots covered; evidence `provenance-aprime`, same IR as S17: SHA-256 identical) and
+  `check` OK, conversion dependence (886 dependents of the 3 lowered definitions, all `CONV_OK`, `needs
+  unfolding: []`), 7,524 proof tasks rendered.
+* **Protected transitions S17 → S21b:** 0 regressions, 0 newly accepted; `gel.pp_delta` Blocked → Audited
+  Pending; `refine_task`, `refine_Periodic`, `refine_Sporadic` Blocked → Direct Failure (their obligations now
+  translate, by rule E; see §4).
+* **All rows S17 → S21b:** claimed 9,804 → 10,200 (**+396, 0 lost**): 362 Blocked → claimed, 29 universe and
+  5 kernel rejections → claimed. Blocked 923 → 533. Direct failures 245 → 238 (28 Blocked → Direct Failure:
+  CoqEAL `refines_apply`/`refines_abstr` (2), HB builders `factory_69`, `_78`, `_411` obligation 109 (3), `ssrint`
+  specialization refusals (6), refinement casts (5, §4), CoqEAL `38663` obligations of the arrival-curve
+  refinements (12)).
+* **GEL roots** (`GEL`, `GEL_is_total`, `ELF`) remain blocked: the frontier shrank from 23 to 16 declarations
+  (`docs/ULIFT_PROPOSAL.md` §9).
+* **Translation time 4 h 36 min → 6 h 57 min (+51%).** More HB declarations reach the late tiers (shape D
+  retries, R-CARRIER no-split with 5 variants). Measured separately on S21 (not part of this stage,
+  `docs/SOLVER_STAGE_A.md`): late-tier attempts that repeat an earlier attempt of the same declaration take
+  3,211 s (99 budget aborts after a completed attempt 2,481 s, 530 repeated completed failures 468 s, other
+  262 s), about 38% of the 2 h 21 min growth.
+
+### (3) Remaining blockers (S21b, `RULE_BACKLOG`)
+
+204 protected roots unclaimed (181 modern, 23 Classic); 238 direct failures.
+
+| Family | Members (protected) | Affected roots | Only this family |
+|---|---|---|---|
+| UNIVERSE_OTHER | 47 (8) | 137 | 30 |
+| SOLUTION_FACT_VIOLATED | 123 (4) | 102 | 15 |
+| STATEMENT_FREE_LEVEL_PINNED | 9 (1) | 91 | 11 |
+| REFERENCE_RAISING | 8 (0) | 83 | 0 |
+| COUPLED_BINDER_LEVELS | 4 (0) | 71 | 0 |
+| COURSE_OF_VALUES | 8 (0) | 39 | 6 |
+| UNCLASSIFIED | 8 (3) | 19 | 3 |
+| PROP_TYPE_CUMULATIVITY | 7 (6) | 16 | 15 |
+| PROTECTED_RANGE_NARROWED | 1 (1) | 9 | 2 |
+| KERNEL_OTHER | 20 (1) | 6 | 1 |
+| POLYMORPHIC_INSTANCE, REFERENCE_COHERENCE | 1, 2 | 1, 1 | 0 |
+
+### (4) The three refinement declarations (diagnosed 2026-10-18)
+
+`refine_task`, `refine_Periodic`, `refine_Sporadic` (and the unprotected `refine_task'`, `refine_task_set'`)
+report "default cast annotation is not convertible in Lean". Reproduced alone (124-declaration closure, with
+the cast's two types printed):
+
+* The proof casts `erefl : x = x` to `Rtask_ab x y` (resp. `Rtask`), which unfolds to CoqEAL's `fun_hrel`,
+  translated since Stage 5 by rule P as `PULift (f y = x)`. Rocq accepts the cast by Prop ≤ Type; Lean needs
+  `PULift.up`.
+* Rule P's tier does insert it (`liftCoerce`), and all 7 of its variants then fail on universes: proof-local
+  `CoqEAL.refinements.refinements.38671` solved as `max(binnat.47805, hrel.1062)`, violating the native fact
+  `extrapolated_arrival_curve.21 ≤ 38671`. That is the same level that rejected these obligations in S17.
+* A later tier without rule P repeats the cast failure and its message is the one reported. **The row's
+  reason is misleading** (the real one is the universe rejection of the rule P tier). Not a regression:
+  the cast check is unchanged since Stage 5, and the declarations were never attempted before.
+
+### (5) Validation and process
+
+* **Frozen worktree `r2l-B-test6` at `68f4bdc`:** the 18 statement suites (new: `test-eq-lowering`) and
+  `test-all` **18/18**. At `b46916c` the statement suites passed and `test-all` was 15/18: `test-m3`,
+  `test-lowering-audit` and `test-m6` failed on "mutation … did not change anything" — the same JSON values,
+  object keys in another order (bisected: `test-lowering-audit` passes at `e9885fe`); fixed in `68f4bdc`.
+* **`68f4bdc` vs S21b rows:** on the 690-declaration `prof-A` subset, 688 rows identical to S21b's and 2 failing
+  rows differ in their last-tier text only (a metavariable number; the position of a budget timeout), so the
+  S21b evidence stands for `68f4bdc`.
+* S21 (OOM), the report-streaming fix, and S21b's frozen worktree `r2l-run-S21b`; post-run checks by
+  `post-S21b.sh` (tasks, provenance manifest + check, conversion dependence, backlog).
+* The branch is merged into `main` after `main` is merged into it (entries 12, 13, 15 are on `main` only; the
+  stage squash would otherwise revert them).
+
+### (6) Evidence
+
+* `coverage/S21b.json`, `coverage/transitions-S17-to-S21b.json`;
+* `RULE_BACKLOG.{md,json}`, `PROOF_TASKS.jsonl`, `provenance/CORPUS_MANIFEST.json` (S21b);
+* `termination/CONVERSION_DEPENDENCE-S21b.json`;
+* `timing/translation_timing-S21b.json`;
+* `test_eq_lowering.json` and the frozen-suite reports.
