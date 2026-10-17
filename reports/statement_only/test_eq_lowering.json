@@ -1,0 +1,60 @@
+{
+ "pipeline": {
+  "exit_codes": [
+   0,
+   2,
+   0
+  ],
+  "validation": "STATEMENT_VALIDATED",
+  "by_validation": {
+   "DEFINITION_AUDITED": 2,
+   "NOT_TRANSLATED": 1,
+   "STATEMENT_AUDITED": 2
+  }
+ },
+ "rows": {
+  "SF.Eqlow.refines": {
+   "status": "TRANSLATED_AND_CHECKED",
+   "eq_lowered": 0,
+   "message": ""
+  },
+  "SF.Eqlow.refinesE": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "eq_lowered": 1,
+   "message": ""
+  },
+  "SF.Eqlow.neq": {
+   "status": "UNIVERSE_REJECTED",
+   "eq_lowered": 0,
+   "message": "proof-local level SF.Eqlow.23 solved as (some u_SF_Eqlow_22): native fact SF.Eqlow.22 lt SF.Eqlow.23 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level SF.Eqlow.23 solved as (some u_SF_Eqlow_22): native fact SF.Eqlow.22 lt SF.Eqlow.23 does not hold for the solution]"
+  },
+  "SF.Eqlow.other": {
+   "status": "STATEMENT_KERNEL_CHECKED",
+   "eq_lowered": 0,
+   "message": ""
+  }
+ },
+ "negative": {
+  "on-definition": {
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Eqlow.refines: rule E reported for a row that is not a statement"
+   ]
+  },
+  "conclusion-not-sort-ended": {
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Eqlow.other: rule E: the source conclusion is not an equality at a sort-ended type"
+   ]
+  },
+  "count-not-one": {
+   "validate_exit": 2,
+   "audit_problems": [
+    "SF.Eqlow.refinesE: rule E: exactly the conclusion's equality may be lowered",
+    "SF.Eqlow.refinesE: parameters ['SF.Eqlow.21', 'SF.Eqlow.22'] and solved levels [] do not partition the own levels ['SF.Eqlow.21', 'SF.Eqlow.22', 'SF.Eqlow.23'] (a parameter must be a type level or occur in a type level's solution)",
+    "SF.Eqlow.refinesE: parameters ['SF.Eqlow.21', 'SF.Eqlow.22'] and solved levels [] do not partition the own levels ['SF.Eqlow.21', 'SF.Eqlow.22', 'SF.Eqlow.23'] (a parameter must be a type level or occur in a type level's solution)"
+   ]
+  }
+ },
+ "unit": "E1Unit.lean:4:44: warning: `Lean.levelZero` has been deprecated: Use `Lean.Level.zero` instead\n\nNote: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.levelZero` to `Level.zero x`).\nE1 distinct=false same=true\n"
+}

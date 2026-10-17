@@ -75,7 +75,8 @@
     },
     {
      "sigma": {
-      "k": "zero"
+      "n": "u_mathcomp_boot_eqtype_51",
+      "k": "param"
      },
      "level": "Corelib.ssr.ssrbool.1171"
     }
@@ -101,7 +102,8 @@
     },
     {
      "sigma": {
-      "k": "zero"
+      "n": "u_mathcomp_boot_eqtype_51",
+      "k": "param"
      },
      "level": "Corelib.ssr.ssrbool.1171"
     }
@@ -127,7 +129,8 @@
     },
     {
      "sigma": {
-      "k": "zero"
+      "n": "u_mathcomp_boot_eqtype_51",
+      "k": "param"
      },
      "level": "Corelib.ssr.ssrbool.1171"
     }

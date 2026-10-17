@@ -1,0 +1,43 @@
+{
+ "schema": "rocq2lean-conversion-dependence/1",
+ "run": "/home/shunqwang4/research/r2l-run-S21b/runs/st-corpus-S21b",
+ "translation_report_sha256": "7a2c87d24afd336bcbf072ed288b98da2ae151186b11ed1827c069dc8c6a17b5",
+ "lowered": [
+  "mathcomp.boot.div.edivn_rec",
+  "mathcomp.boot.div.gcdn",
+  "mathcomp.boot.div.modn_rec"
+ ],
+ "dependents": 886,
+ "constants_analyzed": 744,
+ "not_analyzed": [],
+ "processes": [
+  {
+   "part": 0,
+   "exit": 0,
+   "seconds": 8.7
+  },
+  {
+   "part": 1,
+   "exit": 0,
+   "seconds": 9.0
+  }
+ ],
+ "by_rocq_verdict": {
+  "CONV_OK": 886
+ },
+ "needs_unfolding": [],
+ "claimed_although_needing_unfolding": [],
+ "lean_kernel_failures_among_dependents": [
+  "prosa.implementation.facts.job_constructor.arrivals_at_unique",
+  "prosa.implementation.facts.job_constructor.arrivals_between_unique",
+  "prosa.implementation.facts.job_constructor.job_arrival_consistent",
+  "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
+ ],
+ "lean_kernel_failures_not_explained": [
+  "prosa.implementation.facts.job_constructor.arrivals_at_unique",
+  "prosa.implementation.facts.job_constructor.arrivals_between_unique",
+  "prosa.implementation.facts.job_constructor.job_arrival_consistent",
+  "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
+ ],
+ "status": "OK"
+}
