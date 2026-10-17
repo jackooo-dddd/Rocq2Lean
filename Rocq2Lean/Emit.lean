@@ -944,7 +944,8 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     -- coherence by unification: per-occurrence shared levels left free by typing are the own variables
     -- (after the value's type is unified with the declared type, before the parameters are named)
     let rebindThenKeep : MetaM Unit := do
-      if let some ref := sharedRef? then rebindShared ref gl genv.facts
+      if let some ref := sharedRef? then
+        rebindShared ref gl genv.facts (own.filter fun m => !typeLevels.contains m && !resultLv.contains m)
       keepParams
     if discover then
       try discard <| solveLevels ty val dflt rebindThenKeep (solve := lower || joint)
