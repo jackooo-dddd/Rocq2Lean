@@ -140,18 +140,21 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
     ("protection", protJson),
     ("roots", Json.arr (roots.map fun (q, n, s) => Json.mkObj [("requested", q), ("name", n), ("status", s)])),
     ("summary", summary)]
-  -- the report is streamed, one compact row per line (the same JSON value as one `Json.mkObj` with a
-  -- `results` array): a corpus report is several GB, and building it as one tree and one string exhausted
-  -- the memory (S21, exit 137 after translation)
+  -- the report is streamed, one row per line (the same JSON value as one `Json.mkObj` with a `results`
+  -- array): a corpus report is several GB, and building it as one tree and one string exhausted the memory
+  -- (S21, exit 137 after translation). Each value is rendered by the pretty printer on one line, so object
+  -- keys keep the pretty printer's order (`compress` orders them differently; the hardening suites' targeted
+  -- mutations walk the report in key order)
+  let line (j : Json) : String := j.pretty (lineWidth := 1000000000)
   IO.FS.withFile repPath .write fun h => do
     h.putStr "{"
     for (k, v) in head do
-      h.putStr s!"{(Json.str k).compress}:{v.compress},\n"
-    h.putStr "\"results\":["
+      h.putStr s!"{(Json.str k).compress}: {line v},\n"
+    h.putStr "\"results\": ["
     let mut first := true
     for r in results do
       h.putStr (if first then "\n" else ",\n")
-      h.putStr r.toJson.compress
+      h.putStr (line r.toJson)
       first := false
     h.putStr "]}\n"
   -- statement mode: the module of the claimed rows is still produced (validated row by row); the
