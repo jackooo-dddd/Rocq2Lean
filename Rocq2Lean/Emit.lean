@@ -37,6 +37,9 @@ structure DeclResult where
   /-- Accepted target type and value, for the independent structural audit. -/
   targetType : Option Expr := none
   targetValue : Option Expr := none
+  /-- Solver stage A (shadow mode only, never reported): the accepted attempt's solved type and value before
+  the P3 collapse of hypotheses, so that its level sites align with the shadow record's. -/
+  shadowWinner : Option (Expr × Expr) := none
   /-- Accepted constructor names and types (generated inductives). -/
   targetCtors : Array (Name × Expr) := #[]
   /-- Universe parameters (generalized source global levels). -/
@@ -568,12 +571,129 @@ private partial def lowersTo (facts : IR.UniverseFacts) (globals : Array String)
     | .mvar _ => false
   go σ.normalize 0
 
+/-- Solver stage B (experiment): the first attempt of the declaration being translated, re-runnable with a
+witness (`R2L_WITNESS`). -/
+initialize witnessRunRef : IO.Ref (Option (Json → MetaM DeclResult)) ← IO.mkRef none
+
+/-- Solver stage B (experiment, `R2L_RETRY_ABORTED`): the attempts of the declaration being translated that the
+late-tier budget aborted, by tier label, re-runnable. -/
+initialize abortedRef : IO.Ref (Array (String × (Unit → MetaM DeclResult))) ← IO.mkRef #[]
+
+/-! ## Solver stage A (shadow mode): the universe constraints of a declaration
+
+Diagnostics only (docs/UNIVERSE_SOLVER_PROPOSAL.md, stage A). With `R2L_SHADOW=<file>`, once a constant is
+final its accepted attempt (or, if none, its first attempt) is repeated with every reference at fresh,
+recorded level metavariables (as coherence by unification), up to Lean's checker and the unification of the
+value's type with the declared type. Written: the level sites of the term before unification (sorts and
+universe arguments, in traversal order), the assignments unification made, the constraints it postponed,
+the own and occurrence metavariables with their source levels, and the accepted row's level sites in the
+same order. Nothing is assigned, defaulted or added to the environment; the state is restored. -/
+
+/-- Level sites of a term in traversal order: `("s", l)` for a sort, `("<c>#<i>", l)` for the `i`-th universe
+argument of constant `c`. -/
+partial def levelSites (e : Expr) (acc : Array (String × Level) := #[]) : Array (String × Level) :=
+  match e with
+  | .sort l => acc.push ("s", l)
+  | .const n ls => Id.run do
+    let mut a := acc
+    let mut i := 0
+    for l in ls do
+      a := a.push (s!"{n}#{i}", l)
+      i := i + 1
+    return a
+  | .app f x => levelSites x (levelSites f acc)
+  | .lam _ t b _ | .forallE _ t b _ => levelSites b (levelSites t acc)
+  | .letE _ t v b _ => levelSites b (levelSites v (levelSites t acc))
+  | .mdata _ b | .proj _ _ b => levelSites b acc
+  | _ => acc
+
+/-- A level as a compact string: `0`, `p:<param>`, `m:<id>`, `S(l)`, `M(a,b)`, `I(a,b)`. -/
+partial def levelStr (ids : Std.HashMap LMVarId Nat) : Level → String
+  | .zero => "0"
+  | .succ l => s!"S({levelStr ids l})"
+  | .max a b => s!"M({levelStr ids a},{levelStr ids b})"
+  | .imax a b => s!"I({levelStr ids a},{levelStr ids b})"
+  | .param n => s!"p:{n}"
+  | .mvar m => s!"m:{(ids[m]?).getD 0}"
+
+/-- The expression metavariables assigned during translation replaced by their values (level metavariables
+left as they are), so that the level sites inside them are recorded; shared subterms visited once. -/
+partial def instExprMVarsOnly (e : Expr) : StateRefT (Std.HashMap ExprStructEq Expr) MetaM Expr := do
+  if !e.hasExprMVar then return e
+  if let some r := (← get)[(e : ExprStructEq)]? then return r
+  let r ← match e with
+    | .mvar id => match ← getExprMVarAssignment? id with
+      | some v => instExprMVarsOnly v
+      | none => pure e
+    | .app f a => pure <| .app (← instExprMVarsOnly f) (← instExprMVarsOnly a)
+    | .lam n t b bi => pure <| .lam n (← instExprMVarsOnly t) (← instExprMVarsOnly b) bi
+    | .forallE n t b bi => pure <| .forallE n (← instExprMVarsOnly t) (← instExprMVarsOnly b) bi
+    | .letE n t v b nd => pure <| .letE n (← instExprMVarsOnly t) (← instExprMVarsOnly v) (← instExprMVarsOnly b) nd
+    | .mdata d b => pure <| .mdata d (← instExprMVarsOnly b)
+    | .proj sn i b => pure <| .proj sn i (← instExprMVarsOnly b)
+    | _ => pure e
+  modify fun m => m.insert e r
+  return r
+
+/-- Shadow mode: unify `ty` and `val` as `solveLevels` does (checker, then value type against declared type)
+and return the constraint record (see the section comment). -/
+def shadowDump (src : String) (own : Array (String × Level)) (occs : Array (LMVarId × String)) (ty val : Expr)
+    (occConst : Std.HashMap LMVarId Name := {}) : MetaM Json := do
+  -- (`R2L_SHADOW_INST`: sites inside expression metavariables assigned during translation are recorded too —
+  -- for locating the joins of failing declarations; the accepted rows' sites are compared without it)
+  let (ty, val) ← if (← IO.getEnv "R2L_SHADOW_INST").isSome then
+      (do pure (← instExprMVarsOnly ty, ← instExprMVarsOnly val)).run' {}
+    else pure (ty, val)
+  let sitesT := levelSites ty
+  let sitesV := levelSites val
+  setPostponed {}
+  let mut diags : Array String := #[]
+  try Meta.check ty catch e => diags := diags.push s!"Meta.check type: {(← e.toMessageData.toString).take 300}"
+  try Meta.check val catch e => diags := diags.push s!"Meta.check value: {(← e.toMessageData.toString).take 300}"
+  try
+    unless ← withTransparency .all <| isDefEq (← inferType val) ty do
+      diags := diags.push "value type not unified with the declared type by Meta.isDefEq"
+  catch e => diags := diags.push s!"isDefEq: {(← e.toMessageData.toString).take 300}"
+  let mut post : Array (Level × Level) := #[]
+  for p in (← getPostponed).toArray do
+    post := post.push (← instantiateLevelMVars p.lhs, ← instantiateLevelMVars p.rhs)
+  -- the metavariable table, in order of first appearance; an assigned metavariable's value (fully
+  -- instantiated, so over unassigned metavariables and parameters) may name further metavariables
+  let mut ids : Std.HashMap LMVarId Nat := {}
+  let mut work : Array Level := (sitesT ++ sitesV).map (·.2) ++ own.map (·.2) ++ occs.map (fun (m, _) => Level.mvar m)
+    ++ post.foldl (fun a (l, r) => (a.push l).push r) #[]
+  let mut asg : Array (Nat × Level) := #[]
+  let mut i := 0
+  while i < work.size do
+    for m in (work[i]!.collectMVars {}).toArray do
+      unless ids.contains m do
+        let k := ids.size
+        ids := ids.insert m k
+        let v ← instantiateLevelMVars (.mvar m)
+        unless v == .mvar m do
+          asg := asg.push (k, v)
+          work := work.push v
+    i := i + 1
+  let lv := levelStr ids
+  let sitesJ (ss : Array (String × Level)) : Json := Json.arr (ss.map fun (k, l) => Json.arr #[Json.str k, Json.str (lv l)])
+  return Json.mkObj [("decl", src), ("metavariables", toJson ids.size),
+    ("own", Json.arr (own.map fun (s, l) => Json.arr #[Json.str s, Json.str (lv l)])),
+    ("occurrences", Json.arr (occs.map fun (m, s) =>
+      Json.arr #[Json.str (lv (.mvar m)), Json.str s, Json.str ((occConst[m]?.map toString).getD "?")])),
+    ("sites_type", sitesJ sitesT), ("sites_value", sitesJ sitesV),
+    ("assignments", Json.arr (asg.map fun (k, v) => Json.arr #[toJson k, Json.str (lv v)])),
+    ("postponed", Json.arr (post.map fun (l, r) => Json.arr #[Json.str (lv l), Json.str (lv r)])),
+    ("diagnostics", toJson diags)]
+
+-- (compile-time budget only: the function is large; no effect on the translator at run time)
+set_option maxHeartbeats 400000 in
 partial def processConstantCore (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
     (stmt : Bool := false) (inferSort : Bool := false) (wfTerm : Bool := false) (inheritSort : Bool := false)
     (hypExact : Bool := false) (joint : Bool := false) (unify : Bool := false) (propLift : Bool := false)
-    (phantom : Bool := false) (eqLower : Bool := false) :
+    (phantom : Bool := false) (eqLower : Bool := false) (shadow : Option (IO.Ref (Option Json)) := none)
+    (witness : Option Json := none) :
     MetaM DeclResult := do
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
@@ -623,7 +743,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     unless st == "transparent" || st == "opaque_present" || st == "sealed_implementation" || st == "opaque_data" do
       return { base with status := "EXPORT_VALIDATION_FAILED", message := s!"unknown body state '{st}'" }
     let name := if hypsRef?.isSome then pendingTargetName c.name else targetName c.name
-    if (← getEnv).contains name && !genv.reuseExisting then
+    if (← getEnv).contains name && !genv.reuseExisting && shadow.isNone then
       return { base with status := "TRANSLATION_FAILED", message := s!"target name {name} already in use" }
     -- R2S: every own global level (type and body) starts as a level metavariable; references to a
     -- declaration sharing a source level use that variable (coherence by construction). After
@@ -654,14 +774,14 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let sharedRef? : Option (IO.Ref (Array (LMVarId × String))) ← if unify then some <$> IO.mkRef #[] else pure none
     let coerceRef? : Option (IO.Ref Nat) ← if propLift then some <$> IO.mkRef 0 else pure none
     let eqRef? : Option (IO.Ref Nat) ← if eqLower then some <$> IO.mkRef 0 else pure none
-    let ty ← match ← runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef? with
+    let ty ← match ← timePhase genv.phaseLog "trans_type" <| runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef? with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let val ← match ← runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef? with
+    let val ← match ← timePhase genv.phaseLog "trans_body" <| runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef? with
       | .ok e => pure e
       | .error e =>
         if e.msg.startsWith "termination obligation required" && !wfTerm && genv.stmtMode then
-          return ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify) (propLift := propLift) (phantom := phantom) (eqLower := eqLower)
+          return ← processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort (wfTerm := true) (inheritSort := inheritSort) (hypExact := hypExact) (unify := unify) (propLift := propLift) (phantom := phantom) (eqLower := eqLower) (shadow := shadow) (witness := witness)
         return fromTransError base e
     -- pending validation: the hypotheses become the artifact's leading binders *before* universe
     -- solving, so that the levels of their types (references to prerequisite statements) are
@@ -718,6 +838,12 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           unless s.sortLevel!.isNeverZero do throwError "the value is a proposition (Prop ≤ Type cumulativity), not a type"
           mkForallFVars xs s
       catch e => return { base with status := "UNSUPPORTED_FEATURE", message := s!"R2B-V: {← e.toMessageData.toString}" }
+    -- solver stage A (shadow mode): the constraints, then stop
+    if let some sref := shadow then
+      let occs ← match sharedRef? with | some r => r.get | none => pure #[]
+      let oc ← match genv.shadowOccConst with | some r => r.get | none => pure {}
+      sref.set (some (← shadowDump c.name ownMVars occs ty val oc))
+      return { base with status := "SHADOW" }
     -- after unification: every own level still free that occurs in the (solved) type becomes a
     -- parameter — a type level, or a body level that a type level's solution now mentions
     let implicitRef ← IO.mkRef (#[] : Array String)
@@ -943,15 +1069,23 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | none => pure .zero
     -- coherence by unification: per-occurrence shared levels left free by typing are the own variables
     -- (after the value's type is unified with the declared type, before the parameters are named)
+    -- solver stage B (experiment): a witness's values for the occurrences and own levels, before coherence
+    -- by unification and R3G name what is still free; every check below then applies as without it
+    let witnessBad ← IO.mkRef (#[] : Array String)
     let rebindThenKeep : MetaM Unit := do
+      if let (some w, some ref) := (witness, sharedRef?) then
+        witnessBad.set (← applyWitness w (← ref.get) gl)
       if let some ref := sharedRef? then
         rebindShared ref gl genv.facts (own.filter fun m => !typeLevels.contains m && !resultLv.contains m)
       keepParams
     if discover then
-      try discard <| solveLevels ty val dflt rebindThenKeep (solve := lower || joint)
+      try discard <| timePhase genv.phaseLog "solve_levels" <| solveLevels ty val dflt rebindThenKeep (solve := lower || joint) (log := genv.phaseLog)
       catch _ => pure ()
       return { base with status := "DISCOVERED", implicitLevels := (← implicitRef.get).qsort (· < ·) }
-    let (ty, val, diags, resid, gty, gval, rdefaults) ← solveLevels ty val dflt rebindThenKeep (solve := lower || joint)
+    let (ty, val, diags, resid, gty, gval, rdefaults) ← timePhase genv.phaseLog "solve_levels" <|
+      solveLevels ty val dflt rebindThenKeep (solve := lower || joint) (log := genv.phaseLog)
+    unless (← witnessBad.get).isEmpty do
+      return { base with status := "UNIVERSE_REJECTED", message := s!"solver witness: {(← witnessBad.get).toList.take 5}" }
     unless (← cycleRef.get).isEmpty do
       return { base with status := "UNIVERSE_REJECTED", message := s!"coherence by unification: {← cycleRef.get}" }
     -- R-CARRIER P2 post-pass: a remaining `u_l` of a split level (e.g. own-level hypothesis types) is its
@@ -994,6 +1128,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       { genv with facts := genv.facts.extend (splits.foldl (· ++ ·.2) #[]) (splits.foldl (fun acc (l, cs) =>
           acc ++ Split.copiedRelations genv.facts #[{ level := l, params := #[], names := cs }]) #[]) }
     let backCopy : String → String := fun x => ((splits.find? (·.2.contains x)).map (·.1)).getD x
+    let preCollapse := (ty, val)
     -- P3 retry tier: hypotheses of one leaf that ended at the same type are collapsed into the first
     let (ty, val, hyps) ← if !hypExact || hyps.isEmpty then pure (ty, val, hyps) else do
       unless resid.isEmpty do
@@ -1194,11 +1329,11 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let isPending := hypsRef?.isSome && !(wfTerm && pending.isEmpty && hyps.isEmpty)
     let name := if isPending then name else targetName c.name
     let base := { base with target := some name, targetKind := kind, rule := s!"constant/{c.bodyState}" }
-    if let some msg ← justifyResiduals name kind lparams resid gty gval genv.reuseExisting then
+    if let some msg ← timePhase genv.phaseLog "justify_residuals" (justifyResiduals name kind lparams resid gty gval genv.reuseExisting) then
       return { base with status := "UNIVERSE_REJECTED", message := msg }
     let base := if resid.isEmpty then base
       else { base with residualParams := resid, residualDefaults := rdefaults, residualType := gty, residualValue := gval }
-    match ← addOrReuse genv.reuseExisting (← mkConstDecl name kind lparams ty val) with
+    match ← timePhase genv.phaseLog "kernel" (do addOrReuse genv.reuseExisting (← mkConstDecl name kind lparams ty val)) with
     | .accepted =>
       -- B: the unfolding equation of a termination-lowered fixpoint at the top of the body, stated
       -- from the source body (a proof task; with the artifact's hypotheses when pending)
@@ -1240,6 +1375,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       return { base with status := if isPending then "PENDING_KERNEL_CHECKED" else "TRANSLATED_AND_CHECKED",
                                       synthetic := synth,
                                       pendingHyps := hyps.map (·.2), targetType := ty, targetValue := val,
+                                      shadowWinner := if genv.shadowWin.isSome then some preCollapse else none,
                                       levelParams := lparams, paramLevels := globals.map backCopy, levelCopies := splits, polyParams := polyNames.length,
                                       factReduced := factReduce, implicitLevels, levelInterp, propLift := propLiftDepth, propLiftCoercions := coercions,
                                       eqLowered := ← (match eqRef? with | some r => r.get | none => pure 0),
@@ -1719,6 +1855,9 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
   let r ← tryCatchRuntimeEx (processConstantCore genv results c factReduce interp admit cumul extraOwn discover lower delta stmt inferSort
       wfTerm inheritSort hypExact joint unify propLift phantom eqLower) fun e => do
     if let some ref := genv.tierLog then ref.modify (·.push (lbl0, (← IO.monoMsNow) - t0, "RESOURCE_LIMIT | aborted"))
+    if genv.retryAborted.isSome then
+      abortedRef.modify (·.push (lbl0, fun _ => processConstantCore genv results c factReduce interp admit cumul extraOwn
+        discover lower delta stmt inferSort wfTerm inheritSort hypExact joint unify propLift phantom eqLower))
     throw e
   if let some ref := genv.tierLog then
     let lbl := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("di", discover), ("lo", lower),
@@ -1726,6 +1865,28 @@ def processConstant (genv : GEnv) (results : Std.HashMap String DeclResult) (c :
     -- (a refused attempt's reason, abbreviated: diagnostics only, the timing file is not the report)
     let st := if r.accepted || r.status == "UNSUPPORTED_FEATURE" then r.status else s!"{r.status} | {r.message.take 600}"
     ref.modify (·.push (lbl, (← IO.monoMsNow) - t0, st))
+  -- solver stage B (experiment): the first attempt of a declaration with a witness, re-runnable on the `unify` path
+  -- with the witness's allowances (`it`, `cu`, `lo`) and its implicit levels as extra own levels
+  if genv.witnessOn then
+    -- (a statement's attempt is named after its `.statement` constant; witnesses are keyed by the source name)
+    if (← witnessRunRef.get).isNone && (genv.witnesses.contains c.name ||
+        genv.witnesses.contains ((c.name.dropSuffix ".statement").toString)) then
+      witnessRunRef.set (some fun w => do
+        let fl := (w.getObjValAs? (Array String) "flags").toOption.getD #[]
+        let eo := (w.getObjValAs? (Array String) "extra_own").toOption.getD #[]
+        processConstantCore genv results c factReduce (fl.contains "it") admit (fl.contains "cu") (extraOwn ++ eo)
+          false (fl.contains "lo") delta stmt inferSort wfTerm inheritSort hypExact false true propLift phantom eqLower
+          (witness := some w))
+  -- solver stage A (shadow mode): the accepted attempt, else the first one, is re-run once the declaration is
+  -- final, with the same structural flags and every reference at a fresh recorded level (`unify`)
+  if let some wref := genv.shadowWin then
+    let prev ← wref.get
+    if r.accepted || prev.isNone then
+      let lbl := tierLabel "c" [("fr", factReduce), ("it", interp), ("ad", admit), ("cu", cumul), ("lo", lower),
+        ("de", delta), ("wf", wfTerm), ("rv", inheritSort), ("p3", hypExact), ("jo", joint), ("un", unify), ("pl", propLift), ("ph", phantom), ("eq", eqLower)] extraOwn.size
+      unless prev.any (·.2.1) do
+        wref.set (some (lbl, r.accepted, fun sref => discard <| processConstantCore genv results c factReduce interp admit cumul extraOwn
+          false false delta stmt inferSort wfTerm inheritSort hypExact false true propLift phantom eqLower (shadow := some sref)))
   return r
 
 def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i : IR.InductiveDecl)
@@ -1733,7 +1894,7 @@ def processInductive (genv : GEnv) (results : Std.HashMap String DeclResult) (i 
     (plain : Bool := false) (rsOwn : Array String := #[]) (unify : Bool := false) :
     MetaM (DeclResult × Option IndTarget) := do
   let t0 ← IO.monoMsNow
-  let r ← processInductiveCore genv results i raw extraOwn discover lower plain rsOwn unify
+  let r ← timePhase genv.phaseLog "inductive_attempt" (processInductiveCore genv results i raw extraOwn discover lower plain rsOwn unify)
   if let some ref := genv.tierLog then
     let lbl := tierLabel "i" [("di", discover), ("lo", lower), ("pl", plain), ("un", unify)] extraOwn.size
     ref.modify (·.push (lbl, (← IO.monoMsNow) - t0, r.1.status))
@@ -2000,7 +2161,35 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
                       else (Split.decoupledPairs i).foldl (·.insert ·) acc
     | _ => acc) {}
   let tierLog ← IO.mkRef (#[] : Array (String × Nat × String))
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, phantomDefs, phantomProofs, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog }
+  let phaseFile ← IO.getEnv "R2L_PHASES"
+  let phaseLog ← if phaseFile.isSome then some <$> IO.mkRef ({} : Std.HashMap String (Nat × Nat)) else pure none
+  -- (solver stage B experiment: `R2L_WITNESS=<file>`, one JSON witness per line, `tools/solver_search.py`)
+  let witnesses : Std.HashMap String Json ← match ← IO.getEnv "R2L_WITNESS" with
+    | some f => (← IO.FS.lines f).foldlM (init := {}) fun acc l => do
+        if l.trim.isEmpty then return acc
+        match Json.parse l with
+        | .ok j => match j.getObjValAs? String "decl" with
+          | .ok d => return acc.insert d j
+          | .error _ => return acc
+        | .error _ => return acc
+    | none => pure {}
+  let witnessOn := !witnesses.isEmpty
+  -- (`R2L_RETRY_ABORTED=all`, or a file of `decl<TAB>tier label` lines: the attempts to re-run)
+  let retryAborted : Option (Std.HashSet (String × String)) ← match ← IO.getEnv "R2L_RETRY_ABORTED" with
+    | some "all" => pure (some {})
+    | some f => pure (some ((← IO.FS.lines f).foldl (init := {}) fun acc l =>
+        match l.splitOn "\t" with
+        | [d, t] => acc.insert (d, t)
+        | _ => acc))
+    | none => pure none
+  let shadowFile ← IO.getEnv "R2L_SHADOW"
+  let shadowWin ← if shadowFile.isSome then some <$> IO.mkRef none else pure none
+  let shadowOccConst ← if shadowFile.isSome then some <$> IO.mkRef ({} : Std.HashMap LMVarId Name) else pure none
+  -- (`R2L_SHADOW_ONLY=<file>`: shadow records only for the declarations named in the file, one per line)
+  let shadowOnly : Option (Std.HashSet String) ← match ← IO.getEnv "R2L_SHADOW_ONLY" with
+    | some f => pure (some ((← IO.FS.lines f).foldl (fun acc l => if l.trim.isEmpty then acc else acc.insert l.trim) {}))
+    | none => pure none
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, phantomDefs, phantomProofs, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog, phaseLog, shadowWin, shadowOccConst, witnesses, witnessOn, retryAborted }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   let opaqueData : Std.HashSet String := src.decls.foldl (init := {}) fun m d => match d with
@@ -2049,6 +2238,11 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     -- the heartbeat budget is per declaration; a declaration exceeding it is a RESOURCE_LIMIT row
     let saved ← saveState
     if let some ref := genv.tierLog then ref.set #[]
+    if let some ref := genv.phaseLog then ref.set {}
+    if let some ref := genv.shadowWin then ref.set none
+    if genv.witnessOn then witnessRunRef.set none
+    if genv.retryAborted.isSome then abortedRef.set #[]
+    if let some ref := genv.shadowOccConst then ref.set {}
     let tDecl ← IO.monoMsNow
     -- (an internal error of one declaration is its TRANSLATION_FAILED row, not the end of the run)
     -- resource limits per declaration (docs/TRUST.md): reflection proofs (ring/lia certificates)
@@ -2070,6 +2264,44 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     -- not part of any report)
     if let some f := (← IO.getEnv "R2L_PROGRESS") then
       IO.FS.withFile f .append fun h => h.putStrLn s!"{r.timeMs}\t{r.status}\t{r.source}"
+    -- (solver stage A, shadow mode: `R2L_SHADOW=<file>`, the constraints of the declaration's recorded attempt,
+    -- with the accepted row's level sites; own heartbeat budget, state restored)
+    if let (some f, some wref) := (shadowFile, genv.shadowWin) then
+      if let some (lbl, acc, run) ← wref.get then
+        if shadowOnly.all (·.contains r.source) then
+          let s ← saveState
+          -- (the whole core state too: `restore` keeps the name generator and the core caches; the translator
+          -- orders some levels by metavariable name, and heartbeats count allocations, so names and cache entries
+          -- left by the shadow attempt would change later rows and budgeted attempts)
+          let coreSt ← getThe Core.State
+          let sref ← IO.mkRef (none : Option Json)
+          let t0 ← IO.monoMsNow
+          let err ← tryCatchRuntimeEx (do withTheReader Core.Context limits (withCurrHeartbeats (run sref)); pure "")
+            fun e => do pure s!"shadow attempt: {(← e.toMessageData.toString).take 300}"
+          let dt := (← IO.monoMsNow) - t0
+          s.restore
+          modifyThe Core.State fun _ => coreSt
+          let mut fields : List (String × Json) := [("tier", lbl), ("accepted", Json.bool acc), ("status", r.status),
+            ("shadow_ms", toJson dt), ("error", err)]
+          if let some j ← sref.get then
+            fields := fields ++ [("record", j)]
+          if acc then
+            let sj (e? : Option Expr) : Json := match e? with
+              | some e => Json.arr ((levelSites e).map fun (k, l) => Json.arr #[Json.str k, Json.str (levelStr {} l)])
+              | none => Json.null
+            let (wt, wv) := match r.shadowWinner with
+              | some (t, v) => (some t, some v)
+              | none => (r.targetType, r.targetValue)
+            fields := fields ++ [("winner_type", sj wt), ("winner_value", sj wv),
+              ("winner_params", toJson (r.levelParams.map toString))]
+          IO.FS.withFile f .append fun h => h.putStrLn (Json.mkObj (("decl", Json.str r.source) :: fields)).compress
+    -- (solver stage A diagnostics: `R2L_PHASES=<file>`, one JSON line per declaration with its time by phase)
+    if let (some f, some ref) := (phaseFile, genv.phaseLog) then
+      let ph := (← ref.get).toArray.qsort (·.1 < ·.1)
+      let line := Json.mkObj [("decl", r.source), ("status", r.status), ("ms", toJson r.timeMs),
+        ("attempts", toJson r.tierTimes.size),
+        ("phases", Json.mkObj (ph.toList.map fun (k, a, n) => (k, Json.arr #[toJson a, toJson n])))]
+      IO.FS.withFile f .append fun h => h.putStrLn line.compress
     match asm? with
     | none => if let some g := genv? then genv := g
     | some a =>
@@ -2553,6 +2785,33 @@ where
                   break
               unless better do sAcc.restore
           if r.accepted then break
+        -- solver stage B (experiment, `R2L_RETRY_ABORTED`): an attempt the late-tier budget aborted, re-run with the
+        -- full budget (all of them, or those the reference solver predicts satisfiable)
+        if !r.accepted then
+          if let some sel := genv.retryAborted then
+            for (lbl, run) in ← abortedRef.get do
+              unless sel.isEmpty || sel.contains (c.name, lbl) do continue
+              let t0 ← IO.monoMsNow
+              let r' ← budgeted c.name "constant" (divisor := 1) (run ())
+              if let some ref := genv.tierLog then
+                ref.modify (·.push (s!"retry {lbl}", (← IO.monoMsNow) - t0,
+                  if r'.accepted then r'.status else s!"{r'.status} | {r'.message.take 600}"))
+              if r'.accepted then
+                r := { r' with levelDiagnostics := r'.levelDiagnostics.push s!"solver: stage B full-budget retry of {lbl} (experiment)" }
+                break
+              lastTier := some r'
+        -- solver stage B (experiment, `R2L_WITNESS`): last, the first attempt with the reference solver's witness
+        if !r.accepted then
+          if let some w := genv.witnesses[c0.name]? then
+            if let some run := ← witnessRunRef.get then
+              let t0 ← IO.monoMsNow
+              let r' ← budgeted c.name "constant" (divisor := 1) (run w)
+              if let some ref := genv.tierLog then
+                ref.modify (·.push ("c[witness]", (← IO.monoMsNow) - t0,
+                  if r'.accepted then r'.status else s!"{r'.status} | {r'.message.take 600}"))
+              if r'.accepted then
+                r := { r' with levelDiagnostics := r'.levelDiagnostics.push "solver: stage B witness attempt (experiment)" }
+              else lastTier := some r'
         -- a declaration that no attempt accepts keeps the diagnosis of the plain attempt without
         -- implicit levels (the earlier behaviour)
         if !r.accepted then
