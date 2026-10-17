@@ -2745,7 +2745,7 @@ partial def levelNF : Level → Option (Nat × List (Name × Nat))
 /-- Coherence by unification: every per-occurrence metavariable of a shared level `l` still free after
 translation is the declaration's own variable for `l` (coherence where typing imposes nothing else). -/
 def rebindShared (ref : IO.Ref (Array (LMVarId × String))) (gl : Std.HashMap String Level)
-    (f : IR.UniverseFacts := { levels := #[], relations := #[] }) : MetaM Unit := do
+    (f : IR.UniverseFacts := { levels := #[], relations := #[] }) (bodyOnly : Array String := #[]) : MetaM Unit := do
   -- one pass: the class (root metavariable) of every occurrence and the source levels it carries
   let occs ← ref.get
   let mut roots : Array (LMVarId × String) := #[]
@@ -2774,7 +2774,12 @@ def rebindShared (ref : IO.Ref (Array (LMVarId × String))) (gl : Std.HashMap St
       -- (the own level already solved through this occurrence, `?l := max (…, ?occ)`: the occurrence is
       -- the parameter `u_l` itself, so `l` denotes `max (…, u_l)`, its R2F reading; never a cycle)
       if (vi.collectMVars {}).contains r then
-        unless vi == .mvar r do assignLevelMVar r (.param (levelParamName l))
+        unless vi == .mvar r do
+          -- (a body level (R2B) has no parameter: `l = max (…, l)` is solved by its least solution, the other
+          -- summands — as a free body level takes its minimal model)
+          if bodyOnly.contains l then
+            assignLevelMVar r (vi.replace fun x => if x == .mvar r then some .zero else none).normalize
+          else assignLevelMVar r (.param (levelParamName l))
       else assignLevelMVar r v
 
 /-- Rule R (docs/COHERENCE_READINGS.md): the levels `σ` and `τ` over the own levels `own` (`u_m` read as the
