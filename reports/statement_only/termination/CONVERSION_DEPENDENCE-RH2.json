@@ -1,0 +1,46 @@
+{
+ "schema": "rocq2lean-conversion-dependence/1",
+ "run": "/home/shunqwang4/research/r2l-run-RH2/runs/st-corpus-RH2",
+ "translation_report_sha256": "93a17c3e1071d6edfd19d5c5d45863ccde08ff09ad628ae397a5372796d72a45",
+ "lowered": [
+  "mathcomp.boot.div.edivn_rec",
+  "mathcomp.boot.div.modn_rec"
+ ],
+ "dependents": 887,
+ "constants_analyzed": 745,
+ "not_analyzed": [],
+ "processes": [
+  {
+   "part": 0,
+   "exit": 0,
+   "seconds": 8.8
+  },
+  {
+   "part": 1,
+   "exit": 0,
+   "seconds": 8.5
+  }
+ ],
+ "by_rocq_verdict": {
+  "CONV_OK": 886,
+  "CONV_NEEDS": 1
+ },
+ "needs_unfolding": [
+  {
+   "declaration": "mathcomp.boot.div.gcdn",
+   "rocq": "CONV_NEEDS",
+   "reason": "guard deferred",
+   "lean": "TRANSLATION_FAILED",
+   "lean_message": "internal error: unknown metavariable `?_uniq.479437`"
+  }
+ ],
+ "claimed_although_needing_unfolding": [],
+ "lean_kernel_failures_among_dependents": [
+  "mathcomp.boot.div.gcdn",
+  "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
+ ],
+ "lean_kernel_failures_not_explained": [
+  "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
+ ],
+ "status": "OK"
+}
