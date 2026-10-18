@@ -2030,3 +2030,45 @@ the cast's two types printed):
 * `termination/CONVERSION_DEPENDENCE-S21b.json`;
 * `timing/translation_timing-S21b.json`;
 * `test_eq_lowering.json` and the frozen-suite reports.
+
+## Entry 17 — Universe solver stages A and B; the least-solution rule (2026-10-18)
+
+Branch `solver-b`, from `main` `6c6b2e4`: `5a42d9c` (least-solution rule) and `d24b0fb` (stage A and the stage B
+experiments, cherry-picked from `solver-a` `3e1e5d6`). Records: `docs/SOLVER_STAGE_A.md`, `docs/SOLVER_STAGE_B.md`;
+draft proposal 3, `docs/CARRIER_PIN_PROPOSAL.md` (not adopted; a decision on P0 for carrier pins).
+
+### (1) Changes
+
+| Commit | Change | Kind |
+|---|---|---|
+| `5a42d9c` | coherence by unification: a body level solved through its own occurrence, `l = max(A, l)`, takes its least solution `A` (was named by a parameter `u_l` it does not have; `Job` was then accepted only with `eqtype.58` lowered to 0) | fix (solver) |
+| `d24b0fb` | stage A: shadow records (`R2L_SHADOW`), phases (`R2L_PHASES`); stage B experiments: witness attempts (`R2L_WITNESS`), full-budget retries of aborted attempts (`R2L_RETRY_ABORTED`); `tools/solver_search.py` (reference solver), `tools/solver_policy.py`, tests | diagnostics / experiments, inert without the variables |
+
+### (2) Coverage — FULL CORPUS (S22, `5a42d9c`)
+
+| Run | Accepted | Audited Pending | Blocked | Direct Failure | Unclaimed |
+|---|---|---|---|---|---|
+| S21b (entry 16) | 685 | 3,585 | 180 | 24 | 204 |
+| **S22** | **685** | **3,610** | **153** | **26** | **179** |
+
+* 25 protected roots newly claimed (the four `*_ready_instance`, the `sched` definitions and their consumers),
+  0 claimed rows lost; 179 claimed rows changed, 177 only in universe levels, 2 more general on another tier.
+* Consumer OK, audit OK, source instances OK, `CORPUS_PROVENANCE_BOUND`, conversion dependence OK.
+* Reference solver soundness: 603/603 accepted `prof-A` records SAT. Speed bound: 49% of attempt time is
+  universe-only variants of groups no variant accepts.
+
+### (3) Validation
+
+Frozen worktree `r2l-sb2` at `d24b0fb`: the 18 statement suites and `test-all` 18/18.
+
+### (4) Negative results (not adopted)
+
+* Rule U (proposal 1): 0 of 127 records at a local position (`docs/ULIFT_PROPOSAL.md` §9.1).
+* Carrier pins in statements (`R2L_EXP_NO_PIN`, upper bound): 0 audit-clean protected roots under P0.
+* Raising at proof-task references (rule H↑): 0 rows; the referrers' level classes are the cause (stage C).
+
+### (5) Evidence
+
+`coverage/S22.json`, `coverage/transitions-S21b-to-S22.json`, `RULE_BACKLOG.{md,json}`, `PROOF_TASKS.jsonl`,
+`TRANSLATION_RESULTS.json`, `provenance/CORPUS_MANIFEST.json`, `termination/CONVERSION_DEPENDENCE-S22.json`,
+`timing/translation_timing-S22.json` (S22).

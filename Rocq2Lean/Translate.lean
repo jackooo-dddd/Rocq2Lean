@@ -118,6 +118,24 @@ structure GEnv where
   liftTargets : Std.HashSet Name := {}
   /-- Timing (entry 14): the attempts of the declaration being translated (tier label, ms, status). -/
   tierLog : Option (IO.Ref (Array (String × Nat × String))) := none
+  /-- Solver stage A diagnostics: time by phase of the declaration being translated, over all its
+  attempts (phase ↦ ms, count); written only with `R2L_PHASES=<file>`, never part of a report. -/
+  phaseLog : Option (IO.Ref (Std.HashMap String (Nat × Nat))) := none
+  /-- Solver stage A (shadow mode, `R2L_SHADOW=<file>`): the attempt of the declaration being translated
+  whose constraints are written once it is final — its tier label, whether it was accepted, and the
+  attempt itself re-run in shadow mode (it writes its constraints to the given reference). -/
+  shadowWin : Option (IO.Ref (Option (String × Bool × (IO.Ref (Option Json) → MetaM Unit)))) := none
+  /-- Solver stage A (shadow mode): the referenced constant of every fresh reference level of the declaration
+  being translated (diagnostics: names the position of each occurrence in the constraint record). -/
+  shadowOccConst : Option (IO.Ref (Std.HashMap LMVarId Name)) := none
+  /-- Solver stage B (experiment, `R2L_WITNESS=<file>`): level witnesses found by the reference solver for
+  declarations the ladder does not accept, by source name (`tools/solver_search.py`). -/
+  witnesses : Std.HashMap String Json := {}
+  /-- Solver stage B: witness attempts enabled (the attempt itself is `witnessRunRef`, Emit). -/
+  witnessOn : Bool := false
+  /-- Solver stage B (experiment, `R2L_RETRY_ABORTED`): re-run budget-aborted attempts of a failing declaration with the
+  full budget; empty = all of them, else the `(declaration, tier label)` pairs listed. -/
+  retryAborted : Option (Std.HashSet (String × String)) := none
   /-- P0: protected public interface (pinned Prosa/Classic inventory, bound in the export contract):
   these declarations keep their full source statement — no R2B-S result-sort lowering and no R2B-P
   specialization of a statement level — whether they are requested roots or dependencies. -/
@@ -404,7 +422,12 @@ def sharedOrFreshLevels (globals : Array String) : TransM (List Level) := do
 with the referring declaration, otherwise fresh). -/
 def levelsOf (n : Name) : TransM (List Level) := do
   match (← read).genv.constGlobals[n]? with
-  | some gs => sharedOrFreshLevels gs
+  | some gs =>
+    let ls ← sharedOrFreshLevels gs
+    if let some ref := (← read).genv.shadowOccConst then
+      for l in ls do
+        if let .mvar m := l then ref.modify (·.insert m n)
+    pure ls
   | none => pure []
 
 /-- Pending validation: the hypothesis standing for leaf `l` in the declaration being translated —
@@ -2728,6 +2751,75 @@ partial def levelMVarsOf (e : Expr) : StateM (Array LMVarId) Unit := do
   | .mdata _ b | .proj _ _ b => levelMVarsOf b
   | _ => pure ()
 
+/-- Solver stage B: a witness level, `0`, `S(l)`, `M(a,b)` or `o:<source level>` (the declaration's own variable
+for that level, `gl`). -/
+partial def parseWitnessLevel (gl : Std.HashMap String Level) (s : String) : Except String Level := do
+  let rec go : List Char → Except String (Level × List Char)
+    | '0' :: r => pure (.zero, r)
+    | 'S' :: '(' :: r => do
+      let (l, r) ← go r
+      match r with
+      | ')' :: r => pure (.succ l, r)
+      | _ => throw s!"witness level {s}: `)` expected"
+    | 'M' :: '(' :: r => do
+      let (a, r) ← go r
+      match r with
+      | ',' :: r =>
+        let (b, r) ← go r
+        match r with
+        | ')' :: r => pure (mkLevelMax' a b, r)
+        | _ => throw s!"witness level {s}: `)` expected"
+      | _ => throw s!"witness level {s}: `,` expected"
+    | 'o' :: ':' :: r =>
+      let (nm, r) := r.span fun ch => ch != ',' && ch != ')'
+      match gl[String.mk nm]? with
+      | some v => pure (v, r)
+      | none => throw s!"witness level {s}: {String.mk nm} is not an own level of the attempt"
+    | _ => throw s!"witness level {s}: unexpected input"
+  let (l, r) ← go s.toList
+  unless r.isEmpty do throw s!"witness level {s}: trailing input"
+  pure l
+
+/-- Solver stage B: assign the occurrence metavariables (in creation order) and own levels of an attempt from a
+witness, after unification. A metavariable unification already solved must equal the witness value. Returns the
+mismatches. -/
+def applyWitness (w : Json) (occs : Array (LMVarId × String)) (gl : Std.HashMap String Level) :
+    MetaM (Array String) := do
+  let occW := (w.getObjValAs? (Array String) "occ").toOption.getD #[]
+  unless occW.size == occs.size do
+    return #[s!"witness has {occW.size} occurrences, the attempt {occs.size}"]
+  let mut bad : Array String := #[]
+  let set (cur v : Level) (what : String) : MetaM (Option String) := do
+    -- (occurs check on the instantiated value: an own level already solved as `max (…, ?occ)` would close a cycle)
+    let v ← instantiateLevelMVars v
+    match cur with
+    | .mvar r =>
+      if (v.collectMVars {}).contains r then
+        return if ← isLevelDefEq cur v then none else some s!"{what}: {cur} vs witness {v}"
+      assignLevelMVar r v
+      return none
+    | _ => return if ← isLevelDefEq cur v then none else some s!"{what}: {cur} vs witness {v}"
+  for (m, l) in occs, s in occW do
+    match parseWitnessLevel gl s with
+    | .error e => bad := bad.push e
+    | .ok v =>
+      if let some e ← set (← instantiateLevelMVars (.mvar m)) v s!"occurrence of {l}" then bad := bad.push e
+  let ownW : List (String × Json) := match w.getObjVal? "own" with
+    | .ok (.obj kvs) => kvs.toList
+    | _ => []
+  for (l, j) in ownW do
+    let some s := j.getStr?.toOption | continue
+    let some v0 := gl[l]? | continue
+    -- (a free own level that the witness keeps as itself is its parameter now, as R2S would make it, so that
+    -- the occurrences the witness set to it are not a free class R3G renames)
+    if s == s!"o:{l}" then
+      if let .mvar r ← instantiateLevelMVars v0 then assignLevelMVar r (.param (levelParamName l))
+      continue
+    match parseWitnessLevel gl s with
+    | .error e => bad := bad.push e
+    | .ok v => if let some e ← set (← instantiateLevelMVars v0) v s!"own level {l}" then bad := bad.push e
+  return bad
+
 /-- Normal form `max(c, p₁ + k₁, …)` of a level without `imax`/metavariables. -/
 partial def levelNF : Level → Option (Nat × List (Name × Nat))
   | .zero => some (0, [])
@@ -2745,7 +2837,7 @@ partial def levelNF : Level → Option (Nat × List (Name × Nat))
 /-- Coherence by unification: every per-occurrence metavariable of a shared level `l` still free after
 translation is the declaration's own variable for `l` (coherence where typing imposes nothing else). -/
 def rebindShared (ref : IO.Ref (Array (LMVarId × String))) (gl : Std.HashMap String Level)
-    (f : IR.UniverseFacts := { levels := #[], relations := #[] }) : MetaM Unit := do
+    (f : IR.UniverseFacts := { levels := #[], relations := #[] }) (bodyOnly : Array String := #[]) : MetaM Unit := do
   -- one pass: the class (root metavariable) of every occurrence and the source levels it carries
   let occs ← ref.get
   let mut roots : Array (LMVarId × String) := #[]
@@ -2774,7 +2866,12 @@ def rebindShared (ref : IO.Ref (Array (LMVarId × String))) (gl : Std.HashMap St
       -- (the own level already solved through this occurrence, `?l := max (…, ?occ)`: the occurrence is
       -- the parameter `u_l` itself, so `l` denotes `max (…, u_l)`, its R2F reading; never a cycle)
       if (vi.collectMVars {}).contains r then
-        unless vi == .mvar r do assignLevelMVar r (.param (levelParamName l))
+        unless vi == .mvar r do
+          -- (a body level (R2B) has no parameter: `l = max (…, l)` is solved by its least solution, the other
+          -- summands — as a free body level takes its minimal model)
+          if bodyOnly.contains l then
+            assignLevelMVar r (vi.replace fun x => if x == .mvar r then some .zero else none).normalize
+          else assignLevelMVar r (.param (levelParamName l))
       else assignLevelMVar r v
 
 /-- Rule R (docs/COHERENCE_READINGS.md): the levels `σ` and `τ` over the own levels `own` (`u_m` read as the
@@ -3021,29 +3118,38 @@ def solvePostponedLevels : MetaM (Array String × Array String) := do
         left := left.push s!"{if unsat then "unsatisfiable" else "solver limitation"}: {lhs} = {rhs}"
   return (log, left)
 
+/-- Solver stage A diagnostics: run `x`, adding its wall-clock time to phase `k` of `log` (inclusive of
+the phases nested in it). Without a log, `x` itself. -/
+def timePhase {α} (log : Option (IO.Ref (Std.HashMap String (Nat × Nat)))) (k : String) (x : MetaM α) : MetaM α := do
+  let some ref := log | x
+  let t0 ← IO.monoMsNow
+  try x finally
+    let dt := (← IO.monoMsNow) - t0
+    ref.modify fun h => let (a, n) := h.getD k (0, 0); h.insert k (a + dt, n + 1)
+
 /-- Solve the universe metavariables introduced at references to generalized constants:
 type-check with Lean's checker (which unifies universe levels; terms are not changed) and
 unify the value's type with the declared type; any level left unconstrained is set to `0`.
 The kernel re-checks the result. -/
 def solveLevels (ty val : Expr) (dflt : LMVarId → MetaM Level := fun _ => pure .zero) (beforeDefault : MetaM Unit := pure ())
-    (solve : Bool := false) :
+    (solve : Bool := false) (log : Option (IO.Ref (Std.HashMap String (Nat × Nat))) := none) :
     MetaM (Expr × Expr × Array String × List Name × Expr × Expr × List Level) := do
   let mut diags : Array String := #[]
   setPostponed {}      -- constraints left by earlier (failed) attempts are not this declaration's
-  try Meta.check ty catch e => diags := diags.push s!"Meta.check type: {← e.toMessageData.toString}"
-  try Meta.check val catch e => diags := diags.push s!"Meta.check value: {← e.toMessageData.toString}"
+  try timePhase log "check_type" (Meta.check ty) catch e => diags := diags.push s!"Meta.check type: {← e.toMessageData.toString}"
+  try timePhase log "check_value" (Meta.check val) catch e => diags := diags.push s!"Meta.check value: {← e.toMessageData.toString}"
   try
-    unless ← withTransparency .all <| isDefEq (← inferType val) ty do
+    unless ← timePhase log "defeq_type" (withTransparency .all <| isDefEq (← inferType val) ty) do
       diags := diags.push "value type not unified with the declared type by Meta.isDefEq"
   catch e => diags := diags.push s!"isDefEq: {← e.toMessageData.toString}"
   -- M6 (last tiers only): the bounded solver on postponed `max` constraints, recorded
   if solve then
-    let (asg, left) ← solvePostponedLevels
+    let (asg, left) ← timePhase log "bounded_solver" solvePostponedLevels
     diags := diags ++ asg.map ("solver: " ++ ·) ++ left.map ("solver: " ++ ·)
   -- Own type levels still unassigned after unification become universe parameters (R2S).
-  beforeDefault
-  let ty ← instLevelMVars ty
-  let val ← instLevelMVars val
+  timePhase log "keep_params" beforeDefault
+  let ty ← timePhase log "inst_levels" (instLevelMVars ty)
+  let val ← timePhase log "inst_levels" (instLevelMVars val)
   let ((), ms) := ((levelMVarsOf ty *> levelMVarsOf val).run #[])
   -- Residual levels are unconstrained by unification; they are defaulted to 0 and *recorded*,
   -- must still pass the universe obligations (rule R3) like every other argument, and are only

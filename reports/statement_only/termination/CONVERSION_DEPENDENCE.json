@@ -1,7 +1,7 @@
 {
  "schema": "rocq2lean-conversion-dependence/1",
- "run": "/home/shunqwang4/research/r2l-run-S21b/runs/st-corpus-S21b",
- "translation_report_sha256": "7a2c87d24afd336bcbf072ed288b98da2ae151186b11ed1827c069dc8c6a17b5",
+ "run": "/home/shunqwang4/research/r2l-run-S22/runs/st-corpus-S22",
+ "translation_report_sha256": "a25f05afba323e6477f51cad98eb5cdd0c37cd6cff45d43896d3bc98bb0bb2ea",
  "lowered": [
   "mathcomp.boot.div.edivn_rec",
   "mathcomp.boot.div.gcdn",
@@ -14,12 +14,12 @@
   {
    "part": 0,
    "exit": 0,
-   "seconds": 8.7
+   "seconds": 9.1
   },
   {
    "part": 1,
    "exit": 0,
-   "seconds": 9.0
+   "seconds": 9.6
   }
  ],
  "by_rocq_verdict": {
@@ -28,16 +28,10 @@
  "needs_unfolding": [],
  "claimed_although_needing_unfolding": [],
  "lean_kernel_failures_among_dependents": [
-  "prosa.implementation.facts.job_constructor.arrivals_at_unique",
-  "prosa.implementation.facts.job_constructor.arrivals_between_unique",
-  "prosa.implementation.facts.job_constructor.job_arrival_consistent",
-  "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
+  "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf'__rocq2lean_obligation_5"
  ],
  "lean_kernel_failures_not_explained": [
-  "prosa.implementation.facts.job_constructor.arrivals_at_unique",
-  "prosa.implementation.facts.job_constructor.arrivals_between_unique",
-  "prosa.implementation.facts.job_constructor.job_arrival_consistent",
-  "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals"
+  "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf'__rocq2lean_obligation_5"
  ],
  "status": "OK"
 }

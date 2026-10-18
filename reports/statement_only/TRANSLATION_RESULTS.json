@@ -1,6 +1,6 @@
 {
  "schema": "rocq2lean-statement-results/1",
- "run": "runs/st-corpus-S21b",
+ "run": "runs/st-corpus-S22",
  "report_status": "ROOTS_NOT_TRANSLATED",
  "checks": {
   "consumer": "OK",
@@ -59,20 +59,20 @@
   },
   "modern": {
    "DEFINITION_AUDITED": 337,
-   "DEFINITION_AUDITED_PENDING": 653,
-   "STATEMENT_AUDITED_PENDING": 1279,
+   "DEFINITION_AUDITED_PENDING": 674,
+   "STATEMENT_AUDITED_PENDING": 1283,
    "STATEMENT_AUDITED": 126,
-   "BLOCKED_DEPENDENCY": 177,
-   "KERNEL_REJECTED": 7,
-   "UNIVERSE_REJECTED": 11,
-   "TRANSLATION_FAILED": 5
+   "BLOCKED_DEPENDENCY": 150,
+   "UNIVERSE_REJECTED": 19,
+   "TRANSLATION_FAILED": 5,
+   "KERNEL_REJECTED": 1
   },
   "prosa": {
-   "STATEMENT_AUDITED_PENDING": 410,
+   "STATEMENT_AUDITED_PENDING": 425,
    "STATEMENT_AUDITED": 245,
-   "BLOCKED_DEPENDENCY": 200,
-   "UNIVERSE_REJECTED": 51,
-   "KERNEL_REJECTED": 19
+   "BLOCKED_DEPENDENCY": 131,
+   "UNIVERSE_REJECTED": 104,
+   "KERNEL_REJECTED": 20
   }
  },
  "protected_interface": {
@@ -89,12 +89,12 @@
    },
    "modern": {
     "DEFINITION_AUDITED": 325,
-    "DEFINITION_AUDITED_PENDING": 593,
-    "STATEMENT_AUDITED_PENDING": 1279,
+    "DEFINITION_AUDITED_PENDING": 614,
+    "STATEMENT_AUDITED_PENDING": 1283,
     "STATEMENT_AUDITED": 126,
-    "BLOCKED_DEPENDENCY": 160,
-    "KERNEL_REJECTED": 7,
-    "UNIVERSE_REJECTED": 11,
+    "BLOCKED_DEPENDENCY": 133,
+    "UNIVERSE_REJECTED": 19,
+    "KERNEL_REJECTED": 1,
     "TRANSLATION_FAILED": 3
    }
   }
@@ -107,13 +107,13 @@
   },
   {
    "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) ",
-   "count": 21
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0)",
+   "count": 36
   },
   {
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0)",
-   "count": 20
+   "message": "statement specialization refused",
+   "count": 31
   },
   {
    "status": "KERNEL_REJECTED",
@@ -122,8 +122,23 @@
   },
   {
    "status": "UNIVERSE_REJECTED",
-   "message": "statement specialization refused",
+   "message": "defaulted universe level(s) ",
    "count": 13
+  },
+  {
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_C",
+   "count": 13
+  },
+  {
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_",
+   "count": 12
+  },
+  {
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines",
+   "count": 11
   },
   {
    "status": "UNIVERSE_REJECTED",
@@ -137,13 +152,18 @@
   },
   {
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_C",
-   "count": 6
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max\n  (",
+   "count": 5
   },
   {
    "status": "TRANSLATION_FAILED",
    "message": "default cast annotation is not convertible in Lean ",
    "count": 5
+  },
+  {
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.mathcomp.boot.eqtype.Equality.sort",
+   "count": 4
   },
   {
    "status": "UNIVERSE_REJECTED",
@@ -161,14 +181,9 @@
    "count": 3
   },
   {
-   "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @Rocq.prosa.behavior.arrival_sequence.arrivals_at\n   ",
-   "count": 2
-  },
-  {
-   "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @RocqPending.prosa.behavior.ready.JobReady h_Corelib_",
-   "count": 2
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level mathcomp.boot.eqtype.58 solved as (some 0)",
+   "count": 3
   },
   {
    "status": "UNIVERSE_REJECTED",
@@ -182,27 +197,7 @@
   },
   {
    "status": "UNIVERSE_REJECTED",
-   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_",
-   "count": 2
-  },
-  {
-   "status": "UNIVERSE_REJECTED",
-   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines",
-   "count": 2
-  },
-  {
-   "status": "UNIVERSE_REJECTED",
    "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max u_CoqEAL_refin",
-   "count": 2
-  },
-  {
-   "status": "UNIVERSE_REJECTED",
-   "message": "reference to Rocq.mathcomp.boot.eqtype.Equality.sort",
-   "count": 2
-  },
-  {
-   "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.boot.eqtype.58 solved as (some 0)",
    "count": 2
   },
   {
@@ -256,13 +251,18 @@
    "count": 1
   },
   {
-   "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @Rocq.prosa.behavior.arrival_sequence.arrivals_betwee",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max (max u_Co",
    "count": 1
   },
   {
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max (max u_Co",
+   "message": "proof-local level mathcomp.boot.eqtype.58 solved as (some (max\n(max (max u_mathcomp_boot_e",
+   "count": 1
+  },
+  {
+   "status": "KERNEL_REJECTED",
+   "message": "(kernel) application type mismatch\n  @Rocq.CoqEAL.refinements.hrel.hrespectful\n    (@Rocq.",
    "count": 1
   },
   {
@@ -273,11 +273,6 @@
   {
    "status": "UNIVERSE_REJECTED",
    "message": "reference to Rocq.CoqEAL.refinements.binnat.Rnat",
-   "count": 1
-  },
-  {
-   "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @Rocq.prosa.model.task.arrival.curves.max_arrivals\n  ",
    "count": 1
   }
  ],
@@ -539,14 +534,6 @@
    "blocks_protected": 22
   },
   {
-   "declaration": "prosa.implementation.refinements.arrival_curve.task_rbf",
-   "family": "modern",
-   "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @Rocq.prosa.analysis.definitions.request_bound_function.task_request_bound_function\n    (@RocqPending.prosa.implementation.refinements.task.Task h_Corelib_ssr_ssrbool_is_true_true\n      h_Corelib_ssr_ssrbool_not_false",
-   "blocks": 76,
-   "blocks_protected": 21
-  },
-  {
    "declaration": "CoqEAL.refinements.param.last_R",
    "family": "external",
    "status": "UNSUPPORTED_FEATURE",
@@ -595,44 +582,12 @@
    "blocks_protected": 8
   },
   {
-   "declaration": "prosa.implementation.refinements.FP.fast_search_space.total_ohep_rbf",
-   "family": "modern",
-   "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3, u_residual_4, u_residual_5, u_residual_6] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @Rocq.prosa.analysis.definitions.request_bound_function.total_ohep_request_bound_function_FP\n    (@RocqPending.prosa.implementation.refinements.task.Task h_Corelib_ssr_ssrbool",
-   "blocks": 31,
-   "blocks_protected": 7
-  },
-  {
    "declaration": "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.ts_obligation_1",
    "family": "classic",
    "status": "UNIVERSE_REJECTED",
    "message": "statement specialization refused: RocqPending.mathcomp.boot.fintype.fintype_ordinal__canonical__eqtype_Equality: the level of u_Corelib_ssr_ssrbool_1169 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_Corelib_ssr_ssrbool_1169 [last tier: UNIVERSE_REJECTED: statement specialization refused: RocqPending.mathcomp.boot.fintype.",
    "blocks": 7,
    "blocks_protected": 7
-  },
-  {
-   "declaration": "prosa.implementation.refinements.EDF.nonpreemptive_sched.basic_ready_instance",
-   "family": "modern",
-   "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @RocqPending.prosa.behavior.ready.JobReady h_Corelib_ssr_ssrbool_is_true_true h_Corelib_ssr_ssrbool_not_false_is_true\n    h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_1 h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_2\n    h_Corelib_ssr_ssrbool_iffP__rocq2lean_obligation_1 h_Corelib_ssr_ssrbool_iffP__rocq2lean_obligation_2\n    (@RocqPending.prosa.impleme",
-   "blocks": 6,
-   "blocks_protected": 6
-  },
-  {
-   "declaration": "prosa.implementation.refinements.FP.nonpreemptive_sched.sequential_ready_instance",
-   "family": "modern",
-   "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.boot.eqtype.58 solved as (some 0): native fact Set lt mathcomp.boot.eqtype.58 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level prosa.implementation.definitions.task.40 solved as (some u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0): native fact Set lt prosa.implementation.definitions.task.40 does not hold for the solut",
-   "blocks": 6,
-   "blocks_protected": 6
-  },
-  {
-   "declaration": "prosa.implementation.refinements.FP.fast_search_space.blocking_bound_NP",
-   "family": "modern",
-   "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3, u_residual_4, u_residual_5, u_residual_6, u_residual_7] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @Rocq.prosa.model.priority.definitions.hep_task\n    (@RocqPending.prosa.implementation.refinements.task.Task h_Corelib_ssr_ssrbool_is_true_true\n      h_Corelib_s",
-   "blocks": 27,
-   "blocks_protected": 5
   },
   {
    "declaration": "CoqEAL.refinements.param.all_R",
@@ -659,6 +614,14 @@
    "blocks_protected": 5
   },
   {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_1",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max\n  (max\n   (max\n    (max\n     (max\n      (max u_CoqEAL_refinements_binnat_47805__c3 u_CoqEAL_refinements_binnat_47805__c4)\n      u_CoqEAL_refinements_binnat_47805__c5)\n     u_CoqEAL_refinements_hrel_1062__c2)\n    u_CoqEAL_refinements_hrel_1062__c3)\n   u_CoqEAL_refinements_param_381__c1)\n  u_prosa_implementation_d",
+   "blocks": 5,
+   "blocks_protected": 5
+  },
+  {
    "declaration": "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_4",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
@@ -672,14 +635,6 @@
    "status": "UNIVERSE_REJECTED",
    "message": "reference to Rocq.mathcomp.algebra.numeric_hierarchy.numdomain.Num.Builders_1.HB_unnamed_factory_3__rocq2lean_obligation_1.statement: argument u_mathcomp_algebra_numeric_hierarchy_numdomain_1653 + 1: mathcomp.algebra.numeric_hierarchy.numdomain.1653 + 1 \u2264 mathcomp.boot.nmodule.1104 is not entailed by the source universe graph, nor is mathcomp.boot.nmodule.1104 \u2264 mathcomp.algebra.numeric_hierarchy.",
    "blocks": 36,
-   "blocks_protected": 4
-  },
-  {
-   "declaration": "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP",
-   "family": "modern",
-   "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @RocqPending.prosa.analysis.definitions.blocking_bound.edf.blocking_relevant h_Corelib_ssr_ssrbool_is_true_true\n    h_Corelib_ssr_ssrbool_not_false_is_true h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_1\n    h_mat",
-   "blocks": 23,
    "blocks_protected": 4
   },
   {
@@ -1579,18 +1534,10 @@
    "blocks_protected": 3
   },
   {
-   "declaration": "prosa.implementation.refinements.EDF.preemptive_sched.basic_ready_instance",
-   "family": "modern",
-   "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @RocqPending.prosa.behavior.ready.JobReady h_Corelib_ssr_ssrbool_is_true_true h_Corelib_ssr_ssrbool_not_false_is_true\n    h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_1 h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_2\n    h_Corelib_ssr_ssrbool_iffP__rocq2lean_obligation_1 h_Corelib_ssr_ssrbool_iffP__rocq2lean_obligation_2\n    (@RocqPending.prosa.impleme",
-   "blocks": 3,
-   "blocks_protected": 3
-  },
-  {
    "declaration": "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_4",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max u_CoqEAL_refinements_hrel_1062__c3 u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0)\nu_prosa_implementation_refinements_arrival_bound_1485__c4)): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38671 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-l",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max u_CoqEAL_refinements_hrel_1062__c3 u_prosa_implementation_definitions_extrapolated_arrival_curve_21)\nu_prosa_implementation_refinements_arrival_bound_1485__c3)): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38671 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local",
    "blocks": 3,
    "blocks_protected": 3
   },
@@ -1611,14 +1558,6 @@
    "blocks_protected": 3
   },
   {
-   "declaration": "prosa.implementation.refinements.FP.preemptive_sched.sequential_ready_instance",
-   "family": "modern",
-   "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.boot.eqtype.58 solved as (some 0): native fact Set lt mathcomp.boot.eqtype.58 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level prosa.implementation.definitions.task.40 solved as (some u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0): native fact Set lt prosa.implementation.definitions.task.40 does not hold for the solut",
-   "blocks": 3,
-   "blocks_protected": 3
-  },
-  {
    "declaration": "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_17",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
@@ -1632,14 +1571,6 @@
    "status": "UNIVERSE_REJECTED",
    "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact Set lt CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact Set lt CoqEAL.refinements.refinements.38663 does not hold for the solution]",
    "blocks": 9,
-   "blocks_protected": 2
-  },
-  {
-   "declaration": "prosa.implementation.refinements.FP.fast_search_space.total_hep_rbf",
-   "family": "modern",
-   "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3, u_residual_4, u_residual_5, u_residual_6] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @Rocq.prosa.analysis.definitions.request_bound_function.total_hep_request_bound_function_FP\n    (@RocqPending.prosa.implementation.refinements.task.Task h_Corelib_ssr_ssrbool_",
-   "blocks": 8,
    "blocks_protected": 2
   },
   {
@@ -1878,7 +1809,7 @@
    "declaration": "prosa.implementation.refinements.EDF.refinements.refine_total_rbf'__rocq2lean_obligation_3",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "reference to Rocq.mathcomp.boot.eqtype.Equality.sort: coherence: source level mathcomp.boot.eqtype.51 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.51, not u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0 [last tier: UNIVERSE_REJECTED: reference to Rocq.mathcomp.boot.eqtype.Equality.sort: coherence: source level mathcomp.boot.eqtype.51",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.definitions.task.TaskCost: the level of u_prosa_implementation_definitions_task_40 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is u_prosa_implementation_definitions_extrapolated_arrival_curve_21, not u_prosa_implementation_definitions_task_40 [last tier: UNIVERSE_RE",
    "blocks": 5,
    "blocks_protected": 1
   },
@@ -1918,7 +1849,7 @@
    "declaration": "prosa.implementation.refinements.EDF.refinements.refine_total_rbf__rocq2lean_obligation_1",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_CoqEAL_refinements_binnat_47805__c2 u_CoqEAL_refinements_hrel_1062__c2)\n u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0)\nu_prosa_implementation_refinements_arrival_bound_1485__c3)): native fact CoqEAL.refinements.param.381 le CoqEAL.refinements.refinements.38671 does not hold for the solu",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_CoqEAL_refinements_binnat_47805__c2 u_CoqEAL_refinements_hrel_1062__c2)\n u_prosa_implementation_definitions_extrapolated_arrival_curve_21)\nu_prosa_implementation_refinements_arrival_bound_1485__c2)): native fact CoqEAL.refinements.param.381 le CoqEAL.refinements.refinements.38671 does not hold for the solution",
    "blocks": 2,
    "blocks_protected": 1
   },
@@ -2019,10 +1950,226 @@
    "blocks_protected": 1
   },
   {
-   "declaration": "prosa.implementation.refinements.EDF.fast_search_space.correct_search_space",
-   "family": "modern",
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_1",
+   "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3, u_residual_4] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @RocqPending.prosa.results.rta.ideal.edf.bounded_nps.is_in_search_space h_Corelib_ssr_ssrbool_is_true_true\n    h_Corelib_ssr_ssrbool_not_false_is_true h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_1\n",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_CoqEAL_refinements_binnat_47805__c3 u_CoqEAL_refinements_binnat_47805__c4)\n u_CoqEAL_refinements_binnat_47805__c5)\nu_CoqEAL_refinements_param_439__c1)): native fact Set lt CoqEAL.refinements.refinements.38671 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.ref",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_2",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.381 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_3",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_4",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_5",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_6",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_7",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_8",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_9",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP__rocq2lean_obligation_1",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max\n  (max\n   (max\n    (max\n     (max\n      (max\n       (max u_CoqEAL_refinements_binnat_47805__c3 u_CoqEAL_refinements_binnat_47805__c4)\n       u_CoqEAL_refinements_binnat_47805__c5)\n      u_CoqEAL_refinements_hrel_1062__c2)\n     u_CoqEAL_refinements_hrel_1062__c3)\n    u_CoqEAL_refinements_param_381__c1)\n   u_CoqEA",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_1",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_CoqEAL_refinements_binnat_47805__c3 u_CoqEAL_refinements_binnat_47805__c4)\n u_CoqEAL_refinements_binnat_47805__c5)\nu_CoqEAL_refinements_param_439__c1)): native fact Set lt CoqEAL.refinements.refinements.38671 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.ref",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_10",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines: argument u_CoqEAL_refinements_refinements_38671: CoqEAL.refinements.refinements.38671 + 0 \u2264 CoqEAL.refinements.refinements.38663 is not entailed by the source universe graph, nor is CoqEAL.refinements.refinements.38663 \u2264 CoqEAL.refinements.refinements.38671 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.CoqEAL.refinements.",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_11",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.EDF.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_mat",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_12",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_CoqEAL_refinements_hrel_1062__c5 u_CoqEAL_refinements_param_381__c3)\n u_prosa_implementation_definitions_extrapolated_arrival_curve_21)\nu_prosa_implementation_refinements_arrival_bound_1485__c37)): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38671 does not hold for the solution [",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_13",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.EDF.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_mat",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_14",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines: argument u_CoqEAL_refinements_refinements_38671: CoqEAL.refinements.refinements.38671 + 0 \u2264 CoqEAL.refinements.refinements.38663 is not entailed by the source universe graph, nor is CoqEAL.refinements.refinements.38663 \u2264 CoqEAL.refinements.refinements.38671 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.CoqEAL.refinements.",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_15",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.EDF.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_mat",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_16",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines: argument u_CoqEAL_refinements_refinements_38671: CoqEAL.refinements.refinements.38671 + 0 \u2264 CoqEAL.refinements.refinements.38663 is not entailed by the source universe graph, nor is CoqEAL.refinements.refinements.38663 \u2264 CoqEAL.refinements.refinements.38671 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.CoqEAL.refinements.",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_17",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.EDF.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_mat",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_2",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.EDF.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_mat",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_3",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.EDF.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_mat",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_4",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_CoqEAL_refinements_hrel_1062__c5 u_CoqEAL_refinements_param_381__c3)\n u_prosa_implementation_definitions_extrapolated_arrival_curve_21)\nu_prosa_implementation_refinements_arrival_bound_1485__c37)): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38671 does not hold for the solution [",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_5",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.EDF.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_mat",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_6",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines: argument u_CoqEAL_refinements_refinements_38671: CoqEAL.refinements.refinements.38671 + 0 \u2264 CoqEAL.refinements.refinements.38663 is not entailed by the source universe graph, nor is CoqEAL.refinements.refinements.38663 \u2264 CoqEAL.refinements.refinements.38671 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.CoqEAL.refinements.",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_7",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.EDF.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_mat",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_8",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines: argument u_CoqEAL_refinements_refinements_38671: CoqEAL.refinements.refinements.38671 + 0 \u2264 CoqEAL.refinements.refinements.38663 is not entailed by the source universe graph, nor is CoqEAL.refinements.refinements.38663 \u2264 CoqEAL.refinements.refinements.38671 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.CoqEAL.refinements.",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_9",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.EDF.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_mat",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP__rocq2lean_obligation_1",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max\n  (max\n   (max\n    (max\n     (max\n      (max\n       (max u_CoqEAL_refinements_binnat_47805__c3 u_CoqEAL_refinements_binnat_47805__c4)\n       u_CoqEAL_refinements_binnat_47805__c5)\n      u_CoqEAL_refinements_hrel_1062__c2)\n     u_CoqEAL_refinements_hrel_1062__c3)\n    u_CoqEAL_refinements_param_381__c1)\n   u_CoqEA",
    "blocks": 1,
    "blocks_protected": 1
   },
@@ -2062,23 +2209,207 @@
    "declaration": "prosa.implementation.refinements.EDF.refinements.refine_total_rbf'__rocq2lean_obligation_2",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "reference to Rocq.mathcomp.boot.eqtype.Equality.sort: coherence: source level mathcomp.boot.eqtype.51 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.51, not u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0 [last tier: UNIVERSE_REJECTED: reference to Rocq.mathcomp.boot.eqtype.Equality.sort: coherence: source level mathcomp.boot.eqtype.51",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.definitions.task.TaskCost: the level of u_prosa_implementation_definitions_task_40 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is u_prosa_implementation_definitions_extrapolated_arrival_curve_21, not u_prosa_implementation_definitions_task_40 [last tier: UNIVERSE_RE",
    "blocks": 1,
    "blocks_protected": 1
   },
   {
-   "declaration": "prosa.implementation.refinements.FP.fast_search_space.correct_search_space",
-   "family": "modern",
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_1",
+   "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @RocqPending.prosa.results.rta.ideal.fp.bounded_pi.is_in_search_space h_Corelib_ssr_ssrbool_is_true_true\n    h_Corelib_ssr_ssrbool_not_false_is_true h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_1\n    h_mathcomp_b",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_CoqEAL_refinements_binnat_47805__c3 u_CoqEAL_refinements_binnat_47805__c4)\n u_CoqEAL_refinements_binnat_47805__c5)\nu_CoqEAL_refinements_param_439__c1)): native fact Set lt CoqEAL.refinements.refinements.38671 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.ref",
    "blocks": 1,
    "blocks_protected": 1
   },
   {
-   "declaration": "prosa.implementation.refinements.FP.fast_search_space.ohep_task",
-   "family": "modern",
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_2",
+   "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) [u_residual_0, u_residual_1, u_residual_2, u_residual_3, u_residual_4] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @Rocq.prosa.model.priority.definitions.hep_task\n    (@RocqPending.prosa.implementation.refinements.task.Task h_Corelib_ssr_ssrbool_is_true_true\n      h_Corelib_ssr_ssrbool_not_false_is_true h_mathcomp_bo",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.381 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_3",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_4",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_5",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_6",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_7",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_8",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_9",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38663 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.refinements.38663 solved as (some 0): native fact CoqEAL.refinements.binnat.47805 le CoqEAL.refinements.refinements.38663 does not hold for the s",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_1",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_CoqEAL_refinements_binnat_47805__c3 u_CoqEAL_refinements_binnat_47805__c4)\n u_CoqEAL_refinements_binnat_47805__c5)\nu_CoqEAL_refinements_param_439__c1)): native fact Set lt CoqEAL.refinements.refinements.38671 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level CoqEAL.refinements.ref",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_10",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines: argument u_CoqEAL_refinements_refinements_38671: CoqEAL.refinements.refinements.38671 + 0 \u2264 CoqEAL.refinements.refinements.38663 is not entailed by the source universe graph, nor is CoqEAL.refinements.refinements.38663 \u2264 CoqEAL.refinements.refinements.38671 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.CoqEAL.refinements.",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_11",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.FP.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_math",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_12",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines: argument u_CoqEAL_refinements_refinements_38671: CoqEAL.refinements.refinements.38671 + 0 \u2264 CoqEAL.refinements.refinements.38663 is not entailed by the source universe graph, nor is CoqEAL.refinements.refinements.38663 \u2264 CoqEAL.refinements.refinements.38671 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.CoqEAL.refinements.",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_13",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.FP.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_math",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_2",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.FP.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_math",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_3",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.FP.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_math",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_4",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines: argument u_CoqEAL_refinements_refinements_38671: CoqEAL.refinements.refinements.38671 + 0 \u2264 CoqEAL.refinements.refinements.38663 is not entailed by the source universe graph, nor is CoqEAL.refinements.refinements.38663 \u2264 CoqEAL.refinements.refinements.38671 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.CoqEAL.refinements.",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_5",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.FP.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_math",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_6",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.refinements.refines: argument u_CoqEAL_refinements_refinements_38671: CoqEAL.refinements.refinements.38671 + 0 \u2264 CoqEAL.refinements.refinements.38663 is not entailed by the source universe graph, nor is CoqEAL.refinements.refinements.38663 \u2264 CoqEAL.refinements.refinements.38671 (with offset 0) [last tier: UNIVERSE_REJECTED: reference to Rocq.CoqEAL.refinements.",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_7",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.FP.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_math",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_8",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_CoqEAL_refinements_hrel_1062__c5 u_CoqEAL_refinements_param_381__c3)\n u_prosa_implementation_definitions_extrapolated_arrival_curve_21)\nu_prosa_implementation_refinements_arrival_bound_1485__c37)): native fact CoqEAL.refinements.param.439 le CoqEAL.refinements.refinements.38671 does not hold for the solution [",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_9",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "statement specialization refused: RocqPending.prosa.implementation.refinements.FP.refinements.eq_task: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is max\n(max (u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) u_mathcomp_boot_eqtype_32)\nu_mathcomp_boot_eqtype_55, not u_math",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point_NP__rocq2lean_obligation_1",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max\n  (max\n   (max\n    (max\n     (max\n      (max\n       (max u_CoqEAL_refinements_binnat_47805__c3 u_CoqEAL_refinements_binnat_47805__c4)\n       u_CoqEAL_refinements_binnat_47805__c5)\n      u_CoqEAL_refinements_hrel_1062__c2)\n     u_CoqEAL_refinements_hrel_1062__c3)\n    u_CoqEAL_refinements_param_381__c1)\n   u_CoqEA",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_check_point__rocq2lean_obligation_1",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max\n  (max\n   (max\n    (max\n     (max\n      (max\n       (max u_CoqEAL_refinements_binnat_47805__c3 u_CoqEAL_refinements_binnat_47805__c4)\n       u_CoqEAL_refinements_binnat_47805__c5)\n      u_CoqEAL_refinements_hrel_1062__c2)\n     u_CoqEAL_refinements_hrel_1062__c3)\n    u_CoqEAL_refinements_param_381__c1)\n   u_CoqEA",
+   "blocks": 1,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf'__rocq2lean_obligation_5",
+   "family": "external",
+   "status": "KERNEL_REJECTED",
+   "message": "(kernel) application type mismatch\n  @Rocq.CoqEAL.refinements.hrel.hrespectful\n    (@Rocq.Corelib.Init.Datatypes.list\n      (@Rocq.prosa.implementation.refinements.task.task_T Rocq.Corelib.Numbers.BinNums.N))\n    (@Rocq.Corelib.Init.Datatypes.list\n      (@Rocq.prosa.implementation.refinements.task.task_T Rocq.Corelib.Numbers.BinNums.N))\n    (@Rocq.Corelib.Init.Datatypes.list\n      (@Rocq.mathcomp.",
    "blocks": 1,
    "blocks_protected": 1
   },
@@ -2117,24 +2448,136 @@
   {
    "declaration": "prosa.implementation.facts.job_constructor.arrivals_at_unique",
    "family": "modern",
-   "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @Rocq.prosa.behavior.arrival_sequence.arrivals_at\n    (@RocqPending.prosa.implementation.definitions.job_constructor.Job h_Corelib_ssr_ssrbool_is_true_true\n      h_Corelib_ssr_ssrbool_not_false_is_true h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_1\n      h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_2 h_Corelib_ssr_ssrbool_iffP__rocq2lean_obligation_1\n",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.mathcomp.boot.eqtype.Equality.sort: coherence: source level mathcomp.boot.eqtype.51 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.51, not u_prosa_implementation_definitions_extrapolated_arrival_curve_21 [last tier: UNIVERSE_REJECTED: statement specialization refused: RocqPending.prosa.implementation.definitions.task.task_concrete_task__c",
    "blocks": 0,
    "blocks_protected": 0
   },
   {
    "declaration": "prosa.implementation.facts.job_constructor.arrivals_between_unique",
    "family": "modern",
-   "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @Rocq.prosa.behavior.arrival_sequence.arrivals_between\n    (@RocqPending.prosa.implementation.definitions.job_constructor.Job h_Corelib_ssr_ssrbool_is_true_true\n      h_Corelib_ssr_ssrbool_not_false_is_true h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_1\n      h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_2 h_Corelib_ssr_ssrbool_iffP__rocq2lean_obligati",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.mathcomp.boot.eqtype.Equality.sort: coherence: source level mathcomp.boot.eqtype.51 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.51, not u_prosa_implementation_definitions_extrapolated_arrival_curve_21 [last tier: UNIVERSE_REJECTED: statement specialization refused: RocqPending.prosa.implementation.definitions.task.task_concrete_task__c",
    "blocks": 0,
    "blocks_protected": 0
   },
   {
    "declaration": "prosa.implementation.facts.job_constructor.job_arrival_consistent",
    "family": "modern",
-   "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @Rocq.prosa.behavior.arrival_sequence.arrivals_at\n    (@RocqPending.prosa.implementation.definitions.job_constructor.Job h_Corelib_ssr_ssrbool_is_true_true\n      h_Corelib_ssr_ssrbool_not_false_is_true h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_1\n      h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_2 h_Corelib_ssr_ssrbool_iffP__rocq2lean_obligation_1\n",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.mathcomp.boot.eqtype.Equality.sort: coherence: source level mathcomp.boot.eqtype.51 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.51, not u_prosa_implementation_definitions_extrapolated_arrival_curve_21 [last tier: UNIVERSE_REJECTED: statement specialization refused: RocqPending.prosa.implementation.definitions.task.task_concrete_task__c",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.nonpreemptive_sched.respects_policy_at_preemption_point_edf_np",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level mathcomp.boot.eqtype.58 solved as (some 0): native fact Set lt mathcomp.boot.eqtype.58 does not hold for the solution [last tier: UNIVERSE_REJECTED: statement specialization refused: RocqPending.prosa.implementation.definitions.task.JobArrival: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but ",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.nonpreemptive_sched.sched_jobs_must_be_ready_to_execute",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1.statement: argument max u_mathcomp_boot_eqtype_51__c1 u_prosa_implementation_definitions_extrapolated_arrival_curve_21: mathcomp.boot.eqtype.51__c1 + 0 \u2264 prosa.implementation.definitions.extrapolated_arrival_curve.21 is not entailed by the source universe graph, nor is prosa.impl",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.nonpreemptive_sched.sched_nonpreemptive",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level mathcomp.boot.eqtype.58 solved as (some 0): native fact Set lt mathcomp.boot.eqtype.58 does not hold for the solution [last tier: UNIVERSE_REJECTED: statement specialization refused: RocqPending.prosa.implementation.refinements.EDF.nonpreemptive_sched.Job: the level of u_prosa_implementation_definitions_extrapolated_arrival_curve_21 is free in the source (no applied argument dete",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.nonpreemptive_sched.sched_nonpreemptive_next",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1.statement: argument max u_mathcomp_boot_eqtype_51__c0 u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0: mathcomp.boot.eqtype.51__c0 + 0 \u2264 prosa.implementation.definitions.extrapolated_arrival_curve.21 is not entailed by the source universe graph, nor is prosa.",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.nonpreemptive_sched.sched_valid",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1.statement: argument max u_mathcomp_boot_eqtype_51__c1 u_prosa_implementation_definitions_extrapolated_arrival_curve_21: mathcomp.boot.eqtype.51__c1 + 0 \u2264 prosa.implementation.definitions.extrapolated_arrival_curve.21 is not entailed by the source universe graph, nor is prosa.impl",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.preemptive_sched.respects_policy_at_preemption_point_edf_fp",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level mathcomp.boot.eqtype.58 solved as (some 0): native fact Set lt mathcomp.boot.eqtype.58 does not hold for the solution [last tier: UNIVERSE_REJECTED: statement specialization refused: RocqPending.prosa.implementation.definitions.task.JobArrival: the level of u_mathcomp_boot_eqtype_58 is free in the source (no applied argument determines it, the source graph does not force it) but ",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.EDF.preemptive_sched.sched_valid",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1.statement: argument max u_mathcomp_boot_eqtype_51__c1 u_prosa_implementation_definitions_extrapolated_arrival_curve_21: mathcomp.boot.eqtype.51__c1 + 0 \u2264 prosa.implementation.definitions.extrapolated_arrival_curve.21 is not entailed by the source universe graph, nor is prosa.impl",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.nonpreemptive_sched.respects_policy_at_preemption_point_np",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1.statement: argument u_mathcomp_boot_eqtype_51__c0: mathcomp.boot.eqtype.51__c0 + 0 \u2264 prosa.implementation.definitions.extrapolated_arrival_curve.21 is not entailed by the source universe graph, nor is prosa.implementation.definitions.extrapolated_arrival_curve.21 \u2264 mathcomp.boot.",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.nonpreemptive_sched.sched_jobs_must_be_ready_to_execute",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1.statement: argument max u_mathcomp_boot_eqtype_51__c0 u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0: mathcomp.boot.eqtype.51__c0 + 0 \u2264 prosa.implementation.definitions.extrapolated_arrival_curve.21 is not entailed by the source universe graph, nor is prosa.",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.nonpreemptive_sched.sched_nonpreemptive",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "proof-local level mathcomp.boot.eqtype.58 solved as (some (max\n(max (max u_mathcomp_boot_eqtype_32 (u_mathcomp_boot_eqtype_51__c1 + 1)) u_mathcomp_boot_eqtype_55)\n(u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1))): native fact mathcomp.boot.eqtype.51__c0 lt mathcomp.boot.eqtype.58 does not hold for the solution [last tier: UNIVERSE_REJECTED: statement specialization refused: ",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.nonpreemptive_sched.sched_nonpreemptive_next",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1.statement: argument max u_mathcomp_boot_eqtype_51__c0 u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0: mathcomp.boot.eqtype.51__c0 + 0 \u2264 prosa.implementation.definitions.extrapolated_arrival_curve.21 is not entailed by the source universe graph, nor is prosa.",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.nonpreemptive_sched.sched_valid",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1.statement: argument max u_mathcomp_boot_eqtype_51__c0 u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0: mathcomp.boot.eqtype.51__c0 + 0 \u2264 prosa.implementation.definitions.extrapolated_arrival_curve.21 is not entailed by the source universe graph, nor is prosa.",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.preemptive_sched.respects_policy_at_preemption_point",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1.statement: argument u_mathcomp_boot_eqtype_51__c0: mathcomp.boot.eqtype.51__c0 + 0 \u2264 prosa.implementation.definitions.extrapolated_arrival_curve.21 is not entailed by the source universe graph, nor is prosa.implementation.definitions.extrapolated_arrival_curve.21 \u2264 mathcomp.boot.",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.FP.preemptive_sched.sched_valid",
+   "family": "modern",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1.statement: argument max u_mathcomp_boot_eqtype_51__c0 u_prosa_implementation_definitions_extrapolated_arrival_curve_21__c0: mathcomp.boot.eqtype.51__c0 + 0 \u2264 prosa.implementation.definitions.extrapolated_arrival_curve.21 is not entailed by the source universe graph, nor is prosa.",
    "blocks": 0,
    "blocks_protected": 0
   },
@@ -2149,8 +2592,8 @@
   {
    "declaration": "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals",
    "family": "modern",
-   "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @Rocq.prosa.model.task.arrival.curves.max_arrivals\n    (@RocqPending.prosa.implementation.refinements.task.Task h_Corelib_ssr_ssrbool_is_true_true\n      h_Corelib_ssr_ssrbool_not_false_is_true h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_1\n      h_mathcomp_boot_ssrnat_eqnP__rocq2lean_obligation_2 h_Corelib_ssr_ssrbool_iffP__rocq2lean_obligation_1\n      h_C",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.mathcomp.boot.eqtype.Equality.sort: coherence: source level mathcomp.boot.eqtype.58 is shared with the referring declaration, so its argument must be u_mathcomp.boot.eqtype.58, not max\n(max u_mathcomp_boot_eqtype_32__c0 u_mathcomp_boot_eqtype_55__c0)\n(u_prosa_implementation_definitions_extrapolated_arrival_curve_21 + 1) [last tier: UNIVERSE_REJECTED: statement specialization refu",
    "blocks": 0,
    "blocks_protected": 0
   },
@@ -2192,78 +2635,78 @@
    "prerequisite": "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 4263,
-   "protected_needing_it": 3542
+   "pending_declarations_needing_it": 4303,
+   "protected_needing_it": 3567
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 4263,
-   "protected_needing_it": 3542
+   "pending_declarations_needing_it": 4303,
+   "protected_needing_it": 3567
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.not_false_is_true",
    "kind": "statement_only",
    "family": "external",
-   "pending_declarations_needing_it": 4178,
-   "protected_needing_it": 3498
+   "pending_declarations_needing_it": 4218,
+   "protected_needing_it": 3523
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.is_true_true",
    "kind": "statement_only",
    "family": "external",
-   "pending_declarations_needing_it": 4172,
-   "protected_needing_it": 3497
+   "pending_declarations_needing_it": 4212,
+   "protected_needing_it": 3522
   },
   {
    "prerequisite": "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 4140,
-   "protected_needing_it": 3485
+   "pending_declarations_needing_it": 4180,
+   "protected_needing_it": 3510
   },
   {
    "prerequisite": "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 4140,
-   "protected_needing_it": 3485
+   "pending_declarations_needing_it": 4180,
+   "protected_needing_it": 3510
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1452,
-   "protected_needing_it": 1294
+   "pending_declarations_needing_it": 1460,
+   "protected_needing_it": 1302
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1452,
-   "protected_needing_it": 1294
+   "pending_declarations_needing_it": 1460,
+   "protected_needing_it": 1302
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1452,
-   "protected_needing_it": 1294
+   "pending_declarations_needing_it": 1460,
+   "protected_needing_it": 1302
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_4",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1452,
-   "protected_needing_it": 1294
+   "pending_declarations_needing_it": 1460,
+   "protected_needing_it": 1302
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_5",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1452,
-   "protected_needing_it": 1294
+   "pending_declarations_needing_it": 1460,
+   "protected_needing_it": 1302
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.inPhantom",
@@ -2276,71 +2719,71 @@
    "prerequisite": "mathcomp.boot.eqtype.inj_eqAxiom__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1270,
-   "protected_needing_it": 1057
+   "pending_declarations_needing_it": 1278,
+   "protected_needing_it": 1065
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.inj_eqAxiom__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1270,
-   "protected_needing_it": 1057
+   "pending_declarations_needing_it": 1278,
+   "protected_needing_it": 1065
   },
   {
    "prerequisite": "mathcomp.boot.choice.PCanHasChoice__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1257,
-   "protected_needing_it": 1057
+   "pending_declarations_needing_it": 1265,
+   "protected_needing_it": 1065
   },
   {
    "prerequisite": "mathcomp.boot.choice.PCanHasChoice__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1257,
-   "protected_needing_it": 1057
+   "pending_declarations_needing_it": 1265,
+   "protected_needing_it": 1065
   },
   {
    "prerequisite": "mathcomp.boot.choice.PCanHasChoice__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1257,
-   "protected_needing_it": 1057
+   "pending_declarations_needing_it": 1265,
+   "protected_needing_it": 1065
   },
   {
    "prerequisite": "mathcomp.boot.choice.PCanIsCountable__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1241,
-   "protected_needing_it": 1057
+   "pending_declarations_needing_it": 1249,
+   "protected_needing_it": 1065
   },
   {
    "prerequisite": "mathcomp.boot.choice.nat_hasChoice__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1226,
-   "protected_needing_it": 1057
+   "pending_declarations_needing_it": 1234,
+   "protected_needing_it": 1065
   },
   {
    "prerequisite": "mathcomp.boot.choice.nat_hasChoice__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1226,
-   "protected_needing_it": 1057
+   "pending_declarations_needing_it": 1234,
+   "protected_needing_it": 1065
   },
   {
    "prerequisite": "mathcomp.boot.choice.nat_hasChoice__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1226,
-   "protected_needing_it": 1057
+   "pending_declarations_needing_it": 1234,
+   "protected_needing_it": 1065
   },
   {
    "prerequisite": "mathcomp.boot.choice.nat_pickleK",
    "kind": "statement_only",
    "family": "external",
-   "pending_declarations_needing_it": 1219,
-   "protected_needing_it": 1057
+   "pending_declarations_needing_it": 1227,
+   "protected_needing_it": 1065
   },
   {
    "prerequisite": "HB.structures.id_phant",
@@ -2518,6 +2961,13 @@
    "protected_needing_it": 734
   },
   {
+   "prerequisite": "mathcomp.boot.div.edivn_rec__rocq2lean_termination_1",
+   "kind": null,
+   "family": "external",
+   "pending_declarations_needing_it": 725,
+   "protected_needing_it": 659
+  },
+  {
    "prerequisite": "mathcomp.boot.fintype.HB_unnamed_factory_66__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
@@ -2525,214 +2975,228 @@
    "protected_needing_it": 712
   },
   {
-   "prerequisite": "mathcomp.boot.div.edivn_rec__rocq2lean_termination_1",
-   "kind": null,
-   "family": "external",
-   "pending_declarations_needing_it": 703,
-   "protected_needing_it": 644
-  },
-  {
    "prerequisite": "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 612,
-   "protected_needing_it": 280
+   "pending_declarations_needing_it": 652,
+   "protected_needing_it": 305
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 612,
-   "protected_needing_it": 280
+   "pending_declarations_needing_it": 652,
+   "protected_needing_it": 305
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 612,
-   "protected_needing_it": 280
+   "pending_declarations_needing_it": 652,
+   "protected_needing_it": 305
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_4",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 612,
-   "protected_needing_it": 280
+   "pending_declarations_needing_it": 652,
+   "protected_needing_it": 305
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.pair_eqP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 611,
-   "protected_needing_it": 280
+   "pending_declarations_needing_it": 651,
+   "protected_needing_it": 305
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.pair_eqP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 611,
-   "protected_needing_it": 280
+   "pending_declarations_needing_it": 651,
+   "protected_needing_it": 305
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 589,
-   "protected_needing_it": 232
+   "pending_declarations_needing_it": 629,
+   "protected_needing_it": 257
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 589,
-   "protected_needing_it": 232
+   "pending_declarations_needing_it": 629,
+   "protected_needing_it": 257
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 589,
-   "protected_needing_it": 232
+   "pending_declarations_needing_it": 629,
+   "protected_needing_it": 257
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_4",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 589,
-   "protected_needing_it": 232
+   "pending_declarations_needing_it": 629,
+   "protected_needing_it": 257
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_5",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 589,
-   "protected_needing_it": 232
+   "pending_declarations_needing_it": 629,
+   "protected_needing_it": 257
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_6",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 589,
-   "protected_needing_it": 232
+   "pending_declarations_needing_it": 629,
+   "protected_needing_it": 257
   },
   {
    "prerequisite": "mathcomp.boot.div.modn_rec__rocq2lean_termination_1",
    "kind": null,
    "family": "external",
-   "pending_declarations_needing_it": 500,
-   "protected_needing_it": 443
+   "pending_declarations_needing_it": 522,
+   "protected_needing_it": 458
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.HB_unnamed_factory_16__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 492,
-   "protected_needing_it": 329
+   "pending_declarations_needing_it": 500,
+   "protected_needing_it": 337
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_factory_9__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 491,
-   "protected_needing_it": 329
+   "pending_declarations_needing_it": 499,
+   "protected_needing_it": 337
   },
   {
    "prerequisite": "mathcomp.boot.choice/Builders_77.HB_unnamed_factory_83__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 485,
-   "protected_needing_it": 329
+   "pending_declarations_needing_it": 493,
+   "protected_needing_it": 337
   },
   {
    "prerequisite": "mathcomp.boot.choice.CanIsCountable__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 478,
-   "protected_needing_it": 329
+   "pending_declarations_needing_it": 486,
+   "protected_needing_it": 337
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.eqbP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 381,
-   "protected_needing_it": 329
+   "pending_declarations_needing_it": 389,
+   "protected_needing_it": 337
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.eqbP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 381,
-   "protected_needing_it": 329
+   "pending_declarations_needing_it": 389,
+   "protected_needing_it": 337
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.eqbP__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 381,
-   "protected_needing_it": 329
+   "pending_declarations_needing_it": 389,
+   "protected_needing_it": 337
   },
   {
    "prerequisite": "mathcomp.boot.ssrnat.oddb",
    "kind": "statement_only",
    "family": "external",
-   "pending_declarations_needing_it": 379,
-   "protected_needing_it": 328
+   "pending_declarations_needing_it": 387,
+   "protected_needing_it": 336
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.unit_eqP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 373,
-   "protected_needing_it": 328
+   "pending_declarations_needing_it": 381,
+   "protected_needing_it": 336
   },
   {
    "prerequisite": "mathcomp.boot.choice.bool_of_unitK",
    "kind": "statement_only",
    "family": "external",
-   "pending_declarations_needing_it": 372,
-   "protected_needing_it": 328
+   "pending_declarations_needing_it": 380,
+   "protected_needing_it": 336
   },
   {
    "prerequisite": "mathcomp.boot.fintype.unit_enumP",
    "kind": "statement_only",
    "family": "external",
-   "pending_declarations_needing_it": 369,
-   "protected_needing_it": 328
+   "pending_declarations_needing_it": 377,
+   "protected_needing_it": 336
   },
   {
    "prerequisite": "prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 302,
-   "protected_needing_it": 73
+   "pending_declarations_needing_it": 342,
+   "protected_needing_it": 98
   },
   {
    "prerequisite": "prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 300,
-   "protected_needing_it": 73
+   "pending_declarations_needing_it": 340,
+   "protected_needing_it": 98
   },
   {
    "prerequisite": "prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 300,
-   "protected_needing_it": 73
+   "pending_declarations_needing_it": 340,
+   "protected_needing_it": 98
   },
   {
    "prerequisite": "prosa.model.processor.ideal.processor_state__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 271,
-   "protected_needing_it": 245
+   "pending_declarations_needing_it": 279,
+   "protected_needing_it": 253
   },
   {
    "prerequisite": "prosa.model.processor.ideal.processor_state__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 271,
-   "protected_needing_it": 245
+   "pending_declarations_needing_it": 279,
+   "protected_needing_it": 253
+  },
+  {
+   "prerequisite": "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_1",
+   "kind": "obligation",
+   "family": "external",
+   "pending_declarations_needing_it": 244,
+   "protected_needing_it": 96
+  },
+  {
+   "prerequisite": "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_2",
+   "kind": "obligation",
+   "family": "external",
+   "pending_declarations_needing_it": 242,
+   "protected_needing_it": 96
+  },
+  {
+   "prerequisite": "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_3",
+   "kind": "obligation",
+   "family": "external",
+   "pending_declarations_needing_it": 242,
+   "protected_needing_it": 96
   },
   {
    "prerequisite": "prosa.classic.model.arrival.basic.task/SporadicTaskset.taskset_of__rocq2lean_obligation_1",
@@ -2740,27 +3204,6 @@
    "family": "external",
    "pending_declarations_needing_it": 208,
    "protected_needing_it": 208
-  },
-  {
-   "prerequisite": "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_1",
-   "kind": "obligation",
-   "family": "external",
-   "pending_declarations_needing_it": 204,
-   "protected_needing_it": 71
-  },
-  {
-   "prerequisite": "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_2",
-   "kind": "obligation",
-   "family": "external",
-   "pending_declarations_needing_it": 202,
-   "protected_needing_it": 71
-  },
-  {
-   "prerequisite": "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_3",
-   "kind": "obligation",
-   "family": "external",
-   "pending_declarations_needing_it": 202,
-   "protected_needing_it": 71
   },
   {
    "prerequisite": "prosa.classic.model.schedule.apa.affinity/Affinity.affinity__rocq2lean_obligation_1",
@@ -2875,14 +3318,14 @@
    "protected_needing_it": 1
   },
   {
-   "prerequisite": "mathcomp.boot.choice.tagged_hasChoice__rocq2lean_obligation_1",
+   "prerequisite": "prosa.model.readiness.basic.basic_ready_instance__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 109,
-   "protected_needing_it": 1
+   "pending_declarations_needing_it": 110,
+   "protected_needing_it": 109
   },
   {
-   "prerequisite": "mathcomp.boot.choice.tagged_hasChoice__rocq2lean_obligation_2",
+   "prerequisite": "mathcomp.boot.choice.tagged_hasChoice__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
    "pending_declarations_needing_it": 109,

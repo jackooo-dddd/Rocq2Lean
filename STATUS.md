@@ -1,5 +1,13 @@
 # Status
 
+**2026-10-18 — Universe solver stages A and B; the least-solution rule (merged into `main` after validation).**
+* **Change:** coherence by unification gives a body level solved through its own occurrence its least solution
+  (`5a42d9c`); stage A/B solver tooling is inert unless enabled (`docs/SOLVER_STAGE_A.md`, `docs/SOLVER_STAGE_B.md`).
+* **Corpus** at `5a42d9c` (run `r2l-run-S22`; consumer, audit, provenance, conversion and tasks OK):
+  **685 Accepted / 3,610 Audited Pending / 153 Blocked / 26 Direct Failure**, 179 unclaimed (S21b: 685 / 3,585 /
+  180 / 24); 0 claimed rows lost. Suites 18/18 and `test-all` 18/18.
+* **Open decision:** carrier pins in protected statements (`docs/CARRIER_PIN_PROPOSAL.md`, draft).
+
 **2026-10-18 — Stage 6: the GEL/HB frontier, rule P under η, rule E, report streaming (merged into `main` after
 validation).**
 * **Rule adopted (approved 2026-10-17):** rule E, equalities of convertible terms at a cumulative universe stated
