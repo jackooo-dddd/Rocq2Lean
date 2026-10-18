@@ -865,6 +865,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
               -- referenced level, and this level is solved to it (fact-checked)
               else if tyRefArgs.any (fun (l, σ) => l == m && σ == .mvar r) then
                 assignLevelMVar r (.param (levelParamName m))
+                probe "r3g.body_level_by_reference"
                 implicitRef.modify fun a => if a.contains m then a else a.push m
       -- R3G: a universe argument still free in the *type*, at a reference to a declaration whose
       -- parameter stands for source level `l`, is the source level `l` itself (Rocq references
@@ -961,6 +962,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
               if !split || (.mvar r) == σ then
                 if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName name))
           if interp then chosen := chosen.push (l, ms)
+          probe "r3g.implicit_level"
           implicitRef.modify fun a => if a.contains name then a else a.push name
       -- R-CARRIER P2: free arguments for a split level outside the type's classes (the value's) take
       -- the first copy
@@ -1011,8 +1013,11 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
         let mut cur : Std.HashMap String Level := {}
         for (t, v) in ownMVars do
           if typeLevels.contains t then cur := cur.insert t (← instantiateLevelMVars v)
+        probe "default.minimal_model"
         pure (minimalModelLevel genv.facts cur m)
-      | none => pure .zero
+      | none =>
+        probe "default.zero"
+        pure .zero
     -- coherence by unification: per-occurrence shared levels left free by typing are the own variables
     -- (after the value's type is unified with the declared type, before the parameters are named)
     let rebindThenKeep : MetaM Unit := do
@@ -1053,6 +1058,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | _ => none
     let (ty, val, gty, gval) := (rn ty, rn val, rn gty, rn gval)
     unless ren.isEmpty do
+      probe "carrier.copies"
       -- implicit levels: every renamed copy / level replaced by its final name (source spelling)
       let finals : Array String := finalSplits.foldl (· ++ ·.2) #[]
       let split0 ← splitRef.get
@@ -2274,9 +2280,11 @@ def rowKey (j : Json) : String := match j with
   | j => j.compress
 
 /-- The replay record of a translated declaration. -/
-def replayRecord (d : IR.Decl) (kept : Bool) (added : Array Name) (rows : Array DeclResult) : Json :=
+def replayRecord (d : IR.Decl) (kept : Bool) (added : Array Name) (rows : Array DeclResult)
+    (probes : Std.HashMap String Nat := {}) : Json :=
   Json.mkObj [("decl", d.name), ("kind", match d with | .constant _ => "constant" | _ => "inductive"),
     ("genv", kept), ("added", Json.arr (added.map nameJson)),
+    ("probes", Json.mkObj ((probes.toArray.qsort (·.1 < ·.1)).toList.map fun (k, n) => (k, Json.num n))),
     ("rows", Json.arr (rows.map fun x => Json.mkObj [("source", x.source),
       ("param_levels", Json.arr (x.paramLevels.map Json.str)),
       ("target", match x.target with | some n => nameJson n | none => .null)]))]
@@ -2417,6 +2425,7 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
           | .error why => replayFallback.modify (·.push (d.name, why))
     let genvBefore := genv
     addedLog.set #[]
+    probeLog.set {}
     -- (determinism: the metavariables and free variables of a declaration are named from its own position
     -- in the export, so its translation does not depend on how many earlier declarations created — the
     -- order of a set of level metavariables follows their names, e.g. the residual levels' numbering)
@@ -2458,7 +2467,7 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
       pure keep.reverse
     let rowsNow := r.synthetic.filter (·.syntheticKind == "termination") ++ #[r] ++
       r.synthetic.filter (·.syntheticKind != "termination")
-    let mut rcd := replayRecord d genv?.isSome added rowsNow
+    let mut rcd := replayRecord d genv?.isSome added rowsNow (← probeLog.get)
     if asm?.isNone then
       if let (.constant _, some g) := (d, genv?) then
         let recRows := (rcd.getObjValAs? (Array Json) "rows").toOption.getD #[]

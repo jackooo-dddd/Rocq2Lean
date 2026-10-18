@@ -10,6 +10,11 @@ A declaration is selected when any criterion holds:
 * --failed: its base row is not claimed (every failure, blocked rows included);
 * --status S: its base row has status S;
 * --names FILE: it is listed (one per line);
+* --reason REGEX: one of its attempts in the base run was refused for a reason matching REGEX (the
+  timing records each refused attempt's status and the first 600 characters of its message): for a change
+  that relaxes a check, accepted declarations included (an earlier attempt may now be accepted);
+* --probe NAME: it reached the named branch in the base run (its replay record's `probes`), for a change
+  confined to that branch;
 * --message REGEX: its base row (or one of its generated rows) is not claimed and its message matches;
 * --prefix P: combined with the criteria above, only declarations whose name starts with P.
 
@@ -30,6 +35,8 @@ def main():
     ap.add_argument("--status", action="append", default=[])
     ap.add_argument("--names")
     ap.add_argument("--message")
+    ap.add_argument("--reason")
+    ap.add_argument("--probe", action="append", default=[])
     ap.add_argument("--prefix", action="append", default=[])
     ap.add_argument("-o", "--out", required=True)
     a = ap.parse_args()
@@ -66,6 +73,11 @@ def main():
                 m = lab.match(t[0])
                 if m and set(m.group(1).split(",")) & set(a.flag):
                     why = why or "flag"; break
+        if a.reason:
+            for t in (timing.get(n) or {}).get("tier_times", []):
+                if " | " in t[2] and re.search(a.reason, t[2].split(" | ", 1)[1]):
+                    why = why or "reason"; break
+        if a.probe and set(d.get("probes", {})) & set(a.probe): why = why or "probe"
         if a.message and re.search(a.message, failmsg.get(n, "")): why = why or "message"
         if a.prefix and not any(n.startswith(p) for p in a.prefix): why = None
         if why: pick.append(n)

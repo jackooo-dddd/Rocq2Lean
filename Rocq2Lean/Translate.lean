@@ -16,6 +16,14 @@ Every failure is a structured `TransError` carrying a status and the node path.
 
 namespace Rocq2Lean
 
+/-- Incremental runs (docs/INCREMENTAL.md §6): named branches where a universe level is *chosen*, reached
+while translating the current declaration (in any attempt, accepted or not), with counts. They are written
+to the declaration's replay record, so that a change confined to one branch selects exactly the
+declarations that reached it. Diagnostics only: a probe never changes a result. -/
+initialize probeLog : IO.Ref (Std.HashMap String Nat) ← IO.mkRef {}
+
+def probe (name : String) : Lean.Meta.MetaM Unit := probeLog.modify fun m => m.insert name (m.getD name 0 + 1)
+
 open Lean Meta
 open IR (SortIR LevelExpr AName IndRef Relevance)
 
@@ -2765,16 +2773,21 @@ def rebindShared (ref : IO.Ref (Array (LMVarId × String))) (gl : Std.HashMap St
     -- (one class of occurrences for several shared levels, identified by typing: it is the level lying
     -- below every other level of the class, as R3G chooses; the others' arguments are then R3-checked)
     let low? := c.find? fun x => c.all fun y => x == y || entails f x y 0
+    if c.size > 1 then probe "rebind.class_several_levels"
     -- (a class whose lowest level is not an own level is left free: R3G names it after that level)
     if let some lo := low? then
-      unless gl.contains lo do continue
+      unless gl.contains lo do
+        probe "rebind.left_free"
+        continue
     let l := low?.getD l0
     if let some v := gl[l]? then
       let vi ← instantiateLevelMVars v
       -- (the own level already solved through this occurrence, `?l := max (…, ?occ)`: the occurrence is
       -- the parameter `u_l` itself, so `l` denotes `max (…, u_l)`, its R2F reading; never a cycle)
       if (vi.collectMVars {}).contains r then
-        unless vi == .mvar r do assignLevelMVar r (.param (levelParamName l))
+        unless vi == .mvar r do
+          probe "rebind.self_occurrence"
+          assignLevelMVar r (.param (levelParamName l))
       else assignLevelMVar r v
 
 /-- Rule R (docs/COHERENCE_READINGS.md): the levels `σ` and `τ` over the own levels `own` (`u_m` read as the
@@ -3013,10 +3026,15 @@ def solvePostponedLevels : MetaM (Array String × Array String) := do
     if (← isLevelDefEq lhs rhs) && (← getPostponed).isEmpty then continue
     saved.restore
     match ← solveMaxEq lhs rhs with
-    | some s => log := log.push s
+    | some s =>
+      probe "solver.assign"
+      log := log.push s
     | none => match ← solveMaxEq rhs lhs with
-      | some s => log := log.push s
+      | some s =>
+        probe "solver.assign"
+        log := log.push s
       | none =>
+        probe "solver.left"
         let unsat := unsatMaxEq lhs rhs || unsatMaxEq rhs lhs
         left := left.push s!"{if unsat then "unsatisfiable" else "solver limitation"}: {lhs} = {rhs}"
   return (log, left)

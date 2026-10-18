@@ -89,3 +89,45 @@ message of a failing row, never in a status or term.
 | incremental, nothing selected | 8 s (base 456 s); 608 rows replayed, 82 translated; rows byte-identical; 0 changed, 0 fallback |
 | incremental, every failing constant selected | 196 s; 0 changed; 1 row differs from the base in its message only (a budget-aborted attempt's solver log) |
 | least-solution change: incremental (`--flag un`, 110 selected) vs full run with the change | see §6 |
+
+## 6. Precise selection: attempt reasons, probes, and the retroactive check
+
+A selection by tier flag is sound but coarse: the costly declarations go through almost every tier
+(S21s: an attempt with `un` 82% of the translation time, `lo`/`cu`/`p3` 91%). Three layers make it precise.
+
+1. **Attempt reasons** (recorded since entry 14). The timing keeps each refused attempt's status and the
+   first 600 characters of its message (`STATUS | message`; `RESOURCE_LIMIT | aborted` for a budget abort).
+   `select_rerun.py --reason REGEX` selects every declaration with an attempt refused for a matching
+   reason. That is the selection for a change that relaxes a check: it includes accepted declarations,
+   whose earlier attempt may now be accepted, which a selection by final message misses.
+2. **Probes** (`probe`, `probeLog`): named branches where a universe level is chosen, counted per
+   declaration over all its attempts and written to its replay record (`probes`). `--probe NAME` selects
+   the declarations that reached the branch, for a change confined to it. A new probe needs a new base
+   run (a replayed declaration carries its base run's probes). The probes so far:
+
+   | Probe | Branch |
+   |---|---|
+   | `rebind.self_occurrence` | `rebindShared`: an own level solved through this occurrence, named by its parameter |
+   | `rebind.class_several_levels` | `rebindShared`: one class of occurrences for several shared levels |
+   | `rebind.left_free` | `rebindShared`: a class whose lowest level is not an own level, left to R3G |
+   | `default.minimal_model`, `default.zero` | a free proof-local level defaulted to its minimal model / to 0 |
+   | `solver.assign`, `solver.left` | the bounded solver assigned a postponed constraint / left one |
+   | `r3g.implicit_level` | R3G names a class of references after a source level (an implicit level) |
+   | `r3g.body_level_by_reference` | statement mode: a body level made a type level through a reference |
+   | `carrier.copies` | R-CARRIER P2 renamed levels into per-class copies |
+
+3. **Retroactive check** (`tools/check_selection.py BASE FULL SELECTION`). Given a full run of the changed
+   translator, it replays the incremental algorithm with the full run as the oracle and lists the
+   *misses*: declarations whose rows changed but that the selection, with change propagation, would have
+   replayed. Every stage's full run can check the selections used during the stage.
+
+`prof-A`, least-solution change (`rebindShared`'s self-occurrence branch, against the full run with the
+change; `check_selection.py`):
+
+| Selection | Selected | Translated (with inductives and propagation) | Their base time | Misses |
+|---|---|---|---|---|
+| `--flag un` | 110 | 139 | 415 s | 0 |
+| `--probe rebind.self_occurrence` | 7 | 90 | 118 s | 0 |
+
+What no selection covers: a change to shared machinery (unifier calls, iteration order, the tier order,
+budgets beyond aborted attempts). That needs a full run.
