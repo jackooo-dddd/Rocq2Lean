@@ -3189,6 +3189,10 @@ where
           -- definition declared at a `Type`)
           -- (entry 16: or the kernel saw a Prop-valued relation where a Type-valued one is expected)
           let relMismatch := r.status == "KERNEL_REJECTED" && (r.message.splitOn "→ Prop").length > 1
+          -- (R-PGATE, switch `R2L_RULE_P_GATE` while measured: the same kernel mismatch reported by the residual-default
+          -- check of a universe-rejected row — CoqEAL `Rnat_div_eucl` obligations, `prod_R` given the δ-unfolded `Rnat`)
+          let relMismatch := relMismatch || ((← IO.getEnv "R2L_RULE_P_GATE").isSome && r.status == "UNIVERSE_REJECTED" &&
+            (r.message.splitOn "(kernel) application type mismatch").length > 1 && (r.message.splitOn "→ Prop").length > 1)
           let liftPossible := (c0.typeDeps ++ c0.bodyDeps).any genv.liftReach.contains || (!isStmt && irEndsInSort c0.type) || relMismatch
           if !r.accepted && c0.bodyState != "opaque_interface" && (retry r.status || castFail) && liftPossible then
             -- (with the ladder's variants: R2F-c, cumulativity, R3↓, per-occurrence coherence)

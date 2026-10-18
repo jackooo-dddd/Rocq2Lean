@@ -1592,7 +1592,9 @@ def coerceArgs (f : Expr) (args : Array Expr) (cnt : IO.Ref Nat) (lifted : Std.H
       let (ca, cd) := (cod (← instantiateMVars aty), cod (← instantiateMVars d))
       if ca.isSort && ca.sortLevel!.isZero && cd.isSort && !cd.sortLevel!.isZero && aty.isForall then
         let lifted ← forallTelescope d fun ys cd' => do
-          let body := mkAppN a ys
+          -- (β: a λ-relation, e.g. the δ-unfolded `Rnat` = `fun a b => nat_of_bin b = a`, is lifted as its body, the
+          -- form the audit compares λ by λ)
+          let body := (mkAppN a ys).headBeta
           let bt ← whnf (← inferType body)
           let cd'' ← whnf cd'
           if bt.isSort && bt.sortLevel!.isZero && cd''.isSort then
