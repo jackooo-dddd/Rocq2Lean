@@ -51,6 +51,7 @@ BODY_OCC = [False]
 # C-PIN / L-IDENT (docs/POLICY_RELAXATIONS.md): the current row's reported carrier pins (referenced constants) and
 # level identifications ((b1, b2) pairs); empty for a protected row.
 PIN_OK = [set()]
+PREMODEL_OK = [set()]   # R-PREMODEL: the current row's reported prerequisite statements
 PIN_PROT = [False]   # C-PIN on a protected statement: at a term constant only (its type does not end in a sort)
 # R-SET: levels with a named strict lower bound (the others are above Set only structurally), and per row the levels
 # reported `set-floor: l`
@@ -2628,6 +2629,17 @@ def equal_at_models(facts, own_params, a, b):
     return sa is not None and sb is not None and leq(sa, sb) and leq(sb, sa)
 
 
+def premodel_ok(facts, levels, args):
+    """R-PREMODEL, independently: the arguments satisfy every native fact between two of the statement's own levels."""
+    arg = dict(zip(levels, args))
+    for (a, b), r in facts.rel.items():
+        if a != b and a != "Set" and a in arg and b in arg:
+            lhs = {"k": "succ", "l": arg[a]} if r == "lt" else arg[a]
+            if not dominated(lhs, arg[b]):
+                return False
+    return True
+
+
 def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None, own_admit=frozenset(), lift=False,
                         lower=False):
     """Rule R3 (docs/UNIVERSE_TRANSLATION.md) for every reference in `exprs`.
@@ -2645,6 +2657,10 @@ def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None
             if len(us) != len(ls):
                 raise Mismatch(f"{name}: {len(us)} universe arguments for {len(ls)} parameters")
             cpos = GEN_COPY_POS.get(name, set())
+            # R-PREMODEL: a reported prerequisite statement whose arguments satisfy every native fact among its own levels
+            if name in HYP_STATEMENTS and name in PREMODEL_OK[0] and premodel_ok(facts, ls, us):
+                n += len(ls)
+                continue
             # rule H (docs/COHERENCE_READINGS.md §5): at a proof task's statement (a prerequisite
             # hypothesis's type, instantiated where the prerequisite is used), an argument for a shared
             # level may lie below it: R3-down, checked below like any argument for another declaration
@@ -3520,6 +3536,8 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                 # parameters by construction, not R3 obligations
                 self_names = {r_.get("target")} | {c["name"] for c in r_.get("target_ctors", [])}
                 gen_ = {k: v for k, v in gen.items() if k not in self_names} if d_["kind"] == "inductive" else gen
+                PREMODEL_OK[0] = {x[len("prereq-model: "):] for x in (r_.get("universe_diagnostics") or [])
+                                  if isinstance(x, str) and x.startswith("prereq-model: ")}
                 univ_checked += check_universe_args(facts, own, gen_, [x for x in exprs if x is not None], bl, poly,
                                                     gen_admit, own_admit, bool(r_.get("universe_cumulativity")),
                                                     bool(r_.get("universe_lowered")))

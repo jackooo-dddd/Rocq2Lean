@@ -151,6 +151,9 @@ structure GEnv where
   /-- R-SET: the levels with a *named* strict lower bound (`a < l`, `a ≠ Set`); every other level is above `Set` only
   by Rocq's structural `Set < l`. -/
   namedStrict : Std.HashSet String := {}
+  /-- R-PREMODEL (docs/POLICY_RELAXATIONS.md §9): set on its tier. A reference to a generated prerequisite statement
+  (a proof task's type) whose arguments satisfy every native fact among the statement's own levels is accepted. -/
+  prereqModel : Bool := false
   /-- Statement mode: constants available only as statements (theorems, extracted obligations, opaque
   data: their proof or value is a task for the Lean proving agent): source key ↦ (statement constant,
   the hypotheses of that constant when it is itself a pending artifact, as leaf keys). -/
@@ -1659,6 +1662,10 @@ partial def trans (t : IR.Term) : TransM Expr := do
     if let some cnt := (← read).propCoerce then
       if let some r ← liftMeta (liftCoerce c' (← inferType c') ty') then
         cnt.modify (· + 1); return r
+    if (← (IO.getEnv "R2L_CAST_DEBUG" : IO _)).isSome then
+      let a ← liftMeta do (MessageData.ofExpr (← inferType c')).toString
+      let b ← liftMeta do (MessageData.ofExpr ty').toString
+      failT "TRANSLATION_FAILED" s!"{kind} cast annotation is not convertible in Lean: {a.take 600} vs {b.take 600}"
     failT "TRANSLATION_FAILED" s!"{kind} cast annotation is not convertible in Lean"
   | .prod n ty b => withPath "prod" do
     checkRelevant n
@@ -3170,6 +3177,18 @@ def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr)
       let ls := ls.drop (genv.polyByTarget[c]?.getD 0)
       unless globals.size == ls.length do throw s!"{c}: {ls.length} universe arguments for {globals.size} parameters"
       let copyPos := (genv.copyPositions[c]?).getD #[]
+      -- R-PREMODEL: the prerequisite statement at a model of its own levels' facts (the proof task at that instance)
+      if genv.prereqModel && genv.leafStmtTargets.contains c then
+        let gl := globals.toList.zip ls
+        let argOf (x : String) : Option Level := (gl.find? (·.1 == x)).map (·.2)
+        let ok := genv.facts.relations.all fun (a, r, b) =>
+          if a == b || a == "Set" then true else
+          match argOf a, argOf b with
+          | some va, some vb => vb.geq (if r == "lt" then va.succ else va)
+          | _, _ => true
+        if ok then
+          n := n + globals.size
+          continue
       for l in globals, σ in ls, k in List.range globals.size do
         if genv.templateLevels.contains l then continue      -- R5, not R3
         let cAdmit := (genv.admitting[c]?.getD #[]).contains l

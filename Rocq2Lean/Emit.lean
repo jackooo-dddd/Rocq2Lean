@@ -1487,6 +1487,10 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | .error msg, _ | _, .error msg =>
         return { base with status := "UNIVERSE_REJECTED", message := msg }
     let base := { base with universeChecks := nchecks }
+    -- (R-PREMODEL: the prerequisite statements the row's references were checked as models of, reported)
+    let base := if !genv.prereqModel then base else
+      let pre := ((constOccurrences ty).map (·.1) ++ (constOccurrences val).map (·.1)).filter genv.leafStmtTargets.contains
+      { base with levelDiagnostics := base.levelDiagnostics ++ (pre.toList.eraseDups.toArray.map (s!"prereq-model: {·}")) }
     -- C: a statement (anywhere) and a protected definition (its quantification ranges) are never
     -- specialized at a level the source leaves free (refused, as R2B-P/R2B-S are: no narrowing)
     -- binder-level independence of a statement (its quantification ranges)
@@ -3173,78 +3177,6 @@ where
                   r := { r' with deltaInlined := used }
                   iface := none
                   break
-          -- rule S-FREE (candidate, `R2L_RULE_SHARED_FREE`): after every tier above failed, the ladder's universe variants
-          -- with one metavariable per non-own source level at every reference (Lean's unifier otherwise merges the
-          -- occurrences of two source levels through a packed carrier `max (51, 21)`, stage C)
-          if !r.accepted && (retry r.status) && (← IO.getEnv "R2L_RULE_SHARED_FREE").isSome then
-            try
-              for (it, cu, lo) in [(false, false, false), (true, false, false), (false, true, false), (false, true, true)] do
-                sharedFreeTier.set true
-                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
-                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo)
-                sharedFreeTier.set false
-                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[shared-free] {r'.message}" }
-                if r'.accepted then
-                  r := { r' with levelDiagnostics := r'.levelDiagnostics.push "shared-free" }
-                  iface := none
-                  break
-            finally
-              sharedFreeTier.set false
-          -- C-PIN / L-IDENT (approved 2026-10-18, docs/POLICY_RELAXATIONS.md; switches `R2L_RULE_CARRIER_PIN`,
-          -- `R2L_RULE_LEVEL_IDENT` while measured): an unprotected statement refused by the generality or the
-          -- binder-independence check is retried with carrier pins / level identifications allowed (reported)
-          let polMsg := r.message ++ ((lastTier.map (·.message)).getD "")
-          let wantPin := (← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome && (polMsg.splitOn "is free in the source").length > 1
-          let wantId := (← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome && (polMsg.splitOn "would be forced by the translation").length > 1
-          if !r.accepted && isStmt && !genv.protectedNames.contains c0.name && (retry r.status) && (wantPin || wantId) then
-            try
-              carrierPinTier.set ((← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
-              levelIdentTier.set ((← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
-              setFloorTier.set ((← IO.getEnv "R2L_RULE_SET_FLOOR").isSome)
-              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
-                                       (false, false, true, false), (false, false, false, true)] do
-                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
-                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
-                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[policy] {r'.message}" }
-                if r'.status == "RESOURCE_LIMIT" then break
-                if r'.accepted then
-                  r := r'
-                  iface := none
-                  break
-            finally
-              carrierPinTier.set false
-              levelIdentTier.set false
-              setFloorTier.set false
-          -- R-SET (docs/POLICY_RELAXATIONS.md; switch `R2L_RULE_SET_FLOOR` while measured): a declaration refused by a
-          -- source fact `Set < l` (a body-only level solved at 0) or a carrier pin at 0 is retried with Rocq's structural
-          -- `Set < l` read as `Set ≤ l` for levels no named level forces up (and, with C-PIN / L-IDENT switched on, those
-          -- for unprotected statements); reported `set-floor: l` / `carrier-pin: c`
-          let floorMsg := r.message ++ ((lastTier.map (·.message)).getD "")
-          let wantFloor := (← IO.getEnv "R2L_RULE_SET_FLOOR").isSome &&
-            ((floorMsg.splitOn "native fact Set lt").length > 1 || (floorMsg.splitOn "but its argument is 0").length > 1 ||
-              -- (R-COPYDIAG: a copied fact of a solved level)
-              ((← IO.getEnv "R2L_RULE_COPY_DIAG").isSome && (floorMsg.splitOn "does not hold for the solution").length > 1 &&
-                (floorMsg.splitOn "__c").length > 1))
-          if !r.accepted && (retry r.status) && wantFloor then
-            try
-              setFloorTier.set true
-              let unprotStmt := isStmt && !genv.protectedNames.contains c0.name
-              carrierPinTier.set (isStmt && (← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
-              levelIdentTier.set (unprotStmt && (← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
-              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
-                                       (false, false, true, false), (false, false, false, true)] do
-                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
-                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
-                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[set-floor] {r'.message}" }
-                if r'.status == "RESOURCE_LIMIT" then break
-                if r'.accepted then
-                  r := r'
-                  iface := none
-                  break
-            finally
-              setFloorTier.set false
-              carrierPinTier.set false
-              levelIdentTier.set false
           -- rule P (approved): a proposition used at a type, lifted by `PULift` (last tier; only a declaration
           -- whose value is a proposition at a declared `Type`, refused otherwise at once)
           let castFail := r.status == "TRANSLATION_FAILED" && (r.message.startsWith "default cast annotation is not convertible" ||
@@ -3476,6 +3408,134 @@ where
                   iface := none
                   break
             finally
+              bodyOccTier.set false
+          -- (the rules of docs/POLICY_RELAXATIONS.md: after every earlier tier, R-OCC included, so that no row an earlier
+          -- tier accepts can change)
+          -- rule S-FREE (candidate, `R2L_RULE_SHARED_FREE`): after every tier above failed, the ladder's universe variants
+          -- with one metavariable per non-own source level at every reference (Lean's unifier otherwise merges the
+          -- occurrences of two source levels through a packed carrier `max (51, 21)`, stage C)
+          if !r.accepted && (retry r.status) && (← IO.getEnv "R2L_RULE_SHARED_FREE").isSome then
+            try
+              for (it, cu, lo) in [(false, false, false), (true, false, false), (false, true, false), (false, true, true)] do
+                sharedFreeTier.set true
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo)
+                sharedFreeTier.set false
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[shared-free] {r'.message}" }
+                if r'.accepted then
+                  r := { r' with levelDiagnostics := r'.levelDiagnostics.push "shared-free" }
+                  iface := none
+                  break
+            finally
+              sharedFreeTier.set false
+          -- C-PIN / L-IDENT (approved 2026-10-18, docs/POLICY_RELAXATIONS.md; switches `R2L_RULE_CARRIER_PIN`,
+          -- `R2L_RULE_LEVEL_IDENT` while measured): an unprotected statement refused by the generality or the
+          -- binder-independence check is retried with carrier pins / level identifications allowed (reported)
+          let polMsg := r.message ++ ((lastTier.map (·.message)).getD "")
+          let wantPin := (← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome && (polMsg.splitOn "is free in the source").length > 1
+          let wantId := (← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome && (polMsg.splitOn "would be forced by the translation").length > 1
+          if !r.accepted && isStmt && !genv.protectedNames.contains c0.name && (retry r.status) && (wantPin || wantId) then
+            try
+              carrierPinTier.set ((← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
+              levelIdentTier.set ((← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
+              setFloorTier.set ((← IO.getEnv "R2L_RULE_SET_FLOOR").isSome)
+              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
+                                       (false, false, true, false), (false, false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[policy] {r'.message}" }
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := r'
+                  iface := none
+                  break
+            finally
+              carrierPinTier.set false
+              levelIdentTier.set false
+              setFloorTier.set false
+          -- R-PREMODEL (docs/POLICY_RELAXATIONS.md §9; switch `R2L_RULE_PREMODEL` while measured): a declaration refused for
+          -- raising at a generated prerequisite statement is retried with such references checked as models of the
+          -- statement's own level facts (with the C-PIN / L-IDENT / R-SET relaxations when those are switched on)
+          let preMsg := r.message ++ ((lastTier.map (·.message)).getD "")
+          if !r.accepted && (retry r.status) && (← IO.getEnv "R2L_RULE_PREMODEL").isSome &&
+              (preMsg.splitOn ".statement: argument").length > 1 && (preMsg.splitOn "is not entailed by the source universe graph").length > 1 then
+            try
+              setFloorTier.set ((← IO.getEnv "R2L_RULE_SET_FLOOR").isSome)
+              carrierPinTier.set (isStmt && (← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
+              levelIdentTier.set (isStmt && !genv.protectedNames.contains c0.name && (← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
+              let gP := { genv with prereqModel := true }
+              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
+                                       (false, false, true, false), (false, false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant gP results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[prereq-model] {r'.message}" }
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := r'
+                  iface := none
+                  break
+            finally
+              setFloorTier.set false
+              carrierPinTier.set false
+              levelIdentTier.set false
+          -- R-SET (docs/POLICY_RELAXATIONS.md; switch `R2L_RULE_SET_FLOOR` while measured): a declaration refused by a
+          -- source fact `Set < l` (a body-only level solved at 0) or a carrier pin at 0 is retried with Rocq's structural
+          -- `Set < l` read as `Set ≤ l` for levels no named level forces up (and, with C-PIN / L-IDENT switched on, those
+          -- for unprotected statements); reported `set-floor: l` / `carrier-pin: c`
+          let floorMsg := r.message ++ ((lastTier.map (·.message)).getD "")
+          let wantFloor := (← IO.getEnv "R2L_RULE_SET_FLOOR").isSome &&
+            ((floorMsg.splitOn "native fact Set lt").length > 1 || (floorMsg.splitOn "but its argument is 0").length > 1 ||
+              -- (R-COPYDIAG: a copied fact of a solved level)
+              ((← IO.getEnv "R2L_RULE_COPY_DIAG").isSome && (floorMsg.splitOn "does not hold for the solution").length > 1 &&
+                (floorMsg.splitOn "__c").length > 1))
+          if !r.accepted && (retry r.status) && wantFloor then
+            try
+              setFloorTier.set true
+              let unprotStmt := isStmt && !genv.protectedNames.contains c0.name
+              carrierPinTier.set (isStmt && (← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
+              levelIdentTier.set (unprotStmt && (← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
+              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
+                                       (false, false, true, false), (false, false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[set-floor] {r'.message}" }
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := r'
+                  iface := none
+                  break
+            finally
+              setFloorTier.set false
+              carrierPinTier.set false
+              levelIdentTier.set false
+          -- R-ALL (switch `R2L_RULE_ALL_TIER` while measured): the last of these tiers, every relaxation of
+          -- docs/POLICY_RELAXATIONS.md at once (each one reported in the row and re-derived by the audit as when alone),
+          -- for declarations that need several (CoqEAL `refines_abstr2`: a prerequisite model and per-occurrence levels)
+          if !r.accepted && (retry r.status || r.status == "TRANSLATION_FAILED") && (← IO.getEnv "R2L_RULE_ALL_TIER").isSome then
+            let prot := genv.protectedNames.contains c0.name
+            try
+              setFloorTier.set true
+              carrierPinTier.set isStmt
+              levelIdentTier.set (isStmt && !prot)
+              bodyOccTier.set true
+              let gA := { genv with prereqModel := true }
+              for (it, lo, p3, pl, ns) in [(false, false, false, false, false), (false, false, true, false, false), (true, false, true, false, false),
+                                           (false, true, false, false, false), (false, false, false, true, false), (false, false, true, true, false),
+                                           (false, false, false, false, true), (false, false, true, false, true)] do
+                if ns && prot then continue
+                let g' := if ns then { gA with carrierSplit := false } else gA
+                let r' ← budgeted c.name "constant" <| processConstant g' results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (extraOwn := eo) (lower := lo) (hypExact := p3) (propLift := pl)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[all] {r'.message}" }
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := if ns then { r' with levelDiagnostics := r'.levelDiagnostics.push "no-split" } else r'
+                  iface := none
+                  break
+            finally
+              setFloorTier.set false
+              carrierPinTier.set false
+              levelIdentTier.set false
               bodyOccTier.set false
           -- generality first (docs/COHERENCE_READINGS.md §6): a definition accepted with an own *type*
           -- level solved by typing (R2S) under coherence by construction is retried with shared levels
