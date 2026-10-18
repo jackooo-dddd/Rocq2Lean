@@ -1,0 +1,38 @@
+{
+ "before": {
+  "Accepted": 685,
+  "Audited Pending": 3610,
+  "Blocked Dependency": 153,
+  "Direct Failure": 26
+ },
+ "after": {
+  "Accepted": 685,
+  "Audited Pending": 3617,
+  "Blocked Dependency": 145,
+  "Direct Failure": 27
+ },
+ "delta": {
+  "Accepted": 0,
+  "Audited Pending": 7,
+  "Blocked Dependency": -8,
+  "Direct Failure": 1
+ },
+ "moves": {
+  "Blocked Dependency -> Audited Pending": 6,
+  "Blocked Dependency -> Direct Failure": 2,
+  "Direct Failure -> Audited Pending": 1
+ },
+ "status_changes": 9,
+ "newly_accepted": [],
+ "newly_unblocked": [
+  "prosa.classic.util.powerset.mem_powerset",
+  "prosa.classic.util.powerset.powerset",
+  "prosa.implementation.refinements.FP.refinements.refine_hep_task",
+  "prosa.implementation.refinements.arrival_bound.refine_leq_steps",
+  "prosa.implementation.refinements.arrival_bound.refine_ltn_steps",
+  "prosa.implementation.refinements.refinements.Rnat_pred",
+  "prosa.implementation.refinements.refinements.refine_ltn"
+ ],
+ "regressions_previously_accepted": [],
+ "same_protected_set": true
+}

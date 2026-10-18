@@ -1,6 +1,6 @@
 {
  "schema": "rocq2lean-statement-results/1",
- "run": "runs/st-corpus-S22",
+ "run": "runs/st-corpus-S23",
  "report_status": "ROOTS_NOT_TRANSLATED",
  "checks": {
   "consumer": "OK",
@@ -15,10 +15,10 @@
   "CoqEAL": {
    "DEFINITION_AUDITED": 48,
    "STATEMENT_AUDITED": 30,
-   "DEFINITION_AUDITED_PENDING": 16,
-   "UNIVERSE_REJECTED": 13,
-   "BLOCKED_DEPENDENCY": 7,
+   "DEFINITION_AUDITED_PENDING": 20,
    "STATEMENT_AUDITED_PENDING": 18,
+   "UNIVERSE_REJECTED": 11,
+   "BLOCKED_DEPENDENCY": 5,
    "UNSUPPORTED_FEATURE": 8
   },
   "Corelib": {
@@ -42,10 +42,10 @@
   },
   "classic": {
    "DEFINITION_AUDITED": 189,
-   "DEFINITION_AUDITED_PENDING": 517,
-   "STATEMENT_AUDITED_PENDING": 1242,
-   "UNIVERSE_REJECTED": 5,
-   "BLOCKED_DEPENDENCY": 22,
+   "DEFINITION_AUDITED_PENDING": 518,
+   "STATEMENT_AUDITED_PENDING": 1243,
+   "UNIVERSE_REJECTED": 4,
+   "BLOCKED_DEPENDENCY": 21,
    "STATEMENT_AUDITED": 47
   },
   "mathcomp": {
@@ -59,19 +59,20 @@
   },
   "modern": {
    "DEFINITION_AUDITED": 337,
-   "DEFINITION_AUDITED_PENDING": 674,
+   "DEFINITION_AUDITED_PENDING": 679,
    "STATEMENT_AUDITED_PENDING": 1283,
    "STATEMENT_AUDITED": 126,
-   "BLOCKED_DEPENDENCY": 150,
+   "BLOCKED_DEPENDENCY": 143,
    "UNIVERSE_REJECTED": 19,
-   "TRANSLATION_FAILED": 5,
+   "TRANSLATION_FAILED": 7,
    "KERNEL_REJECTED": 1
   },
   "prosa": {
-   "STATEMENT_AUDITED_PENDING": 425,
+   "STATEMENT_AUDITED_PENDING": 431,
    "STATEMENT_AUDITED": 245,
-   "BLOCKED_DEPENDENCY": 131,
-   "UNIVERSE_REJECTED": 104,
+   "BLOCKED_DEPENDENCY": 119,
+   "UNIVERSE_REJECTED": 105,
+   "TRANSLATION_FAILED": 5,
    "KERNEL_REJECTED": 20
   }
  },
@@ -81,21 +82,21 @@
   "by_family": {
    "classic": {
     "DEFINITION_AUDITED": 187,
-    "DEFINITION_AUDITED_PENDING": 495,
-    "STATEMENT_AUDITED_PENDING": 1218,
-    "UNIVERSE_REJECTED": 3,
-    "BLOCKED_DEPENDENCY": 20,
+    "DEFINITION_AUDITED_PENDING": 496,
+    "STATEMENT_AUDITED_PENDING": 1219,
+    "UNIVERSE_REJECTED": 2,
+    "BLOCKED_DEPENDENCY": 19,
     "STATEMENT_AUDITED": 47
    },
    "modern": {
     "DEFINITION_AUDITED": 325,
-    "DEFINITION_AUDITED_PENDING": 614,
+    "DEFINITION_AUDITED_PENDING": 619,
     "STATEMENT_AUDITED_PENDING": 1283,
     "STATEMENT_AUDITED": 126,
-    "BLOCKED_DEPENDENCY": 133,
+    "BLOCKED_DEPENDENCY": 126,
     "UNIVERSE_REJECTED": 19,
     "KERNEL_REJECTED": 1,
-    "TRANSLATION_FAILED": 3
+    "TRANSLATION_FAILED": 5
    }
   }
  },
@@ -122,11 +123,6 @@
   },
   {
    "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) ",
-   "count": 13
-  },
-  {
-   "status": "UNIVERSE_REJECTED",
    "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max u_C",
    "count": 13
   },
@@ -134,6 +130,11 @@
    "status": "UNIVERSE_REJECTED",
    "message": "reference to RocqPending.prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_",
    "count": 12
+  },
+  {
+   "status": "UNIVERSE_REJECTED",
+   "message": "defaulted universe level(s) ",
+   "count": 11
   },
   {
    "status": "UNIVERSE_REJECTED",
@@ -146,6 +147,11 @@
    "count": 11
   },
   {
+   "status": "TRANSLATION_FAILED",
+   "message": "default cast annotation is not convertible in Lean ",
+   "count": 9
+  },
+  {
    "status": "UNSUPPORTED_FEATURE",
    "message": "recursive call on a non-direct subterm (course-of-values) of an indexed, non-uniform or Pr",
    "count": 8
@@ -153,11 +159,6 @@
   {
    "status": "UNIVERSE_REJECTED",
    "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max\n (max\n  (",
-   "count": 5
-  },
-  {
-   "status": "TRANSLATION_FAILED",
-   "message": "default cast annotation is not convertible in Lean ",
    "count": 5
   },
   {
@@ -186,6 +187,11 @@
    "count": 3
   },
   {
+   "status": "TRANSLATION_FAILED",
+   "message": "scrutinee type is not an application of Eq ",
+   "count": 3
+  },
+  {
    "status": "UNIVERSE_REJECTED",
    "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max u_CoqEAL_",
    "count": 2
@@ -193,6 +199,11 @@
   {
    "status": "UNIVERSE_REJECTED",
    "message": "proof-local level CoqEAL.refinements.refinements.38663 solved as (some (max\n(max\n (max u_C",
+   "count": 2
+  },
+  {
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.binnat.Rnat",
    "count": 2
   },
   {
@@ -247,11 +258,6 @@
   },
   {
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level prosa.classic.util.powerset.24 solved as (some 0)",
-   "count": 1
-  },
-  {
-   "status": "UNIVERSE_REJECTED",
    "message": "proof-local level CoqEAL.refinements.refinements.38671 solved as (some (max\n(max (max u_Co",
    "count": 1
   },
@@ -268,11 +274,6 @@
   {
    "status": "KERNEL_REJECTED",
    "message": "(kernel) application type mismatch\n  (@fun \u00ab\u2017evar_0\u2017\u00bb =>\n      @Rocq.CoqEAL.refinements.pa",
-   "count": 1
-  },
-  {
-   "status": "UNIVERSE_REJECTED",
-   "message": "reference to Rocq.CoqEAL.refinements.binnat.Rnat",
    "count": 1
   }
  ],
@@ -305,7 +306,7 @@
    "declaration": "mathcomp.algebra.ssrint/intRing.comMixin__rocq2lean_obligation_26",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "statement specialization refused: RocqPending.mathcomp.algebra.ssrint.HB_unnamed_mixin_6: the level of u_mathcomp_boot_choice_299 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 1, not u_mathcomp_boot_choice_299 [last tier: RESOURCE_LIMIT: late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats (200000) has bee",
+   "message": "statement specialization refused: RocqPending.mathcomp.algebra.ssrint.HB_unnamed_mixin_6: the level of u_mathcomp_boot_choice_299 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 1, not u_mathcomp_boot_choice_299 [last tier: RESOURCE_LIMIT: late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (200000) has been r",
    "blocks": 135,
    "blocks_protected": 78
   },
@@ -404,22 +405,6 @@
    "message": "statement specialization refused: RocqPending.mathcomp.algebra.ssrint.ssrint_int__canonical__Algebra_BaseAddUMagma: the level of u_mathcomp_boot_choice_333 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_mathcomp_boot_choice_333 [last tier: RESOURCE_LIMIT: late tier: (deterministic) timeout at `isDefEq`, maximum number of h",
    "blocks": 89,
    "blocks_protected": 71
-  },
-  {
-   "declaration": "CoqEAL.refinements.refinements.refines_apply",
-   "family": "external",
-   "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) [u_residual_0, u_residual_1] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @RocqPending.Corelib.Init.Logic.eq_rect_r h_Corelib_Init_Logic_eq_rect_r__rocq2lean_obligation_1\n    (A \u2192\n      B \u2192\n        Type\n          (max\n              (max (max u_CoqEAL_refinements_refinements_38756 u_CoqEAL_refinements_refinements_38757",
-   "blocks": 94,
-   "blocks_protected": 48
-  },
-  {
-   "declaration": "CoqEAL.refinements.refinements.refines_abstr",
-   "family": "external",
-   "status": "UNIVERSE_REJECTED",
-   "message": "defaulted universe level(s) [u_residual_0] not justified: the declaration is not valid for every value ((kernel) application type mismatch\n  @RocqPending.Corelib.Init.Logic.eq_rect_r h_Corelib_Init_Logic_eq_rect_r__rocq2lean_obligation_1\n    (C \u2192\n      D \u2192 Type (max (max u_residual_0 u_CoqEAL_refinements_refinements_38996) u_CoqEAL_refinements_refinements_38997))\nargument has type\n  Type\n    (max ",
-   "blocks": 44,
-   "blocks_protected": 30
   },
   {
    "declaration": "CoqEAL.refinements.param.map_R",
@@ -542,6 +527,14 @@
    "blocks_protected": 20
   },
   {
+   "declaration": "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8",
+   "family": "external",
+   "status": "UNIVERSE_REJECTED",
+   "message": "reference to Rocq.CoqEAL.refinements.binnat.Rnat: coherence: source level CoqEAL.refinements.binnat.47805 is shared with the referring declaration, so its argument must be u_CoqEAL.refinements.binnat.47805, not 0 [last tier: UNIVERSE_REJECTED: statement specialization refused: Rocq.CoqEAL.refinements.param.prod_R: the level of u_CoqEAL_refinements_param_439 is free in the source (no applied argume",
+   "blocks": 20,
+   "blocks_protected": 16
+  },
+  {
    "declaration": "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
@@ -550,10 +543,34 @@
    "blocks_protected": 15
   },
   {
+   "declaration": "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+   "family": "external",
+   "status": "TRANSLATION_FAILED",
+   "message": "scrutinee type is not an application of Eq [last tier: TRANSLATION_FAILED: scrutinee type is not an application of Eq]",
+   "blocks": 15,
+   "blocks_protected": 13
+  },
+  {
+   "declaration": "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+   "family": "external",
+   "status": "TRANSLATION_FAILED",
+   "message": "scrutinee type is not an application of Eq [last tier: TRANSLATION_FAILED: scrutinee type is not an application of Eq]",
+   "blocks": 15,
+   "blocks_protected": 13
+  },
+  {
+   "declaration": "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
+   "family": "external",
+   "status": "TRANSLATION_FAILED",
+   "message": "scrutinee type is not an application of Eq [last tier: TRANSLATION_FAILED: scrutinee type is not an application of Eq]",
+   "blocks": 15,
+   "blocks_protected": 13
+  },
+  {
    "declaration": "prosa.implementation.refinements.task.refine_task'",
    "family": "modern",
    "status": "TRANSLATION_FAILED",
-   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: default cast annotation is not convertible in Lean]",
+   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: [body-occ] default cast annotation is not convertible in Lean]",
    "blocks": 10,
    "blocks_protected": 10
   },
@@ -561,7 +578,7 @@
    "declaration": "prosa.classic.implementation.apa.job/ConcreteJob.job_eqdef",
    "family": "classic",
    "status": "UNIVERSE_REJECTED",
-   "message": "protected public declaration: universe specialization refused (a quantification range would be narrowed): RocqPending.prosa.classic.implementation.apa.job.ConcreteJob.concrete_job: the level of u_mathcomp_boot_eqtype_51 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_mathcomp_boot_eqtype_51 [last tier: UNIVERSE_REJECTED: pr",
+   "message": "protected public declaration: universe specialization refused (a quantification range would be narrowed): RocqPending.prosa.classic.implementation.apa.job.ConcreteJob.concrete_job: the level of u_mathcomp_boot_eqtype_51 is free in the source (no applied argument determines it, the source graph does not force it) but its argument is 0, not u_mathcomp_boot_eqtype_51 [last tier: UNIVERSE_REJECTED: [b",
    "blocks": 13,
    "blocks_protected": 8
   },
@@ -569,7 +586,7 @@
    "declaration": "prosa.classic.implementation.apa.task/ConcreteTask.concrete_taskset",
    "family": "classic",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.boot.eqtype.51 solved as (some 0): native fact Set lt mathcomp.boot.eqtype.51 does not hold for the solution [last tier: UNIVERSE_REJECTED: R2B-P levels #[prosa.classic.implementation.apa.task.29] on a pending artifact: the source instance is not checkable]",
+   "message": "proof-local level mathcomp.boot.eqtype.51 solved as (some 0): native fact Set lt mathcomp.boot.eqtype.51 does not hold for the solution [last tier: UNIVERSE_REJECTED: [body-occ] proof-local level mathcomp.boot.eqtype.51 solved as (some 0): native fact Set lt mathcomp.boot.eqtype.51 does not hold for the solution]",
    "blocks": 8,
    "blocks_protected": 8
   },
@@ -577,7 +594,7 @@
    "declaration": "prosa.implementation.refinements.task.refine_task_set'",
    "family": "modern",
    "status": "TRANSLATION_FAILED",
-   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: default cast annotation is not convertible in Lean]",
+   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: [body-occ] default cast annotation is not convertible in Lean]",
    "blocks": 8,
    "blocks_protected": 8
   },
@@ -681,7 +698,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_128",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -713,7 +730,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_132",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -745,7 +762,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_136",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -753,7 +770,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_137",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -761,7 +778,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_138",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -769,7 +786,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_139",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -777,7 +794,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_140",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -785,7 +802,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_141",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -801,7 +818,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_143",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -809,7 +826,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_144",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -849,7 +866,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_10__rocq2lean_obligation_149",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -873,7 +890,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_124",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -881,7 +898,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_125",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -905,7 +922,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_128",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -913,7 +930,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_129",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -953,7 +970,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_134",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -961,7 +978,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_135",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -969,7 +986,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_136",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1001,7 +1018,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_140",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1009,7 +1026,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_141",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1041,7 +1058,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_14__rocq2lean_obligation_145",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1105,7 +1122,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_125",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_2489): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_2489): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1145,7 +1162,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_130",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1193,7 +1210,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_136",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1201,7 +1218,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_137",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1209,7 +1226,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_138",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1257,7 +1274,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_144",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1265,7 +1282,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_145",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3387 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_2497): native fact mathcomp.algebra.algebraic_hierarchy.divalg.3442 le mathcomp.algebra.numeric_hierarchy.numdomain.3387 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3387 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_2497): native fact mathcomp.algebra.algebraic_hierarchy.divalg.3442 le mathcomp.algebra.numeric_hierarchy.numdomain.3387 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1273,7 +1290,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_146",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_2499): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_2499): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1281,7 +1298,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_147",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1297,7 +1314,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_149",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1305,7 +1322,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_150",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1321,7 +1338,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_152",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1329,7 +1346,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_153",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1337,7 +1354,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_154",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1345,7 +1362,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_155",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1353,7 +1370,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_156",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1385,7 +1402,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_160",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1393,7 +1410,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_161",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1409,7 +1426,7 @@
    "declaration": "mathcomp.algebra.numeric_hierarchy.numdomain/Num/Builders_8.HB_unnamed_factory_16__rocq2lean_obligation_163",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `whnf`, maximum number of heartbeats (20",
+   "message": "proof-local level mathcomp.algebra.numeric_hierarchy.numdomain.3686 solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact mathcomp.algebra.numeric_hierarchy.numdomain.3686 le mathcomp.algebra.algebraic_hierarchy.divalg.3442 does not hold for the solution [last tier: RESOURCE_LIMIT: [no-split] late tier: (deterministic) timeout at `isDefEq`, maximum number of heartbeats ",
    "blocks": 9,
    "blocks_protected": 4
   },
@@ -1817,7 +1834,7 @@
    "declaration": "Corelib.Classes.CMorphisms.respectful",
    "family": "external",
    "status": "KERNEL_REJECTED",
-   "message": "(kernel) application type mismatch\n  @Rocq.Corelib.Classes.CRelationClasses.crelation (A \u2192 B)\nargument has type\n  Type (max v_0 v_2)\nbut function has type\n  Type v_4 \u2192 Type (max v_4 (v_5 + 1)) [last tier: KERNEL_REJECTED: (kernel) application type mismatch\n  @Rocq.Corelib.Classes.CRelationClasses.crelation (A \u2192 B)\nargument has type\n  Type (max v_0 v_2)\nbut function has type\n  Type v_4 \u2192 Type (max ",
+   "message": "(kernel) application type mismatch\n  @Rocq.Corelib.Classes.CRelationClasses.crelation (A \u2192 B)\nargument has type\n  Type (max v_0 v_2)\nbut function has type\n  Type v_4 \u2192 Type (max v_4 (v_5 + 1)) [last tier: KERNEL_REJECTED: [body-occ] (kernel) application type mismatch\n  @Rocq.Corelib.Classes.CRelationClasses.crelation (A \u2192 B)\nargument has type\n  Type (max v_0 v_2)\nbut function has type\n  Type v_4 \u2192",
    "blocks": 4,
    "blocks_protected": 1
   },
@@ -1842,6 +1859,22 @@
    "family": "external",
    "status": "KERNEL_REJECTED",
    "message": "(kernel) let-declaration type mismatch '\u00ab\u2017the_hidden_goal\u2017\u00bb' [last tier: UNIVERSE_REJECTED: reference to Rocq.prosa.implementation.refinements.arrival_bound.task_arrivals_bound_T: coherence: source level prosa.implementation.refinements.arrival_bound.1485 is a proof-local level of the referring declaration, solved as u_prosa_implementation_refinements_arrival_bound_1485; the argument must be the s",
+   "blocks": 3,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.arrival_curve.refine_positive_horizon__rocq2lean_obligation_8",
+   "family": "external",
+   "status": "TRANSLATION_FAILED",
+   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: default cast annotation is not convertible in Lean]",
+   "blocks": 3,
+   "blocks_protected": 1
+  },
+  {
+   "declaration": "prosa.implementation.refinements.arrival_curve.refine_positive_horizon__rocq2lean_obligation_9",
+   "family": "external",
+   "status": "TRANSLATION_FAILED",
+   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: default cast annotation is not convertible in Lean]",
    "blocks": 3,
    "blocks_protected": 1
   },
@@ -1937,15 +1970,7 @@
    "declaration": "Corelib.Classes.CMorphisms.iffT_flip_arrow_subrelation",
    "family": "external",
    "status": "UNIVERSE_REJECTED",
-   "message": "reference to Rocq.Corelib.Init.Datatypes.prod_rect: argument v_1 + 1 mentions v_1, which is not a parameter of the referring declaration [last tier: UNIVERSE_REJECTED: reference to Rocq.Corelib.Init.Datatypes.prod_rect: argument v_1 + 1 mentions v_1, which is not a parameter of the referring declaration]",
-   "blocks": 1,
-   "blocks_protected": 1
-  },
-  {
-   "declaration": "prosa.classic.util.powerset.powerset",
-   "family": "classic",
-   "status": "UNIVERSE_REJECTED",
-   "message": "proof-local level prosa.classic.util.powerset.24 solved as (some 0): native fact Set lt prosa.classic.util.powerset.24 does not hold for the solution [last tier: UNIVERSE_REJECTED: proof-local level prosa.classic.util.powerset.24 solved as (some 0): native fact Set lt prosa.classic.util.powerset.24 does not hold for the solution]",
+   "message": "reference to Rocq.Corelib.Init.Datatypes.prod_rect: argument v_1 + 1 mentions v_1, which is not a parameter of the referring declaration [last tier: UNIVERSE_REJECTED: [body-occ] reference to Rocq.Corelib.Init.Datatypes.prod_rect: argument v_1 + 1 mentions v_1, which is not a parameter of the referring declaration]",
    "blocks": 1,
    "blocks_protected": 1
   },
@@ -2598,10 +2623,26 @@
    "blocks_protected": 0
   },
   {
+   "declaration": "prosa.implementation.refinements.refinements.refine_b2n",
+   "family": "modern",
+   "status": "TRANSLATION_FAILED",
+   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: [body-occ] default cast annotation is not convertible in Lean]",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
+   "declaration": "prosa.implementation.refinements.refinements.refine_size",
+   "family": "modern",
+   "status": "TRANSLATION_FAILED",
+   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: [body-occ] default cast annotation is not convertible in Lean]",
+   "blocks": 0,
+   "blocks_protected": 0
+  },
+  {
    "declaration": "prosa.implementation.refinements.task.refine_Periodic",
    "family": "modern",
    "status": "TRANSLATION_FAILED",
-   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: default cast annotation is not convertible in Lean]",
+   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: [body-occ] default cast annotation is not convertible in Lean]",
    "blocks": 0,
    "blocks_protected": 0
   },
@@ -2609,7 +2650,7 @@
    "declaration": "prosa.implementation.refinements.task.refine_Sporadic",
    "family": "modern",
    "status": "TRANSLATION_FAILED",
-   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: default cast annotation is not convertible in Lean]",
+   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: [body-occ] default cast annotation is not convertible in Lean]",
    "blocks": 0,
    "blocks_protected": 0
   },
@@ -2617,7 +2658,7 @@
    "declaration": "prosa.implementation.refinements.task.refine_task",
    "family": "modern",
    "status": "TRANSLATION_FAILED",
-   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: default cast annotation is not convertible in Lean]",
+   "message": "default cast annotation is not convertible in Lean [last tier: TRANSLATION_FAILED: [body-occ] default cast annotation is not convertible in Lean]",
    "blocks": 0,
    "blocks_protected": 0
   },
@@ -2635,43 +2676,43 @@
    "prerequisite": "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 4303,
-   "protected_needing_it": 3567
+   "pending_declarations_needing_it": 4315,
+   "protected_needing_it": 3573
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 4303,
-   "protected_needing_it": 3567
+   "pending_declarations_needing_it": 4315,
+   "protected_needing_it": 3573
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.not_false_is_true",
    "kind": "statement_only",
    "family": "external",
-   "pending_declarations_needing_it": 4218,
-   "protected_needing_it": 3523
+   "pending_declarations_needing_it": 4230,
+   "protected_needing_it": 3529
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.is_true_true",
    "kind": "statement_only",
    "family": "external",
-   "pending_declarations_needing_it": 4212,
-   "protected_needing_it": 3522
+   "pending_declarations_needing_it": 4224,
+   "protected_needing_it": 3528
   },
   {
    "prerequisite": "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 4180,
-   "protected_needing_it": 3510
+   "pending_declarations_needing_it": 4192,
+   "protected_needing_it": 3516
   },
   {
    "prerequisite": "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 4180,
-   "protected_needing_it": 3510
+   "pending_declarations_needing_it": 4192,
+   "protected_needing_it": 3516
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1",
@@ -2719,71 +2760,71 @@
    "prerequisite": "mathcomp.boot.eqtype.inj_eqAxiom__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1278,
-   "protected_needing_it": 1065
+   "pending_declarations_needing_it": 1280,
+   "protected_needing_it": 1067
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.inj_eqAxiom__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1278,
-   "protected_needing_it": 1065
+   "pending_declarations_needing_it": 1280,
+   "protected_needing_it": 1067
   },
   {
    "prerequisite": "mathcomp.boot.choice.PCanHasChoice__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1265,
-   "protected_needing_it": 1065
+   "pending_declarations_needing_it": 1267,
+   "protected_needing_it": 1067
   },
   {
    "prerequisite": "mathcomp.boot.choice.PCanHasChoice__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1265,
-   "protected_needing_it": 1065
+   "pending_declarations_needing_it": 1267,
+   "protected_needing_it": 1067
   },
   {
    "prerequisite": "mathcomp.boot.choice.PCanHasChoice__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1265,
-   "protected_needing_it": 1065
+   "pending_declarations_needing_it": 1267,
+   "protected_needing_it": 1067
   },
   {
    "prerequisite": "mathcomp.boot.choice.PCanIsCountable__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1249,
-   "protected_needing_it": 1065
+   "pending_declarations_needing_it": 1251,
+   "protected_needing_it": 1067
   },
   {
    "prerequisite": "mathcomp.boot.choice.nat_hasChoice__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1234,
-   "protected_needing_it": 1065
+   "pending_declarations_needing_it": 1236,
+   "protected_needing_it": 1067
   },
   {
    "prerequisite": "mathcomp.boot.choice.nat_hasChoice__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1234,
-   "protected_needing_it": 1065
+   "pending_declarations_needing_it": 1236,
+   "protected_needing_it": 1067
   },
   {
    "prerequisite": "mathcomp.boot.choice.nat_hasChoice__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 1234,
-   "protected_needing_it": 1065
+   "pending_declarations_needing_it": 1236,
+   "protected_needing_it": 1067
   },
   {
    "prerequisite": "mathcomp.boot.choice.nat_pickleK",
    "kind": "statement_only",
    "family": "external",
-   "pending_declarations_needing_it": 1227,
-   "protected_needing_it": 1065
+   "pending_declarations_needing_it": 1229,
+   "protected_needing_it": 1067
   },
   {
    "prerequisite": "HB.structures.id_phant",
@@ -2796,162 +2837,162 @@
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_11",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 766,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 768,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 766,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 768,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_5",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 766,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 768,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_7",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 766,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 768,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_9",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 766,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 768,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_106__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 765,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 767,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 765,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 767,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 765,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 767,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_7",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 765,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 767,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 765,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 767,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_10",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 765,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 767,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_12",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 765,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 767,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_4",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 765,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 767,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_6",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 765,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 767,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_8",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 765,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 767,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_106__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 764,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 766,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 764,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 766,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_4",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 764,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 766,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_5",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 764,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 766,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_6",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 764,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 766,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_107__rocq2lean_obligation_8",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 764,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 766,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_13",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 764,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 766,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_mixin_109__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 764,
-   "protected_needing_it": 734
+   "pending_declarations_needing_it": 766,
+   "protected_needing_it": 736
   },
   {
    "prerequisite": "mathcomp.boot.fintype.HB_unnamed_factory_57__rocq2lean_obligation_1",
@@ -2978,85 +3019,85 @@
    "prerequisite": "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 652,
-   "protected_needing_it": 305
+   "pending_declarations_needing_it": 655,
+   "protected_needing_it": 306
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 652,
-   "protected_needing_it": 305
+   "pending_declarations_needing_it": 655,
+   "protected_needing_it": 306
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 652,
-   "protected_needing_it": 305
+   "pending_declarations_needing_it": 655,
+   "protected_needing_it": 306
   },
   {
    "prerequisite": "Corelib.ssr.ssrbool.andP__rocq2lean_obligation_4",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 652,
-   "protected_needing_it": 305
+   "pending_declarations_needing_it": 655,
+   "protected_needing_it": 306
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.pair_eqP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 651,
-   "protected_needing_it": 305
+   "pending_declarations_needing_it": 654,
+   "protected_needing_it": 306
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.pair_eqP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 651,
-   "protected_needing_it": 305
+   "pending_declarations_needing_it": 654,
+   "protected_needing_it": 306
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 629,
-   "protected_needing_it": 257
+   "pending_declarations_needing_it": 634,
+   "protected_needing_it": 260
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 629,
-   "protected_needing_it": 257
+   "pending_declarations_needing_it": 634,
+   "protected_needing_it": 260
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 629,
-   "protected_needing_it": 257
+   "pending_declarations_needing_it": 634,
+   "protected_needing_it": 260
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_4",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 629,
-   "protected_needing_it": 257
+   "pending_declarations_needing_it": 634,
+   "protected_needing_it": 260
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_5",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 629,
-   "protected_needing_it": 257
+   "pending_declarations_needing_it": 634,
+   "protected_needing_it": 260
   },
   {
    "prerequisite": "mathcomp.boot.seq.eqseqP__rocq2lean_obligation_6",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 629,
-   "protected_needing_it": 257
+   "pending_declarations_needing_it": 634,
+   "protected_needing_it": 260
   },
   {
    "prerequisite": "mathcomp.boot.div.modn_rec__rocq2lean_termination_1",
@@ -3069,57 +3110,57 @@
    "prerequisite": "mathcomp.boot.eqtype.HB_unnamed_factory_16__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 500,
-   "protected_needing_it": 337
+   "pending_declarations_needing_it": 502,
+   "protected_needing_it": 339
   },
   {
    "prerequisite": "mathcomp.boot.choice.HB_unnamed_factory_9__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 499,
-   "protected_needing_it": 337
+   "pending_declarations_needing_it": 501,
+   "protected_needing_it": 339
   },
   {
    "prerequisite": "mathcomp.boot.choice/Builders_77.HB_unnamed_factory_83__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 493,
-   "protected_needing_it": 337
+   "pending_declarations_needing_it": 495,
+   "protected_needing_it": 339
   },
   {
    "prerequisite": "mathcomp.boot.choice.CanIsCountable__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 486,
-   "protected_needing_it": 337
+   "pending_declarations_needing_it": 488,
+   "protected_needing_it": 339
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.eqbP__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 389,
-   "protected_needing_it": 337
+   "pending_declarations_needing_it": 391,
+   "protected_needing_it": 339
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.eqbP__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 389,
-   "protected_needing_it": 337
+   "pending_declarations_needing_it": 391,
+   "protected_needing_it": 339
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.eqbP__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 389,
-   "protected_needing_it": 337
+   "pending_declarations_needing_it": 391,
+   "protected_needing_it": 339
   },
   {
    "prerequisite": "mathcomp.boot.ssrnat.oddb",
    "kind": "statement_only",
    "family": "external",
-   "pending_declarations_needing_it": 387,
-   "protected_needing_it": 336
+   "pending_declarations_needing_it": 389,
+   "protected_needing_it": 338
   },
   {
    "prerequisite": "mathcomp.boot.eqtype.unit_eqP__rocq2lean_obligation_1",
@@ -3146,22 +3187,22 @@
    "prerequisite": "prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 342,
-   "protected_needing_it": 98
+   "pending_declarations_needing_it": 345,
+   "protected_needing_it": 99
   },
   {
    "prerequisite": "prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 340,
-   "protected_needing_it": 98
+   "pending_declarations_needing_it": 343,
+   "protected_needing_it": 99
   },
   {
    "prerequisite": "prosa.implementation.definitions.arrival_bound.eqn_task_arrivals_bound__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 340,
-   "protected_needing_it": 98
+   "pending_declarations_needing_it": 343,
+   "protected_needing_it": 99
   },
   {
    "prerequisite": "prosa.model.processor.ideal.processor_state__rocq2lean_obligation_1",
@@ -3181,22 +3222,22 @@
    "prerequisite": "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 244,
-   "protected_needing_it": 96
+   "pending_declarations_needing_it": 247,
+   "protected_needing_it": 97
   },
   {
    "prerequisite": "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 242,
-   "protected_needing_it": 96
+   "pending_declarations_needing_it": 245,
+   "protected_needing_it": 97
   },
   {
    "prerequisite": "prosa.implementation.definitions.task.eqn_task__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 242,
-   "protected_needing_it": 96
+   "pending_declarations_needing_it": 245,
+   "protected_needing_it": 97
   },
   {
    "prerequisite": "prosa.classic.model.arrival.basic.task/SporadicTaskset.taskset_of__rocq2lean_obligation_1",
@@ -3216,29 +3257,29 @@
    "prerequisite": "Corelib.Init.Logic.eq_rect_r__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 149,
-   "protected_needing_it": 13
+   "pending_declarations_needing_it": 164,
+   "protected_needing_it": 18
   },
   {
    "prerequisite": "mathcomp.boot.choice.seq_hasChoice__rocq2lean_obligation_1",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 114,
-   "protected_needing_it": 1
+   "pending_declarations_needing_it": 116,
+   "protected_needing_it": 3
   },
   {
    "prerequisite": "mathcomp.boot.choice.seq_hasChoice__rocq2lean_obligation_2",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 114,
-   "protected_needing_it": 1
+   "pending_declarations_needing_it": 116,
+   "protected_needing_it": 3
   },
   {
    "prerequisite": "mathcomp.boot.choice.seq_hasChoice__rocq2lean_obligation_3",
    "kind": "obligation",
    "family": "external",
-   "pending_declarations_needing_it": 114,
-   "protected_needing_it": 1
+   "pending_declarations_needing_it": 116,
+   "protected_needing_it": 3
   },
   {
    "prerequisite": "mathcomp.boot.nmodule/Algebra/Builders_43.HB_unnamed_factory_45__rocq2lean_obligation_23",
