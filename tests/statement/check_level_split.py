@@ -7,7 +7,7 @@ fixtures/stmt/split (synthetic Split.v; not Prosa).
    split view (`level_split` = the source-derived split), as is pR_tail (a split definition passing its
    copies to pR's: `us__s<i> <= us`); the statements using them at carriers of
    independent levels are accepted; the ineligible qR (level also in a constructor argument) and gR
-   (level also in the body) are not split, and qR_intro stays refused (binder independence).
+   (level also in the body) are not split; qR_intro's binder levels are identified under L-IDENT (reported).
 2. Negative controls, kernel-accepted, rejected by the independent checks:
    - a forged split of the ineligible gR (self-reported, and with the report field hidden);
    - fun_R's copies exchanged between binders (wrong group mapping);
@@ -58,8 +58,11 @@ check(len(R["SF.Split.pR_intro"]["level_params"]) == 4 and len(R["SF.Split.fun_R
 for n in ("SF.Split.qR", "SF.Split.gR"):
     check(R[n]["status"] == "TRANSLATED_AND_CHECKED" and not R[n].get("level_split"), f"{n}: not eligible, not split")
 qi = R["SF.Split.qR_intro"]
-check(qi["status"] == "UNIVERSE_REJECTED" and "binder levels" in qi.get("message", ""),
-      "qR_intro (ineligible coupled level) stays refused: binder independence")
+# (L-IDENT, docs/POLICY_RELAXATIONS.md §2, approved 2026-10-18: an unprotected statement may identify binder levels the
+# source does not strictly order; the row reports the identification and the audit re-checks it)
+check(qi["status"] in ("STATEMENT_KERNEL_CHECKED", "STATEMENT_PENDING_KERNEL_CHECKED")
+      and any(isinstance(d, str) and d.startswith("level-ident: ") for d in (qi.get("universe_diagnostics") or [])),
+      "qR_intro (ineligible coupled level): its binder levels identified under L-IDENT, reported")
 
 
 def subst(j, m):
