@@ -71,6 +71,43 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
     unless src.decls.any (·.name == n) do return some s!"root {n} is not an exported declaration"
   return none
 
+/-- Incremental runs (docs/INCREMENTAL.md): the base run in directory `dir` (its report, replay records,
+timing and module), for an export with SHA-256 `irSha`; `rerunPath`: the declarations to translate again,
+one per line. -/
+def loadReplay (dir : System.FilePath) (irSha : String) (rerunPath : Option String) : IO ReplayInput := do
+  let fail (m : String) : IO ReplayInput := throw <| IO.userError s!"REPLAY_REJECTED: {m}"
+  -- the report: streamed, one row per line after the `results` line (`,` after each row but the last, `]}`)
+  let repLines ← IO.FS.lines (dir / "translation_report.json")
+  unless repLines.any (· == s!"\"input_sha256\": {(Json.str irSha).compress},") do
+    return ← fail s!"the base run in {dir} did not translate this export"
+  let some k := repLines.findIdx? (· == "\"results\": [") | return ← fail "base report without streamed rows"
+  let mut lines : Std.HashMap String String := {}
+  for i in [k+1:repLines.size] do
+    let l := repLines[i]!
+    let raw := if i + 1 == repLines.size then l.dropRight 2 else l.dropRight 1
+    if raw.isEmpty then continue
+    let j ← IO.ofExcept (Json.parse raw)
+    lines := lines.insert ((j.getObjValAs? String "source").toOption.getD "") raw
+  let mut records : Std.HashMap String Json := {}
+  for l in ← IO.FS.lines (dir / "replay_records.jsonl") do
+    if l.isEmpty then continue
+    let j ← IO.ofExcept (Json.parse l)
+    records := records.insert ((j.getObjValAs? String "decl").toOption.getD "") j
+  let tj ← IO.ofExcept (Json.parse (← IO.FS.readFile (dir / "translation_timing.json")))
+  let mut timing : Std.HashMap String (Nat × Array (String × Nat × String)) := {}
+  for e in (tj.getObjValAs? (Array Json) "declarations").toOption.getD #[] do
+    let tiers := ((e.getObjValAs? (Array Json) "tier_times").toOption.getD #[]).filterMap fun t => match t with
+      | .arr #[.str l, .num ms, .str st] => some (l, ms.mantissa.toNat, st)
+      | _ => none
+    timing := timing.insert ((e.getObjValAs? String "source").toOption.getD "") ((e.getObjValAs? Nat "time_ms").toOption.getD 0, tiers)
+  -- (the region stays mapped: the declarations are installed from it)
+  let (md, _) ← readModuleData (dir / "lean" / "Rocq2LeanOut.olean")
+  let consts := md.constants.foldl (fun m c => m.insert c.name c) ({} : Std.HashMap Name ConstantInfo)
+  let rerun ← match rerunPath with
+    | some p => pure ((← IO.FS.lines p).foldl (fun s l => if l.trim.isEmpty then s else s.insert l.trim) ({} : Std.HashSet String))
+    | none => pure {}
+  return { lines, records, timing, consts, rerun }
+
 @[command_elab rocqImport] def elabRocqImport : CommandElab := fun stx => do
   let some srcPath := stx[1].isStrLit? | throwError "expected a source path"
   let some repPath := stx[2].isStrLit? | throwError "expected a report path"
@@ -103,7 +140,16 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
   let (protJson, protNames) ← match conArg with
     | some (p, h) => readProtection p h gotSha
     | none => pure (Json.null, {})
-  let results ← liftTermElabM (translateSource source protNames)
+  -- incremental (docs/INCREMENTAL.md): `R2L_REPLAY_BASE=<run directory>`, `R2L_RERUN=<file>`
+  let repDir := (System.FilePath.mk repPath).parent.getD "."
+  let rep? ← match ← IO.getEnv "R2L_REPLAY_BASE" with
+    | some dir =>
+      if (← IO.FS.realPath dir) == (← IO.FS.realPath repDir) then
+        throwError "REPLAY_REJECTED: the base run is this run"
+      some <$> loadReplay dir gotSha (← IO.getEnv "R2L_RERUN")
+    | none => pure none
+  let tRep ← IO.monoMsNow
+  let results ← liftTermElabM (translateSource source protNames (rep? := rep?))
   let tTrans ← IO.monoMsNow
   let roots := rootSummary source results
   let count (p : DeclResult → Bool) := (results.filter p).size
@@ -119,9 +165,9 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
   let timing := Json.mkObj [
     ("schema", "rocq2lean-translation-timing/1"),
     ("phase_ms", Json.mkObj [("sha256", Json.num (tSha - tStart)), ("parse", Json.num (tParse - tSha)),
-                             ("translate", Json.num (tTrans - tParse))]),
-    ("declarations", Json.arr (results.map fun r => Json.mkObj [("source", r.source), ("status", r.status),
-      ("time_ms", Json.num r.timeMs),
+                             ("replay_load", Json.num (tRep - tParse)), ("translate", Json.num (tTrans - tRep))]),
+    ("declarations", Json.arr (results.map fun r => Json.mkObj <| [("source", r.source), ("status", r.status),
+      ("time_ms", Json.num r.timeMs)] ++ (if r.replayed then [("replayed", Json.bool true)] else []) ++ [
       ("tier_times", Json.arr (r.tierTimes.map fun (l, ms, st) => Json.arr #[Json.str l, Json.num ms, Json.str st]))]))]
   IO.FS.writeFile ((System.FilePath.mk repPath).withFileName "translation_timing.json") (timing.compress ++ "\n")
   -- statement mode: a root translated as its statement, or pending on proofs, is not a failure
@@ -154,9 +200,30 @@ def rootContractProblem (src : IR.Source) : Option String := Id.run do
     let mut first := true
     for r in results do
       h.putStr (if first then "\n" else ",\n")
-      h.putStr (line r.toJson)
+      -- (a replayed row is the base report's line, byte for byte)
+      h.putStr (match r.verbatimRaw with | some raw => raw | none => line r.toJson)
       first := false
     h.putStr "]}\n"
+  -- incremental (docs/INCREMENTAL.md): this run's replay records, so that it can be a base run; with a base,
+  -- what was replayed, translated and changed
+  IO.FS.withFile (repDir / "replay_records.jsonl") .write fun h => do
+    for j in ← replayRecords.get do h.putStrLn j.compress
+  if rep?.isSome then
+    let changed ← replayChanged.get
+    let fallback ← replayFallback.get
+    let recs ← replayRecords.get
+    let selfBad := recs.filter fun j => (j.getObjVal? "selfcheck").isOk
+    IO.FS.writeFile (repDir / "replay_summary.json") ((Json.mkObj [
+      ("schema", "rocq2lean-replay-summary/1"),
+      ("base", (← IO.getEnv "R2L_REPLAY_BASE").getD ""),
+      ("rerun_requested", ((← IO.getEnv "R2L_RERUN").getD "")),
+      ("rows", results.size),
+      ("rows_replayed", (results.filter (·.replayed)).size),
+      ("rows_translated", (results.filter (!·.replayed)).size),
+      ("changed", Json.arr (changed.map Json.str)),
+      ("fallback", Json.arr (fallback.map fun (n, m) => Json.mkObj [("decl", n), ("reason", m)])),
+      ("selfcheck_failures", Json.arr (selfBad.map fun j => (j.getObjVal? "decl").toOption.getD .null)),
+      ("load_ms", Json.num (tRep - tParse)), ("translate_ms", Json.num (tTrans - tRep))]).pretty ++ "\n")
   -- statement mode: the module of the claimed rows is still produced (validated row by row); the
   -- report's status records the untranslated roots and the CLI exits non-zero
   let stmtMode := (source.header.getObjValAs? String "mode").toOption.isNone &&

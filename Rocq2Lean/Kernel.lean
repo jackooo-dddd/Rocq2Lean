@@ -19,6 +19,11 @@ inductive KernelResult where
   | rejected (msg : String)
   deriving Repr, Inhabited
 
+/-- Incremental runs (docs/INCREMENTAL.md): the names of the declarations installed by `addChecked`, in
+order. The translator clears it before each source declaration and keeps the names still present after
+it, so a later run can install the same declarations without translating it. -/
+initialize addedLog : IO.Ref (Array Name) ← IO.mkRef #[]
+
 /-- Submit `decl` to the Lean kernel and, if it is accepted, install the extended environment. -/
 def addChecked (decl : Declaration) : CoreM KernelResult := do
   let opts ← getOptions
@@ -29,6 +34,7 @@ def addChecked (decl : Declaration) : CoreM KernelResult := do
       none (doCheck := true) with
   | .ok env' =>
     setEnv env'
+    addedLog.modify (· ++ decl.getNames.toArray)
     return .accepted
   | .error ex =>
     return .rejected (← (ex.toMessageData opts).toString)
