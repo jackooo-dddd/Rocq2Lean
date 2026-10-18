@@ -321,12 +321,28 @@ private def hypBinderCount (n : Name) (t : Expr) : Nat := Id.run do
     | _ => break
   return k
 
-private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (n : Name)
+/-- (speed, exact) the generality check's per-check context: the source level of a parameter name (the first
+in `facts.levels`, as `find?` returned) and the source levels of the referring declaration's own parameters
+that are not copies. -/
+private structure PinCtx where
+  srcOf : Std.HashMap Name String
+  ownSrc : Array String
+
+private def mkPinCtx (facts : IR.UniverseFacts) (own : List Name) : PinCtx := Id.run do
+  let mut m : Std.HashMap Name String := {}
+  for l in facts.levels do
+    let p := levelParamName l
+    unless m.contains p do m := m.insert p l
+  let ownSrc := own.toArray.filterMap fun q => if (q.toString.splitOn "__c").length > 1 then none else m[q]?
+  return { srcOf := m, ownSrc }
+
+private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (ctx : PinCtx) (own : List Name) (n : Name)
     (us : List Level) (nargs : Nat) : Option String := Id.run do
   let some ci := env.find? n | return none
   let lps := ci.levelParams
   if lps.length != us.length then return none
-  let doms := (binderDomains ci.type nargs).extract (hypBinderCount n ci.type) nargs
+  -- (speed: the binder domains are computed only when a parameter reaches the test below)
+  let mut doms? : Option (Array Expr) := none
   for (p, σ) in lps.zip us do
     unless p.toString.startsWith "u_" do continue      -- (R6 universe variables, Lean's own constants)
     if own.contains p then continue                     -- (a level of the declaration: R3)
@@ -337,7 +353,7 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
     if own.any (fun q => q != p && base q == base p && (q.toString.splitOn "__c").length > 1) then continue
     -- (an argument max(q₁, …) of own parameters (or copies) whose source levels are all *equal* to the
     -- referenced level in the source graph (≤ both ways) is that level's reading, not a specialization)
-    let srcOf (x : Name) : Option String := facts.levels.find? (fun l => levelParamName l == Name.mkSimple (base x))
+    let srcOf (x : Name) : Option String := ctx.srcOf[Name.mkSimple (base x)]?
     if let some lp := srcOf p then
       if let some (c, ps) := levelNF σ.normalize then
         if c == 0 && !ps.isEmpty && ps.all (fun (q, k) => k == 0 && own.contains q &&
@@ -347,12 +363,14 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
       -- (rule R, general form: an argument over own levels equal to the referenced level at every model
       -- of the source facts, e.g. a referenced definition's R2F reading `max (u_l, u_m, …)` with `m ≤ l`, is
       -- that level, not a specialization)
-      let ownSrc : Array String := own.toArray.filterMap fun q =>
-        if (q.toString.splitOn "__c").length > 1 then none else facts.levels.find? (levelParamName · == q)
-      if (p.toString.splitOn "__c").length == 1 && σ.hasParam && equalAtModels facts (ownSrc.push lp) σ (.param p) then continue
+      if (p.toString.splitOn "__c").length == 1 && σ.hasParam && equalAtModels facts (ctx.ownSrc.push lp) σ (.param p) then continue
     if !σ.hasParam then
-      if let some l := facts.levels.find? (fun l => levelParamName l == p) then
+      if let some l := ctx.srcOf[p]? then
         if entails facts l "Set" 0 then continue
+    let doms := match doms? with
+      | some d => d
+      | none => (binderDomains ci.type nargs).extract (hypBinderCount n ci.type) nargs
+    doms? := some doms
     if doms.any (fun d => (collectLevelParams {} d).params.contains p) then continue
     return some s!"{n}: the level of {p} is free in the source (no applied argument determines it, the source graph does not force it) but its argument is {σ}, not {p}"
   return none
@@ -366,28 +384,62 @@ private def siblingFixed (env : Environment) (n : Name) (nargs : Nat) : Array Na
       out := out.push j
   return out
 
-partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr) : Option String :=
-  match e with
-  | .app .. =>
-    let f := e.getAppFn
-    let args := e.getAppArgs
-    let r := match f with
-      | .const n us => freeLevelRef env facts own n us args.size
-      | _ => freeLevelPin env facts own f
-    if r.isSome then r else
-    let skip := match f with
-      | .const n _ => siblingFixed env n args.size
-      | _ => #[]
-    Id.run do
+/-- (speed, exact) the state of one generality traversal: subterms already found clean (the result depends
+on the subterm only), and the per-reference results. -/
+private abbrev PinM := StateM (Std.HashSet Expr × Std.HashMap (Name × List Level × Nat) (Option String) ×
+  Std.HashMap (Name × Nat) (Array Nat))
+
+private partial def freeLevelPinM (env : Environment) (facts : IR.UniverseFacts) (ctx : PinCtx) (own : List Name)
+    (e : Expr) : PinM (Option String) := do
+  if (← get).1.contains e then return none
+  let ref (n : Name) (us : List Level) (k : Nat) : PinM (Option String) := do
+    if let some r := (← get).2.1[(n, us, k)]? then return r
+    let r := freeLevelRef env facts ctx own n us k
+    modify fun (v, m, s) => (v, m.insert (n, us, k) r, s)
+    return r
+  let go := freeLevelPinM env facts ctx own
+  let r ← match e with
+    | .app .. => do
+      let f := e.getAppFn
+      let args := e.getAppArgs
+      let r ← match f with
+        | .const n us => ref n us args.size
+        | _ => go f
+      if r.isSome then pure r else
+      let skip ← match f with
+        | .const n _ => do
+          match (← get).2.2[(n, args.size)]? with
+          | some x => pure x
+          | none =>
+            let x := siblingFixed env n args.size
+            modify fun (v, m, s) => (v, m, s.insert (n, args.size) x)
+            pure x
+        | _ => pure #[]
+      let mut out : Option String := none
       for i in [0:args.size] do
         if skip.contains i then continue
-        if let some m := freeLevelPin env facts own args[i]! then return some m
-      return none
-  | .const n us => freeLevelRef env facts own n us 0
-  | .forallE _ d b _ | .lam _ d b _ => freeLevelPin env facts own d <|> freeLevelPin env facts own b
-  | .letE _ t v b _ => freeLevelPin env facts own t <|> freeLevelPin env facts own v <|> freeLevelPin env facts own b
-  | .mdata _ b | .proj _ _ b => freeLevelPin env facts own b
-  | _ => none
+        if let some m ← go args[i]! then
+          out := some m
+          break
+      pure out
+    | .const n us => ref n us 0
+    | .forallE _ d b _ | .lam _ d b _ => do
+      match ← go d with
+      | some m => pure (some m)
+      | none => go b
+    | .letE _ t v b _ => do
+      match ← go t with
+      | some m => pure (some m)
+      | none => match ← go v with
+        | some m => pure (some m)
+        | none => go b
+    | .mdata _ b | .proj _ _ b => go b
+    | _ => pure none
+  if r.isNone then modify fun (v, m, s) => (v.insert e, m, s)
+  return r
+
+partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr) : Option String :=
+  (freeLevelPinM env facts (mkPinCtx facts own) own e).run' ({}, {}, {})
 
 private def peelBinders (e : Expr) (k : Nat) : Expr :=
   match k, e with
@@ -844,17 +896,35 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       -- (only own *type* levels represent a class: a proof-local level is solved, fact-checked by R2S, and
       -- never decides the class — R-CARRIER, factory_57's 551 against isSub's motive level 542)
       let ownCur ← (ownMVars.filter fun (m, _) => !resultLv.contains m && (typeLevels.contains m || stmt)).mapM fun (_, v) => instantiateLevelMVars v
-      let mut done : Array Level := #[]
+      let mut done : Std.HashSet Level := {}
       let mut chosen : Array (String × Array LMVarId) := #[]
+      -- (speed: the arguments are grouped once, by class and by source level, and an argument's current value
+      -- is read only for the source levels a class can pick, at the same point of the pass as before — no
+      -- assignment happens in between —, instead of re-reading every argument for every class: quadratic on
+      -- HB terms. The interface's arguments, read for R-CARRIER P2, are collected once from the same term.)
+      let cands := if interp then all else inTy
+      let mut clsOf : Std.HashMap Level (Array String) := {}
+      for (l', σ') in all do clsOf := clsOf.insert σ' ((clsOf.getD σ' #[]).push l')
+      let mut tyClsOf : Std.HashMap Level (Array String) := {}
+      for (l', σ') in cands do tyClsOf := tyClsOf.insert σ' ((tyClsOf.getD σ' #[]).push l')
+      let mut byL : Std.HashMap String (Array Level) := {}
+      for (l', σ') in all do byL := byL.insert l' ((byL.getD l' #[]).push σ')
+      let mut ifaceByL : Std.HashMap String (Array Level) := {}
+      for (n, ls) in constOccurrences (peelBinders (if stmt then val else ty) hyps.size) do
+        if let some gs := genv.constGlobals[n]? then
+          let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
+          if gs.size == ls.length then
+            for l' in gs, σ' in ls do ifaceByL := ifaceByL.insert l' ((ifaceByL.getD l' #[]).push σ')
       -- (R2F-c: classes of the body are candidates too; their levels become own levels)
-      for (_, σ) in (if interp then all else inTy) do
+      for (_, σ) in cands do
         unless σ.isMVar && !done.contains σ do continue
-        done := done.push σ
-        let cls := (all.filter (·.2 == σ)).map (·.1)
-        let tyCls := ((if interp then all else inTy).filter (·.2 == σ)).map (·.1)
+        done := done.insert σ
+        let cls := clsOf.getD σ #[]
+        let tyCls := tyClsOf.getD σ #[]
         -- every argument for `l` anywhere must still be free: they all become `u_l` (coherence)
-        let mut cur : Array (String × Level) := #[]
-        for (l', σ') in all do cur := cur.push (l', ← instCollapse σ')
+        let mut cur : Std.HashMap String (Array Level) := {}
+        for l in tyCls do
+          unless cur.contains l do cur := cur.insert l (← (byL.getD l #[]).mapM instCollapse)
         -- (statement mode: an argument for `l` that unification already fixed to an expression, e.g. a
         -- referenced declaration's R2F reading of its own parameter, is left as is; R3 coherence, the
         -- kernel and the audit check it like every argument)
@@ -864,8 +934,8 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           | _ => false
         let pick := tyCls.toList.eraseDups.find? fun l =>
           !own.contains l && !genv.templateLevels.contains l && cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) &&
-          (if genv.stmtMode then (cur.filter (·.1 == l)).any (·.2 == σ) && !ownCur.contains σ
-           else (cur.filter (·.1 == l)).all (fun (_, x) => x.isMVar || isCopyOf l x))
+          (if genv.stmtMode then (cur.getD l #[]).any (· == σ) && !ownCur.contains σ
+           else (cur.getD l #[]).all (fun x => x.isMVar || isCopyOf l x))
         if let some l := pick then
           -- R-CARRIER P2 (docs/CARRIER_LEVELS.md): the distinct free classes of arguments for `l` in the
           -- type (operands typing does not relate) are named separately, `l__c<k>`; with one class, `u_l`
@@ -873,10 +943,9 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           -- Count operand classes in the source interface, excluding generated prerequisite binders.
           -- Their universe instances are chosen by the translator (as for joint identification),
           -- and must not create extra independent classes beside the declaration's own operands.
-          for (l', σ') in ← argsFor (← instLevelMVars (peelBinders (if stmt then val else ty) hyps.size)) do
-            if l' == l then
-              let x ← instCollapse σ'
-              if (x.isMVar || isCopyOf l x) && !tyClasses.contains x then tyClasses := tyClasses.push x
+          for σ' in ifaceByL.getD l #[] do
+            let x ← instCollapse σ'
+            if (x.isMVar || isCopyOf l x) && !tyClasses.contains x then tyClasses := tyClasses.push x
           let split := genv.carrierSplit && !interp && tyClasses.size ≥ 2
           let k := (tyClasses.idxOf? σ).getD 0
           let name := if split then s!"{l}__c{k}" else l
@@ -885,13 +954,12 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
               let cs := (List.range tyClasses.size).toArray.map (s!"{l}__c{·}")
               if a.any (·.1 == l) then a else a.push (l, cs)
           let mut ms : Array LMVarId := #[]
-          for (l', σ') in cur do
-            if l' == l then
-              if let .mvar r ← instCollapse σ' then
-                -- (split: only this class; arguments of other type classes get their own copy, and
-                -- classes of the value alone join the first copy below)
-                if !split || (.mvar r) == σ then
-                  if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName name))
+          for σ' in cur.getD l #[] do
+            if let .mvar r ← instCollapse σ' then
+              -- (split: only this class; arguments of other type classes get their own copy, and
+              -- classes of the value alone join the first copy below)
+              if !split || (.mvar r) == σ then
+                if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName name))
           if interp then chosen := chosen.push (l, ms)
           implicitRef.modify fun a => if a.contains name then a else a.push name
       -- R-CARRIER P2: free arguments for a split level outside the type's classes (the value's) take
