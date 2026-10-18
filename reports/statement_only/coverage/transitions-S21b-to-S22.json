@@ -1,0 +1,56 @@
+{
+ "before": {
+  "Accepted": 685,
+  "Audited Pending": 3585,
+  "Blocked Dependency": 180,
+  "Direct Failure": 24
+ },
+ "after": {
+  "Accepted": 685,
+  "Audited Pending": 3610,
+  "Blocked Dependency": 153,
+  "Direct Failure": 26
+ },
+ "delta": {
+  "Accepted": 0,
+  "Audited Pending": 25,
+  "Blocked Dependency": -27,
+  "Direct Failure": 2
+ },
+ "moves": {
+  "Blocked Dependency -> Audited Pending": 13,
+  "Blocked Dependency -> Direct Failure": 14,
+  "Direct Failure -> Audited Pending": 12
+ },
+ "status_changes": 43,
+ "newly_accepted": [],
+ "newly_unblocked": [
+  "prosa.implementation.refinements.EDF.fast_search_space.blocking_bound_NP",
+  "prosa.implementation.refinements.EDF.fast_search_space.bound_on_total_hep_workload",
+  "prosa.implementation.refinements.EDF.fast_search_space.check_point_FP",
+  "prosa.implementation.refinements.EDF.fast_search_space.check_point_NP",
+  "prosa.implementation.refinements.EDF.fast_search_space.correct_search_space",
+  "prosa.implementation.refinements.EDF.fast_search_space.search_space_subset_EDF",
+  "prosa.implementation.refinements.EDF.nonpreemptive_sched.basic_ready_instance",
+  "prosa.implementation.refinements.EDF.nonpreemptive_sched.sched",
+  "prosa.implementation.refinements.EDF.preemptive_sched.basic_ready_instance",
+  "prosa.implementation.refinements.EDF.preemptive_sched.sched",
+  "prosa.implementation.refinements.FP.fast_search_space.blocking_bound_NP",
+  "prosa.implementation.refinements.FP.fast_search_space.check_point_FP",
+  "prosa.implementation.refinements.FP.fast_search_space.check_point_NP",
+  "prosa.implementation.refinements.FP.fast_search_space.correct_search_space",
+  "prosa.implementation.refinements.FP.fast_search_space.ohep_task",
+  "prosa.implementation.refinements.FP.fast_search_space.search_space_subset_FP",
+  "prosa.implementation.refinements.FP.fast_search_space.total_hep_rbf",
+  "prosa.implementation.refinements.FP.fast_search_space.total_ohep_rbf",
+  "prosa.implementation.refinements.FP.nonpreemptive_sched.sched",
+  "prosa.implementation.refinements.FP.nonpreemptive_sched.sequential_ready_instance",
+  "prosa.implementation.refinements.FP.preemptive_sched.sched",
+  "prosa.implementation.refinements.FP.preemptive_sched.sequential_ready_instance",
+  "prosa.implementation.refinements.arrival_curve.task_rbf",
+  "prosa.implementation.refinements.fast_search_space_computation.structure_of_correct_search_space",
+  "prosa.implementation.refinements.fast_search_space_computation.task_search_space_subset"
+ ],
+ "regressions_previously_accepted": [],
+ "same_protected_set": true
+}
