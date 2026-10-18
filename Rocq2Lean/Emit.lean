@@ -555,8 +555,29 @@ private def typeDomains (t : Expr) : Array Expr := Id.run do
 
 /-- P3: leading hypothesis binders of the same leaf at the same type (after universe solving) are
 collapsed into the first; returns the new type, value and the indices of the kept binders. -/
+initialize dupsRef : IO.Ref (Array (Nat × Nat)) ← IO.mkRef #[]
+
+/-- R-P3RES: the collapse `collapseHyps` chose (kept binders, duplicate ↦ canonical), applied to another version of the
+same declaration (the generic one, residual levels as parameters), so that both records describe one declaration. -/
+def collapseHypsBy (ty val : Expr) (n : Nat) (keep : Array Nat) (dups : Array (Nat × Nat)) : MetaM (Expr × Expr) := do
+  if keep.size == n then return (ty, val)
+  forallBoundedTelescope ty n fun xs tb => do
+    let vb ← instantiateLambda val xs
+    let dupOf := dups.map fun (j, i) => (xs[j]!, xs[i]!)
+    let rec go (k : Nat) (vars : Array Expr) (sub : Array (Expr × Expr)) : MetaM (Expr × Expr) := do
+      let tr (e : Expr) : Expr := (e.replaceFVars (dupOf.map (·.1)) (dupOf.map (·.2))).replaceFVars (sub.map (·.1)) (sub.map (·.2))
+      if h : k < keep.size then
+        let x := xs[keep[k]]!
+        let t := tr (← instantiateMVars (← inferType x))
+        withLocalDeclD (← x.fvarId!.getUserName) t fun y => go (k + 1) (vars.push y) (sub.push (x, y))
+      else
+        return (← mkForallFVars vars (tr tb), ← mkLambdaFVars vars (tr vb))
+    termination_by keep.size - k
+    go 0 #[] #[]
+
 def collapseHyps (ty val : Expr) (names : Array String) : MetaM (Expr × Expr × Array Nat) := do
   let n := names.size
+  dupsRef.set #[]
   forallBoundedTelescope ty n fun xs tb => do
     let vb ← instantiateLambda val xs
     let mut keep : Array Nat := #[]
@@ -571,7 +592,9 @@ def collapseHyps (ty val : Expr) (names : Array String) : MetaM (Expr × Expr ×
         if canon.isNone && names[i]! == names[j]! then
           if normLv (← instantiateMVars (← inferType xs[i]!)) == tj then canon := some i
       match canon with
-      | some i => dupOf := dupOf.push (xs[j]!, xs[i]!)
+      | some i =>
+        dupOf := dupOf.push (xs[j]!, xs[i]!)
+        dupsRef.modify (·.push (j, i))
       | none => keep := keep.push j
     if keep.size == xs.size then return (ty, val, keep)
     let rec go (k : Nat) (vars : Array Expr) (sub : Array (Expr × Expr)) : MetaM (Expr × Expr) := do
@@ -1326,11 +1349,17 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let backCopy : String → String := fun x => ((splits.find? (·.2.contains x)).map (·.1)).getD x
     let preCollapse := (ty, val)
     -- P3 retry tier: hypotheses of one leaf that ended at the same type are collapsed into the first
-    let (ty, val, hyps) ← if !hypExact || hyps.isEmpty then pure (ty, val, hyps) else do
-      unless resid.isEmpty do
+    let hyps0 := hyps
+    let (ty, val, hyps, keepIdx) ← if !hypExact || hyps.isEmpty then pure (ty, val, hyps, (#[] : Array Nat)) else do
+      -- (R-P3RES, switch `R2L_RULE_P3_RESID` while measured: residual levels are allowed with per-instance hypotheses;
+      -- they stay parameters, justified by the kernel at every value like any residual)
+      unless resid.isEmpty || (← IO.getEnv "R2L_RULE_P3_RESID").isSome do
         return { base with status := "UNSUPPORTED_FEATURE", message := "P3 tier: residual levels with per-instance hypotheses" }
       let (ty', val', keep) ← collapseHyps ty val (hyps.map (·.2))
-      pure (ty', val', keep.map (hyps[·]!))
+      pure (ty', val', keep.map (hyps[·]!), keep)
+    -- (R-P3RES: the generic version, residual levels as parameters, collapsed the same way)
+    let (gty, gval) ← if !hypExact || resid.isEmpty || keepIdx.isEmpty then pure (gty, gval) else
+      collapseHypsBy gty gval hyps0.size keepIdx (← dupsRef.get)
     if discover then
       return { base with status := "DISCOVERED", implicitLevels := (← implicitRef.get).qsort (· < ·) }
     -- C (docs/UNIVERSE_FAMILY_C.md): every level of a statement is a level of the statement; one left
