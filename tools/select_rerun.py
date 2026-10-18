@@ -9,7 +9,9 @@ A declaration is selected when any criterion holds:
   the changed code can only run in attempts with that flag;
 * --failed: its base row is not claimed (every failure, blocked rows included);
 * --status S: its base row has status S;
-* --names FILE: it is listed (one per line).
+* --names FILE: it is listed (one per line);
+* --message REGEX: its base row (or one of its generated rows) is not claimed and its message matches;
+* --prefix P: combined with the criteria above, only declarations whose name starts with P.
 
 The selection only needs to cover the declarations the change can affect *directly*: the translator
 translates again every declaration that depends, directly or through others, on one whose rows changed.
@@ -27,6 +29,8 @@ def main():
     ap.add_argument("--failed", action="store_true")
     ap.add_argument("--status", action="append", default=[])
     ap.add_argument("--names")
+    ap.add_argument("--message")
+    ap.add_argument("--prefix", action="append", default=[])
     ap.add_argument("-o", "--out", required=True)
     a = ap.parse_args()
     decls = [json.loads(l) for l in open(f"{a.base}/replay_records.jsonl") if l.strip()]
@@ -36,6 +40,15 @@ def main():
         for r in d["rows"]:
             if r["source"] == d["decl"]:
                 status[d["decl"]] = (timing.get(d["decl"]) or {}).get("status", "")
+    failmsg = {}
+    if a.message:
+        dec = json.JSONDecoder()
+        for l in open(f"{a.base}/translation_report.json"):
+            if not l.startswith("{\""): continue
+            try: r, _ = dec.raw_decode(l)
+            except ValueError: continue
+            if "results" in r or r.get("status") in CLAIMED: continue
+            failmsg[r.get("synthesized_from") or r["source"]] = failmsg.get(r.get("synthesized_from") or r["source"], "") + "\n" + r.get("message", "")
     names = set()
     if a.names:
         names = {l.strip() for l in open(a.names) if l.strip()}
@@ -53,6 +66,8 @@ def main():
                 m = lab.match(t[0])
                 if m and set(m.group(1).split(",")) & set(a.flag):
                     why = why or "flag"; break
+        if a.message and re.search(a.message, failmsg.get(n, "")): why = why or "message"
+        if a.prefix and not any(n.startswith(p) for p in a.prefix): why = None
         if why: pick.append(n)
     with open(a.out, "w") as f:
         for n in pick: f.write(n + "\n")
