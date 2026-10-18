@@ -331,6 +331,12 @@ def factReduceUniverse (f : IR.UniverseFacts) (u : Array LevelExpr) : Array Leve
         | .set => false)
     | _ => true
 
+/-- R-OCC (docs/BODY_OCCURRENCE_LEVELS.md): the body-only levels whose sort occurrences each get a fresh level
+metavariable, and the copies made (metavariable, source level). Set per attempt around the body's translation. -/
+initialize bodyOccSet : IO.Ref (Std.HashSet String) ← IO.mkRef {}
+initialize bodyOccLog : IO.Ref (Array (LMVarId × String)) ← IO.mkRef #[]
+/-- R-OCC: set while the per-occurrence last tier runs. -/
+initialize bodyOccTier : IO.Ref Bool ← IO.mkRef false
 /-- Lean sort level of a source `Type@{u}` in the pilot fragment: `Set + n ↦ n + 1`, `max`
 componentwise. Global monomorphic levels and polymorphic variables are rejected. -/
 def transTypeLevel (u : Array LevelExpr) : TransM Level := do
@@ -348,6 +354,10 @@ def transTypeLevel (u : Array LevelExpr) : TransM Level := do
       | none =>
         match (← read).globalLevels[n]? with
         | some l =>
+          let l ← if !(← bodyOccSet.get).contains n then pure l else do
+            let v ← liftMeta mkFreshLevelMVar
+            if let .mvar m := v then bodyOccLog.modify (·.push (m, n))
+            pure v
           -- R8: a motive level's parameter is the sort level itself (it may be 0: Prop)
           if (← read).admitLevels.contains n then pure (l.addOffset e.offset)
           else pure (l.addOffset (e.offset + 1))
@@ -2978,6 +2988,20 @@ def checkBodyLevel (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std
     let k := if r == "lt" && !(propOffset && a == "Set") then 1 else 0
     unless summandsLeq f (← summ a) (← summ b) k do
       throw s!"proof-local level {m} solved as {sol[m]?}: native fact {a} {r} {b} does not hold for the solution"
+
+/-- R-OCC: an occurrence copy `σ` of body-only level `m` satisfies `m`'s upper-bound facts (`m ≤ b`, `m < b`). -/
+def checkBodyCopy (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std.HashMap String Level)
+    (m : String) (σ : Level) : Except String Unit := do
+  let summ (x : String) : Except String (List (String × Nat)) :=
+    match sol[x]? with
+    | some τ => sourceSummands typeLevels τ #[]
+    | none => pure [(x, 0)]
+  let mine (x : String) := x == "Set" || typeLevels.contains x || sol.contains x
+  for (a, r, b) in f.relations do
+    unless a == m && b != m && mine b do continue
+    let k := if r == "lt" then 1 else 0
+    unless summandsLeq f (← sourceSummands typeLevels σ #[]) (← summ b) k do
+      throw s!"proof-local level {m}: occurrence solved as {σ}: native fact {a} {r} {b} does not hold for it"
 
 /-- Minimal-model default of an unconstrained proof-local level `m` (R2B/R3′): the least level
 satisfying its native lower bounds from `Set` and the type levels (`Set < m` gives 1, `l ≤ m`

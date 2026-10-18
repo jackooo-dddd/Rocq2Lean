@@ -45,6 +45,9 @@ class Mismatch(Exception):
 
 
 FACTS = None     # native universe facts of the audited export (set by main)
+# R-OCC (docs/BODY_OCCURRENCE_LEVELS.md): a sort occurrence of a body-only level may be a per-occurrence copy
+# (reports with "body-occ" rows); the copy is checked here against the level's upper-bound facts.
+BODY_OCC = [False]
 STATEMENT_MODE = [False]     # set by main_statement
 
 
@@ -580,7 +583,8 @@ class Auditor:
             return
         if k == "sort":
             if e["k"] != "sort" or level_nf(e["l"]) != source_sort_nf(s["s"], self.body):
-                raise Mismatch(f"{path}: sort mismatch")
+                if not body_copy_ok(s["s"], e, self.body):
+                    raise Mismatch(f"{path}: sort mismatch")
             return
         if k in ("prod", "lam"):
             want = "forall" if k == "prod" else "lam"
@@ -3073,6 +3077,51 @@ def own_partition_full(d, r):
     return params, sol, interp
 
 
+def body_copy_ok(s, e, body):
+    """R-OCC, independently: target sort `e` is `Sort (σ+1)` for a source sort `Type@{m}` of a
+    proof-local level `m`, where σ satisfies every native upper-bound fact `m ≤ b` / `m < b` (b read as its
+    solution when solved, as itself otherwise: every such fact, not only those among the declaration's levels)."""
+    if not BODY_OCC[0] or body is None or FACTS is None or e["k"] != "sort":
+        return False
+    if s["k"] != "type" or len(s["u"]) != 1:
+        return False
+    x = s["u"][0]
+    if x["l"]["k"] != "global" or x["n"] != 0 or x["l"]["n"] not in body or x["l"]["n"] in ADMIT[0]:
+        return False
+    m = x["l"]["n"]
+    try:
+        c, ps = level_raw(e["l"])
+    except Mismatch:
+        return False
+    if (c is not None and c < 1) or any(o < 1 for o in ps.values()) or (c is None and not ps):
+        return False
+    back = {level_param(g): g for g in FACTS.levels if g != "Set"}
+    if any(p not in back for p in ps):
+        return False
+    lhs = [("Set", max((c or 0) - 1, 0))] + [(back[p], o - 1) for p, o in ps.items()]
+
+    def summ(y):
+        if y not in body:
+            return [(y, 0)]
+        bc, bps = level_raw(body[y])
+        if any(p not in back for p in bps):
+            raise Mismatch("solution outside the source levels")
+        return [("Set", bc or 0)] + [(back[p], k) for p, k in bps.items()]
+
+    def leq(l_, r_, k):
+        return all((a == "Set" and i + k == 0) or any(
+            (FACTS.entails(a, b, 0) or a == "Set") if i + k <= j else FACTS.entails(a, b, i + k - j) for b, j in r_)
+            for a, i in l_)
+
+    try:
+        for (a, b), r in FACTS.rel.items():
+            if a == m and b != m and not leq(lhs, summ(b), 1 if r == "lt" else 0):
+                return False
+    except Mismatch:
+        return False
+    return True
+
+
 def check_body_levels(facts, d, sol, params=None, admit=frozenset(), prop_offset=False, relaxed=None):
     """Rules R2S/R2B, independently: each solution is a level over the declaration's parameters, and
     every native fact between a solved level and Set / a parameter / another solved level holds with
@@ -3168,6 +3217,7 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
     facts = Facts(lines[4]) if lines[4].get("kind") == "universe_facts" else None
     global FACTS
     FACTS = facts
+    BODY_OCC[0] = any("body-occ" in (r_.get("universe_diagnostics") or []) for r_ in rows.values()) if isinstance(rows, dict) else False
     if facts is None:
         problem("universe", "source IR has no native universe facts")
     gen, poly, gen_admit = {}, {}, {}

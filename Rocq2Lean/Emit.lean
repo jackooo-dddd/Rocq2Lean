@@ -777,7 +777,14 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let ty ← match ← timePhase genv.phaseLog "trans_type" <| runTrans genv (withPath "type" (transClosed c.type)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef? with
       | .ok e => pure e
       | .error e => return fromTransError base e
-    let val ← match ← timePhase genv.phaseLog "trans_body" <| runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef? with
+    -- R-OCC (docs/BODY_OCCURRENCE_LEVELS.md, last tier): every sort occurrence of a body-only level of a definition
+    -- gets its own level metavariable (not R2B-V result-sort levels: the declared result sort is read from the value)
+    let bodyOcc := !stmt && (← bodyOccTier.get)
+    bodyOccLog.set #[]
+    if bodyOcc then bodyOccSet.set ((own.filter fun m => !typeLevels.contains m && !resultLv.contains m).foldl (·.insert ·) {})
+    let valR ← timePhase genv.phaseLog "trans_body" <| runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef?
+    bodyOccSet.set {}
+    let val ← match valR with
       | .ok e => pure e
       | .error e =>
         if e.msg.startsWith "termination obligation required" && !wfTerm && genv.stmtMode then
@@ -1066,7 +1073,15 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
         for (t, v) in ownMVars do
           if typeLevels.contains t then cur := cur.insert t (← instantiateLevelMVars v)
         pure (minimalModelLevel genv.facts cur m)
-      | none => pure .zero
+      | none =>
+        -- (R-OCC: an occurrence copy left free defaults as its source level)
+        match (← bodyOccLog.get).find? (·.1 == id) with
+        | some (_, m) =>
+          let mut cur : Std.HashMap String Level := {}
+          for (t, v) in ownMVars do
+            if typeLevels.contains t then cur := cur.insert t (← instantiateLevelMVars v)
+          pure (minimalModelLevel genv.facts cur m)
+        | none => pure .zero
     -- coherence by unification: per-occurrence shared levels left free by typing are the own variables
     -- (after the value's type is unified with the declared type, before the parameters are named)
     -- solver stage B (experiment): a witness's values for the occurrences and own levels, before coherence
@@ -1084,6 +1099,27 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       return { base with status := "DISCOVERED", implicitLevels := (← implicitRef.get).qsort (· < ·) }
     let (ty, val, diags, resid, gty, gval, rdefaults) ← timePhase genv.phaseLog "solve_levels" <|
       solveLevels ty val dflt rebindThenKeep (solve := lower || joint) (log := genv.phaseLog)
+    -- R-OCC: a body-only level all of whose occurrences are copies occurs nowhere itself; it is its minimal model
+    -- (for the facts of the other levels), its lower bounds read through the current values of every other level,
+    -- type or solved, and through the parameter `u_a` of a lower bound `a` that is a parameter of the declaration
+    -- without being one of its explicit levels (an R3G implicit level: Classic `powerset`'s `eqtype.51`); repeated
+    -- so that a default can use another's
+    if bodyOcc then
+      let usedPs := (collectLevelParams (collectLevelParams {} (← instantiateMVars ty)) (← instantiateMVars val)).params
+      for pass in [0:3] do
+        for (m, v) in ownMVars do
+          if let .mvar r ← instantiateLevelMVars v then
+            unless typeLevels.contains m do
+              let mut cur : Std.HashMap String Level := {}
+              for (a, _, b) in genv.facts.relations do
+                if b == m && usedPs.contains (levelParamName a) then cur := cur.insert a (.param (levelParamName a))
+              for (t, w) in ownMVars do
+                let wi ← instantiateLevelMVars w
+                if t != m && !wi.hasMVar then cur := cur.insert t wi
+              -- (every lower bound that is a level of this declaration has a value; the last pass takes what is known)
+              if pass == 2 || (genv.facts.relations.all fun (a, _, b) =>
+                  b != m || a == "Set" || cur.contains a || !(ownMVars.any (·.1 == a))) then
+                assignLevelMVar r (minimalModelLevel genv.facts cur m)
     unless (← witnessBad.get).isEmpty do
       return { base with status := "UNIVERSE_REJECTED", message := s!"solver witness: {(← witnessBad.get).toList.take 5}" }
     unless (← cycleRef.get).isEmpty do
@@ -1188,6 +1224,11 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     -- R3 coherence for R2F-c own levels: an argument for `l` must be ι l
     let solι := levelInterp.foldl (fun (m : Std.HashMap String Level) (l, x) => m.insert l x) sol
     let base := { base with bodyLevels := own.filterMap fun m => sol[m]?.map (m, ·) }
+    let base := if (← bodyOccLog.get).isEmpty then base else { base with levelDiagnostics := base.levelDiagnostics.push "body-occ" }
+    for (mv, m) in ← bodyOccLog.get do
+      let σ := (← instantiateLevelMVars (.mvar mv)).normalize
+      if let .error msg := checkBodyCopy genv.facts globals sol m σ then
+        return { base with status := "UNIVERSE_REJECTED", message := msg }
     for m in own do
       if sol.contains m then
         if resultLv.contains m then continue          -- (R2B-V: a lowering, checked below)
@@ -2762,6 +2803,31 @@ where
                 r := r'
                 iface := none
                 break
+          -- R-OCC, per-occurrence body-only levels, last resort (docs/BODY_OCCURRENCE_LEVELS.md): a failing definition is
+          -- retried with one level per sort occurrence of each body-only level (Rocq types each occurrence below the
+          -- one level by cumulativity; each copy must satisfy the level's upper-bound facts). Only declarations that
+          -- fail every other tier: no accepted row, hence no dependant, changes. (CoqEAL `refines_apply`: one
+          -- `Type@{38671}` for the relations of three `eq_rect_r` rewrites, identifying the statement's relation levels)
+          if !r.accepted && !isStmt && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then
+            let prot := genv.protectedNames.contains c0.name
+            bodyOccTier.set true
+            try
+              -- (with per-instance prerequisite hypotheses, P3: the occurrences are now independent, so one shared
+              -- hypothesis for a pending dependency used at several of them no longer fits)
+              for (it, lo, ns, p3) in [(false, false, false, false), (false, false, false, true), (true, false, false, true),
+                                       (false, true, false, true), (false, false, true, false), (false, false, true, true)] do
+                if ns && prot then continue
+                let g' := if ns then { genv with carrierSplit := false } else genv
+                let r' ← budgeted c.name "constant" <| processConstant g' results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
+                  (interp := it) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[body-occ] {r'.message}" }
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := if ns then { r' with levelDiagnostics := r'.levelDiagnostics.push "no-split" } else r'
+                  iface := none
+                  break
+            finally
+              bodyOccTier.set false
           -- generality first (docs/COHERENCE_READINGS.md §6): a definition accepted with an own *type*
           -- level solved by typing (R2S) under coherence by construction is retried with shared levels
           -- instantiated per occurrence; the retry is kept only when it is accepted with fewer solved type
