@@ -56,6 +56,7 @@ PIN_PROT = [False]   # C-PIN on a protected statement: at a term constant only (
 # reported `set-floor: l`
 NAMED_STRICT = [set()]
 SETFLOOR = {}
+COPYDIAG = {}
 IDENT_OK = [set()]
 STATEMENT_MODE = [False]     # set by main_statement
 
@@ -3231,8 +3232,16 @@ def check_body_levels(facts, d, sol, params=None, admit=frozenset(), prop_offset
 
     mine = set(tl) | set(sol) | {"Set"}
     floor_ = SETFLOOR.get(d.get("name"), set())
+    diag_ = COPYDIAG.get(d.get("name"), set())
+    base_ = lambda x: x.split("__c")[0]
     for (a, b), r in facts.rel.items():
         if (a in sol or b in sol) and a in mine and b in mine:
+            # R-COPYDIAG: for a reported level, a copied fact is checked with the copies read as their source levels
+            if (a in diag_ or b in diag_) and ("__c" in a or "__c" in b):
+                k_ = 1 if r == "lt" and not (a == "Set" and b not in NAMED_STRICT[0] and (a in floor_ or b in floor_)) else 0
+                if not leq([(base_(x), i) for x, i in summ(a)], [(base_(x), j) for x, j in summ(b)], k_):
+                    raise Mismatch(f"proof-local level solution violates the native fact {a} {r} {b}")
+                continue
             # R-SET: a reported level's structural Set < b (no named strict lower bound) read as Set <= b
             if a == "Set" and r == "lt" and floor_ and (b in floor_ or any(b == x for x in floor_)) and b not in NAMED_STRICT[0]:
                 if not leq(summ(a), summ(b), 0):
@@ -3308,7 +3317,11 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
     FACTS = facts
     NAMED_STRICT[0] = {b for (a, b), r in facts.rel.items() if r == "lt" and a != "Set"} if facts is not None else set()
     SETFLOOR.clear()
+    COPYDIAG.clear()
     for s__, r__ in (rows.items() if isinstance(rows, dict) else []):
+        cd = {x[len("copy-diag: "):] for x in (r__.get("universe_diagnostics") or []) if isinstance(x, str) and x.startswith("copy-diag: ")}
+        if cd:
+            COPYDIAG[s__] = cd
         fl = {x[len("set-floor: "):] for x in (r__.get("universe_diagnostics") or []) if isinstance(x, str) and x.startswith("set-floor: ")}
         if fl:
             SETFLOOR[s__] = fl

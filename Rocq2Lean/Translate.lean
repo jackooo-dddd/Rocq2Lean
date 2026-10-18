@@ -3058,7 +3058,10 @@ solved by Lean's unifier as `σ m`; every native fact between `m` and `Set`, a t
 proof-local level must still hold with each proof-local level read as its solution. -/
 def checkBodyLevel (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std.HashMap String Level)
     (m : String) (admit : Array String := #[]) (propOffset : Bool := false)
-    (floor : Option (Std.HashSet String) := none) : Except String Unit := do
+    (floor : Option (Std.HashSet String) := none) (diag : Bool := false) : Except String Unit := do
+  -- R-COPYDIAG: every R-CARRIER / R-SPLIT copy `l__c<k>` read as its source level `l` (the source's situation, all
+  -- copies of one level equal); the facts are then the source's own facts between source levels
+  let base (x : String) : String := if diag then (x.splitOn "__c").head! else x
   let summ (x : String) : Except String (List (String × Nat)) :=
     match sol[x]? with
     | some σ => do
@@ -3077,6 +3080,14 @@ def checkBodyLevel (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std
     let k := match floor with
       | some ns => if a == "Set" && r == "lt" && !ns.contains b then 0 else k
       | none => k
+    if diag then
+      let (a', b') := (base a, base b)
+      let bs (xs : List (String × Nat)) := xs.map fun (x, j) => (base x, j)
+      if (a'.splitOn "__c").length != (a.splitOn "__c").length || (b'.splitOn "__c").length != (b.splitOn "__c").length then
+        -- (a copied fact: checked between the source levels, the copies of each read as one)
+        unless summandsLeq f (bs (← summ a)) (bs (← summ b)) k do
+          throw s!"proof-local level {m} solved as {sol[m]?}: native fact {a} {r} {b} does not hold for the solution"
+        continue
     unless summandsLeq f (← summ a) (← summ b) k do
       throw s!"proof-local level {m} solved as {sol[m]?}: native fact {a} {r} {b} does not hold for the solution"
 

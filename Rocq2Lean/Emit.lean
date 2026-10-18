@@ -845,7 +845,7 @@ def shadowDump (src : String) (own : Array (String × Level)) (occs : Array (LMV
     ("diagnostics", toJson diags)]
 
 -- (compile-time budget only: the function is large; no effect on the translator at run time)
-set_option maxHeartbeats 400000 in
+set_option maxHeartbeats 1600000 in
 partial def processConstantCore (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
@@ -1420,6 +1420,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
         return { base with status := "UNIVERSE_REJECTED", message := msg }
     let floorOn ← setFloorTier.get
     let mut floorUsed : Array String := #[]
+    let mut diagUsed : Array String := #[]
     for m in own do
       if sol.contains m then
         if resultLv.contains m then continue          -- (R2B-V: a lowering, checked below)
@@ -1427,9 +1428,14 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           -- R-SET (last tier): the structural `Set < l` read as `Set ≤ l`; reported
           if floorOn && (checkBodyLevel genv.facts globals sol m admitLv cumul (floor := some genv.namedStrict)).toBool then
             floorUsed := floorUsed.push m
+          -- R-COPYDIAG (switch `R2L_RULE_COPY_DIAG` while measured): copied facts checked on the diagonal; reported
+          else if floorOn && (← IO.getEnv "R2L_RULE_COPY_DIAG").isSome &&
+              (checkBodyLevel genv.facts globals sol m admitLv cumul (floor := some genv.namedStrict) (diag := true)).toBool then
+            floorUsed := floorUsed.push m
+            diagUsed := diagUsed.push m
           else return { base with status := "UNIVERSE_REJECTED", message := msg }
     let base := if floorUsed.isEmpty then base else
-      { base with levelDiagnostics := base.levelDiagnostics ++ floorUsed.map (s!"set-floor: {·}") }
+      { base with levelDiagnostics := base.levelDiagnostics ++ floorUsed.map (s!"set-floor: {·}") ++ diagUsed.map (s!"copy-diag: {·}") }
     -- levels for which the relaxation was actually needed (the strict check fails): proof-local ones
     -- (R2B-P, source instance checked at verify) and levels of the type's own result sort (R2B-S)
     let mut r2bp : Array (String × Level) := #[]
@@ -3215,7 +3221,10 @@ where
           -- for unprotected statements); reported `set-floor: l` / `carrier-pin: c`
           let floorMsg := r.message ++ ((lastTier.map (·.message)).getD "")
           let wantFloor := (← IO.getEnv "R2L_RULE_SET_FLOOR").isSome &&
-            ((floorMsg.splitOn "native fact Set lt").length > 1 || (floorMsg.splitOn "but its argument is 0").length > 1)
+            ((floorMsg.splitOn "native fact Set lt").length > 1 || (floorMsg.splitOn "but its argument is 0").length > 1 ||
+              -- (R-COPYDIAG: a copied fact of a solved level)
+              ((← IO.getEnv "R2L_RULE_COPY_DIAG").isSome && (floorMsg.splitOn "does not hold for the solution").length > 1 &&
+                (floorMsg.splitOn "__c").length > 1))
           if !r.accepted && (retry r.status) && wantFloor then
             try
               setFloorTier.set true
