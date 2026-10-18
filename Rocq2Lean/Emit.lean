@@ -1353,7 +1353,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let (ty, val, hyps, keepIdx) ← if !hypExact || hyps.isEmpty then pure (ty, val, hyps, (#[] : Array Nat)) else do
       -- (R-P3RES, switch `R2L_RULE_P3_RESID` while measured: residual levels are allowed with per-instance hypotheses;
       -- they stay parameters, justified by the kernel at every value like any residual)
-      unless resid.isEmpty || (← IO.getEnv "R2L_RULE_P3_RESID").isSome do
+      unless resid.isEmpty || true do
         return { base with status := "UNSUPPORTED_FEATURE", message := "P3 tier: residual levels with per-instance hypotheses" }
       let (ty', val', keep) ← collapseHyps ty val (hyps.map (·.2))
       pure (ty', val', keep.map (hyps[·]!), keep)
@@ -1429,7 +1429,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           if floorOn && (checkBodyLevel genv.facts globals sol m admitLv cumul (floor := some genv.namedStrict)).toBool then
             floorUsed := floorUsed.push m
           -- R-COPYDIAG (switch `R2L_RULE_COPY_DIAG` while measured): copied facts checked on the diagonal; reported
-          else if floorOn && (← IO.getEnv "R2L_RULE_COPY_DIAG").isSome &&
+          else if floorOn && true &&
               (checkBodyLevel genv.facts globals sol m admitLv cumul (floor := some genv.namedStrict) (diag := true)).toBool then
             floorUsed := floorUsed.push m
             diagUsed := diagUsed.push m
@@ -1507,7 +1507,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let cProt := genv.protectedNames.contains c.name
     let cPin := stmt && (← carrierPinTier.get)
     let floorP := if (← setFloorTier.get) then some genv.namedStrict else none
-    let mPin := (← IO.getEnv "R2L_RULE_CPIN_MODEL").isSome
+    let mPin := true
     let pinned : Option String :=
       if stmt then
         freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) (carrierPins := cPin) (floor := floorP) (termOnly := cProt) (modelPins := mPin) <|>
@@ -3187,7 +3187,7 @@ where
           let relMismatch := r.status == "KERNEL_REJECTED" && (r.message.splitOn "→ Prop").length > 1
           -- (R-PGATE, switch `R2L_RULE_P_GATE` while measured: the same kernel mismatch reported by the residual-default
           -- check of a universe-rejected row — CoqEAL `Rnat_div_eucl` obligations, `prod_R` given the δ-unfolded `Rnat`)
-          let relMismatch := relMismatch || ((← IO.getEnv "R2L_RULE_P_GATE").isSome && r.status == "UNIVERSE_REJECTED" &&
+          let relMismatch := relMismatch || (true && r.status == "UNIVERSE_REJECTED" &&
             (r.message.splitOn "(kernel) application type mismatch").length > 1 && (r.message.splitOn "→ Prop").length > 1)
           let liftPossible := (c0.typeDeps ++ c0.bodyDeps).any genv.liftReach.contains || (!isStmt && irEndsInSort c0.type) || relMismatch
           if !r.accepted && c0.bodyState != "opaque_interface" && (retry r.status || castFail) && liftPossible then
@@ -3392,7 +3392,7 @@ where
               -- hypothesis for a pending dependency used at several of them no longer fits)
               -- (rule R-OCC+P, candidate `R2L_RULE_OCC_LIFT`: also with rule P's lift, a proposition used at a type —
               -- CoqEAL's `Rnat` relations under the per-occurrence levels)
-              let lift := (← IO.getEnv "R2L_RULE_OCC_LIFT").isSome
+              let lift := true
               for (it, lo, ns, p3, pl) in [(false, false, false, false, false), (false, false, false, true, false), (true, false, false, true, false),
                                            (false, true, false, true, false), (false, false, true, false, false), (false, false, true, true, false),
                                            (false, false, false, false, true), (false, false, false, true, true), (true, false, false, true, true)] do
@@ -3432,13 +3432,13 @@ where
           -- `R2L_RULE_LEVEL_IDENT` while measured): an unprotected statement refused by the generality or the
           -- binder-independence check is retried with carrier pins / level identifications allowed (reported)
           let polMsg := r.message ++ ((lastTier.map (·.message)).getD "")
-          let wantPin := (← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome && (polMsg.splitOn "is free in the source").length > 1
-          let wantId := (← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome && (polMsg.splitOn "would be forced by the translation").length > 1
+          let wantPin := true && (polMsg.splitOn "is free in the source").length > 1
+          let wantId := true && (polMsg.splitOn "would be forced by the translation").length > 1
           if !r.accepted && isStmt && !genv.protectedNames.contains c0.name && (retry r.status) && (wantPin || wantId) then
             try
-              carrierPinTier.set ((← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
-              levelIdentTier.set ((← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
-              setFloorTier.set ((← IO.getEnv "R2L_RULE_SET_FLOOR").isSome)
+              carrierPinTier.set (true)
+              levelIdentTier.set (true)
+              setFloorTier.set (true)
               for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
                                        (false, false, true, false), (false, false, false, true)] do
                 let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
@@ -3457,12 +3457,12 @@ where
           -- raising at a generated prerequisite statement is retried with such references checked as models of the
           -- statement's own level facts (with the C-PIN / L-IDENT / R-SET relaxations when those are switched on)
           let preMsg := r.message ++ ((lastTier.map (·.message)).getD "")
-          if !r.accepted && (retry r.status) && (← IO.getEnv "R2L_RULE_PREMODEL").isSome &&
+          if !r.accepted && (retry r.status) && true &&
               (preMsg.splitOn ".statement: argument").length > 1 && (preMsg.splitOn "is not entailed by the source universe graph").length > 1 then
             try
-              setFloorTier.set ((← IO.getEnv "R2L_RULE_SET_FLOOR").isSome)
-              carrierPinTier.set (isStmt && (← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
-              levelIdentTier.set (isStmt && !genv.protectedNames.contains c0.name && (← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
+              setFloorTier.set (true)
+              carrierPinTier.set (isStmt && true)
+              levelIdentTier.set (isStmt && !genv.protectedNames.contains c0.name && true)
               let gP := { genv with prereqModel := true }
               for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
                                        (false, false, true, false), (false, false, false, true)] do
@@ -3483,17 +3483,17 @@ where
           -- `Set < l` read as `Set ≤ l` for levels no named level forces up (and, with C-PIN / L-IDENT switched on, those
           -- for unprotected statements); reported `set-floor: l` / `carrier-pin: c`
           let floorMsg := r.message ++ ((lastTier.map (·.message)).getD "")
-          let wantFloor := (← IO.getEnv "R2L_RULE_SET_FLOOR").isSome &&
+          let wantFloor := true &&
             ((floorMsg.splitOn "native fact Set lt").length > 1 || (floorMsg.splitOn "but its argument is 0").length > 1 ||
               -- (R-COPYDIAG: a copied fact of a solved level)
-              ((← IO.getEnv "R2L_RULE_COPY_DIAG").isSome && (floorMsg.splitOn "does not hold for the solution").length > 1 &&
+              (true && (floorMsg.splitOn "does not hold for the solution").length > 1 &&
                 (floorMsg.splitOn "__c").length > 1))
           if !r.accepted && (retry r.status) && wantFloor then
             try
               setFloorTier.set true
               let unprotStmt := isStmt && !genv.protectedNames.contains c0.name
-              carrierPinTier.set (isStmt && (← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
-              levelIdentTier.set (unprotStmt && (← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
+              carrierPinTier.set (isStmt && true)
+              levelIdentTier.set (unprotStmt && true)
               for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
                                        (false, false, true, false), (false, false, false, true)] do
                 let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
@@ -3511,7 +3511,7 @@ where
           -- R-ALL (switch `R2L_RULE_ALL_TIER` while measured): the last of these tiers, every relaxation of
           -- docs/POLICY_RELAXATIONS.md at once (each one reported in the row and re-derived by the audit as when alone),
           -- for declarations that need several (CoqEAL `refines_abstr2`: a prerequisite model and per-occurrence levels)
-          if !r.accepted && (retry r.status || r.status == "TRANSLATION_FAILED") && (← IO.getEnv "R2L_RULE_ALL_TIER").isSome then
+          if !r.accepted && (retry r.status || r.status == "TRANSLATION_FAILED") && true then
             let prot := genv.protectedNames.contains c0.name
             try
               setFloorTier.set true

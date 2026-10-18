@@ -2080,7 +2080,7 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
     restoreTrans saved
     -- R-CONVOY (statement mode, switch `R2L_RULE_CONVOY` while measured): the structural lowering of the βζι-reduced
     -- body (definitional), before the course-of-values and accessibility lowerings
-    if (← read).genv.stmtMode && (← (IO.getEnv "R2L_RULE_CONVOY" : IO _)).isSome then
+    if (← read).genv.stmtMode && true then
       let defsC := defs.map fun (n, ty, b, r) => (n, ty, b.convoyReduce, r)
       let savedC ← saveTrans
       let rC ← tryCatchThe TransError (some <$> transFix1 defsC false) fun _ => do restoreTrans savedC; pure none
