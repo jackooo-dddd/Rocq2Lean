@@ -2072,3 +2072,49 @@ Frozen worktree `r2l-sb2` at `d24b0fb`: the 18 statement suites and `test-all` 1
 `coverage/S22.json`, `coverage/transitions-S21b-to-S22.json`, `RULE_BACKLOG.{md,json}`, `PROOF_TASKS.jsonl`,
 `TRANSLATION_RESULTS.json`, `provenance/CORPUS_MANIFEST.json`, `termination/CONVERSION_DEPENDENCE-S22.json`,
 `timing/translation_timing-S22.json` (S22).
+
+## Entry 18 — R-OCC: per-occurrence levels for body-only levels of a definition (2026-10-18)
+
+Branch `rules-bodyocc`, from `main` `72edc1b`: `79d89a5`. Record: `docs/BODY_OCCURRENCE_LEVELS.md`. Approved by the
+user on 2026-10-18 after the subset measurements below.
+
+### (1) Change
+
+| Commit | Change | Kind |
+|---|---|---|
+| `79d89a5` | R-OCC, a last tier for definitions: every sort occurrence of a body-only level gets its own level metavariable (Rocq types each occurrence below the one level by cumulativity; Lean needs equality at each); each copy satisfies the level's upper-bound facts; the level itself, when only its copies occur, is its minimal model; reported `body-occ`; audit `body_copy_ok` re-derives every copied sort | rule (last tier) |
+
+The failure it removes: CoqEAL `refines_apply` rewrote three relations with `eq_rect_r` at one `Type@{38671}`; the one
+metavariable identified the statement's relation levels with `max(38756, 38757)`, and the defaulted residuals were
+kernel-rejected. Classic `powerset`: one occurrence of level 24 forced to 0.
+
+### (2) Coverage — FULL CORPUS (S23, `79d89a5`)
+
+| Run | Accepted | Audited Pending | Blocked | Direct Failure | Unclaimed |
+|---|---|---|---|---|---|
+| S22 (entry 17) | 685 | 3,610 | 153 | 26 | 179 |
+| **S23** | **685** | **3,617** | **145** | **27** | **172** |
+
+* 7 protected roots newly claimed: `powerset`, `mem_powerset`, `refine_leq_steps`, `refine_ltn_steps`, `Rnat_pred`,
+  `refine_ltn`, `refine_hep_task`; 0 claimed rows lost; 2 roots move from Blocked to Direct Failure (blockers the
+  CoqEAL lemmas hid: `refine_b2n`, `refine_size`, casts under rule P).
+* 4 rows carry `body-occ`. Consumer OK, audit OK, source instances OK, `CORPUS_PROVENANCE_BOUND`, conversion
+  dependence OK (one unexplained kernel failure, `refine_total_hep_rbf'` obligation 5, as in S22).
+* Measured first incrementally from B1 (entry 19's method): +6 roots, 0 regressions; the seventh
+  (`refine_hep_task`) needs the least-solution rule of entry 17, absent from B1.
+
+### (3) Validation
+
+Frozen worktree `r2l-rbo-test` at `79d89a5`: the 18 statement suites and `test-all` 18/18.
+
+### (4) Negative result
+
+Applying the per-occurrence levels on every tier (not as a last tier) loses accepted rows (CoqEAL `Rnat_add`,
+`Rnat_eq`, `Rnat_leq`, `Rnat_sub`: their only proof-local level lost the lower bounds its references gave it). As a
+last tier no accepted row changes.
+
+### (5) Evidence
+
+`coverage/S23.json`, `coverage/transitions-S22-to-S23.json`, `RULE_BACKLOG.{md,json}`, `PROOF_TASKS.jsonl`,
+`TRANSLATION_RESULTS.json`, `provenance/CORPUS_MANIFEST.json`, `termination/CONVERSION_DEPENDENCE-S23.json`,
+`timing/translation_timing-S23.json` (S23).
