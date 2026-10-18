@@ -147,6 +147,10 @@ structure DeclResult where
   proofValue : Option Expr := none
   /-- Assembly: a row carried over unchanged from the validated report (its JSON). -/
   verbatim : Option Json := none
+  /-- Incremental runs (docs/INCREMENTAL.md): a row replayed from the base run, written as the base
+  report's line for it (byte for byte), and whether the row was replayed rather than translated. -/
+  verbatimRaw : Option String := none
+  replayed : Bool := false
   /-- Assembly, proof tasks: `PROOF_ASSEMBLED`, `PROOF_NOT_SUPPLIED`, `ASSEMBLY_TRANSPORT_REQUIRED`,
   `OPAQUE_BINDING_PENDING` or `PROOF_VERIFIED_STATEMENT_PENDING`. -/
   proofState : String := ""
@@ -320,12 +324,28 @@ private def hypBinderCount (n : Name) (t : Expr) : Nat := Id.run do
     | _ => break
   return k
 
-private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (n : Name)
+/-- (speed, exact) the generality check's per-check context: the source level of a parameter name (the first
+in `facts.levels`, as `find?` returned) and the source levels of the referring declaration's own parameters
+that are not copies. -/
+private structure PinCtx where
+  srcOf : Std.HashMap Name String
+  ownSrc : Array String
+
+private def mkPinCtx (facts : IR.UniverseFacts) (own : List Name) : PinCtx := Id.run do
+  let mut m : Std.HashMap Name String := {}
+  for l in facts.levels do
+    let p := levelParamName l
+    unless m.contains p do m := m.insert p l
+  let ownSrc := own.toArray.filterMap fun q => if (q.toString.splitOn "__c").length > 1 then none else m[q]?
+  return { srcOf := m, ownSrc }
+
+private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (ctx : PinCtx) (own : List Name) (n : Name)
     (us : List Level) (nargs : Nat) : Option String := Id.run do
   let some ci := env.find? n | return none
   let lps := ci.levelParams
   if lps.length != us.length then return none
-  let doms := (binderDomains ci.type nargs).extract (hypBinderCount n ci.type) nargs
+  -- (speed: the binder domains are computed only when a parameter reaches the test below)
+  let mut doms? : Option (Array Expr) := none
   for (p, σ) in lps.zip us do
     unless p.toString.startsWith "u_" do continue      -- (R6 universe variables, Lean's own constants)
     if own.contains p then continue                     -- (a level of the declaration: R3)
@@ -336,7 +356,7 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
     if own.any (fun q => q != p && base q == base p && (q.toString.splitOn "__c").length > 1) then continue
     -- (an argument max(q₁, …) of own parameters (or copies) whose source levels are all *equal* to the
     -- referenced level in the source graph (≤ both ways) is that level's reading, not a specialization)
-    let srcOf (x : Name) : Option String := facts.levels.find? (fun l => levelParamName l == Name.mkSimple (base x))
+    let srcOf (x : Name) : Option String := ctx.srcOf[Name.mkSimple (base x)]?
     if let some lp := srcOf p then
       if let some (c, ps) := levelNF σ.normalize then
         if c == 0 && !ps.isEmpty && ps.all (fun (q, k) => k == 0 && own.contains q &&
@@ -346,12 +366,14 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
       -- (rule R, general form: an argument over own levels equal to the referenced level at every model
       -- of the source facts, e.g. a referenced definition's R2F reading `max (u_l, u_m, …)` with `m ≤ l`, is
       -- that level, not a specialization)
-      let ownSrc : Array String := own.toArray.filterMap fun q =>
-        if (q.toString.splitOn "__c").length > 1 then none else facts.levels.find? (levelParamName · == q)
-      if (p.toString.splitOn "__c").length == 1 && σ.hasParam && equalAtModels facts (ownSrc.push lp) σ (.param p) then continue
+      if (p.toString.splitOn "__c").length == 1 && σ.hasParam && equalAtModels facts (ctx.ownSrc.push lp) σ (.param p) then continue
     if !σ.hasParam then
-      if let some l := facts.levels.find? (fun l => levelParamName l == p) then
+      if let some l := ctx.srcOf[p]? then
         if entails facts l "Set" 0 then continue
+    let doms := match doms? with
+      | some d => d
+      | none => (binderDomains ci.type nargs).extract (hypBinderCount n ci.type) nargs
+    doms? := some doms
     if doms.any (fun d => (collectLevelParams {} d).params.contains p) then continue
     return some s!"{n}: the level of {p} is free in the source (no applied argument determines it, the source graph does not force it) but its argument is {σ}, not {p}"
   return none
@@ -365,28 +387,62 @@ private def siblingFixed (env : Environment) (n : Name) (nargs : Nat) : Array Na
       out := out.push j
   return out
 
-partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr) : Option String :=
-  match e with
-  | .app .. =>
-    let f := e.getAppFn
-    let args := e.getAppArgs
-    let r := match f with
-      | .const n us => freeLevelRef env facts own n us args.size
-      | _ => freeLevelPin env facts own f
-    if r.isSome then r else
-    let skip := match f with
-      | .const n _ => siblingFixed env n args.size
-      | _ => #[]
-    Id.run do
+/-- (speed, exact) the state of one generality traversal: subterms already found clean (the result depends
+on the subterm only), and the per-reference results. -/
+private abbrev PinM := StateM (Std.HashSet Expr × Std.HashMap (Name × List Level × Nat) (Option String) ×
+  Std.HashMap (Name × Nat) (Array Nat))
+
+private partial def freeLevelPinM (env : Environment) (facts : IR.UniverseFacts) (ctx : PinCtx) (own : List Name)
+    (e : Expr) : PinM (Option String) := do
+  if (← get).1.contains e then return none
+  let ref (n : Name) (us : List Level) (k : Nat) : PinM (Option String) := do
+    if let some r := (← get).2.1[(n, us, k)]? then return r
+    let r := freeLevelRef env facts ctx own n us k
+    modify fun (v, m, s) => (v, m.insert (n, us, k) r, s)
+    return r
+  let go := freeLevelPinM env facts ctx own
+  let r ← match e with
+    | .app .. => do
+      let f := e.getAppFn
+      let args := e.getAppArgs
+      let r ← match f with
+        | .const n us => ref n us args.size
+        | _ => go f
+      if r.isSome then pure r else
+      let skip ← match f with
+        | .const n _ => do
+          match (← get).2.2[(n, args.size)]? with
+          | some x => pure x
+          | none =>
+            let x := siblingFixed env n args.size
+            modify fun (v, m, s) => (v, m, s.insert (n, args.size) x)
+            pure x
+        | _ => pure #[]
+      let mut out : Option String := none
       for i in [0:args.size] do
         if skip.contains i then continue
-        if let some m := freeLevelPin env facts own args[i]! then return some m
-      return none
-  | .const n us => freeLevelRef env facts own n us 0
-  | .forallE _ d b _ | .lam _ d b _ => freeLevelPin env facts own d <|> freeLevelPin env facts own b
-  | .letE _ t v b _ => freeLevelPin env facts own t <|> freeLevelPin env facts own v <|> freeLevelPin env facts own b
-  | .mdata _ b | .proj _ _ b => freeLevelPin env facts own b
-  | _ => none
+        if let some m ← go args[i]! then
+          out := some m
+          break
+      pure out
+    | .const n us => ref n us 0
+    | .forallE _ d b _ | .lam _ d b _ => do
+      match ← go d with
+      | some m => pure (some m)
+      | none => go b
+    | .letE _ t v b _ => do
+      match ← go t with
+      | some m => pure (some m)
+      | none => match ← go v with
+        | some m => pure (some m)
+        | none => go b
+    | .mdata _ b | .proj _ _ b => go b
+    | _ => pure none
+  if r.isNone then modify fun (v, m, s) => (v.insert e, m, s)
+  return r
+
+partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr) : Option String :=
+  (freeLevelPinM env facts (mkPinCtx facts own) own e).run' ({}, {}, {})
 
 private def peelBinders (e : Expr) (k : Nat) : Expr :=
   match k, e with
@@ -942,6 +998,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
               -- referenced level, and this level is solved to it (fact-checked)
               else if tyRefArgs.any (fun (l, σ) => l == m && σ == .mvar r) then
                 assignLevelMVar r (.param (levelParamName m))
+                probe "r3g.body_level_by_reference"
                 implicitRef.modify fun a => if a.contains m then a else a.push m
       -- R3G: a universe argument still free in the *type*, at a reference to a declaration whose
       -- parameter stands for source level `l`, is the source level `l` itself (Rocq references
@@ -973,17 +1030,35 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       -- (only own *type* levels represent a class: a proof-local level is solved, fact-checked by R2S, and
       -- never decides the class — R-CARRIER, factory_57's 551 against isSub's motive level 542)
       let ownCur ← (ownMVars.filter fun (m, _) => !resultLv.contains m && (typeLevels.contains m || stmt)).mapM fun (_, v) => instantiateLevelMVars v
-      let mut done : Array Level := #[]
+      let mut done : Std.HashSet Level := {}
       let mut chosen : Array (String × Array LMVarId) := #[]
+      -- (speed: the arguments are grouped once, by class and by source level, and an argument's current value
+      -- is read only for the source levels a class can pick, at the same point of the pass as before — no
+      -- assignment happens in between —, instead of re-reading every argument for every class: quadratic on
+      -- HB terms. The interface's arguments, read for R-CARRIER P2, are collected once from the same term.)
+      let cands := if interp then all else inTy
+      let mut clsOf : Std.HashMap Level (Array String) := {}
+      for (l', σ') in all do clsOf := clsOf.insert σ' ((clsOf.getD σ' #[]).push l')
+      let mut tyClsOf : Std.HashMap Level (Array String) := {}
+      for (l', σ') in cands do tyClsOf := tyClsOf.insert σ' ((tyClsOf.getD σ' #[]).push l')
+      let mut byL : Std.HashMap String (Array Level) := {}
+      for (l', σ') in all do byL := byL.insert l' ((byL.getD l' #[]).push σ')
+      let mut ifaceByL : Std.HashMap String (Array Level) := {}
+      for (n, ls) in constOccurrences (peelBinders (if stmt then val else ty) hyps.size) do
+        if let some gs := genv.constGlobals[n]? then
+          let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
+          if gs.size == ls.length then
+            for l' in gs, σ' in ls do ifaceByL := ifaceByL.insert l' ((ifaceByL.getD l' #[]).push σ')
       -- (R2F-c: classes of the body are candidates too; their levels become own levels)
-      for (_, σ) in (if interp then all else inTy) do
+      for (_, σ) in cands do
         unless σ.isMVar && !done.contains σ do continue
-        done := done.push σ
-        let cls := (all.filter (·.2 == σ)).map (·.1)
-        let tyCls := ((if interp then all else inTy).filter (·.2 == σ)).map (·.1)
+        done := done.insert σ
+        let cls := clsOf.getD σ #[]
+        let tyCls := tyClsOf.getD σ #[]
         -- every argument for `l` anywhere must still be free: they all become `u_l` (coherence)
-        let mut cur : Array (String × Level) := #[]
-        for (l', σ') in all do cur := cur.push (l', ← instCollapse σ')
+        let mut cur : Std.HashMap String (Array Level) := {}
+        for l in tyCls do
+          unless cur.contains l do cur := cur.insert l (← (byL.getD l #[]).mapM instCollapse)
         -- (statement mode: an argument for `l` that unification already fixed to an expression, e.g. a
         -- referenced declaration's R2F reading of its own parameter, is left as is; R3 coherence, the
         -- kernel and the audit check it like every argument)
@@ -993,8 +1068,8 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           | _ => false
         let pick := tyCls.toList.eraseDups.find? fun l =>
           !own.contains l && !genv.templateLevels.contains l && cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) &&
-          (if genv.stmtMode then (cur.filter (·.1 == l)).any (·.2 == σ) && !ownCur.contains σ
-           else (cur.filter (·.1 == l)).all (fun (_, x) => x.isMVar || isCopyOf l x))
+          (if genv.stmtMode then (cur.getD l #[]).any (· == σ) && !ownCur.contains σ
+           else (cur.getD l #[]).all (fun x => x.isMVar || isCopyOf l x))
         if let some l := pick then
           -- R-CARRIER P2 (docs/CARRIER_LEVELS.md): the distinct free classes of arguments for `l` in the
           -- type (operands typing does not relate) are named separately, `l__c<k>`; with one class, `u_l`
@@ -1002,10 +1077,9 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           -- Count operand classes in the source interface, excluding generated prerequisite binders.
           -- Their universe instances are chosen by the translator (as for joint identification),
           -- and must not create extra independent classes beside the declaration's own operands.
-          for (l', σ') in ← argsFor (← instLevelMVars (peelBinders (if stmt then val else ty) hyps.size)) do
-            if l' == l then
-              let x ← instCollapse σ'
-              if (x.isMVar || isCopyOf l x) && !tyClasses.contains x then tyClasses := tyClasses.push x
+          for σ' in ifaceByL.getD l #[] do
+            let x ← instCollapse σ'
+            if (x.isMVar || isCopyOf l x) && !tyClasses.contains x then tyClasses := tyClasses.push x
           let split := genv.carrierSplit && !interp && tyClasses.size ≥ 2
           let k := (tyClasses.idxOf? σ).getD 0
           let name := if split then s!"{l}__c{k}" else l
@@ -1014,14 +1088,14 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
               let cs := (List.range tyClasses.size).toArray.map (s!"{l}__c{·}")
               if a.any (·.1 == l) then a else a.push (l, cs)
           let mut ms : Array LMVarId := #[]
-          for (l', σ') in cur do
-            if l' == l then
-              if let .mvar r ← instCollapse σ' then
-                -- (split: only this class; arguments of other type classes get their own copy, and
-                -- classes of the value alone join the first copy below)
-                if !split || (.mvar r) == σ then
-                  if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName name))
+          for σ' in cur.getD l #[] do
+            if let .mvar r ← instCollapse σ' then
+              -- (split: only this class; arguments of other type classes get their own copy, and
+              -- classes of the value alone join the first copy below)
+              if !split || (.mvar r) == σ then
+                if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName name))
           if interp then chosen := chosen.push (l, ms)
+          probe "r3g.implicit_level"
           implicitRef.modify fun a => if a.contains name then a else a.push name
       -- R-CARRIER P2: free arguments for a split level outside the type's classes (the value's) take
       -- the first copy
@@ -1072,6 +1146,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
         let mut cur : Std.HashMap String Level := {}
         for (t, v) in ownMVars do
           if typeLevels.contains t then cur := cur.insert t (← instantiateLevelMVars v)
+        probe "default.minimal_model"
         pure (minimalModelLevel genv.facts cur m)
       | none =>
         -- (R-OCC: an occurrence copy left free defaults as its source level)
@@ -1081,7 +1156,9 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           for (t, v) in ownMVars do
             if typeLevels.contains t then cur := cur.insert t (← instantiateLevelMVars v)
           pure (minimalModelLevel genv.facts cur m)
-        | none => pure .zero
+        | none =>
+          probe "default.zero"
+          pure .zero
     -- coherence by unification: per-occurrence shared levels left free by typing are the own variables
     -- (after the value's type is unified with the declared type, before the parameters are named)
     -- solver stage B (experiment): a witness's values for the occurrences and own levels, before coherence
@@ -1152,6 +1229,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | _ => none
     let (ty, val, gty, gval) := (rn ty, rn val, rn gty, rn gval)
     unless ren.isEmpty do
+      probe "carrier.copies"
       -- implicit levels: every renamed copy / level replaced by its final name (source spelling)
       let finals : Array String := finalSplits.foldl (· ++ ·.2) #[]
       let split0 ← splitRef.get
@@ -2171,8 +2249,286 @@ def asmAfter (a : AsmInput) (opaqueData : Std.HashSet String) (results : Std.Has
         r ← assembleProof results r d.name tmpl hs
   return (r, true)
 
-/-- Translate all declarations of an export, in order (`asm?`: assembly, see above). -/
-def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}) (asm? : Option AsmInput := none) :
+/-- The entries a translated constant's rows register for references to them (`cname`: the name it
+was translated under, `<name>.statement` / `.type` for a statement). Shared by the translation and the
+replay of a row from a base run (docs/INCREMENTAL.md), so both register the same entries. -/
+def registerConstant (genv0 : GEnv) (c0name cname : String) (r : DeclResult) : GEnv := Id.run do
+  let mut genv := genv0
+  -- B: generated statements (termination obligations, unfolding equations) are proof tasks
+  for x in r.synthetic do
+    if let some n := x.target then
+      if x.status == "STATEMENT_KERNEL_CHECKED" || x.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
+        genv := { genv with leafStmt := genv.leafStmt.insert x.source (n, x.pendingHyps),
+                            leafStmtTargets := genv.leafStmtTargets.insert n }
+        unless x.levelParams.isEmpty do
+          genv := { genv with constGlobals := genv.constGlobals.insert n x.paramLevels }
+  -- statement mode: register proof tasks (statements) and pending artifacts for later references
+  if r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" || r.status == "PENDING_KERNEL_CHECKED" then
+    if let some n := r.target then
+      if r.status == "PENDING_KERNEL_CHECKED" then
+        genv := { genv with pendingDefs := genv.pendingDefs.insert c0name (n, r.pendingHyps) }
+      else
+        genv := { genv with leafStmt := genv.leafStmt.insert c0name (n, r.pendingHyps),
+                            leafStmtTargets := genv.leafStmtTargets.insert n }
+      unless r.levelParams.isEmpty do
+        genv := { genv with constGlobals := genv.constGlobals.insert n r.paramLevels }
+  if r.ok then if let some n := r.target then
+    genv := { genv with consts := genv.consts.insert cname n,
+                        constLevels := genv.constLevels.insert cname r.levelParams.length,
+                        constGlobals := if r.levelParams.isEmpty then genv.constGlobals
+                          else genv.constGlobals.insert n r.paramLevels }
+    if r.polyParams > 0 then
+      genv := { genv with constPoly := genv.constPoly.insert cname r.polyParams,
+                          polyByTarget := genv.polyByTarget.insert n r.polyParams }
+    unless r.admittingLevels.isEmpty do
+      genv := { genv with admitting := genv.admitting.insert n r.admittingLevels }
+  return genv
+
+/-- The entries every translated declaration registers, after its kind's own (`registerConstant`, an
+inductive's in `translateDecl`): copy positions, the rule P gate and the R3G-F closures. Shared with replay. -/
+def registerCommon (genv0 : GEnv) (d : IR.Decl) (r : DeclResult) : GEnv := Id.run do
+  let mut genv := genv0
+  -- R-CARRIER P2: the copy positions of the declaration's universe parameters, for references to it
+  unless r.levelCopies.isEmpty do
+    let copies := r.levelCopies.foldl (· ++ ·.2) #[]
+    let mask := (r.levelParams.drop r.polyParams).toArray.map fun p => copies.any (levelParamName · == p)
+    for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
+      genv := { genv with copyPositions := genv.copyPositions.insert n mask }
+  -- R3G-F: the declaration's closure of result-sort implicit levels (its dependencies' and its own)
+  let deps := match d with
+    | .constant c => c.typeDeps ++ c.bodyDeps
+    | .inductive i => i.typeDeps
+  -- rule P gate: the declaration reaches a lifted definition
+  if r.propLift.isSome || deps.any genv.liftReach.contains then
+    genv := { genv with liftReach := genv.liftReach.insert d.name,
+                        liftTargets := (r.target.toList ++ (r.targetCtors.map (·.1)).toList).foldl (fun s n => s.insert n)
+                          (genv.liftTargets.insert ``PULift) }
+  let cl := r.resultSortImplicit.foldl (·.insert ·) (genv.rsOfDeps deps)
+  unless cl.isEmpty do genv := { genv with rsClosure := genv.rsClosure.insert d.name cl }
+  -- R3G-F applicability at references to this declaration (docs/RESULT_SORT_LEVELS.md §2): besides an
+  -- inductive's source result-sort-only levels (registered above), the R3G-F levels of its dependency
+  -- closure that are not levels of its own source (they reach it only through such blocks)
+  if r.accepted || r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
+    let expl : Std.HashSet String := match d with
+      | .constant c => globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)
+      | .inductive i => (globalsOfInd i).foldl (·.insert ·) {}
+    let inh := (genv.rsOfDeps deps).fold (fun acc l => if expl.contains l then acc else acc.push l) #[]
+    unless inh.isEmpty do
+      for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
+        let old := (genv.resultOnly[n]?).getD #[]
+        genv := { genv with resultOnly := genv.resultOnly.insert n (old ++ inh.filter (!old.contains ·)) }
+  return genv
+
+/-- R-SPLIT: the facts of a split view (each copy inherits the level's upper bounds); they stay in force
+after the view is accepted. Shared with replay. -/
+def splitFacts (facts : IR.UniverseFacts) (infos : Array Split.Info) : IR.UniverseFacts :=
+  facts.extend (infos.foldl (fun a inf => a ++ inf.names) #[]) (Split.copiedRelations facts infos)
+
+/-- R-SPLIT: references read every copy of a split level as the source level itself. Shared with replay. -/
+def registerSplit (genv : GEnv) (r : DeclResult) (split : Array (String × Array Nat × Array String)) : GEnv := Id.run do
+  let back : String → String := fun x => ((split.find? (·.2.2.contains x)).map (·.1)).getD x
+  let mut cg := genv.constGlobals
+  for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
+    if let some gs := cg[n]? then cg := cg.insert n (gs.map back)
+  return { genv with constGlobals := cg }
+
+/-! ## Incremental runs (docs/INCREMENTAL.md)
+
+Every run writes a *replay record* per source declaration (`replay_records.jsonl`): the declarations it
+installed (`addedLog`, those still present after it), whether its environment update was kept, and per
+row the universe parameters' source levels and the target. An incremental run takes a base run (its
+report, replay records and module) and the declarations to translate again. A constant that is not
+selected and none of whose dependencies changed, directly or through others, is *replayed*: the
+declarations it installed are submitted to the kernel again as the base module has them, its rows are
+the base report's lines, and its environment entries are registered by the same functions translation
+uses (`registerConstant`, `registerCommon`, `registerSplit`). Every other declaration (inductives
+included: they take seconds) is translated, and compared with its base rows; one that differs makes
+its dependents translated too. -/
+
+/-- A base run: its report lines and replay records, by source; its timing; its module's declarations;
+the declarations to translate again. -/
+structure ReplayInput where
+  lines : Std.HashMap String String
+  records : Std.HashMap String Json
+  timing : Std.HashMap String (Nat × Array (String × Nat × String))
+  consts : Std.HashMap Name ConstantInfo
+  rerun : Std.HashSet String
+
+/-- This run's replay records (one per source declaration, in order), the declarations whose rows
+differ from the base run's, and the replays that fell back to translation (with the reason). -/
+initialize replayRecords : IO.Ref (Array Json) ← IO.mkRef #[]
+initialize replayChanged : IO.Ref (Array String) ← IO.mkRef #[]
+initialize replayFallback : IO.Ref (Array (String × String)) ← IO.mkRef #[]
+
+/-- A name as its components (not `Name.toString`, whose escaping `String.toName` does not invert). -/
+def nameJson (n : Name) : Json :=
+  Json.arr (n.components.toArray.map fun c => match c with
+    | .str _ s => Json.str s
+    | .num _ k => Json.num k
+    | .anonymous => Json.null)
+
+def nameOfJson (j : Json) : Name :=
+  ((j.getArr?).toOption.getD #[]).foldl (fun n c => match c with
+    | .str s => .str n s
+    | .num k => match k.mantissa.toNat? with | some m => .num n m | none => n
+    | _ => n) .anonymous
+
+/-- The declaration a base module holds for a name (only definitions, theorems and opaque constants are
+replayed: inductives are always translated, and the translator installs nothing else). -/
+def declOfInfo : ConstantInfo → Option Declaration
+  | .defnInfo v => some (.defnDecl v)
+  | .thmInfo v => some (.thmDecl v)
+  | .opaqueInfo v => some (.opaqueDecl v)
+  | _ => none
+
+private def jArr (j : Json) (k : String) : Array String := (j.getObjValAs? (Array String) k).toOption.getD #[]
+private def jNat (j : Json) (k : String) : Nat := (j.getObjValAs? Nat k).toOption.getD 0
+
+/-- A base row (its report JSON and its replay record's row): the fields that the dependents of a row
+and the registration read. The row itself is written back as the base report's line. -/
+def rowOfJson (j rcd : Json) (raw : Option String) : DeclResult :=
+  let s (k : String) := (j.getObjValAs? String k).toOption.getD ""
+  { source := s "source", kind := s "kind", status := s "status", rule := s "rule", message := s "message",
+    target := match rcd.getObjVal? "target" with
+      | .ok t@(.arr _) => some (nameOfJson t)
+      | _ => none,
+    targetKind := s "target_kind",
+    levelParams := (jArr j "level_params").toList.map String.toName,
+    numParams := jNat j "num_params",
+    paramLevels := jArr rcd "param_levels",
+    polyParams := jNat j "universe_poly_params",
+    admittingLevels := jArr j "admitting_levels",
+    pendingHyps := jArr j "pending_hypotheses",
+    blockedBy := jArr j "blocked_by",
+    propLift := (j.getObjValAs? Nat "prop_lift").toOption,
+    levelCopies := ((j.getObjValAs? (Array Json) "level_copies").toOption.getD #[]).map fun c =>
+      ((c.getObjValAs? String "level").toOption.getD "", jArr c "copies"),
+    resultSortImplicit := jArr j "result_sort_implicit_levels",
+    levelSplit := ((j.getObjValAs? (Array Json) "level_split").toOption.getD #[]).map fun c =>
+      ((c.getObjValAs? String "level").toOption.getD "", (c.getObjValAs? (Array Nat) "params").toOption.getD #[], jArr c "copies"),
+    protectedIface := (j.getObjValAs? Bool "protected").toOption.getD false,
+    synthesizedFrom := s "synthesized_from", syntheticKind := s "synthetic_kind",
+    verbatimRaw := raw, replayed := raw.isSome }
+
+/-- `translateDecl` returns before registering anything for these constants (no translation rule, or
+nothing to translate). -/
+def constEarlyExit (src : IR.Source) (c0 : IR.ConstantDecl) : Bool :=
+  let raw := src.rawDecls[c0.name]?
+  (raw.bind fun j => (j.getObjVal? "termination").toOption).isSome ||
+  c0.bodyState == "obligation_extraction_failed" ||
+  (c0.bodyState == "opaque_interface" &&
+    ((raw.bind fun j => (j.getObjVal? "type_sort").toOption).bind fun j => (IR.parseTerm j).toOption).isNone)
+
+/-- The environment entries of a constant's rows, registered as translating it registered them. -/
+def replayRegistration (src : IR.Source) (genv : GEnv) (d : IR.Decl) (rows : Array DeclResult) (kept : Bool) :
+    Except String GEnv := do
+  unless kept do return genv
+  let .constant c0 := d | throw "not a constant"
+  let some main := rows.find? (·.source == c0.name) | throw "no row for the declaration"
+  if constEarlyExit src c0 then return genv
+  let main := { main with synthetic := rows.filter (·.source != c0.name) }
+  let isStmt := c0.bodyState == "statement_only" || c0.bodyState == "obligation" || c0.bodyState == "opaque_interface"
+  let cname := if isStmt then c0.name ++ (if c0.bodyState == "opaque_interface" then ".type" else ".statement") else c0.name
+  let mut g := genv
+  let mut dd := d
+  -- (R-SPLIT: the split view was translated, with its facts, which stay in force)
+  if !main.levelSplit.isEmpty then
+    let some (d', infos) := Split.view d | throw "R-SPLIT row without a split view"
+    g := { g with facts := splitFacts g.facts infos }
+    dd := d'
+  g := registerConstant g c0.name cname main
+  g := registerCommon g dd main
+  if !main.levelSplit.isEmpty then g := registerSplit g main main.levelSplit
+  return g
+
+/-- Fields of two environments that differ: every table's size, and the entries at the given keys (the
+names a declaration registers under). Used to check a replayed registration against translation. -/
+def genvDiff (a b : GEnv) (keysS : Array String) (keysN : Array Name) : Array String := Id.run do
+  let mut bad := #[]
+  let sizes : List (String × Nat × Nat) := [
+    ("consts", a.consts.size, b.consts.size), ("constLevels", a.constLevels.size, b.constLevels.size),
+    ("constGlobals", a.constGlobals.size, b.constGlobals.size), ("resultOnly", a.resultOnly.size, b.resultOnly.size),
+    ("rsClosure", a.rsClosure.size, b.rsClosure.size), ("copyPositions", a.copyPositions.size, b.copyPositions.size),
+    ("templateLevels", a.templateLevels.size, b.templateLevels.size), ("inds", a.inds.size, b.inds.size),
+    ("constPoly", a.constPoly.size, b.constPoly.size), ("polyByTarget", a.polyByTarget.size, b.polyByTarget.size),
+    ("admitting", a.admitting.size, b.admitting.size), ("liftReach", a.liftReach.size, b.liftReach.size),
+    ("liftTargets", a.liftTargets.size, b.liftTargets.size), ("leafStmt", a.leafStmt.size, b.leafStmt.size),
+    ("leafStmtTargets", a.leafStmtTargets.size, b.leafStmtTargets.size), ("pendingDefs", a.pendingDefs.size, b.pendingDefs.size),
+    ("facts.levels", a.facts.levels.size, b.facts.levels.size), ("facts.relations", a.facts.relations.size, b.facts.relations.size),
+    ("sortOverride", a.sortOverride.size, b.sortOverride.size)]
+  for (k, x, y) in sizes do
+    if x != y then bad := bad.push s!"{k}: size {x} vs {y}"
+  let srt (s : Std.HashSet String) : Array String := s.toArray.qsort (· < ·)
+  for k in keysS do
+    if a.consts[k]? != b.consts[k]? then bad := bad.push s!"consts[{k}]"
+    if a.constLevels[k]? != b.constLevels[k]? then bad := bad.push s!"constLevels[{k}]"
+    if a.constPoly[k]? != b.constPoly[k]? then bad := bad.push s!"constPoly[{k}]"
+    if a.leafStmt[k]? != b.leafStmt[k]? then bad := bad.push s!"leafStmt[{k}]"
+    if a.pendingDefs[k]? != b.pendingDefs[k]? then bad := bad.push s!"pendingDefs[{k}]"
+    if (a.rsClosure[k]?).map srt != (b.rsClosure[k]?).map srt then bad := bad.push s!"rsClosure[{k}]"
+    if a.liftReach.contains k != b.liftReach.contains k then bad := bad.push s!"liftReach[{k}]"
+  for n in keysN do
+    if a.constGlobals[n]? != b.constGlobals[n]? then bad := bad.push s!"constGlobals[{n}]"
+    if a.resultOnly[n]? != b.resultOnly[n]? then bad := bad.push s!"resultOnly[{n}]"
+    if a.copyPositions[n]? != b.copyPositions[n]? then bad := bad.push s!"copyPositions[{n}]"
+    if a.polyByTarget[n]? != b.polyByTarget[n]? then bad := bad.push s!"polyByTarget[{n}]"
+    if a.admitting[n]? != b.admitting[n]? then bad := bad.push s!"admitting[{n}]"
+    if a.liftTargets.contains n != b.liftTargets.contains n then bad := bad.push s!"liftTargets[{n}]"
+    if a.leafStmtTargets.contains n != b.leafStmtTargets.contains n then bad := bad.push s!"leafStmtTargets[{n}]"
+  return bad
+
+/-- A row as compared between runs: everything but its messages. -/
+def rowKey (j : Json) : String := match j with
+  | .obj _ => ((j.setObjVal! "message" .null).setObjVal! "universe_diagnostics" .null).compress
+  | j => j.compress
+
+/-- The replay record of a translated declaration. -/
+def replayRecord (d : IR.Decl) (kept : Bool) (added : Array Name) (rows : Array DeclResult)
+    (probes : Std.HashMap String Nat := {}) : Json :=
+  Json.mkObj [("decl", d.name), ("kind", match d with | .constant _ => "constant" | _ => "inductive"),
+    ("genv", kept), ("added", Json.arr (added.map nameJson)),
+    ("probes", Json.mkObj ((probes.toArray.qsort (·.1 < ·.1)).toList.map fun (k, n) => (k, Json.num n))),
+    ("rows", Json.arr (rows.map fun x => Json.mkObj [("source", x.source),
+      ("param_levels", Json.arr (x.paramLevels.map Json.str)),
+      ("target", match x.target with | some n => nameJson n | none => .null)]))]
+
+/-- Replay a constant from the base run: its declarations through the kernel, its rows, its registration. -/
+def replayDecl (src : IR.Source) (rp : ReplayInput) (genv : GEnv) (d : IR.Decl) :
+    MetaM (Except String (Array DeclResult × GEnv)) := do
+  let some rcd := rp.records[d.name]? | return .error "no replay record"
+  unless (rcd.getObjValAs? String "kind").toOption == some "constant" do return .error "not a constant"
+  let mut decls := #[]
+  for nj in ((rcd.getObjValAs? (Array Json) "added").toOption.getD #[]) do
+    let n := nameOfJson nj
+    match (rp.consts[n]?).bind declOfInfo with
+    | some x => decls := decls.push x
+    | none => return .error s!"{n} is not a definition, theorem or opaque constant of the base module"
+  let mut rows := #[]
+  for rr in ((rcd.getObjValAs? (Array Json) "rows").toOption.getD #[]) do
+    let srcName := (rr.getObjValAs? String "source").toOption.getD ""
+    let some raw := rp.lines[srcName]? | return .error s!"no base report row for {srcName}"
+    let j ← match Json.parse raw with
+      | .ok j => pure j
+      | .error e => return .error s!"base report row for {srcName}: {e}"
+    let (_, tiers) := (rp.timing[srcName]?).getD (0, #[])
+    rows := rows.push { rowOfJson j rr (some raw) with tierTimes := tiers }
+  let kept := (rcd.getObjValAs? Bool "genv").toOption.getD false
+  let g ← match replayRegistration src genv d rows kept with
+    | .ok g => pure g
+    | .error e => return .error e
+  let saved ← saveState
+  for x in decls do
+    match ← addChecked x with
+    | .accepted => pure ()
+    | .rejected msg =>
+      saved.restore
+      return .error s!"kernel: {msg.take 300}"
+  return .ok (rows, g)
+
+/-- Translate all declarations of an export, in order (`asm?`: assembly, see above; `rep?`: an incremental
+run's base run, docs/INCREMENTAL.md). -/
+def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}) (asm? : Option AsmInput := none)
+    (rep? : Option ReplayInput := none) :
     MetaM (Array DeclResult) := do
   let irBodies := src.decls.foldl (init := ({} : Std.HashMap String IR.Term)) fun m d => match d with
     | .constant c => match c.body, c.universes with
@@ -2242,7 +2598,11 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     | some a => a.validated.fold (init := {}) fun m k v =>
       let p := jStr v "synthesized_from"
       if p.isEmpty then m else m.insert p ((m.getD p #[]).push (k, v))
+  -- incremental: declarations whose rows differ from the base run's, or that depend on one (transitively)
+  let mut tainted : Std.HashSet String := {}
+  let mut declIdx := 0
   for d in src.decls do
+    declIdx := declIdx + 1
     -- assembly, B: a termination obligation of `d` (its statement is in the validated library) gets its
     -- final theorem before `d` is translated again, so that the lowering can use it
     if let some a := asm? then
@@ -2276,6 +2636,31 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
             results := results.insert k x
             out := out.push x
         continue
+    -- incremental (docs/INCREMENTAL.md): a constant that is not selected and none of whose dependencies
+    -- changed (directly or through others) is replayed from the base run
+    let depChanged := (declDeps d).any tainted.contains
+    if let some rp := rep? then
+      if asm?.isNone && !depChanged && !rp.rerun.contains d.name then
+        if let .constant _ := d then
+          match ← replayDecl src rp genv d with
+          | .ok (rows, g) =>
+            genv := g
+            for x in rows do
+              results := results.insert x.source x
+              out := out.push x
+            if let some rcd := rp.records[d.name]? then replayRecords.modify (·.push rcd)
+            if let some f := (← IO.getEnv "R2L_PROGRESS") then
+              IO.FS.withFile f .append fun h => do
+                for x in rows do h.putStrLn s!"0\t{x.status}\t{x.source}\treplayed"
+            continue
+          | .error why => replayFallback.modify (·.push (d.name, why))
+    let genvBefore := genv
+    addedLog.set #[]
+    probeLog.set {}
+    -- (determinism: the metavariables and free variables of a declaration are named from its own position
+    -- in the export, so its translation does not depend on how many earlier declarations created — the
+    -- order of a set of level metavariables follows their names, e.g. the residual levels' numbering)
+    modifyThe Core.State fun s => { s with ngen := { namePrefix := .num `_r2l declIdx } }
     -- the heartbeat budget is per declaration; a declaration exceeding it is a RESOURCE_LIMIT row
     let saved ← saveState
     if let some ref := genv.tierLog then ref.set #[]
@@ -2343,6 +2728,31 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
         ("attempts", toJson r.tierTimes.size),
         ("phases", Json.mkObj (ph.toList.map fun (k, a, n) => (k, Json.arr #[toJson a, toJson n])))]
       IO.FS.withFile f .append fun h => h.putStrLn line.compress
+    -- incremental: the declaration's replay record (what it installed, each name once, in the order of its
+    -- last installation), and the check that replaying its rows registers exactly what translating it did
+    let added ← do
+      let env ← getEnv
+      let mut seen : Std.HashSet Name := {}
+      let mut keep := #[]
+      for n in (← addedLog.get).reverse do
+        if env.contains n && !seen.contains n then
+          seen := seen.insert n
+          keep := keep.push n
+      pure keep.reverse
+    let rowsNow := r.synthetic.filter (·.syntheticKind == "termination") ++ #[r] ++
+      r.synthetic.filter (·.syntheticKind != "termination")
+    let mut rcd := replayRecord d genv?.isSome added rowsNow (← probeLog.get)
+    if asm?.isNone then
+      if let (.constant _, some g) := (d, genv?) then
+        let recRows := (rcd.getObjValAs? (Array Json) "rows").toOption.getD #[]
+        let rows := (rowsNow.zip recRows).map fun (x, rr) => rowOfJson x.toJson rr none
+        let keysS := #[d.name, d.name ++ ".statement", d.name ++ ".type"] ++ rowsNow.map (·.source)
+        let keysN := (rowsNow.filterMap (·.target)).push ``PULift
+        let bad := match replayRegistration src genvBefore d rows true with
+          | .ok g' => genvDiff g g' keysS keysN
+          | .error e => #[e]
+        unless bad.isEmpty do rcd := rcd.setObjVal! "selfcheck" (Json.arr (bad.map Json.str))
+    replayRecords.modify (·.push rcd)
     match asm? with
     | none => if let some g := genv? then genv := g
     | some a =>
@@ -2361,6 +2771,7 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     r := { r with protectedIface := protectedNames.contains r.source }
     -- (B: termination statements are reported before their declaration, unfolding equations after
     -- it: each row only references rows reported earlier)
+    let outStart := out.size
     let gen := r.synthetic
     r := { r with synthetic := #[] }
     let mut after : Array DeclResult := #[]
@@ -2396,6 +2807,26 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     for x in after do
       results := results.insert x.source x
       out := out.push x
+    -- incremental: a translated declaration whose record or rows (but their messages) differ from the base
+    -- run's changes its dependents' inputs: they are translated too
+    if let some rp := rep? then
+      let mine := out.extract outStart out.size
+      let strip (j : Json) : String := match j with
+        | .obj _ => (j.setObjVal! "selfcheck" .null).compress
+        | j => j.compress
+      let same := Id.run do
+        let some brec := rp.records[d.name]? | return false
+        if strip brec != strip rcd then return false
+        for x in mine do
+          let some raw := rp.lines[x.source]? | return false
+          match Json.parse raw with
+          | .ok j => if rowKey j != rowKey x.toJson then return false
+          | .error _ => return false
+        return true
+      if !same then
+        replayChanged.modify (·.push d.name)
+        tainted := tainted.insert d.name
+      else if depChanged then tainted := tainted.insert d.name
   return out
 where
   /-- R-SPLIT (docs/LEVEL_SPLIT.md, experimental): a declaration with an eligible level is first
@@ -2405,22 +2836,17 @@ where
   translateSplit (genv0 : GEnv) (results : Std.HashMap String DeclResult) (d : IR.Decl) : MetaM (DeclResult × GEnv) := do
     let some (d', infos) := Split.view d | translateDecl genv0 results d
     let copies := infos.foldl (fun a inf => a ++ inf.names) #[]
-    let back : String → String := fun x => (infos.find? (·.names.contains x)).map (·.level) |>.getD x
-    let facts' := genv0.facts.extend copies (Split.copiedRelations genv0.facts infos)
     let saved ← saveState
-    let (r, genv) ← translateDecl { genv0 with facts := facts' } results d'
+    let (r, genv) ← translateDecl { genv0 with facts := splitFacts genv0.facts infos } results d'
     -- (every copy must stay a universe parameter: a copy solved or defaulted would not be the split view)
     let generic := copies.all fun c => r.levelParams.contains (levelParamName c)
     if generic && (r.ok || r.status == "PENDING_KERNEL_CHECKED" || r.status == "STATEMENT_KERNEL_CHECKED" ||
         r.status == "STATEMENT_PENDING_KERNEL_CHECKED") then
       -- references: each copy stands for the source level
-      let mut cg := genv.constGlobals
-      for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
-        if let some gs := cg[n]? then cg := cg.insert n (gs.map back)
       let note := s!"R-SPLIT: {infos.map fun i => (i.level, i.params)}"
       return ({ r with levelSplit := infos.map fun i => (i.level, i.params, i.names),
                        levelDiagnostics := r.levelDiagnostics.push note },
-              { genv with constGlobals := cg })
+              registerSplit genv r (infos.map fun i => (i.level, i.params, i.names)))
     saved.restore
     let (r0, g0) ← translateDecl genv0 results d
     let why := if generic then s!"{r.status}: {r.message.take 300}" else "a copy was not kept as a universe parameter"
@@ -2895,34 +3321,7 @@ where
             else if r.status == "PENDING_KERNEL_CHECKED" then "STATEMENT_PENDING_KERNEL_CHECKED" else r.status
           r := { r with source := c0.name, status := st,
                         targetKind := if st != r.status then "statement" else r.targetKind }
-        -- B: generated statements (termination obligations, unfolding equations) are proof tasks
-        for x in r.synthetic do
-          if let some n := x.target then
-            if x.status == "STATEMENT_KERNEL_CHECKED" || x.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
-              genv := { genv with leafStmt := genv.leafStmt.insert x.source (n, x.pendingHyps),
-                                  leafStmtTargets := genv.leafStmtTargets.insert n }
-              unless x.levelParams.isEmpty do
-                genv := { genv with constGlobals := genv.constGlobals.insert n x.paramLevels }
-        -- statement mode: register proof tasks (statements) and pending artifacts for later references
-        if r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" || r.status == "PENDING_KERNEL_CHECKED" then
-          if let some n := r.target then
-            if r.status == "PENDING_KERNEL_CHECKED" then
-              genv := { genv with pendingDefs := genv.pendingDefs.insert c0.name (n, r.pendingHyps) }
-            else
-              genv := { genv with leafStmt := genv.leafStmt.insert c0.name (n, r.pendingHyps),
-                                  leafStmtTargets := genv.leafStmtTargets.insert n }
-            unless r.levelParams.isEmpty do
-              genv := { genv with constGlobals := genv.constGlobals.insert n r.paramLevels }
-        if r.ok then if let some n := r.target then
-          genv := { genv with consts := genv.consts.insert c.name n,
-                              constLevels := genv.constLevels.insert c.name r.levelParams.length,
-                              constGlobals := if r.levelParams.isEmpty then genv.constGlobals
-                                else genv.constGlobals.insert n r.paramLevels }
-          if r.polyParams > 0 then
-            genv := { genv with constPoly := genv.constPoly.insert c.name r.polyParams,
-                                polyByTarget := genv.polyByTarget.insert n r.polyParams }
-          unless r.admittingLevels.isEmpty do
-            genv := { genv with admitting := genv.admitting.insert n r.admittingLevels }
+        genv := registerConstant genv c0.name c.name r
         pure r
       | .inductive i =>
         -- R3G for blocks: first with free reference levels as implicit parameters (more general); if
@@ -3058,35 +3457,7 @@ where
             for (l, _) in r.templateParams do
               genv := { genv with templateLevels := genv.templateLevels.insert l }
         pure r
-    -- R-CARRIER P2: the copy positions of the declaration's universe parameters, for references to it
-    unless r.levelCopies.isEmpty do
-      let copies := r.levelCopies.foldl (· ++ ·.2) #[]
-      let mask := (r.levelParams.drop r.polyParams).toArray.map fun p => copies.any (levelParamName · == p)
-      for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
-        genv := { genv with copyPositions := genv.copyPositions.insert n mask }
-    -- R3G-F: the declaration's closure of result-sort implicit levels (its dependencies' and its own)
-    let deps := match d with
-      | .constant c => c.typeDeps ++ c.bodyDeps
-      | .inductive i => i.typeDeps
-    -- rule P gate: the declaration reaches a lifted definition
-    if r.propLift.isSome || deps.any genv.liftReach.contains then
-      genv := { genv with liftReach := genv.liftReach.insert d.name,
-                          liftTargets := (r.target.toList ++ (r.targetCtors.map (·.1)).toList).foldl (fun s n => s.insert n)
-                            (genv.liftTargets.insert ``PULift) }
-    let cl := r.resultSortImplicit.foldl (·.insert ·) (genv.rsOfDeps deps)
-    unless cl.isEmpty do genv := { genv with rsClosure := genv.rsClosure.insert d.name cl }
-    -- R3G-F applicability at references to this declaration (docs/RESULT_SORT_LEVELS.md §2): besides an
-    -- inductive's source result-sort-only levels (registered above), the R3G-F levels of its dependency
-    -- closure that are not levels of its own source (they reach it only through such blocks)
-    if r.accepted || r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
-      let expl : Std.HashSet String := match d with
-        | .constant c => globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)
-        | .inductive i => (globalsOfInd i).foldl (·.insert ·) {}
-      let inh := (genv.rsOfDeps deps).fold (fun acc l => if expl.contains l then acc else acc.push l) #[]
-      unless inh.isEmpty do
-        for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
-          let old := (genv.resultOnly[n]?).getD #[]
-          genv := { genv with resultOnly := genv.resultOnly.insert n (old ++ inh.filter (!old.contains ·)) }
+    genv := registerCommon genv d r
     return (r, genv)
 
 end Rocq2Lean
