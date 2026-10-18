@@ -804,6 +804,51 @@ partial def IR.betaApp (f : IR.Term) (args : Array IR.Term) : IR.Term :=
     | _ => .app f args
   else f
 
+/-- R-CONVOY (docs/POLICY_RELAXATIONS.md): definitional βζι-reduction of match convoys in a fixpoint body — a `let`
+bound to a constructor application is inlined, an applied λ is β-reduced, and a `match` on a constructor
+application of its inductive is ι-reduced (Paramcoq's `map_R`: `let K := cons_R … s_R in (λ s1' s2' s_R', match
+s_R' …) _ _ K`, whose recursive call is on a field of `K`, i.e. on `s_R`). Rocq's guard sees the call by the same
+reduction. Used only when the structural lowering fails on the source body. -/
+partial def IR.Term.convoyReduce (t : IR.Term) (fuel : Nat := 64) : IR.Term :=
+  if fuel == 0 then t else
+  let go (u : IR.Term) := u.convoyReduce (fuel - 1)
+  let ctorView : IR.Term → Option (IR.IndRef × Nat × Array IR.Term)
+    | .app (.construct i k _) args => some (i, k, args)
+    | .construct i k _ => some (i, k, #[])
+    | _ => none
+  match t with
+  | .letIn nm v ty b =>
+    let v' := go v
+    if (ctorView v').isSome then go ((b.subst0 v').flattenApps) else .letIn nm v' (go ty) (go b)
+  | .app f args =>
+    let f' := go f
+    let args' := args.map go
+    match f' with
+    | .lam .. => go (IR.betaApp f' args')
+    | .app g as => .app g (as ++ args')
+    | _ => .app f' args'
+  | .case i np r pu ps pctx ret c brs =>
+    let c' := go c
+    let rebuilt := IR.Term.case i np r pu (ps.map go) pctx (go ret) c' (brs.map fun (ctx, b) => (ctx, go b))
+    match ctorView c' with
+    | some (j, k, args) =>
+      if j.mind == i.mind && j.idx == i.idx && k < brs.size && args.size ≥ np then
+        let fields := args.extract np args.size
+        let (ctx, b) := brs[k]!
+        if fields.size == ctx.size then
+          go ((List.range fields.size).reverse.foldl (fun acc jj => acc.subst0 (fields[jj]!.liftRels jj)) b)
+        else rebuilt
+      else rebuilt
+    | none => rebuilt
+  | .evar ev args => .evar ev (args.map go)
+  | .cast c kd ty => .cast (go c) kd (go ty)
+  | .prod nm ty b => .prod nm (go ty) (go b)
+  | .lam nm ty b => .lam nm (go ty) (go b)
+  | .proj i np a c => .proj i np a (go c)
+  | .fix ds idx => .fix (ds.map fun (nm, ty, b, r) => (nm, go ty, go b, r)) idx
+  | .cofix ds idx => .cofix (ds.map fun (nm, ty, b, r) => (nm, go ty, go b, r)) idx
+  | _ => t
+
 /-- Statement mode: ζ-normalization of a fixpoint body *before* any lowering (the audit's
 `zeta_fix_lets`, same order): a `let` whose value mentions a function of the block (`rel` in
 `[lo, lo + n)`) is inlined (definitional), so its uses become recursive calls, in every minor premise
@@ -2024,6 +2069,13 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
     unless e.msg.startsWith "recursive call on a term that is not a direct recursive constructor field" do
       throwThe TransError e
     restoreTrans saved
+    -- R-CONVOY (statement mode, switch `R2L_RULE_CONVOY` while measured): the structural lowering of the βζι-reduced
+    -- body (definitional), before the course-of-values and accessibility lowerings
+    if (← read).genv.stmtMode && (← (IO.getEnv "R2L_RULE_CONVOY" : IO _)).isSome then
+      let defsC := defs.map fun (n, ty, b, r) => (n, ty, b.convoyReduce, r)
+      let savedC ← saveTrans
+      let rC ← tryCatchThe TransError (some <$> transFix1 defsC false) fun _ => do restoreTrans savedC; pure none
+      if let some x := rC then return x
     unless (← read).genv.stmtMode do return ← transFix1 defs true
     -- B (statement mode, docs/TERMINATION.md): recursion that neither the structural nor the
     -- course-of-values lowering covers (a call on a subterm Rocq's guard sees only by reducing a
@@ -2031,7 +2083,11 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
     -- termination obligation
     let saved2 ← saveTrans
     tryCatchThe TransError (transFix1 defs true) fun e2 => do
-      unless e2.msg.startsWith "recursive call on a term that is not a direct recursive constructor field" do
+      -- (R-COVWF: also when the course-of-values lowering does not cover the inductive — indexed, non-uniform or
+      -- Prop-only, CoqEAL's parametricity lemmas `map_R`, `filter_R`, … over `list_R`: the accessibility lowering
+      -- with its explicit termination obligation, as for a call Rocq's guard sees only by reduction)
+      unless e2.msg.startsWith "recursive call on a term that is not a direct recursive constructor field" ||
+          ((← IO.getEnv "R2L_RULE_COV_WF").isSome && e2.msg.startsWith "recursive call on a non-direct subterm (course-of-values)") do
         throwThe TransError e2
       restoreTrans saved2
       transFixWf defs

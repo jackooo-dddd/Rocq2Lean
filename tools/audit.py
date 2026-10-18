@@ -1077,6 +1077,17 @@ class Auditor:
         return e, list(reversed(spine))
 
     def check_fix(self, s, e, path, env):
+        try:
+            return self.check_fix0(s, e, path, env)
+        except Mismatch:
+            # R-CONVOY: the source block βζι-reduced (definitional), as the translator lowers it when the structural
+            # lowering of the source body fails
+            s2 = dict(s, defs=[dict(d, body=convoy_reduce(d["body"])) for d in s["defs"]])
+            if s2 == s:
+                raise
+            return self.check_fix0(s2, e, path, env)
+
+    def check_fix0(self, s, e, path, env):
         """fix f a0..a_{n-1} {struct a_r} := match a_r with ... end
            ->  lam a0..a_{n-1}. I.rec params motive minors idx a_r Q   (Q = a_{r+1}..)"""
         # M6 δβ: constants to which the block passes its own functions are inlined; ζ: let-bound
@@ -2102,6 +2113,38 @@ def mentions_rels(t, lo, n):
     src_rewrite(t, lambda x, d: hit.append(1) if x.get("k") == "rel" and lo + d <= x["i"] < lo + d + n else None,
                 again=False)
     return bool(hit)
+
+
+def convoy_reduce(body):
+    """R-CONVOY, independently: definitional βζι-reduction of match convoys (a let bound to a constructor application
+    inlined, an applied λ β-reduced, a match on a constructor application of its inductive ι-reduced)."""
+    def ctor(x):
+        if x.get("k") == "app" and x["f"].get("k") == "construct":
+            return x["f"], x["args"]
+        if x.get("k") == "construct":
+            return x, []
+        return None
+
+    def pre(x, d):
+        k = x.get("k")
+        if k == "let" and ctor(x["v"]) is not None:
+            return src_flatten_apps(src_subst0(x["b"], x["v"]))
+        if k == "app" and x["f"].get("k") == "lam":
+            return beta_app(x["f"], x["args"])
+        if k == "case":
+            cv = ctor(x["c"])
+            if cv is not None:
+                c, args = cv
+                ind, npar = x["ci"]["ind"], x["ci"]["npar"]
+                if c["ind"] == ind and c["c"] < len(x["brs"]) and len(args) >= npar:
+                    fields, br = args[npar:], x["brs"][c["c"]]
+                    if len(fields) == len(br["ctx"]):
+                        b = br["body"]
+                        for j in reversed(range(len(fields))):
+                            b = src_subst0(b, src_lift(fields[j], j))
+                        return b
+        return None
+    return src_rewrite(body, pre)
 
 
 def zeta_fix_lets(body, nfun):
