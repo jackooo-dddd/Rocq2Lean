@@ -48,6 +48,10 @@ FACTS = None     # native universe facts of the audited export (set by main)
 # R-OCC (docs/BODY_OCCURRENCE_LEVELS.md): a sort occurrence of a body-only level may be a per-occurrence copy
 # (reports with "body-occ" rows); the copy is checked here against the level's upper-bound facts.
 BODY_OCC = [False]
+# C-PIN / L-IDENT (docs/POLICY_RELAXATIONS.md): the current row's reported carrier pins (referenced constants) and
+# level identifications ((b1, b2) pairs); empty for a protected row.
+PIN_OK = [set()]
+IDENT_OK = [set()]
 STATEMENT_MODE = [False]     # set by main_statement
 
 
@@ -2738,6 +2742,8 @@ def check_binder_independence(facts, d, params, sol, interp):
     for b1, x1 in tr:
         for b2, x2 in tr:
             if b1 != b2 and dominated(x1, x2) and not facts.entails(b1, b2, 0):
+                if (b1, b2) in IDENT_OK[0] and not facts.entails(b2, b1, 1):
+                    continue          # L-IDENT: reported, the source does not force b2 < b1
                 raise Mismatch(f"statement specialized: binder levels {b1} <= {b2} forced by the translation, not by the source")
 
 
@@ -2795,6 +2801,9 @@ def check_statement_generality(facts, own, gen, exprs, poly, types):
                 if not ps and facts.entails(l, "Set", 0):
                     continue
                 if any(mentions_param(b, p) for b in binders):
+                    continue
+                # C-PIN: a reported pin at a closed argument k the source graph does not force l above
+                if not ps and c is not None and name in PIN_OK[0] and not facts.entails("Set", l, c + 1):
                     continue
                 raise Mismatch(f"{name}: source level {l} is free in the statement (not determined by the reference's "
                                f"arguments, not forced by the source graph) but its argument is {sigma}, not the "
@@ -3433,6 +3442,10 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                         if s_ in protected:
                             raise Mismatch(f"protected public declaration with a narrowed quantification range: {e}")
                         DEF_TYPE_CANDIDATES.append({"declaration": s_, "message": str(e)})
+                diags_ = [x for x in (r_.get("universe_diagnostics") or []) if isinstance(x, str)]
+                unprot_ = s_ in statements and s_ not in protected
+                PIN_OK[0] = {x[len("carrier-pin: "):] for x in diags_ if x.startswith("carrier-pin: ")} if unprot_ else set()
+                IDENT_OK[0] = {tuple(x[len("level-ident: "):].split(" <= ")) for x in diags_ if x.startswith("level-ident: ")} if unprot_ else set()
                 if s_ in statements:
                     check_binder_independence(facts, d_, set(params), sol_only, interp_)
                 if s_ in statements or (d_["kind"] == "constant" and s_ in definitions):

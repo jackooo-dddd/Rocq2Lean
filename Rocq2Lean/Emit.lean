@@ -330,6 +330,14 @@ that are not copies. -/
 private structure PinCtx where
   srcOf : Std.HashMap Name String
   ownSrc : Array String
+  /-- C-PIN (docs/POLICY_RELAXATIONS.md): a closed argument `k` for a level free in the source is accepted when the
+  source graph does not force the level above `k` (an unprotected statement, on the policy tier). -/
+  carrierPins : Bool := false
+
+/-- C-PIN / L-IDENT: set while the policy-relaxation last tier runs (unprotected statements only). -/
+initialize carrierPinTier : IO.Ref Bool ← IO.mkRef false
+initialize identRef : IO.Ref (Array String) ← IO.mkRef #[]
+initialize levelIdentTier : IO.Ref Bool ← IO.mkRef false
 
 private def mkPinCtx (facts : IR.UniverseFacts) (own : List Name) : PinCtx := Id.run do
   let mut m : Std.HashMap Name String := {}
@@ -375,6 +383,11 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (ctx : P
       | none => (binderDomains ci.type nargs).extract (hypBinderCount n ci.type) nargs
     doms? := some doms
     if doms.any (fun d => (collectLevelParams {} d).params.contains p) then continue
+    -- C-PIN: the instance at its concrete carrier's level `k`, a model of the source graph at that level
+    if ctx.carrierPins && !σ.hasParam then
+      if let some l := ctx.srcOf[p]? then
+        if let some k := σ.normalize.toNat then
+          if !entails facts "Set" l (k + 1) then continue
     return some s!"{n}: the level of {p} is free in the source (no applied argument determines it, the source graph does not force it) but its argument is {σ}, not {p}"
   return none
 
@@ -441,8 +454,32 @@ private partial def freeLevelPinM (env : Environment) (facts : IR.UniverseFacts)
   if r.isNone then modify fun (v, m, s) => (v.insert e, m, s)
   return r
 
-partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr) : Option String :=
-  (freeLevelPinM env facts (mkPinCtx facts own) own e).run' ({}, {}, {})
+partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr)
+    (carrierPins : Bool := false) : Option String :=
+  (freeLevelPinM env facts { mkPinCtx facts own with carrierPins } own e).run' ({}, {}, {})
+
+/-- C-PIN, the report: the references of `e` accepted only through a carrier pin. -/
+partial def carrierPinRefs (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr) : Array String :=
+  let ctx0 := mkPinCtx facts own
+  let ctx1 := { ctx0 with carrierPins := true }
+  let rec go (e : Expr) (acc : Array String) : Array String :=
+    match e with
+    | .app .. =>
+      let args := e.getAppArgs
+      let acc := match e.getAppFn with
+        | .const n us =>
+          if (freeLevelRef env facts ctx0 own n us args.size).isSome && (freeLevelRef env facts ctx1 own n us args.size).isNone
+          then (if acc.contains n.toString then acc else acc.push n.toString) else acc
+        | f => go f acc
+      args.foldl (fun a x => go x a) acc
+    | .const n us =>
+      if (freeLevelRef env facts ctx0 own n us 0).isSome && (freeLevelRef env facts ctx1 own n us 0).isNone
+      then (if acc.contains n.toString then acc else acc.push n.toString) else acc
+    | .forallE _ d b _ | .lam _ d b _ => go b (go d acc)
+    | .letE _ t v b _ => go b (go v (go t acc))
+    | .mdata _ b | .proj _ _ b => go b acc
+    | _ => acc
+  go e #[]
 
 private def peelBinders (e : Expr) (k : Nat) : Expr :=
   match k, e with
@@ -597,16 +634,21 @@ def levelDominated (σ₁ σ₂ : Level) : Bool :=
       (c1 == 0 || c1 ≤ c2 || p2.any fun (_, k') => c1 ≤ k')
   | _, _ => false
 
-def binderIndependence (facts : IR.UniverseFacts) (binders : Array String) (σ : String → Option Level) : Option String := Id.run do
+def binderIndependence (facts : IR.UniverseFacts) (binders : Array String) (σ : String → Option Level)
+    (allowIdent : Bool := false) : Option String × Array String := Id.run do
   let tr := binders.filterMap fun b => (σ b).map (b, ·)
   for (b, l) in tr do
     if !l.hasParam && !(entails facts b "Set" 0) then
-      return some s!"binder level {b} would be fixed at {l} (the source does not force it to Set)"
+      return (some s!"binder level {b} would be fixed at {l} (the source does not force it to Set)", #[])
+  let mut ident : Array String := #[]
   for (b1, l1) in tr do
     for (b2, l2) in tr do
       if b1 != b2 && levelDominated l1 l2 && !(entails facts b1 b2 0) then
-        return some s!"binder levels {b1} ≤ {b2} would be forced by the translation ({l1} ≤ {l2}), not by the source"
-  return none
+        -- L-IDENT (docs/POLICY_RELAXATIONS.md): an unprotected statement may be read in a model of the source graph
+        -- with `b1 ≤ b2`, when the source does not force `b2 < b1`; reported
+        if allowIdent && !(entails facts b2 b1 1) then ident := ident.push s!"{b1} <= {b2}"
+        else return (some s!"binder levels {b1} ≤ {b2} would be forced by the translation ({l1} ≤ {l2}), not by the source", #[])
+  return (none, ident)
 
 private partial def irEndsInSort : IR.Term → Bool
   | .prod _ _ b => irEndsInSort b
@@ -751,6 +793,8 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     (phantom : Bool := false) (eqLower : Bool := false) (shadow : Option (IO.Ref (Option Json)) := none)
     (witness : Option Json := none) :
     MetaM DeclResult := do
+  sharedFreeMap.set {}
+  sharedFreeOn.set (← sharedFreeTier.get)
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
   unless missing.isEmpty do
@@ -1370,16 +1414,28 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
         match levelInterp.find? (·.1 == b) with
         | some (_, x) => some x
         | none => if paramLevels.contains b then some (.param (levelParamName b)) else sol[b]?
-      if let some m := binderIndependence genv.facts (binderLevelsIR body) σ then
-        return { base with status := "UNIVERSE_REJECTED", message := s!"statement specialization refused: {m}" }
+      let identOk := !genv.protectedNames.contains c.name && (← levelIdentTier.get)
+      match binderIndependence genv.facts (binderLevelsIR body) σ (allowIdent := identOk) with
+      | (some m, _) => return { base with status := "UNIVERSE_REJECTED", message := s!"statement specialization refused: {m}" }
+      | (none, ident) => identRef.set (ident.map (s!"level-ident: {·}"))
     let env ← getEnv
+    let cPin := stmt && !genv.protectedNames.contains c.name && (← carrierPinTier.get)
     let pinned : Option String :=
       if stmt then
-        freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) <|>
-          freeLevelPin env genv.facts lparams (peelBinders val hyps.size)
+        freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) (carrierPins := cPin) <|>
+          freeLevelPin env genv.facts lparams (peelBinders val hyps.size) (carrierPins := cPin)
       else if genv.protectedNames.contains c.name then
         (typeDomains (peelBinders ty hyps.size)).findSome? (freeLevelPin env genv.facts lparams)
       else none
+    -- (C-PIN / L-IDENT: the pins and identifications the row relies on, reported)
+    let base ← do
+      let mut extra := (← identRef.get)
+      identRef.set #[]
+      if cPin && pinned.isNone then
+        let pins := carrierPinRefs env genv.facts lparams (peelBinders ty hyps.size) ++
+          carrierPinRefs env genv.facts lparams (peelBinders val hyps.size)
+        extra := extra ++ (pins.toList.eraseDups.toArray.map (s!"carrier-pin: {·}"))
+      pure { base with levelDiagnostics := base.levelDiagnostics ++ extra }
     if let some m := pinned then
       return { base with status := "UNIVERSE_REJECTED",
                          message := if stmt then s!"statement specialization refused: {m}"
@@ -3031,6 +3087,46 @@ where
                   r := { r' with deltaInlined := used }
                   iface := none
                   break
+          -- rule S-FREE (candidate, `R2L_RULE_SHARED_FREE`): after every tier above failed, the ladder's universe variants
+          -- with one metavariable per non-own source level at every reference (Lean's unifier otherwise merges the
+          -- occurrences of two source levels through a packed carrier `max (51, 21)`, stage C)
+          if !r.accepted && (retry r.status) && (← IO.getEnv "R2L_RULE_SHARED_FREE").isSome then
+            try
+              for (it, cu, lo) in [(false, false, false), (true, false, false), (false, true, false), (false, true, true)] do
+                sharedFreeTier.set true
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo)
+                sharedFreeTier.set false
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[shared-free] {r'.message}" }
+                if r'.accepted then
+                  r := { r' with levelDiagnostics := r'.levelDiagnostics.push "shared-free" }
+                  iface := none
+                  break
+            finally
+              sharedFreeTier.set false
+          -- C-PIN / L-IDENT (approved 2026-10-18, docs/POLICY_RELAXATIONS.md; switches `R2L_RULE_CARRIER_PIN`,
+          -- `R2L_RULE_LEVEL_IDENT` while measured): an unprotected statement refused by the generality or the
+          -- binder-independence check is retried with carrier pins / level identifications allowed (reported)
+          let polMsg := r.message ++ ((lastTier.map (·.message)).getD "")
+          let wantPin := (← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome && (polMsg.splitOn "is free in the source").length > 1
+          let wantId := (← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome && (polMsg.splitOn "would be forced by the translation").length > 1
+          if !r.accepted && isStmt && !genv.protectedNames.contains c0.name && (retry r.status) && (wantPin || wantId) then
+            try
+              carrierPinTier.set ((← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
+              levelIdentTier.set ((← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
+              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
+                                       (false, false, true, false), (false, false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[policy] {r'.message}" }
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := r'
+                  iface := none
+                  break
+            finally
+              carrierPinTier.set false
+              levelIdentTier.set false
           -- rule P (approved): a proposition used at a type, lifted by `PULift` (last tier; only a declaration
           -- whose value is a proposition at a declared `Type`, refused otherwise at once)
           let castFail := r.status == "TRANSLATION_FAILED" && (r.message.startsWith "default cast annotation is not convertible" ||
@@ -3240,12 +3336,17 @@ where
             try
               -- (with per-instance prerequisite hypotheses, P3: the occurrences are now independent, so one shared
               -- hypothesis for a pending dependency used at several of them no longer fits)
-              for (it, lo, ns, p3) in [(false, false, false, false), (false, false, false, true), (true, false, false, true),
-                                       (false, true, false, true), (false, false, true, false), (false, false, true, true)] do
+              -- (rule R-OCC+P, candidate `R2L_RULE_OCC_LIFT`: also with rule P's lift, a proposition used at a type —
+              -- CoqEAL's `Rnat` relations under the per-occurrence levels)
+              let lift := (← IO.getEnv "R2L_RULE_OCC_LIFT").isSome
+              for (it, lo, ns, p3, pl) in [(false, false, false, false, false), (false, false, false, true, false), (true, false, false, true, false),
+                                           (false, true, false, true, false), (false, false, true, false, false), (false, false, true, true, false),
+                                           (false, false, false, false, true), (false, false, false, true, true), (true, false, false, true, true)] do
                 if ns && prot then continue
+                if pl && !lift then continue
                 let g' := if ns then { genv with carrierSplit := false } else genv
                 let r' ← budgeted c.name "constant" <| processConstant g' results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
-                  (interp := it) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                  (interp := it) (extraOwn := eo) (lower := lo) (hypExact := p3) (propLift := pl)
                 if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[body-occ] {r'.message}" }
                 if r'.status == "RESOURCE_LIMIT" then break
                 if r'.accepted then

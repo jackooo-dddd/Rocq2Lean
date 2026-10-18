@@ -416,6 +416,13 @@ def lookupInd (i : IndRef) : TransM IndTarget := do
     return t
   | none => failT "TRANSLATION_FAILED" s!"reference to inductive {i.mind}, which has no accepted translation"
 
+/-- Rule S-FREE (candidate, `R2L_RULE_SHARED_FREE`, a last tier): one level metavariable per source level that is not an
+own level, at every reference of the attempt (monomorphic Rocq: the level is one level at all of them), instead of a
+fresh one per reference. Set per attempt (`sharedFreeTier`), reset at the start of each attempt. -/
+initialize sharedFreeOn : IO.Ref Bool ← IO.mkRef false
+initialize sharedFreeMap : IO.Ref (Std.HashMap String Level) ← IO.mkRef {}
+initialize sharedFreeTier : IO.Ref Bool ← IO.mkRef false
+
 /-- Universe arguments at a reference to a declaration whose parameters stand for the source global
 levels `globals` (in parameter order): a level that is also one of the referring declaration's own
 levels is *the same level* in monomorphic Rocq, so the reference uses the referring declaration's
@@ -434,7 +441,13 @@ def sharedOrFreshLevels (globals : Array String) : TransM (List Level) := do
   if (← read).lowerShared then return ← liftMeta do globals.toList.mapM fun _ => mkFreshLevelMVar
   globals.toList.mapM fun l => match own[l]? with
     | some v => pure v
-    | none => liftMeta mkFreshLevelMVar
+    | none => do
+      if ← sharedFreeOn.get then
+        if let some v := (← sharedFreeMap.get)[l]? then return v
+        let v ← liftMeta mkFreshLevelMVar
+        sharedFreeMap.modify (·.insert l v)
+        return v
+      liftMeta mkFreshLevelMVar
 
 /-- Universe arguments of a reference to an accepted or pending target `n` (its source levels shared
 with the referring declaration, otherwise fresh). -/
