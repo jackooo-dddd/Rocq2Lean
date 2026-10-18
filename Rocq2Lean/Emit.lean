@@ -2294,7 +2294,9 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
       if p.isEmpty then m else m.insert p ((m.getD p #[]).push (k, v))
   -- incremental: declarations whose rows differ from the base run's, or that depend on one (transitively)
   let mut tainted : Std.HashSet String := {}
+  let mut declIdx := 0
   for d in src.decls do
+    declIdx := declIdx + 1
     -- assembly, B: a termination obligation of `d` (its statement is in the validated library) gets its
     -- final theorem before `d` is translated again, so that the lowering can use it
     if let some a := asm? then
@@ -2348,6 +2350,10 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
           | .error why => replayFallback.modify (·.push (d.name, why))
     let genvBefore := genv
     addedLog.set #[]
+    -- (determinism: the metavariables and free variables of a declaration are named from its own position
+    -- in the export, so its translation does not depend on how many earlier declarations created — the
+    -- order of a set of level metavariables follows their names, e.g. the residual levels' numbering)
+    modifyThe Core.State fun s => { s with ngen := { namePrefix := .num `_r2l declIdx } }
     -- the heartbeat budget is per declaration; a declaration exceeding it is a RESOURCE_LIMIT row
     let saved ← saveState
     if let some ref := genv.tierLog then ref.set #[]
