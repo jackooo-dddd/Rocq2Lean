@@ -2795,6 +2795,27 @@ def check_binder_independence(facts, d, params, sol, interp):
                 raise Mismatch(f"statement specialized: binder levels {b1} <= {b2} forced by the translation, not by the source")
 
 
+def ends_in_sort_(t):
+    while t is not None and t.get("k") == "forall":
+        t = t["b"]
+    return t is not None and t.get("k") == "sort"
+
+
+def pin_model_ok(facts, l, sigma, levels, args):
+    """C-PIN-M, independently: sigma (for l) and the reference's other arguments satisfy every native fact between l
+    and the referenced constant's other source levels."""
+    arg = dict(zip(levels, args))
+    for (a, b), r in facts.rel.items():
+        k = 1 if r == "lt" else 0
+        if b == l and a != l and a != "Set" and a in arg:
+            if not dominated({"k": "succ", "l": arg[a]} if k else arg[a], sigma):
+                return False
+        elif a == l and b != l and b != "Set" and b in arg:
+            if not dominated({"k": "succ", "l": sigma} if k else sigma, arg[b]):
+                return False
+    return True
+
+
 def check_statement_generality(facts, own, gen, exprs, poly, types):
     """Task C, independently of the translator's own reports (no `universe_level_defaults`/residual
     record is consulted): a statement — or a definition's type — is never specialized at a universe
@@ -2850,11 +2871,11 @@ def check_statement_generality(facts, own, gen, exprs, poly, types):
                     continue
                 if any(mentions_param(b, p) for b in binders):
                     continue
+                # C-PIN-M: a reported pin at a term constant whose argument satisfies every native fact between l and
+                # the constant's other levels, read with this reference's arguments (Set facts by R-SET's floor)
+                if ps and name in PIN_OK[0] and (not PIN_PROT[0] or not ends_in_sort_(ty)) and pin_model_ok(facts, l, sigma, gen[name], us_):
+                    continue
                 # C-PIN: a reported pin at a closed argument k the source graph does not force l above
-                def ends_in_sort_(t):
-                    while t is not None and t.get("k") == "forall":
-                        t = t["b"]
-                    return t is not None and t.get("k") == "sort"
                 if not ps and c is not None and name in PIN_OK[0] and (not PIN_PROT[0] or not ends_in_sort_(ty)) and (
                         (c == 0 and l not in NAMED_STRICT[0]) or not facts.entails("Set", l, c + 1)):
                     continue          # (R-SET: at 0, Set < l is structural unless a named level forces l up)

@@ -324,6 +324,25 @@ private def hypBinderCount (n : Name) (t : Expr) : Nat := Id.run do
     | _ => break
   return k
 
+/-- A normalized level as (constant, summands `p + k`); none outside the fragment (imax, mvars). -/
+partial def levelParts : Level → Option (Nat × Array (Name × Nat))
+  | .zero => some (0, #[])
+  | .succ l => (levelParts l).map fun (c, ps) => (c + 1, ps.map fun (p, k) => (p, k + 1))
+  | .param p => some (0, #[(p, 0)])
+  | .max a b => do
+    let (c1, p1) ← levelParts a
+    let (c2, p2) ← levelParts b
+    pure (max c1 c2, p1 ++ p2)
+  | _ => none
+
+/-- `σ₁ ≤ σ₂` for every value of the parameters. -/
+def levelDominated (σ₁ σ₂ : Level) : Bool :=
+  match levelParts σ₁.normalize, levelParts σ₂.normalize with
+  | some (c1, p1), some (c2, p2) =>
+    p1.all (fun (p, k) => p2.any fun (q, k') => q == p && k ≤ k') &&
+      (c1 == 0 || c1 ≤ c2 || p2.any fun (_, k') => c1 ≤ k')
+  | _, _ => false
+
 /-- (speed, exact) the generality check's per-check context: the source level of a parameter name (the first
 in `facts.levels`, as `find?` returned) and the source levels of the referring declaration's own parameters
 that are not copies. -/
@@ -338,6 +357,8 @@ private structure PinCtx where
   /-- C-PIN for a protected statement: only at a constant that is a term (its type does not end in a sort): a concrete
   instance, over which no binder of the statement ranges (P0: no quantification range is narrowed). -/
   termOnly : Bool := false
+  /-- C-PIN-M: non-closed model arguments at term constants. -/
+  modelPins : Bool := false
 
 /-- C-PIN / L-IDENT: set while the policy-relaxation last tier runs (unprotected statements only). -/
 initialize carrierPinTier : IO.Ref Bool ← IO.mkRef false
@@ -394,6 +415,26 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (ctx : P
       | .forallE _ _ b _ => endsInSort b
       | .sort _ => true
       | _ => false
+    -- C-PIN-M (`R2L_RULE_CPIN_MODEL` while measured): at any constant of an unprotected statement (a term constant of a
+    -- protected one, as C-PIN), an argument that satisfies every
+    -- native fact between the pinned level and the constant's other levels, read with this reference's arguments
+    -- (Set facts by R-SET's floor): the reference is the instance at a model of its own levels' facts
+    if ctx.carrierPins && σ.hasParam && ctx.modelPins && (!ctx.termOnly || !endsInSort ci.type) then
+      if let some l := ctx.srcOf[p]? then
+        let argOf (x : String) : Option Level := (lps.zip us).findSome? fun (q, v) => if ctx.srcOf[q]? == some x then some v else none
+        let ok := facts.relations.all fun (a, r, b) =>
+          let k := if r == "lt" then 1 else 0
+          if b == l && a != l then
+            if a == "Set" then ctx.floor.isSome || levelDominated (Level.ofNat k) σ
+            else match argOf a with
+              | some va => levelDominated (va.addOffset k) σ
+              | none => true
+          else if a == l && b != l && b != "Set" then
+            match argOf b with
+            | some vb => levelDominated (σ.addOffset k) vb
+            | none => true
+          else true
+        if ok then continue
     if ctx.carrierPins && !σ.hasParam && (!ctx.termOnly || !endsInSort ci.type) then
       if let some l := ctx.srcOf[p]? then
         if let some k := σ.normalize.toNat then
@@ -469,14 +510,15 @@ private partial def freeLevelPinM (env : Environment) (facts : IR.UniverseFacts)
   return r
 
 partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr)
-    (carrierPins : Bool := false) (floor : Option (Std.HashSet String) := none) (termOnly : Bool := false) : Option String :=
-  (freeLevelPinM env facts { mkPinCtx facts own with carrierPins, floor, termOnly } own e).run' ({}, {}, {})
+    (carrierPins : Bool := false) (floor : Option (Std.HashSet String) := none) (termOnly : Bool := false)
+    (modelPins : Bool := false) : Option String :=
+  (freeLevelPinM env facts { mkPinCtx facts own with carrierPins, floor, termOnly, modelPins } own e).run' ({}, {}, {})
 
 /-- C-PIN, the report: the references of `e` accepted only through a carrier pin. -/
 partial def carrierPinRefs (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr)
-    (floor : Option (Std.HashSet String) := none) (termOnly : Bool := false) : Array String :=
+    (floor : Option (Std.HashSet String) := none) (termOnly : Bool := false) (modelPins : Bool := false) : Array String :=
   let ctx0 := mkPinCtx facts own
-  let ctx1 := { ctx0 with carrierPins := true, floor, termOnly }
+  let ctx1 := { ctx0 with carrierPins := true, floor, termOnly, modelPins }
   let rec go (e : Expr) (acc : Array String) : Array String :=
     match e with
     | .app .. =>
@@ -629,25 +671,6 @@ def identifyJointMVars (es : Array Expr) : MetaM (Array (Array LMVarId)) := do
       done := done ++ S
       out := out.push S
   return out
-
-/-- A normalized level as (constant, summands `p + k`); none outside the fragment (imax, mvars). -/
-partial def levelParts : Level → Option (Nat × Array (Name × Nat))
-  | .zero => some (0, #[])
-  | .succ l => (levelParts l).map fun (c, ps) => (c + 1, ps.map fun (p, k) => (p, k + 1))
-  | .param p => some (0, #[(p, 0)])
-  | .max a b => do
-    let (c1, p1) ← levelParts a
-    let (c2, p2) ← levelParts b
-    pure (max c1 c2, p1 ++ p2)
-  | _ => none
-
-/-- `σ₁ ≤ σ₂` for every value of the parameters. -/
-def levelDominated (σ₁ σ₂ : Level) : Bool :=
-  match levelParts σ₁.normalize, levelParts σ₂.normalize with
-  | some (c1, p1), some (c2, p2) =>
-    p1.all (fun (p, k) => p2.any fun (q, k') => q == p && k ≤ k') &&
-      (c1 == 0 || c1 ≤ c2 || p2.any fun (_, k') => c1 ≤ k')
-  | _, _ => false
 
 def binderIndependence (facts : IR.UniverseFacts) (binders : Array String) (σ : String → Option Level)
     (allowIdent : Bool := false) : Option String × Array String := Id.run do
@@ -1445,10 +1468,11 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let cProt := genv.protectedNames.contains c.name
     let cPin := stmt && (← carrierPinTier.get)
     let floorP := if (← setFloorTier.get) then some genv.namedStrict else none
+    let mPin := (← IO.getEnv "R2L_RULE_CPIN_MODEL").isSome
     let pinned : Option String :=
       if stmt then
-        freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) (carrierPins := cPin) (floor := floorP) (termOnly := cProt) <|>
-          freeLevelPin env genv.facts lparams (peelBinders val hyps.size) (carrierPins := cPin) (floor := floorP) (termOnly := cProt)
+        freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) (carrierPins := cPin) (floor := floorP) (termOnly := cProt) (modelPins := mPin) <|>
+          freeLevelPin env genv.facts lparams (peelBinders val hyps.size) (carrierPins := cPin) (floor := floorP) (termOnly := cProt) (modelPins := mPin)
       else if genv.protectedNames.contains c.name then
         (typeDomains (peelBinders ty hyps.size)).findSome? (freeLevelPin env genv.facts lparams)
       else none
@@ -1457,8 +1481,8 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       let mut extra := (← identRef.get)
       identRef.set #[]
       if cPin && pinned.isNone then
-        let pins := carrierPinRefs env genv.facts lparams (peelBinders ty hyps.size) (floor := floorP) (termOnly := cProt) ++
-          carrierPinRefs env genv.facts lparams (peelBinders val hyps.size) (floor := floorP) (termOnly := cProt)
+        let pins := carrierPinRefs env genv.facts lparams (peelBinders ty hyps.size) (floor := floorP) (termOnly := cProt) (modelPins := mPin) ++
+          carrierPinRefs env genv.facts lparams (peelBinders val hyps.size) (floor := floorP) (termOnly := cProt) (modelPins := mPin)
         extra := extra ++ (pins.toList.eraseDups.toArray.map (s!"carrier-pin: {·}"))
       pure { base with levelDiagnostics := base.levelDiagnostics ++ extra }
     if let some m := pinned then
@@ -3141,6 +3165,7 @@ where
             try
               carrierPinTier.set ((← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
               levelIdentTier.set ((← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
+              setFloorTier.set ((← IO.getEnv "R2L_RULE_SET_FLOOR").isSome)
               for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
                                        (false, false, true, false), (false, false, false, true)] do
                 let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
@@ -3154,6 +3179,7 @@ where
             finally
               carrierPinTier.set false
               levelIdentTier.set false
+              setFloorTier.set false
           -- R-SET (docs/POLICY_RELAXATIONS.md; switch `R2L_RULE_SET_FLOOR` while measured): a declaration refused by a
           -- source fact `Set < l` (a body-only level solved at 0) or a carrier pin at 0 is retried with Rocq's structural
           -- `Set < l` read as `Set ≤ l` for levels no named level forces up (and, with C-PIN / L-IDENT switched on, those
