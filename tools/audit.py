@@ -51,6 +51,11 @@ BODY_OCC = [False]
 # C-PIN / L-IDENT (docs/POLICY_RELAXATIONS.md): the current row's reported carrier pins (referenced constants) and
 # level identifications ((b1, b2) pairs); empty for a protected row.
 PIN_OK = [set()]
+PIN_PROT = [False]   # C-PIN on a protected statement: at a term constant only (its type does not end in a sort)
+# R-SET: levels with a named strict lower bound (the others are above Set only structurally), and per row the levels
+# reported `set-floor: l`
+NAMED_STRICT = [set()]
+SETFLOOR = {}
 IDENT_OK = [set()]
 STATEMENT_MODE = [False]     # set by main_statement
 
@@ -2803,8 +2808,13 @@ def check_statement_generality(facts, own, gen, exprs, poly, types):
                 if any(mentions_param(b, p) for b in binders):
                     continue
                 # C-PIN: a reported pin at a closed argument k the source graph does not force l above
-                if not ps and c is not None and name in PIN_OK[0] and not facts.entails("Set", l, c + 1):
-                    continue
+                def ends_in_sort_(t):
+                    while t is not None and t.get("k") == "forall":
+                        t = t["b"]
+                    return t is not None and t.get("k") == "sort"
+                if not ps and c is not None and name in PIN_OK[0] and (not PIN_PROT[0] or not ends_in_sort_(ty)) and (
+                        (c == 0 and l not in NAMED_STRICT[0]) or not facts.entails("Set", l, c + 1)):
+                    continue          # (R-SET: at 0, Set < l is structural unless a named level forces l up)
                 raise Mismatch(f"{name}: source level {l} is free in the statement (not determined by the reference's "
                                f"arguments, not forced by the source graph) but its argument is {sigma}, not the "
                                f"parameter {level_param(l)}: the statement is specialized (R3G)")
@@ -3156,8 +3166,14 @@ def check_body_levels(facts, d, sol, params=None, admit=frozenset(), prop_offset
             for a, i in lhs)
 
     mine = set(tl) | set(sol) | {"Set"}
+    floor_ = SETFLOOR.get(d.get("name"), set())
     for (a, b), r in facts.rel.items():
         if (a in sol or b in sol) and a in mine and b in mine:
+            # R-SET: a reported level's structural Set < b (no named strict lower bound) read as Set <= b
+            if a == "Set" and r == "lt" and floor_ and (b in floor_ or any(b == x for x in floor_)) and b not in NAMED_STRICT[0]:
+                if not leq(summ(a), summ(b), 0):
+                    raise Mismatch(f"proof-local level solution violates the native fact {a} {r} {b}")
+                continue
             # R2B-P (cumulativity-tier rows only): a fact Set < m may stem from Prop's typing
             # (Type@{Set+1} in Rocq, Sort 1 in Lean)
             # (only for the reported levels: R2B-P proof-local ones, R2B-S result-sort ones)
@@ -3226,6 +3242,12 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
     facts = Facts(lines[4]) if lines[4].get("kind") == "universe_facts" else None
     global FACTS
     FACTS = facts
+    NAMED_STRICT[0] = {b for (a, b), r in facts.rel.items() if r == "lt" and a != "Set"} if facts is not None else set()
+    SETFLOOR.clear()
+    for s__, r__ in (rows.items() if isinstance(rows, dict) else []):
+        fl = {x[len("set-floor: "):] for x in (r__.get("universe_diagnostics") or []) if isinstance(x, str) and x.startswith("set-floor: ")}
+        if fl:
+            SETFLOOR[s__] = fl
     BODY_OCC[0] = any("body-occ" in (r_.get("universe_diagnostics") or []) for r_ in rows.values()) if isinstance(rows, dict) else False
     if facts is None:
         problem("universe", "source IR has no native universe facts")
@@ -3444,7 +3466,8 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                         DEF_TYPE_CANDIDATES.append({"declaration": s_, "message": str(e)})
                 diags_ = [x for x in (r_.get("universe_diagnostics") or []) if isinstance(x, str)]
                 unprot_ = s_ in statements and s_ not in protected
-                PIN_OK[0] = {x[len("carrier-pin: "):] for x in diags_ if x.startswith("carrier-pin: ")} if unprot_ else set()
+                PIN_OK[0] = {x[len("carrier-pin: "):] for x in diags_ if x.startswith("carrier-pin: ")} if s_ in statements else set()
+                PIN_PROT[0] = s_ in protected
                 IDENT_OK[0] = {tuple(x[len("level-ident: "):].split(" <= ")) for x in diags_ if x.startswith("level-ident: ")} if unprot_ else set()
                 if s_ in statements:
                     check_binder_independence(facts, d_, set(params), sol_only, interp_)

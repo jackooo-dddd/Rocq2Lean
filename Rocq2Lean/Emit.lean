@@ -333,9 +333,15 @@ private structure PinCtx where
   /-- C-PIN (docs/POLICY_RELAXATIONS.md): a closed argument `k` for a level free in the source is accepted when the
   source graph does not force the level above `k` (an unprotected statement, on the policy tier). -/
   carrierPins : Bool := false
+  /-- R-SET: a closed pin at 0 is admitted for a level without a named strict lower bound (these levels). -/
+  floor : Option (Std.HashSet String) := none
+  /-- C-PIN for a protected statement: only at a constant that is a term (its type does not end in a sort): a concrete
+  instance, over which no binder of the statement ranges (P0: no quantification range is narrowed). -/
+  termOnly : Bool := false
 
 /-- C-PIN / L-IDENT: set while the policy-relaxation last tier runs (unprotected statements only). -/
 initialize carrierPinTier : IO.Ref Bool ← IO.mkRef false
+initialize setFloorTier : IO.Ref Bool ← IO.mkRef false
 initialize identRef : IO.Ref (Array String) ← IO.mkRef #[]
 initialize levelIdentTier : IO.Ref Bool ← IO.mkRef false
 
@@ -384,10 +390,18 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (ctx : P
     doms? := some doms
     if doms.any (fun d => (collectLevelParams {} d).params.contains p) then continue
     -- C-PIN: the instance at its concrete carrier's level `k`, a model of the source graph at that level
-    if ctx.carrierPins && !σ.hasParam then
+    let rec endsInSort : Expr → Bool
+      | .forallE _ _ b _ => endsInSort b
+      | .sort _ => true
+      | _ => false
+    if ctx.carrierPins && !σ.hasParam && (!ctx.termOnly || !endsInSort ci.type) then
       if let some l := ctx.srcOf[p]? then
         if let some k := σ.normalize.toNat then
-          if !entails facts "Set" l (k + 1) then continue
+          -- (R-SET: at 0, only a named strict lower bound forces the level up; `Set < l` alone is structural)
+          let forced := match ctx.floor with
+            | some ns => if k == 0 then ns.contains l else entails facts "Set" l (k + 1)
+            | none => entails facts "Set" l (k + 1)
+          if !forced then continue
     return some s!"{n}: the level of {p} is free in the source (no applied argument determines it, the source graph does not force it) but its argument is {σ}, not {p}"
   return none
 
@@ -455,13 +469,14 @@ private partial def freeLevelPinM (env : Environment) (facts : IR.UniverseFacts)
   return r
 
 partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr)
-    (carrierPins : Bool := false) : Option String :=
-  (freeLevelPinM env facts { mkPinCtx facts own with carrierPins } own e).run' ({}, {}, {})
+    (carrierPins : Bool := false) (floor : Option (Std.HashSet String) := none) (termOnly : Bool := false) : Option String :=
+  (freeLevelPinM env facts { mkPinCtx facts own with carrierPins, floor, termOnly } own e).run' ({}, {}, {})
 
 /-- C-PIN, the report: the references of `e` accepted only through a carrier pin. -/
-partial def carrierPinRefs (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr) : Array String :=
+partial def carrierPinRefs (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr)
+    (floor : Option (Std.HashSet String) := none) (termOnly : Bool := false) : Array String :=
   let ctx0 := mkPinCtx facts own
-  let ctx1 := { ctx0 with carrierPins := true }
+  let ctx1 := { ctx0 with carrierPins := true, floor, termOnly }
   let rec go (e : Expr) (acc : Array String) : Array String :=
     match e with
     | .app .. =>
@@ -1351,11 +1366,18 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       let σ := (← instantiateLevelMVars (.mvar mv)).normalize
       if let .error msg := checkBodyCopy genv.facts globals sol m σ then
         return { base with status := "UNIVERSE_REJECTED", message := msg }
+    let floorOn ← setFloorTier.get
+    let mut floorUsed : Array String := #[]
     for m in own do
       if sol.contains m then
         if resultLv.contains m then continue          -- (R2B-V: a lowering, checked below)
         if let .error msg := checkBodyLevel genv.facts globals sol m admitLv cumul then
-          return { base with status := "UNIVERSE_REJECTED", message := msg }
+          -- R-SET (last tier): the structural `Set < l` read as `Set ≤ l`; reported
+          if floorOn && (checkBodyLevel genv.facts globals sol m admitLv cumul (floor := some genv.namedStrict)).toBool then
+            floorUsed := floorUsed.push m
+          else return { base with status := "UNIVERSE_REJECTED", message := msg }
+    let base := if floorUsed.isEmpty then base else
+      { base with levelDiagnostics := base.levelDiagnostics ++ floorUsed.map (s!"set-floor: {·}") }
     -- levels for which the relaxation was actually needed (the strict check fails): proof-local ones
     -- (R2B-P, source instance checked at verify) and levels of the type's own result sort (R2B-S)
     let mut r2bp : Array (String × Level) := #[]
@@ -1364,6 +1386,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       let tyGlobals := globalsOf c.type
       for m in own do
         if let some σ := sol[m]? then
+          if floorUsed.contains m then continue        -- (R-SET, reported as such)
           if !(checkBodyLevel genv.facts globals sol m admitLv false).toBool then
             -- a level of the type that is not only the result sort: the row is the source statement
             -- specialized at the checked instance (R2B-P with `in_type`; never on a requested root)
@@ -1419,11 +1442,13 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | (some m, _) => return { base with status := "UNIVERSE_REJECTED", message := s!"statement specialization refused: {m}" }
       | (none, ident) => identRef.set (ident.map (s!"level-ident: {·}"))
     let env ← getEnv
-    let cPin := stmt && !genv.protectedNames.contains c.name && (← carrierPinTier.get)
+    let cProt := genv.protectedNames.contains c.name
+    let cPin := stmt && (← carrierPinTier.get)
+    let floorP := if (← setFloorTier.get) then some genv.namedStrict else none
     let pinned : Option String :=
       if stmt then
-        freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) (carrierPins := cPin) <|>
-          freeLevelPin env genv.facts lparams (peelBinders val hyps.size) (carrierPins := cPin)
+        freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) (carrierPins := cPin) (floor := floorP) (termOnly := cProt) <|>
+          freeLevelPin env genv.facts lparams (peelBinders val hyps.size) (carrierPins := cPin) (floor := floorP) (termOnly := cProt)
       else if genv.protectedNames.contains c.name then
         (typeDomains (peelBinders ty hyps.size)).findSome? (freeLevelPin env genv.facts lparams)
       else none
@@ -1432,8 +1457,8 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       let mut extra := (← identRef.get)
       identRef.set #[]
       if cPin && pinned.isNone then
-        let pins := carrierPinRefs env genv.facts lparams (peelBinders ty hyps.size) ++
-          carrierPinRefs env genv.facts lparams (peelBinders val hyps.size)
+        let pins := carrierPinRefs env genv.facts lparams (peelBinders ty hyps.size) (floor := floorP) (termOnly := cProt) ++
+          carrierPinRefs env genv.facts lparams (peelBinders val hyps.size) (floor := floorP) (termOnly := cProt)
         extra := extra ++ (pins.toList.eraseDups.toArray.map (s!"carrier-pin: {·}"))
       pure { base with levelDiagnostics := base.levelDiagnostics ++ extra }
     if let some m := pinned then
@@ -2642,7 +2667,9 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
   let shadowOnly : Option (Std.HashSet String) ← match ← IO.getEnv "R2L_SHADOW_ONLY" with
     | some f => pure (some ((← IO.FS.lines f).foldl (fun acc l => if l.trim.isEmpty then acc else acc.insert l.trim) {}))
     | none => pure none
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, phantomDefs, phantomProofs, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog, phaseLog, shadowWin, shadowOccConst, witnesses, witnessOn, retryAborted }
+  -- R-SET: the levels with a named strict lower bound
+  let namedStrict : Std.HashSet String := src.facts.relations.foldl (fun acc (a, r, b) => if r == "lt" && a != "Set" then acc.insert b else acc) {}
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, phantomDefs, phantomProofs, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog, phaseLog, shadowWin, shadowOccConst, witnesses, witnessOn, retryAborted, namedStrict }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   let opaqueData : Std.HashSet String := src.decls.foldl (init := {}) fun m d => match d with
@@ -3125,6 +3152,33 @@ where
                   iface := none
                   break
             finally
+              carrierPinTier.set false
+              levelIdentTier.set false
+          -- R-SET (docs/POLICY_RELAXATIONS.md; switch `R2L_RULE_SET_FLOOR` while measured): a declaration refused by a
+          -- source fact `Set < l` (a body-only level solved at 0) or a carrier pin at 0 is retried with Rocq's structural
+          -- `Set < l` read as `Set ≤ l` for levels no named level forces up (and, with C-PIN / L-IDENT switched on, those
+          -- for unprotected statements); reported `set-floor: l` / `carrier-pin: c`
+          let floorMsg := r.message ++ ((lastTier.map (·.message)).getD "")
+          let wantFloor := (← IO.getEnv "R2L_RULE_SET_FLOOR").isSome &&
+            ((floorMsg.splitOn "native fact Set lt").length > 1 || (floorMsg.splitOn "but its argument is 0").length > 1)
+          if !r.accepted && (retry r.status) && wantFloor then
+            try
+              setFloorTier.set true
+              let unprotStmt := isStmt && !genv.protectedNames.contains c0.name
+              carrierPinTier.set (isStmt && (← IO.getEnv "R2L_RULE_CARRIER_PIN").isSome)
+              levelIdentTier.set (unprotStmt && (← IO.getEnv "R2L_RULE_LEVEL_IDENT").isSome)
+              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
+                                       (false, false, true, false), (false, false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[set-floor] {r'.message}" }
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := r'
+                  iface := none
+                  break
+            finally
+              setFloorTier.set false
               carrierPinTier.set false
               levelIdentTier.set false
           -- rule P (approved): a proposition used at a type, lifted by `PULift` (last tier; only a declaration

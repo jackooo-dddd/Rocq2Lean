@@ -148,6 +148,9 @@ structure GEnv where
   these declarations keep their full source statement — no R2B-S result-sort lowering and no R2B-P
   specialization of a statement level — whether they are requested roots or dependencies. -/
   protectedNames : Std.HashSet String := {}
+  /-- R-SET: the levels with a *named* strict lower bound (`a < l`, `a ≠ Set`); every other level is above `Set` only
+  by Rocq's structural `Set < l`. -/
+  namedStrict : Std.HashSet String := {}
   /-- Statement mode: constants available only as statements (theorems, extracted obligations, opaque
   data: their proof or value is a task for the Lean proving agent): source key ↦ (statement constant,
   the hypotheses of that constant when it is itself a pending artifact, as leaf keys). -/
@@ -2996,7 +2999,8 @@ def summandsLeq (f : IR.UniverseFacts) (lhs rhs : List (String × Nat)) (k : Nat
 solved by Lean's unifier as `σ m`; every native fact between `m` and `Set`, a type level or another
 proof-local level must still hold with each proof-local level read as its solution. -/
 def checkBodyLevel (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std.HashMap String Level)
-    (m : String) (admit : Array String := #[]) (propOffset : Bool := false) : Except String Unit := do
+    (m : String) (admit : Array String := #[]) (propOffset : Bool := false)
+    (floor : Option (Std.HashSet String) := none) : Except String Unit := do
   let summ (x : String) : Except String (List (String × Nat)) :=
     match sol[x]? with
     | some σ => do
@@ -3011,6 +3015,10 @@ def checkBodyLevel (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std
     -- at Sort 1 (the image of Set), so a fact `Set < m` may stem from Prop alone; it is then checked
     -- as `Set ≤ m` (the kernel checks the typing itself)
     let k := if r == "lt" && !(propOffset && a == "Set") then 1 else 0
+    -- R-SET: Rocq's structural `Set < b` (no named level forces `b` strictly up) is read as `Set ≤ b`
+    let k := match floor with
+      | some ns => if a == "Set" && r == "lt" && !ns.contains b then 0 else k
+      | none => k
     unless summandsLeq f (← summ a) (← summ b) k do
       throw s!"proof-local level {m} solved as {sol[m]?}: native fact {a} {r} {b} does not hold for the solution"
 
