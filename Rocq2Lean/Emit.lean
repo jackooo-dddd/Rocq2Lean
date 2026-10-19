@@ -940,9 +940,16 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | .error e => return fromTransError base e
     -- R-OCC (docs/BODY_OCCURRENCE_LEVELS.md, last tier): every sort occurrence of a body-only level of a definition
     -- gets its own level metavariable (not R2B-V result-sort levels: the declared result sort is read from the value)
-    let bodyOcc := !stmt && (← bodyOccTier.get)
+    -- (R-OCC-S, docs/POLICY_RELAXATIONS.md §12: in an unprotected statement, the levels that occur in no binder domain of
+    -- its quantifier telescope — only inside terms, e.g. an `eq_rect_r` motive of a CoqEAL refinement — get per-occurrence
+    -- sort levels likewise; the quantification ranges are unchanged)
+    let occStmt := stmt && !genv.protectedNames.contains c.name
+    let bodyOcc := (!stmt || occStmt) && (← bodyOccTier.get)
     bodyOccLog.set #[]
-    if bodyOcc then bodyOccSet.set ((own.filter fun m => !typeLevels.contains m && !resultLv.contains m).foldl (·.insert ·) {})
+    if bodyOcc then
+      let binderLv := binderLevelsIR body
+      bodyOccSet.set ((own.filter fun m =>
+        (if stmt then !binderLv.contains m else !typeLevels.contains m) && !resultLv.contains m).foldl (·.insert ·) {})
     let valR ← timePhase genv.phaseLog "trans_body" <| runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef?
     bodyOccSet.set {}
     let val ← match valR with
@@ -1409,11 +1416,80 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     -- (an implicit level that typing solved is an own level with a solution, not also a parameter: parameters and
     -- solved levels partition the own levels — entry 16, found by the audit on the R3G-for-definitions tier)
     let globals := (paramLevels ++ implicitLevels.filter (!sol.contains ·) ++ levelInterp.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
+    let floorOn0 ← setFloorTier.get
     let lparams := polyNames ++ globals.toList.map levelParamName
+    -- R-ORIENT (docs/POLICY_RELAXATIONS.md §10, last tiers): unification identified own levels `m₁ … mₖ` with
+    -- one own parameter `u_p` (each `mᵢ` solved as `u_p`); when that solution fails a native fact, the same
+    -- identification is represented by another member `r` (`u_p ↦ u_r`, `p` solved as `u_r`): the same term up
+    -- to the parameter's name. A free parameter `x` the source places between two members (`a ≤ x ≤ b`) is equal
+    -- to them in every model of the identification and is identified too (squeezed). Every solved level is
+    -- then checked against all its facts as before.
+    let mut orientUsed : Array String := #[]
+    let passes (sol : Std.HashMap String Level) (gl : Array String) (m : String) : Bool :=
+      (checkBodyLevel genv.facts gl sol m admitLv cumul).toBool ||
+        (floorOn0 && ((checkBodyLevel genv.facts gl sol m admitLv cumul (floor := some genv.namedStrict)).toBool ||
+          (checkBodyLevel genv.facts gl sol m admitLv cumul (floor := some genv.namedStrict) (diag := true)).toBool))
+    let plain (x : String) : Bool := !admitLv.contains x && !resultLv.contains x && !(levelInterp.any (·.1 == x))
+    let classes : Array String := if !floorOn0 then #[] else paramLevels.filter fun p =>
+      plain p && sol.toArray.any fun (m, σ) => σ == .param (levelParamName p) && plain m
+    let mut globals := globals
+    let mut renames : Array (Name × Name) := #[]
+    for p in classes do
+      let members := sol.toArray.filterMap fun (m, σ) => if σ == .param (levelParamName p) then some m else none
+      let touched := sol.toArray.filterMap fun (m, σ) =>
+        if (collectLevelParams {} (mkSort σ)).params.contains (levelParamName p) then some m else none
+      if touched.all (passes sol globals) then continue
+      -- (squeezed parameters, to a fixpoint)
+      let mut cls := members.push p
+      let mut sq : Array String := #[]
+      let mut grew := true
+      while grew do
+        grew := false
+        for x in globals do
+          if cls.contains x || !plain x then continue
+          if (cls.any fun a => entails genv.facts a x 0) && (cls.any fun b => entails genv.facts x b 0) then
+            cls := cls.push x
+            sq := sq.push x
+            grew := true
+      -- (candidates: the members, those below every other member in the source graph first)
+      let cands := members.push p
+      let low (a : String) : Bool := cls.all fun x => entails genv.facts a x 0
+      let lowFirst := (cands.filter low) ++ (cands.filter (!low ·))
+      for r in lowFirst do
+        let rn := levelParamName r
+        let gone : Array String := ((sq.push p).filter (· != r))
+        let goneN := gone.map levelParamName
+        let sub (σ : Level) : Level := (σ.replace fun x => match x with
+          | .param n => if goneN.contains n then some (.param rn) else none
+          | _ => none).normalize
+        let sol' := (sol.erase r).fold (fun acc m σ => acc.insert m (sub σ)) ({} : Std.HashMap String Level)
+        let sol' := gone.foldl (fun acc x => acc.insert x (.param rn)) sol'
+        let gl' := ((globals.filter (!gone.contains ·)).push r).toList.eraseDups.toArray.qsort (· < ·)
+        if (← IO.getEnv "R2L_ORIENT_DEBUG").isSome then
+          IO.eprintln s!"orient-debug {c.name} {p}->{r} sq={sq}"
+          for m in sol'.toArray.map (·.1) do
+            if !(passes sol' gl' m) then
+              if let .error e := checkBodyLevel genv.facts gl' sol' m admitLv cumul then IO.eprintln s!"orient-debug {c.name} {p}->{r}: {e}"
+        if (sol'.toArray.map (·.1)).all (passes sol' gl') then
+          probe "orient.reoriented"
+          sol := sol'
+          globals := gl'
+          paramLevels := ((paramLevels.filter (!gone.contains ·)).push r).toList.eraseDups.toArray
+          renames := renames ++ goneN.map (·, rn)
+          orientUsed := orientUsed.push s!"{p} -> {r}" ++ sq.map (s!"squeezed: {·} -> {r}")
+          break
+    let lparams := if renames.isEmpty then lparams else polyNames ++ globals.toList.map levelParamName
+    let rnO (e : Expr) : Expr := if renames.isEmpty then e else e.replaceLevel fun x => match x with
+      | .param n => (renames.find? (·.1 == n)).map (.param ·.2)
+      | _ => none
+    let (ty, val, gty, gval) ← if renames.isEmpty then pure (ty, val, gty, gval) else
+      pure (rnO (← instantiateMVars ty), rnO (← instantiateMVars val), rnO (← instantiateMVars gty), rnO (← instantiateMVars gval))
     -- R3 coherence for R2F-c own levels: an argument for `l` must be ι l
     let solι := levelInterp.foldl (fun (m : Std.HashMap String Level) (l, x) => m.insert l x) sol
     let base := { base with bodyLevels := own.filterMap fun m => sol[m]?.map (m, ·) }
     let base := if (← bodyOccLog.get).isEmpty then base else { base with levelDiagnostics := base.levelDiagnostics.push "body-occ" }
+    let base := if orientUsed.isEmpty then base else
+      { base with levelDiagnostics := base.levelDiagnostics ++ orientUsed.map (s!"orient: {·}") }
     for (mv, m) in ← bodyOccLog.get do
       let σ := (← instantiateLevelMVars (.mvar mv)).normalize
       if let .error msg := checkBodyCopy genv.facts globals sol m σ then
@@ -2830,6 +2906,34 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
         ({ source := d.name, kind := match d with | .constant _ => "constant" | _ => "inductive",
            status := if rt then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
            message := if rt then s!"resource limit per declaration: {msg.take 300}" else s!"internal error: {msg.take 600}" }, none)
+    -- R-TARGET (docs/POLICY_RELAXATIONS.md §11): a declaration whose budget ran out on the early tiers after an attempt
+    -- failed on a generated prerequisite statement's levels (R-PREMODEL's case, a tier the ladder did not reach) is
+    -- translated once more, with a fresh budget, with such references read as R-PREMODEL reads them; kept only when
+    -- accepted (a declaration that fails either way keeps its row)
+    let tiers0 ← match genv.tierLog with | some ref => ref.get | none => pure #[]
+    let premodelCase := tiers0.any fun (_, _, m) =>
+      (m.splitOn ".statement: argument").length > 1 && (m.splitOn "is not entailed by the source universe graph").length > 1
+    let (r, genv?, tiers0) ← if r.status == "RESOURCE_LIMIT" && !genv.prereqModel && premodelCase then do
+        if let some ref := genv.tierLog then ref.set #[]
+        let gP := { genv with prereqModel := true }
+        let r2? ← tryCatchRuntimeEx (Sum.inl <$> withTheReader Core.Context limits
+            (withCurrHeartbeats (translateSplit gP results d))) fun e => do
+          saved.restore
+          pure (Sum.inr (← e.toMessageData.toString))
+        match r2? with
+        | .inl (r2, g2) =>
+          let t2 ← match genv.tierLog with | some ref => ref.get | none => pure #[]
+          let tiers0 := tiers0 ++ t2.map fun (l, ms, m) => (s!"target:{l}", ms, m)
+          if r2.accepted then
+            probe "target.premodel_accepted"
+            pure ({ r2 with levelDiagnostics := r2.levelDiagnostics.push "targeted-retry: prereq-model" },
+                  some { g2 with prereqModel := false }, tiers0)
+          else
+            saved.restore
+            pure (r, genv?, tiers0)
+        | .inr m => pure (r, genv?, tiers0.push ("target", 0, s!"RESOURCE_LIMIT | {m.take 300}"))
+      else pure (r, genv?, tiers0)
+    if let some ref := genv.tierLog then ref.set tiers0
     let mut r := r
     r := { r with timeMs := (← IO.monoMsNow) - tDecl, tierTimes := ← match genv.tierLog with | some ref => ref.get | none => pure #[] }
     -- (diagnostics: `R2L_PROGRESS=<file>` appends each finished declaration, so a long run can be followed;
@@ -3189,6 +3293,10 @@ where
           -- check of a universe-rejected row — CoqEAL `Rnat_div_eucl` obligations, `prod_R` given the δ-unfolded `Rnat`)
           let relMismatch := relMismatch || (true && r.status == "UNIVERSE_REJECTED" &&
             (r.message.splitOn "(kernel) application type mismatch").length > 1 && (r.message.splitOn "→ Prop").length > 1)
+          -- (and the same mismatch found by the value's `Meta.check` before the kernel, reported in the row's diagnostics:
+          -- `Rnat_div_eucl`, a Prop relation `fun a b => nat_of_bin b = a` where `hrespectful` takes a Type-valued one)
+          let relMismatch := relMismatch || (r.status == "UNIVERSE_REJECTED" && r.levelDiagnostics.any fun d =>
+            (d.splitOn "Application type mismatch").length > 1 && (d.splitOn "→ Prop").length > 1 && (d.splitOn "→ Type").length > 1)
           let liftPossible := (c0.typeDeps ++ c0.bodyDeps).any genv.liftReach.contains || (!isStmt && irEndsInSort c0.type) || relMismatch
           if !r.accepted && c0.bodyState != "opaque_interface" && (retry r.status || castFail) && liftPossible then
             -- (with the ladder's variants: R2F-c, cumulativity, R3↓, per-occurrence coherence)
@@ -3384,7 +3492,7 @@ where
           -- one level by cumulativity; each copy must satisfy the level's upper-bound facts). Only declarations that
           -- fail every other tier: no accepted row, hence no dependant, changes. (CoqEAL `refines_apply`: one
           -- `Type@{38671}` for the relations of three `eq_rect_r` rewrites, identifying the statement's relation levels)
-          if !r.accepted && !isStmt && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then
+          if !r.accepted && (!isStmt || !genv.protectedNames.contains c0.name) && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then
             let prot := genv.protectedNames.contains c0.name
             bodyOccTier.set true
             try
@@ -3453,12 +3561,14 @@ where
               carrierPinTier.set false
               levelIdentTier.set false
               setFloorTier.set false
-          -- R-PREMODEL (docs/POLICY_RELAXATIONS.md §9; switch `R2L_RULE_PREMODEL` while measured): a declaration refused for
+          -- R-PREMODEL (docs/POLICY_RELAXATIONS.md §8; switch `R2L_RULE_PREMODEL` while measured): a declaration refused for
           -- raising at a generated prerequisite statement is retried with such references checked as models of the
           -- statement's own level facts (with the C-PIN / L-IDENT / R-SET relaxations when those are switched on)
           let preMsg := r.message ++ ((lastTier.map (·.message)).getD "")
           if !r.accepted && (retry r.status) && true &&
-              (preMsg.splitOn ".statement: argument").length > 1 && (preMsg.splitOn "is not entailed by the source universe graph").length > 1 then
+              ((preMsg.splitOn ".statement: argument").length > 1 && (preMsg.splitOn "is not entailed by the source universe graph").length > 1 ||
+                -- (R-ORIENT: a re-represented identification may meet a prerequisite statement's levels)
+                (preMsg.splitOn "does not hold for the solution").length > 1) then
             try
               setFloorTier.set (true)
               carrierPinTier.set (isStmt && true)
@@ -3469,6 +3579,7 @@ where
                 let r' ← budgeted c.name "constant" <| processConstant gP results c (stmt := isStmt)
                   (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
                 if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[prereq-model] {r'.message}" }
+                if (← IO.getEnv "R2L_ORIENT_DEBUG").isSome then IO.eprintln s!"tier-debug {c.name} prereq-model {r'.status}: {r'.message.take 700}"
                 if r'.status == "RESOURCE_LIMIT" then break
                 if r'.accepted then
                   r := r'
@@ -3487,7 +3598,9 @@ where
             ((floorMsg.splitOn "native fact Set lt").length > 1 || (floorMsg.splitOn "but its argument is 0").length > 1 ||
               -- (R-COPYDIAG: a copied fact of a solved level)
               (true && (floorMsg.splitOn "does not hold for the solution").length > 1 &&
-                (floorMsg.splitOn "__c").length > 1))
+                (floorMsg.splitOn "__c").length > 1) ||
+              -- (R-ORIENT: a solved level's fact, with the identification re-represented)
+              (floorMsg.splitOn "does not hold for the solution").length > 1)
           if !r.accepted && (retry r.status) && wantFloor then
             try
               setFloorTier.set true
@@ -3499,6 +3612,7 @@ where
                 let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
                   (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
                 if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[set-floor] {r'.message}" }
+                if (← IO.getEnv "R2L_ORIENT_DEBUG").isSome then IO.eprintln s!"tier-debug {c.name} set-floor {r'.status}: {r'.message.take 700}"
                 if r'.status == "RESOURCE_LIMIT" then break
                 if r'.accepted then
                   r := r'

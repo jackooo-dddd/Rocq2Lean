@@ -151,7 +151,7 @@ structure GEnv where
   /-- R-SET: the levels with a *named* strict lower bound (`a < l`, `a ≠ Set`); every other level is above `Set` only
   by Rocq's structural `Set < l`. -/
   namedStrict : Std.HashSet String := {}
-  /-- R-PREMODEL (docs/POLICY_RELAXATIONS.md §9): set on its tier. A reference to a generated prerequisite statement
+  /-- R-PREMODEL (docs/POLICY_RELAXATIONS.md §8): set on its tier. A reference to a generated prerequisite statement
   (a proof task's type) whose arguments satisfy every native fact among the statement's own levels is accepted. -/
   prereqModel : Bool := false
   /-- Statement mode: constants available only as statements (theorems, extracted obligations, opaque
@@ -1840,7 +1840,7 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
     | _ => univArgs ind.mind tgt puinst params
   let sargs := sty.getAppArgs
   unless sty.getAppFn.isConstOf iname && sargs.size == npar + rv.numIndices do
-    failT "TRANSLATION_FAILED" s!"scrutinee type is not an application of {iname}"
+    failT "TRANSLATION_FAILED" s!"scrutinee type is not an application of {iname} (whnf: {(toString sty).take 200})"
   let idx := sargs.extract npar sargs.size
   let large := rv.levelParams.length == indLvls.length + 1
   let recLvls (u : Level) := if large then u :: indLvls else indLvls

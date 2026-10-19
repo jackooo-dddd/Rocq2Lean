@@ -1,7 +1,7 @@
 # Rules of 2026-10-18: carrier pins, level identification, the Set floor, convoys, and their companions
 
-Status: **approved 2026-10-18** (C-PIN and L-IDENT explicitly; the rest under the user's standing approval of the
-same day, "add reasonable rules, no need to ask"). Each rule is a *last tier* or a retry after a refusal: only
+Status: **approved 2026-10-18** (C-PIN and L-IDENT explicitly; the rest — §§3–12 — under the user's standing approval
+of the same day, "add reasonable rules, no need to ask"). Each rule is a *last tier* or a retry after a refusal: only
 declarations that fail every earlier tier are retried, so no accepted row and no dependant of one changes. Each is
 reported in the row (`universe_diagnostics`) and re-derived by the independent audit (`tools/audit.py`). While
 measured one by one (incremental runs from B2, `ITERATION_LOG.md` entry 19) each sits behind a switch
@@ -83,11 +83,68 @@ Rule P's tier (approved, `docs/PROP_LIFT.md`) is also tried when a universe-reje
 failed on a kernel application mismatch at `… → Prop` (CoqEAL `Rnat_div_eucl` obligations: `prod_R` given the
 δ-unfolded `Rnat`). The η-lift of a λ-relation is β-reduced (`fun xs => PULift (b[xs])`), the form the audit compares.
 
-## 8. Candidates measured, not (yet) adopted
+## 7b. R-PGATE, Meta.check form
 
-* S-FREE (`R2L_RULE_SHARED_FREE`): one metavariable per non-own source level at every reference (stage C).
+The same relation mismatch reported by the value's `Meta.check` (before the kernel), in the row's diagnostics, opens the
+tier too (`Rnat_div_eucl`: `fun a b => nat_of_bin b = a : Nat → N → Prop` where `hrespectful` takes `… → Type`).
+
+## 8. R-PREMODEL: a prerequisite statement at a model of its own level facts
+
+A declaration refused because a reference to a generated prerequisite statement (`RocqPending.<leaf>.statement`, the
+type of a pending hypothesis) would raise a level (`argument σ: m + k ≤ l is not entailed`) is retried with such
+references accepted when the arguments, read together, satisfy every native fact among the statement's own levels: the
+hypothesis is the proof task at that instance, which is a model of its own graph. Reported `prereq-model: <statement>`;
+audit: `premodel_ok`. The tier also opens for a row refused by a solved level's fact (R-ORIENT, §10), whose
+re-represented identification may meet a prerequisite statement's levels.
+
+## 9. R-ALL: every relaxation at once
+
+The last tier: all of §§1–8, 10, 12 together, for declarations that need several (CoqEAL `refines_abstr2`: a prerequisite
+model and per-occurrence levels). Each relaxation is reported in the row and re-derived by the audit as when alone.
+
+## 10. R-ORIENT: the representative of an identification
+
+**Shape.** Lean's unifier identified own levels `m₁ … mₖ` of a declaration with one own parameter `u_p` (each `mᵢ` solved
+as `u_p`). Which member of the class becomes the parameter is an accident of unification order. When the solution fails
+a native fact (`proof-local level m solved as u_p: native fact m ≤ b does not hold`), the class is re-represented by
+another member `r` (`u_p ↦ u_r`, `p` solved as `u_r`), lowest members (below every other member in the source graph)
+first.
+
+**Squeeze.** A free parameter `x` that the source places between two members (`a ≤ x ≤ b`, entailed) is equal to them in
+every model of the identification; it is identified too (`x` solved as `u_r`). HB numeric obligations
+(`Builders_8.HB_unnamed_factory_16`): `R : Type@{3686}` used at `3387`, with `3686 ≤ divalg.3442 ≤ 3387`.
+
+**Correspondence.** The term is the same up to the parameter's name (the identification is the unifier's, as before);
+every solved level, the new ones included, is checked against all its native facts exactly as R2B/R2S check solved
+levels. Reported `orient: p -> r` and `squeezed: x -> r`; the audit's `check_body_levels` re-derives every solution
+independently (it does not use the diagnostics). Last tiers only (R-PREMODEL, R-SET, R-ALL).
+
+## 11. R-TARGET: a fresh budget for the tier the ladder did not reach
+
+A declaration whose per-declaration budget ran out (`RESOURCE_LIMIT`) after an attempt failed on a prerequisite
+statement's levels (R-PREMODEL's case, §8) — the early tiers used the budget before R-PREMODEL's tier was reached
+(`Builders_81.Algebra_isZmodule__to__Algebra_BaseZmoduleNmodule_isZmodule`: its first attempt alone takes ~120 s) — is
+translated once more with a fresh budget and R-PREMODEL's reading from the first attempt. Kept only when accepted;
+reported `targeted-retry: prereq-model` (with R-PREMODEL's `prereq-model:` diagnostics, audited as in §8). A resource
+rule, not a semantic one: only a declaration that fails either way is affected.
+
+## 12. R-OCC-S: per-occurrence levels inside an unprotected statement
+
+R-OCC (`docs/BODY_OCCURRENCE_LEVELS.md`) for an unprotected statement (an extracted obligation): the levels of the
+statement that occur in no binder domain of its ∀-telescope occur only inside terms (CoqEAL refinement obligations: the
+`Type@{38671}` of `refines_apply`'s `eq_rect_r` motives inside the statement); each of their sort occurrences gets a
+fresh level, checked against the level's upper-bound facts as an R-OCC copy. No binder level is copied, so no
+quantification range changes. Reported `body-occ`; the audit's `body_copy_ok` accepts a copy at such a level of an
+unprotected statement row reporting `body-occ` (`STMT_OCC`) and re-checks its facts. Protected statements: unchanged.
+
+## 13. Candidates measured, not (yet) adopted
+
+* S-FREE (`R2L_RULE_SHARED_FREE`): one metavariable per non-own source level at every reference (stage C). Measured alone
+  from B2: −1 claimed root (one Audited Pending row became Blocked Dependency): not adopted.
 * R-OCC + rule P (`R2L_RULE_OCC_LIFT`).
-* Full-budget retry of budget-aborted attempts (`R2L_RETRY_ABORTED`, solver stage B).
+* Full-budget retry of budget-aborted attempts (`R2L_RETRY_ABORTED`, solver stage B). Measured alone from B2: 0. On a
+  subset it accepted a cumulativity attempt whose own levels were neither parameters nor solved (audit: partition): not
+  adopted.
 * R-COVWF (`R2L_RULE_COV_WF`): ineffective (the accessibility lowering does not take indexed inductives either).
 
 Their per-rule numbers are in entry 19.

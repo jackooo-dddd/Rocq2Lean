@@ -48,6 +48,9 @@ FACTS = None     # native universe facts of the audited export (set by main)
 # R-OCC (docs/BODY_OCCURRENCE_LEVELS.md): a sort occurrence of a body-only level may be a per-occurrence copy
 # (reports with "body-occ" rows); the copy is checked here against the level's upper-bound facts.
 BODY_OCC = [False]
+# R-OCC-S (docs/POLICY_RELAXATIONS.md §12): for an unprotected statement row with "body-occ", the statement's levels that
+# occur in no binder domain of its ∀-telescope (copies of their sorts are checked like R-OCC copies)
+STMT_OCC = [set()]
 # C-PIN / L-IDENT (docs/POLICY_RELAXATIONS.md): the current row's reported carrier pins (referenced constants) and
 # level identifications ((b1, b2) pairs); empty for a protected row.
 PIN_OK = [set()]
@@ -3186,7 +3189,8 @@ def body_copy_ok(s, e, body):
     if s["k"] != "type" or len(s["u"]) != 1:
         return False
     x = s["u"][0]
-    if x["l"]["k"] != "global" or x["n"] != 0 or x["l"]["n"] not in body or x["l"]["n"] in ADMIT[0]:
+    if x["l"]["k"] != "global" or x["n"] != 0 or x["l"]["n"] in ADMIT[0] or \
+            (x["l"]["n"] not in body and x["l"]["n"] not in STMT_OCC[0]):
         return False
     m = x["l"]["n"]
     try:
@@ -4654,6 +4658,8 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
             aud.body = sol
             REDUCE[0] = bool(r.get("sort_fact_reduced"))
             ADMIT[0] = set(r.get("admitting_levels") or [])
+            if s_ in leaves and not r.get("protected") and "body-occ" in (r.get("universe_diagnostics") or []):
+                STMT_OCC[0] = source_globals(d["body"], set()) - binder_levels(d["body"])
             try:
                 if decls[s_].get("body_state") == "opaque_interface":
                     # declared at the sort Lean infers for the translated type (the native sort is an
@@ -4679,6 +4685,7 @@ def main_statement(lines, src_path, contract_path, report_path, out_path, metada
                 aud.body = None
                 REDUCE[0] = False
                 ADMIT[0] = set()
+                STMT_OCC[0] = set()
             v["verdict"] = "MATCH"
         except Mismatch as e:
             v["verdict"] = "MISMATCH"
