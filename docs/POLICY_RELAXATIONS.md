@@ -1,6 +1,6 @@
 # Rules of 2026-10-18: carrier pins, level identification, the Set floor, convoys, and their companions
 
-Status: **approved 2026-10-18** (C-PIN and L-IDENT explicitly; the rest — §§3–12 — under the user's standing approval
+Status: **approved 2026-10-18** (C-PIN and L-IDENT explicitly; the rest — §§3–11 — under the user's standing approval
 of the same day, "add reasonable rules, no need to ask"). Each rule is a *last tier* or a retry after a refusal: only
 declarations that fail every earlier tier are retried, so no accepted row and no dependant of one changes. Each is
 reported in the row (`universe_diagnostics`) and re-derived by the independent audit (`tools/audit.py`). While
@@ -99,7 +99,7 @@ re-represented identification may meet a prerequisite statement's levels.
 
 ## 9. R-ALL: every relaxation at once
 
-The last tier: all of §§1–8, 10, 12 together, for declarations that need several (CoqEAL `refines_abstr2`: a prerequisite
+The last tier: all of §§1–8 and 10 together, for declarations that need several (CoqEAL `refines_abstr2`: a prerequisite
 model and per-occurrence levels). Each relaxation is reported in the row and re-derived by the audit as when alone.
 
 ## 10. R-ORIENT: the representative of an identification
@@ -128,16 +128,7 @@ translated once more with a fresh budget and R-PREMODEL's reading from the first
 reported `targeted-retry: prereq-model` (with R-PREMODEL's `prereq-model:` diagnostics, audited as in §8). A resource
 rule, not a semantic one: only a declaration that fails either way is affected.
 
-## 12. R-OCC-S: per-occurrence levels inside an unprotected statement
-
-R-OCC (`docs/BODY_OCCURRENCE_LEVELS.md`) for an unprotected statement (an extracted obligation): the levels of the
-statement that occur in no binder domain of its ∀-telescope occur only inside terms (CoqEAL refinement obligations: the
-`Type@{38671}` of `refines_apply`'s `eq_rect_r` motives inside the statement); each of their sort occurrences gets a
-fresh level, checked against the level's upper-bound facts as an R-OCC copy. No binder level is copied, so no
-quantification range changes. Reported `body-occ`; the audit's `body_copy_ok` accepts a copy at such a level of an
-unprotected statement row reporting `body-occ` (`STMT_OCC`) and re-checks its facts. Protected statements: unchanged.
-
-## 13. Candidates measured, not (yet) adopted
+## 12. Candidates measured, not (yet) adopted
 
 * S-FREE (`R2L_RULE_SHARED_FREE`): one metavariable per non-own source level at every reference (stage C). Measured alone
   from B2: −1 claimed root (one Audited Pending row became Blocked Dependency): not adopted.
@@ -146,5 +137,10 @@ unprotected statement row reporting `body-occ` (`STMT_OCC`) and re-checks its fa
   subset it accepted a cumulativity attempt whose own levels were neither parameters nor solved (audit: partition): not
   adopted.
 * R-COVWF (`R2L_RULE_COV_WF`): ineffective (the accessibility lowering does not take indexed inductives either).
+* R-OCC-S (R-OCC for the non-binder levels of an unprotected statement): **rejected, unsound.** In a statement the copied
+  occurrences are part of what is stated: `test-eq-lowering`'s `neq`, `@eq (A → B → Type@{c}) R S` with `R S` at `b`,
+  had `c` copied and solved to `b`, restating the equality at the smaller type (rule E's lowering, which is admitted only
+  for convertible operands). R-OCC's correspondence (§3 of `docs/BODY_OCCURRENCE_LEVELS.md`) holds only for a value. A sound
+  variant would copy only inside proof subterms (proof-irrelevant), which the translation does not track.
 
 Their per-rule numbers are in entry 19.

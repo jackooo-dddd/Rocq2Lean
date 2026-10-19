@@ -940,16 +940,9 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | .error e => return fromTransError base e
     -- R-OCC (docs/BODY_OCCURRENCE_LEVELS.md, last tier): every sort occurrence of a body-only level of a definition
     -- gets its own level metavariable (not R2B-V result-sort levels: the declared result sort is read from the value)
-    -- (R-OCC-S, docs/POLICY_RELAXATIONS.md §12: in an unprotected statement, the levels that occur in no binder domain of
-    -- its quantifier telescope — only inside terms, e.g. an `eq_rect_r` motive of a CoqEAL refinement — get per-occurrence
-    -- sort levels likewise; the quantification ranges are unchanged)
-    let occStmt := stmt && !genv.protectedNames.contains c.name
-    let bodyOcc := (!stmt || occStmt) && (← bodyOccTier.get)
+    let bodyOcc := !stmt && (← bodyOccTier.get)
     bodyOccLog.set #[]
-    if bodyOcc then
-      let binderLv := binderLevelsIR body
-      bodyOccSet.set ((own.filter fun m =>
-        (if stmt then !binderLv.contains m else !typeLevels.contains m) && !resultLv.contains m).foldl (·.insert ·) {})
+    if bodyOcc then bodyOccSet.set ((own.filter fun m => !typeLevels.contains m && !resultLv.contains m).foldl (·.insert ·) {})
     let valR ← timePhase genv.phaseLog "trans_body" <| runTrans genv (withPath "body" (transClosed body)) gl polyLvls factReduce admitLv lower hypsRef? c.name hypExact sharedRef? coerceRef? phantom eqRef?
     bodyOccSet.set {}
     let val ← match valR with
@@ -3495,7 +3488,7 @@ where
           -- one level by cumulativity; each copy must satisfy the level's upper-bound facts). Only declarations that
           -- fail every other tier: no accepted row, hence no dependant, changes. (CoqEAL `refines_apply`: one
           -- `Type@{38671}` for the relations of three `eq_rect_r` rewrites, identifying the statement's relation levels)
-          if !r.accepted && (!isStmt || !genv.protectedNames.contains c0.name) && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then
+          if !r.accepted && !isStmt && genv.stmtMode && (retry r.status || r.status == "TRANSLATION_FAILED") then
             let prot := genv.protectedNames.contains c0.name
             bodyOccTier.set true
             try
