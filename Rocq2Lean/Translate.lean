@@ -3004,7 +3004,11 @@ def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) 
     throw s!"coherence: source level {l} is a motive level of the referring declaration but not of the referenced one"
   let shift (x : Level) : Level := if cAdmit && !dAdmit then x.succ else x
   if let some s := body[l]? then
-    if σ.normalize == (shift s).normalize then return
+    -- (the solution itself: coherent; for a motive level (R8) nothing more, otherwise its summands are R3-checked
+    -- below like every argument's — a proof-local level solved above the referenced constant's level raises it;
+    -- the audit's check_universe_args does the same; S25 `refine_value_at`: 47805 solved as u_381 at `Rnat`)
+    if σ.normalize == (shift s).normalize && (cAdmit || dAdmit) then return
+    if σ.normalize == (shift s).normalize then pure () else
     -- Rule R: an argument equal to the solution (or R2F image) at every model of the source facts (its
     -- summands are R3-checked below, as every argument's)
     if !cAdmit && !dAdmit && equalAtModels f own σ s then pure () else
