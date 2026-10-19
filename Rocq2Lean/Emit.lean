@@ -1360,7 +1360,9 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let (ty, val, hyps, keepIdx) ← if !hypExact || hyps.isEmpty then pure (ty, val, hyps, (#[] : Array Nat)) else do
       -- (R-P3RES, switch `R2L_RULE_P3_RESID` while measured: residual levels are allowed with per-instance hypotheses;
       -- they stay parameters, justified by the kernel at every value like any residual)
-      unless resid.isEmpty || true do
+      -- (last tiers only: in the early P3 attempt residuals stay refused, so a declaration a later tier accepts keeps
+      -- that translation — CoqEAL `refines_apply`, accepted by R-OCC with its six relation levels; S24 found the leak)
+      unless resid.isEmpty || (← setFloorTier.get) || (← bodyOccTier.get) do
         return { base with status := "UNSUPPORTED_FEATURE", message := "P3 tier: residual levels with per-instance hypotheses" }
       let (ty', val', keep) ← collapseHyps ty val (hyps.map (·.2))
       pure (ty', val', keep.map (hyps[·]!), keep)
@@ -1583,7 +1585,8 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let cProt := genv.protectedNames.contains c.name
     let cPin := stmt && (← carrierPinTier.get)
     let floorP := if (← setFloorTier.get) then some genv.namedStrict else none
-    let mPin := true
+    -- (C-PIN-M: in the pin / floor tiers only, like C-PIN; an early tier keeps the generality check unrelaxed)
+    let mPin := (← carrierPinTier.get) || (← setFloorTier.get)
     let pinned : Option String :=
       if stmt then
         freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) (carrierPins := cPin) (floor := floorP) (termOnly := cProt) (modelPins := mPin) <|>
