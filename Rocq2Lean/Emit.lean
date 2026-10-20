@@ -2742,6 +2742,14 @@ def replayDecl (src : IR.Source) (rp : ReplayInput) (genv : GEnv) (d : IR.Decl) 
       return .error s!"kernel: {msg.take 300}"
   return .ok (rows, g)
 
+/-- One farm worker's result (`translateFarm`). -/
+structure FarmOut where
+  rows : Array DeclResult
+  consts : Array ConstantInfo
+  kept : Bool
+  rcd : Json
+  regRows : Array DeclResult := #[]
+
 /-- Translate all declarations of an export, in order (`asm?`: assembly, see above; `rep?`: an incremental
 run's base run, docs/INCREMENTAL.md). -/
 def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}) (asm? : Option AsmInput := none)
@@ -2818,6 +2826,10 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
       let p := jStr v "synthesized_from"
       if p.isEmpty then m else m.insert p ((m.getD p #[]).push (k, v))
   -- incremental: declarations whose rows differ from the base run's, or that depend on one (transitively)
+  -- the task farm (docs/PARALLEL.md): a translation (not an assembly or an incremental run) with `R2L_JOBS` > 1
+  let jobs := ((← IO.getEnv "R2L_JOBS").bind String.toNat?).getD 1
+  if jobs > 1 && asm?.isNone && rep?.isNone && shadowFile.isNone && !witnessOn then
+    return ← translateFarm src genv protectedNames jobs
   let mut tainted : Std.HashSet String := {}
   let mut declIdx := 0
   for d in src.decls do
@@ -2874,65 +2886,9 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
             continue
           | .error why => replayFallback.modify (·.push (d.name, why))
     let genvBefore := genv
-    addedLog.set #[]
-    probeLog.set {}
-    -- (determinism: the metavariables and free variables of a declaration are named from its own position
-    -- in the export, so its translation does not depend on how many earlier declarations created — the
-    -- order of a set of level metavariables follows their names, e.g. the residual levels' numbering)
-    modifyThe Core.State fun s => { s with ngen := { namePrefix := .num `_r2l declIdx } }
-    -- the heartbeat budget is per declaration; a declaration exceeding it is a RESOURCE_LIMIT row
-    let saved ← saveState
-    if let some ref := genv.tierLog then ref.set #[]
-    if let some ref := genv.phaseLog then ref.set {}
-    if let some ref := genv.shadowWin then ref.set none
-    if genv.witnessOn then witnessRunRef.set none
-    if genv.retryAborted.isSome then abortedRef.set #[]
-    if let some ref := genv.shadowOccConst then ref.set {}
-    let tDecl ← IO.monoMsNow
-    -- (an internal error of one declaration is its TRANSLATION_FAILED row, not the end of the run)
-    -- resource limits per declaration (docs/TRUST.md): reflection proofs (ring/lia certificates)
-    -- evaluate the translated normalizers on concrete data during the checks
     let limits := fun (c : Core.Context) => { c with maxRecDepth := 8192, maxHeartbeats := c.maxHeartbeats * 5 }
-    let r? ← tryCatchRuntimeEx (Sum.inl <$> withTheReader Core.Context limits
-        (withCurrHeartbeats (translateSplit genv results d))) fun e => do
-      saved.restore
-      pure (Sum.inr (e.isRuntime, ← e.toMessageData.toString))
-    let (r, genv?) := match r? with
-      | .inl (r, genv') => (r, some genv')
-      | .inr (rt, msg) =>
-        ({ source := d.name, kind := match d with | .constant _ => "constant" | _ => "inductive",
-           status := if rt then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
-           message := if rt then s!"resource limit per declaration: {msg.take 300}" else s!"internal error: {msg.take 600}" }, none)
-    -- R-TARGET (docs/POLICY_RELAXATIONS.md §11): a declaration whose budget ran out on the early tiers after an attempt
-    -- failed on a generated prerequisite statement's levels (R-PREMODEL's case, a tier the ladder did not reach) is
-    -- translated once more, with a fresh budget, with such references read as R-PREMODEL reads them; kept only when
-    -- accepted (a declaration that fails either way keeps its row)
-    let tiers0 ← match genv.tierLog with | some ref => ref.get | none => pure #[]
-    let premodelCase := tiers0.any fun (_, _, m) =>
-      (m.splitOn ".statement: argument").length > 1 && (m.splitOn "is not entailed by the source universe graph").length > 1
-    let (r, genv?, tiers0) ← if r.status == "RESOURCE_LIMIT" && !genv.prereqModel && premodelCase then do
-        if let some ref := genv.tierLog then ref.set #[]
-        let gP := { genv with prereqModel := true }
-        let r2? ← tryCatchRuntimeEx (Sum.inl <$> withTheReader Core.Context limits
-            (withCurrHeartbeats (translateSplit gP results d))) fun e => do
-          saved.restore
-          pure (Sum.inr (← e.toMessageData.toString))
-        match r2? with
-        | .inl (r2, g2) =>
-          let t2 ← match genv.tierLog with | some ref => ref.get | none => pure #[]
-          let tiers0 := tiers0 ++ t2.map fun (l, ms, m) => (s!"target:{l}", ms, m)
-          if r2.accepted then
-            probe "target.premodel_accepted"
-            pure ({ r2 with levelDiagnostics := r2.levelDiagnostics.push "targeted-retry: prereq-model" },
-                  some { g2 with prereqModel := false }, tiers0)
-          else
-            saved.restore
-            pure (r, genv?, tiers0)
-        | .inr m => pure (r, genv?, tiers0.push ("target", 0, s!"RESOURCE_LIMIT | {m.take 300}"))
-      else pure (r, genv?, tiers0)
-    if let some ref := genv.tierLog then ref.set tiers0
+    let (r, genv?) ← translateBudgeted genv results d declIdx
     let mut r := r
-    r := { r with timeMs := (← IO.monoMsNow) - tDecl, tierTimes := ← match genv.tierLog with | some ref => ref.get | none => pure #[] }
     -- (diagnostics: `R2L_PROGRESS=<file>` appends each finished declaration, so a long run can be followed;
     -- not part of any report)
     if let some f := (← IO.getEnv "R2L_PROGRESS") then
@@ -3076,6 +3032,199 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
       else if depChanged then tainted := tainted.insert d.name
   return out
 where
+  /-- One declaration under the per-declaration budget (with R-TARGET), from a clean per-thread state (added-constant
+  log, probes, attempt logs): its row and, unless it raised, its environment update. -/
+  translateBudgeted (genv : GEnv) (results : Std.HashMap String DeclResult) (d : IR.Decl) (declIdx : Nat) :
+      MetaM (DeclResult × Option GEnv) := do
+    addedLog.set #[]
+    probeLog.set {}
+    -- (determinism: the metavariables and free variables of a declaration are named from its own position
+    -- in the export, so its translation does not depend on how many earlier declarations created — the
+    -- order of a set of level metavariables follows their names, e.g. the residual levels' numbering)
+    modifyThe Core.State fun s => { s with ngen := { namePrefix := .num `_r2l declIdx } }
+    -- the heartbeat budget is per declaration; a declaration exceeding it is a RESOURCE_LIMIT row
+    let saved ← saveState
+    if let some ref := genv.tierLog then ref.set #[]
+    if let some ref := genv.phaseLog then ref.set {}
+    if let some ref := genv.shadowWin then ref.set none
+    if genv.witnessOn then witnessRunRef.set none
+    if genv.retryAborted.isSome then abortedRef.set #[]
+    if let some ref := genv.shadowOccConst then ref.set {}
+    let tDecl ← IO.monoMsNow
+    -- (an internal error of one declaration is its TRANSLATION_FAILED row, not the end of the run)
+    -- resource limits per declaration (docs/TRUST.md): reflection proofs (ring/lia certificates)
+    -- evaluate the translated normalizers on concrete data during the checks
+    let limits := fun (c : Core.Context) => { c with maxRecDepth := 8192, maxHeartbeats := c.maxHeartbeats * 5 }
+    let r? ← tryCatchRuntimeEx (Sum.inl <$> withTheReader Core.Context limits
+        (withCurrHeartbeats (translateSplit genv results d))) fun e => do
+      saved.restore
+      pure (Sum.inr (e.isRuntime, ← e.toMessageData.toString))
+    let (r, genv?) := match r? with
+      | .inl (r, genv') => (r, some genv')
+      | .inr (rt, msg) =>
+        ({ source := d.name, kind := match d with | .constant _ => "constant" | _ => "inductive",
+           status := if rt then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
+           message := if rt then s!"resource limit per declaration: {msg.take 300}" else s!"internal error: {msg.take 600}" }, none)
+    -- R-TARGET (docs/POLICY_RELAXATIONS.md §11): a declaration whose budget ran out on the early tiers after an attempt
+    -- failed on a generated prerequisite statement's levels (R-PREMODEL's case, a tier the ladder did not reach) is
+    -- translated once more, with a fresh budget, with such references read as R-PREMODEL reads them; kept only when
+    -- accepted (a declaration that fails either way keeps its row)
+    let tiers0 ← match genv.tierLog with | some ref => ref.get | none => pure #[]
+    let premodelCase := tiers0.any fun (_, _, m) =>
+      (m.splitOn ".statement: argument").length > 1 && (m.splitOn "is not entailed by the source universe graph").length > 1
+    let (r, genv?, tiers0) ← if r.status == "RESOURCE_LIMIT" && !genv.prereqModel && premodelCase then do
+        if let some ref := genv.tierLog then ref.set #[]
+        let gP := { genv with prereqModel := true }
+        let r2? ← tryCatchRuntimeEx (Sum.inl <$> withTheReader Core.Context limits
+            (withCurrHeartbeats (translateSplit gP results d))) fun e => do
+          saved.restore
+          pure (Sum.inr (← e.toMessageData.toString))
+        match r2? with
+        | .inl (r2, g2) =>
+          let t2 ← match genv.tierLog with | some ref => ref.get | none => pure #[]
+          let tiers0 := tiers0 ++ t2.map fun (l, ms, m) => (s!"target:{l}", ms, m)
+          if r2.accepted then
+            probe "target.premodel_accepted"
+            pure ({ r2 with levelDiagnostics := r2.levelDiagnostics.push "targeted-retry: prereq-model" },
+                  some { g2 with prereqModel := false }, tiers0)
+          else
+            saved.restore
+            pure (r, genv?, tiers0)
+        | .inr m => pure (r, genv?, tiers0.push ("target", 0, s!"RESOURCE_LIMIT | {m.take 300}"))
+      else pure (r, genv?, tiers0)
+    if let some ref := genv.tierLog then ref.set tiers0
+    let r := { r with timeMs := (← IO.monoMsNow) - tDecl, tierTimes := ← match genv.tierLog with | some ref => ref.get | none => pure #[] }
+    return (r, genv?)
+
+  /-- The task farm (`R2L_JOBS=N`, N > 1; `docs/PARALLEL.md`): each constant is translated on one of N dedicated
+  threads, in a snapshot of the environment holding all its dependencies, as soon as they are installed; the main
+  thread installs each result as an incremental replay installs a base run's (its constants through the checked
+  kernel, its registration from its rows by `replayRegistration`), in completion order. Inductive blocks are
+  translated on the main thread. A declaration keeps the name prefix of its export position and sees only installed
+  declarations, so its rows do not depend on the schedule (the closure-shard runs: rows identical to a sequential
+  run). Rows are reported in export order. -/
+  translateFarm (src : IR.Source) (genv0 : GEnv) (protectedNames : Std.HashSet String) (jobs : Nat) :
+      MetaM (Array DeclResult) := do
+    let decls := src.decls
+    let n := decls.size
+    let mut idxOf : Std.HashMap String Nat := {}
+    for k in [0:n] do idxOf := idxOf.insert decls[k]!.name k
+    let deps : Array (Array Nat) := (List.range n).toArray.map fun k =>
+      ((declDeps decls[k]!).filterMap idxOf.get?).filter (· != k) |>.toList.eraseDups.toArray
+    let mut waiting : Array Nat := deps.map (·.size)
+    let mut dependents : Array (Array Nat) := Array.replicate n #[]
+    for k in [0:n] do
+      for x in deps[k]! do dependents := dependents.modify x (·.push k)
+    let mut ready : Std.HashSet Nat := (List.range n).foldl (fun acc k => if waiting[k]! == 0 then acc.insert k else acc) {}
+    let mut genv := genv0
+    let mut results : Std.HashMap String DeclResult := {}
+    let mut outs : Array (Array DeclResult) := Array.replicate n #[]
+    let mut recs : Array (Option Json) := Array.replicate n none
+    let mut running : Array (Task (Nat × Except String FarmOut)) := #[]
+    let mut nRunning := 0
+    let mut nDone := 0
+    let ctxCore ← readThe Core.Context
+    let progress ← IO.getEnv "R2L_PROGRESS"
+    while nDone < n do
+      -- dispatch: ready constants, lowest export position first, while a worker is free; an inductive block is
+      -- translated here, on the main thread
+      let mut inline? : Option Nat := none
+      while nRunning < jobs && !ready.isEmpty do
+        let k := ready.fold (init := n) fun m x => min m x
+        ready := ready.erase k
+        match decls[k]! with
+        | .inductive _ => inline? := some k; break
+        | .constant _ =>
+          let sCore ← getThe Core.State
+          let g := genv
+          let rs := results
+          let act : MetaM FarmOut := farmWork src g rs decls[k]! (k + 1) protectedNames
+          let t ← IO.asTask (prio := .dedicated) (do
+            let (o, _, _) ← act.toIO ctxCore sCore
+            pure o)
+          running := running.push (t.map (sync := true) fun e => (k, match e with
+            | .ok o => .ok o
+            | .error err => .error (toString err)))
+          nRunning := nRunning + 1
+      -- install one result: an inline block, else the first worker to finish
+      let (k, o?) ← match inline? with
+        | some k => do
+          let (r, genv?) ← translateBudgeted genv results decls[k]! (k + 1)
+          if let some g := genv? then genv := g
+          pure (k, Except.ok ({ rows := #[{ r with protectedIface := protectedNames.contains r.source }], consts := #[], kept := false, rcd := .null } : FarmOut))
+        | none => do
+          if h : running.toList.length > 0 then
+            let (k, o) ← IO.waitAny running.toList h
+            pure (k, o)
+          else throwError "task farm: no declaration is ready and none is running (cyclic dependencies?)"
+      if inline?.isNone then
+        running ← running.filterM fun t => do return !(← IO.hasFinished t) || (t.get).1 != k
+        nRunning := nRunning - 1
+      let d := decls[k]!
+      let rows ← match o? with
+        | .ok o => do
+          -- its constants, in the order the worker installed them (a name already present is not added twice)
+          let mut bad : Option String := none
+          for ci in o.consts do
+            if (← getEnv).contains ci.name then continue
+            match declOfInfo ci with
+            | some decl =>
+              match ← addChecked decl with
+              | .accepted => pure ()
+              | .rejected msg => bad := some s!"task farm: installing {ci.name}: {msg.take 300}"
+            | none => bad := some s!"task farm: {ci.name} is not a definition, theorem or opaque constant"
+          if o.kept then
+            match replayRegistration src genv d o.regRows true with
+            | .ok g => genv := g
+            | .error e => bad := some s!"task farm: registration: {e}"
+          if let some m := bad then
+            pure #[{ source := d.name, kind := "constant", status := "TRANSLATION_FAILED", message := m }]
+          else
+            recs := recs.set! k (some o.rcd)
+            pure o.rows
+        | .error e => pure #[{ source := d.name, kind := "constant", status := "TRANSLATION_FAILED", message := s!"internal error (task farm): {e.take 600}" }]
+      for x in rows do results := results.insert x.source x
+      outs := outs.set! k rows
+      if let some f := progress then
+        IO.FS.withFile f .append fun h => do
+          for x in rows do if x.source == d.name then h.putStrLn s!"{x.timeMs}\t{x.status}\t{x.source}"
+      nDone := nDone + 1
+      for x in dependents[k]! do
+        waiting := waiting.modify x (· - 1)
+        if waiting[x]! == 0 then ready := ready.insert x
+    for r? in recs do if let some r := r? then replayRecords.modify (·.push r)
+    return outs.foldl (· ++ ·) #[]
+
+  /-- A farm worker: one constant from a clean per-thread state, with its own attempt log; its rows (in report
+  order), the constants it installed, whether its environment update is kept, its replay record. -/
+  farmWork (src : IR.Source) (genv0 : GEnv) (results : Std.HashMap String DeclResult) (d : IR.Decl) (declIdx : Nat)
+      (protectedNames : Std.HashSet String) : MetaM FarmOut := do
+    let genv := { genv0 with tierLog := some (← IO.mkRef #[]), phaseLog := none, shadowWin := none, shadowOccConst := none }
+    let (r, genv?) ← translateBudgeted genv results d declIdx
+    let env ← getEnv
+    let mut seen : Std.HashSet Name := {}
+    let mut added := #[]
+    for nm in (← addedLog.get).reverse do
+      if env.contains nm && !seen.contains nm then
+        seen := seen.insert nm
+        added := added.push nm
+    let addedR := added.reverse
+    let rowsNow := r.synthetic.filter (·.syntheticKind == "termination") ++ #[r] ++ r.synthetic.filter (·.syntheticKind != "termination")
+    let mut rcd := replayRecord d genv?.isSome addedR rowsNow (← probeLog.get)
+    let recRows := (rcd.getObjValAs? (Array Json) "rows").toOption.getD #[]
+    let regRows := (rowsNow.zip recRows).map fun (x, rr) => rowOfJson x.toJson rr none
+    if let (.constant _, some g) := (d, genv?) then
+      let keysS := #[d.name, d.name ++ ".statement", d.name ++ ".type"] ++ rowsNow.map (·.source)
+      let keysN := (rowsNow.filterMap (·.target)).push ``PULift
+      let bad := match replayRegistration src genv d regRows true with
+        | .ok g' => genvDiff g g' keysS keysN
+        | .error e => #[e]
+      unless bad.isEmpty do rcd := rcd.setObjVal! "selfcheck" (Json.arr (bad.map Json.str))
+    -- the rows as the sequential loop reports them: termination statements first, the declaration, then the rest
+    let r1 := { r with protectedIface := protectedNames.contains r.source, synthetic := #[] }
+    let rows := r.synthetic.filter (·.syntheticKind == "termination") ++ #[r1] ++ r.synthetic.filter (·.syntheticKind != "termination")
+    return { rows, consts := addedR.filterMap env.find?, kept := genv?.isSome, rcd, regRows }
+
   /-- R-SPLIT (docs/LEVEL_SPLIT.md, experimental): a declaration with an eligible level is first
   translated through its split view (each copy a universe parameter; the copies inherit the level's
   upper bounds); if that view is not accepted, the declaration is translated as before. References
