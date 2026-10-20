@@ -1,4 +1,5 @@
 import Lean
+import Rocq2Lean.TLRef
 import Rocq2Lean.IR
 
 /-!
@@ -20,7 +21,7 @@ namespace Rocq2Lean
 while translating the current declaration (in any attempt, accepted or not), with counts. They are written
 to the declaration's replay record, so that a change confined to one branch selects exactly the
 declarations that reached it. Diagnostics only: a probe never changes a result. -/
-initialize probeLog : IO.Ref (Std.HashMap String Nat) ← IO.mkRef {}
+initialize probeLog : TLRef ((Std.HashMap String Nat)) ← TLRef.new ({})
 
 def probe (name : String) : Lean.Meta.MetaM Unit := probeLog.modify fun m => m.insert name (m.getD name 0 + 1)
 
@@ -347,10 +348,10 @@ def factReduceUniverse (f : IR.UniverseFacts) (u : Array LevelExpr) : Array Leve
 
 /-- R-OCC (docs/BODY_OCCURRENCE_LEVELS.md): the body-only levels whose sort occurrences each get a fresh level
 metavariable, and the copies made (metavariable, source level). Set per attempt around the body's translation. -/
-initialize bodyOccSet : IO.Ref (Std.HashSet String) ← IO.mkRef {}
-initialize bodyOccLog : IO.Ref (Array (LMVarId × String)) ← IO.mkRef #[]
+initialize bodyOccSet : TLRef ((Std.HashSet String)) ← TLRef.new ({})
+initialize bodyOccLog : TLRef ((Array (LMVarId × String))) ← TLRef.new (#[])
 /-- R-OCC: set while the per-occurrence last tier runs. -/
-initialize bodyOccTier : IO.Ref Bool ← IO.mkRef false
+initialize bodyOccTier : TLRef (Bool) ← TLRef.new (false)
 /-- Lean sort level of a source `Type@{u}` in the pilot fragment: `Set + n ↦ n + 1`, `max`
 componentwise. Global monomorphic levels and polymorphic variables are rejected. -/
 def transTypeLevel (u : Array LevelExpr) : TransM Level := do
@@ -425,9 +426,9 @@ def lookupInd (i : IndRef) : TransM IndTarget := do
 /-- Rule S-FREE (candidate, `R2L_RULE_SHARED_FREE`, a last tier): one level metavariable per source level that is not an
 own level, at every reference of the attempt (monomorphic Rocq: the level is one level at all of them), instead of a
 fresh one per reference. Set per attempt (`sharedFreeTier`), reset at the start of each attempt. -/
-initialize sharedFreeOn : IO.Ref Bool ← IO.mkRef false
-initialize sharedFreeMap : IO.Ref (Std.HashMap String Level) ← IO.mkRef {}
-initialize sharedFreeTier : IO.Ref Bool ← IO.mkRef false
+initialize sharedFreeOn : TLRef (Bool) ← TLRef.new (false)
+initialize sharedFreeMap : TLRef ((Std.HashMap String Level)) ← TLRef.new ({})
+initialize sharedFreeTier : TLRef (Bool) ← TLRef.new (false)
 
 /-- Universe arguments at a reference to a declaration whose parameters stand for the source global
 levels `globals` (in parameter order): a level that is also one of the referring declaration's own

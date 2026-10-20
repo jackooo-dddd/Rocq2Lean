@@ -1,4 +1,5 @@
 import Lean
+import Rocq2Lean.TLRef
 
 /-!
 # Checked kernel insertion
@@ -22,7 +23,7 @@ inductive KernelResult where
 /-- Incremental runs (docs/INCREMENTAL.md): the names of the declarations installed by `addChecked`, in
 order. The translator clears it before each source declaration and keeps the names still present after
 it, so a later run can install the same declarations without translating it. -/
-initialize addedLog : IO.Ref (Array Name) ← IO.mkRef #[]
+initialize addedLog : TLRef ((Array Name)) ← TLRef.new (#[])
 
 /-- Submit `decl` to the Lean kernel and, if it is accepted, install the extended environment. -/
 def addChecked (decl : Declaration) : CoreM KernelResult := do
