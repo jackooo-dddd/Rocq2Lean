@@ -2118,3 +2118,103 @@ last tier no accepted row changes.
 `coverage/S23.json`, `coverage/transitions-S22-to-S23.json`, `RULE_BACKLOG.{md,json}`, `PROOF_TASKS.jsonl`,
 `TRANSLATION_RESULTS.json`, `provenance/CORPUS_MANIFEST.json`, `termination/CONVERSION_DEPENDENCE-S23.json`,
 `timing/translation_timing-S23.json` (S23).
+
+## Entry 19 — The rules of 2026-10-18/19: measured one by one, adopted together (2026-10-19/20)
+
+Branch `rules-orient` (worktree `r2l-tgt`), from `integ` (= `rules-bodyocc` + `incremental`, speed included) through
+`rules-cand` and `rules-adopt`; final code `d8f3a10`. Record: `docs/POLICY_RELAXATIONS.md`. C-PIN and L-IDENT approved
+explicitly on 2026-10-18; the others under the user's standing approval of the same day ("add reasonable rules, no
+need to ask"). Every rule is a last tier (or a retry after a refusal), reported in the row and re-derived by the
+independent audit.
+
+### (1) Method
+
+Each candidate rule sat behind a switch `R2L_RULE_*` and was measured alone as an incremental run from the full base
+run B2 (`docs/INCREMENTAL.md`): only B2's failing rows that the rule can affect are re-translated, every changed row
+taints its dependants, the replay is self-checked, then consumer + audit + coverage against B2. Then all rules at once
+(incremental, `all-v2`), then adopted (switches removed) and validated by full corpus runs (S24, S25).
+
+### (2) Rules and their measured effect (protected roots newly claimed, incremental from B2)
+
+| Rule | § | Alone | Note |
+|---|---|---|---|
+| R-CONVOY (βζι at match convoys before the structural lowering) | 6 | **+9** | CoqEAL parametricity lemmas `map_R`, `filter_R`, … |
+| R-SET (Rocq's structural `Set < l` read as `Set ≤ l` for levels no named level forces up) | 3 | **+13** | Classic `concrete_taskset`, `ts_*` examples |
+| C-PIN + L-IDENT (+ C-PIN-M) (policy tier) | 1, 2 | 0 / 0 / with R-SET +13 | the pins need R-SET's floor |
+| R-OCC + rule P | — | +2 | |
+| R-PGATE | 7 | 0 | |
+| R-PREMODEL (prerequisite statement at a model of its own facts) | 8 | 0 alone | needed by the combination (`refines_abstr2`) |
+| R-P3RES, R-COPYDIAG, R-ALL | 5, 4, 9 | in the combination | |
+| **all of them together (`all-v2`)** | | **+31** | 0 regressions, audit and consumer OK |
+| S-FREE (one level per non-own source level at every reference) | 12 | **−1** | not adopted |
+| full-budget retry of aborted attempts (`R2L_RETRY_ABORTED`) | 12 | 0 | not adopted |
+| R-COVWF | 12 | ineffective | dropped |
+
+### (3) Full corpus
+
+| Run | Code | Accepted | Audited Pending | Blocked | Direct Failure | Unclaimed |
+|---|---|---|---|---|---|---|
+| S22 (entry 17) | | 685 | 3,610 | 153 | 26 | 179 |
+| S23 (entry 18) | | 685 | 3,617 | 145 | 27 | 172 |
+| S24 | `b64797a` (rules always on) | 685 | 3,641 | 123 | 25 | 148, **3 S23 roots lost** |
+| S25 | `3a26dfa` | 685 | 3,648 | 118 | 23 | 141, 0 lost, audit: 1 problem |
+| **S25 + R3 fix (S25i)** | **`d8f3a10`** | **685** | **3,647** | **118** | **24** | **142**, 0 lost |
+
+* **S24 found a leak.** With the switches removed, R-P3RES (residual levels with per-instance hypotheses) and C-PIN-M
+  were active in *early* tiers: the early P3 attempt accepted CoqEAL `refines_apply` with its relation levels
+  `38758`, `38763` identified, instead of R-OCC with six parameters as in B2; `refines_abstr2` and then `refine_ltn`,
+  `refine_foldr`, `refine_hep_task` failed. The incremental measurements could not see it: they re-translate only
+  failing rows. Fixed (`3150470`): both apply on the last tiers only. **Lesson: a rule adopted from incremental
+  measurements is validated by a full run with a row-level leak check** (`notes/leakcheck.py BASE NEW`: rows the
+  base accepted that the new run lost or translated differently). S25: 0 such rows against B2 and against S23.
+* **S25's audit found a translator/audit inconsistency** (`refine_value_at`): `checkInstantiation` accepted an argument
+  equal to the referring declaration's solution of the level without R3, the audit R3-checks it; the solution
+  (`47805 := u_381`) raised `Rnat`'s level. Fixed in the translator (`d8f3a10`, motive levels unchanged), validated
+  incrementally from S25 (S25i: 197 rows translated, 10,775 replayed, 4 changed, self-check 0, consumer and audit
+  OK). `refine_value_at` is no longer claimed (it was a gain of these rules, not an S23 root).
+* S24's `refine_size` (claimed only through the leak's less general `refines_apply`) is not claimed in S25.
+* Against `all-v2` (incremental): `factory_78` (Builders_74) is no longer accepted — `all-v2` accepted it by an early
+  P3 attempt with residuals; on the last tiers that attempt exceeds the late-tier budget. No protected root depends
+  on it alone (the GEL group needs four more blockers). Next round.
+
+### (4) Rules tried and withdrawn
+
+* **R-OCC-S** (R-OCC for the non-binder levels of an unprotected statement): **unsound**, caught by
+  `test-eq-lowering`: `neq`'s `@eq (A → B → Type@{c}) R S` was restated at `R`'s level, rule E's lowering, admitted
+  only for convertible operands. In a statement the copied sorts are part of the statement; R-OCC's correspondence
+  holds only for values.
+* **R-ORIENT** (re-represent a unifier identification by another member, squeezing parameters between members) and
+  **R-TARGET** (a fresh-budget retry with R-PREMODEL after `RESOURCE_LIMIT`): kept (last tiers, audited), **0 rows**
+  in S25. The HB numeric obligations they target have a second obstacle (phantom levels `HB.structures.23` copies
+  against `divalg.3106`).
+
+### (5) Validation
+
+* Suites on `d8f3a10` (frozen `r2l-adopt-test`): the 18 statement suites and `test-all` 18/18 (2026-10-20 14:30).
+* S25i: consumer OK, audit OK, source instances OK, provenance, conversion dependence (one unexplained kernel failure,
+  `refine_total_hep_rbf'` obligation 5, as since S22).
+
+### (6) Speed
+
+| Run | Wall (translate) | Σ per-declaration |
+|---|---|---|
+| S22 | 6h58m | 24,962 s |
+| B1 (speed + incremental) | 5h41m | 20,278 s |
+| B2 (B1 + R-OCC) | 6h16m | 22,398 s |
+| S24 | 7h44m | 27,658 s |
+| S25 | 10h24m (shared machine) | 37,252 s |
+
+The rules are last tiers: a row that still fails pays for them (S25's gate widenings for R-ORIENT: the 96 HB numeric
+obligations ~200 s each instead of ~134 s, no gain). Incremental: a replay of the whole corpus 86–93 s.
+
+**Parallel translation by closure shards** (4 shards of B1's export, `r2l-par`): every shard carries the closure of
+its roots, 4,916–9,080 of 10,972 declarations; per shard 1h47m–4h52m, peak 12.7–19.2 GB; all 4,270 protected rows
+claimed by B1 claimed in the shards, rows identical except the residual record's numbering of one row
+(`choice.HB_unnamed_factory_57`). Wall with 4 shards ≈ 4h52m vs 5h41m (1.17×) at ~4× the memory: not worth it. The
+simulation from S21s timings gives 3.95× (4 workers) / 7.58× (8) for an in-process declaration-level task farm.
+
+### (7) Evidence
+
+`coverage/S25.json` (S25i), `coverage/transitions-S23-to-S25.json`, `RULE_BACKLOG.{md,json}`, `PROOF_TASKS.jsonl`,
+`TRANSLATION_RESULTS.json`, `provenance/CORPUS_MANIFEST.json`, `termination/CONVERSION_DEPENDENCE-S25.json`,
+`timing/translation_timing-S25.json` (S25, full run).

@@ -1,7 +1,7 @@
 {
  "schema": "rocq2lean-conversion-dependence/1",
- "run": "/home/shunqwang4/research/r2l-run-S23/runs/st-corpus-S23",
- "translation_report_sha256": "e03a711094fd4effb3eb3ffc5ad7f8895be39cf658cb015345d3a24b0e81a275",
+ "run": "/home/shunqwang4/research/r2l-run-S25/runs/st-corpus-S25i",
+ "translation_report_sha256": "1489baa7cccfd887a91e22510844da459ca03a7844a09bb969f2e1982410b30c",
  "lowered": [
   "mathcomp.boot.div.edivn_rec",
   "mathcomp.boot.div.gcdn",
@@ -14,12 +14,22 @@
   {
    "part": 0,
    "exit": 0,
-   "seconds": 9.0
+   "seconds": 8.2
   },
   {
    "part": 1,
    "exit": 0,
-   "seconds": 9.3
+   "seconds": 8.3
+  },
+  {
+   "part": 2,
+   "exit": 0,
+   "seconds": 7.8
+  },
+  {
+   "part": 3,
+   "exit": 0,
+   "seconds": 7.9
   }
  ],
  "by_rocq_verdict": {

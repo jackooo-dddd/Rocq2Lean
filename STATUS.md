@@ -1,5 +1,13 @@
 # Status
 
+**2026-10-20 — The rules of 2026-10-18/19 (merged into `main` after validation).**
+* **Rules adopted** (`docs/POLICY_RELAXATIONS.md`, all last tiers, audited): C-PIN, L-IDENT, R-SET, R-COPYDIAG,
+  R-P3RES, R-CONVOY, R-PGATE, R-PREMODEL, R-ALL, R-ORIENT, R-TARGET. Withdrawn: R-OCC-S (unsound). Not adopted:
+  S-FREE, full-budget retry.
+* **Corpus** at `d8f3a10` (S25 + incremental S25i; consumer, audit, provenance, conversion and tasks OK):
+  **685 Accepted / 3,647 Audited Pending / 118 Blocked / 24 Direct Failure**, 142 unclaimed (S23: 685 / 3,617 /
+  145 / 27); 0 claimed rows lost against S23 and B2. Suites 18/18 and `test-all` 18/18. ITERATION_LOG entry 19.
+
 **2026-10-18 — R-OCC: per-occurrence levels for body-only levels (merged into `main` after validation).**
 * **Rule adopted (approved 2026-10-18):** R-OCC, a last tier for definitions (`docs/BODY_OCCURRENCE_LEVELS.md`).
 * **Corpus** at `79d89a5` (run `r2l-run-S23`; consumer, audit, provenance, conversion and tasks OK):
