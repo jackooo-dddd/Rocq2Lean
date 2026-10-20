@@ -1,4 +1,5 @@
 import Lean
+import Rocq2Lean.TLRef
 import Rocq2Lean.IR
 import Rocq2Lean.Kernel
 import Rocq2Lean.Translate
@@ -361,10 +362,10 @@ private structure PinCtx where
   modelPins : Bool := false
 
 /-- C-PIN / L-IDENT: set while the policy-relaxation last tier runs (unprotected statements only). -/
-initialize carrierPinTier : IO.Ref Bool ← IO.mkRef false
-initialize setFloorTier : IO.Ref Bool ← IO.mkRef false
-initialize identRef : IO.Ref (Array String) ← IO.mkRef #[]
-initialize levelIdentTier : IO.Ref Bool ← IO.mkRef false
+initialize carrierPinTier : TLRef (Bool) ← TLRef.new (false)
+initialize setFloorTier : TLRef (Bool) ← TLRef.new (false)
+initialize identRef : TLRef ((Array String)) ← TLRef.new (#[])
+initialize levelIdentTier : TLRef (Bool) ← TLRef.new (false)
 
 private def mkPinCtx (facts : IR.UniverseFacts) (own : List Name) : PinCtx := Id.run do
   let mut m : Std.HashMap Name String := {}
@@ -555,7 +556,7 @@ private def typeDomains (t : Expr) : Array Expr := Id.run do
 
 /-- P3: leading hypothesis binders of the same leaf at the same type (after universe solving) are
 collapsed into the first; returns the new type, value and the indices of the kept binders. -/
-initialize dupsRef : IO.Ref (Array (Nat × Nat)) ← IO.mkRef #[]
+initialize dupsRef : TLRef ((Array (Nat × Nat))) ← TLRef.new (#[])
 
 /-- R-P3RES: the collapse `collapseHyps` chose (kept binders, duplicate ↦ canonical), applied to another version of the
 same declaration (the generic one, residual levels as parameters), so that both records describe one declaration. -/
@@ -732,11 +733,11 @@ private partial def lowersTo (facts : IR.UniverseFacts) (globals : Array String)
 
 /-- Solver stage B (experiment): the first attempt of the declaration being translated, re-runnable with a
 witness (`R2L_WITNESS`). -/
-initialize witnessRunRef : IO.Ref (Option (Json → MetaM DeclResult)) ← IO.mkRef none
+initialize witnessRunRef : TLRef ((Option (Json → MetaM DeclResult))) ← TLRef.new (none)
 
 /-- Solver stage B (experiment, `R2L_RETRY_ABORTED`): the attempts of the declaration being translated that the
 late-tier budget aborted, by tier label, re-runnable. -/
-initialize abortedRef : IO.Ref (Array (String × (Unit → MetaM DeclResult))) ← IO.mkRef #[]
+initialize abortedRef : TLRef ((Array (String × (Unit → MetaM DeclResult)))) ← TLRef.new (#[])
 
 /-! ## Solver stage A (shadow mode): the universe constraints of a declaration
 
@@ -2572,9 +2573,9 @@ structure ReplayInput where
 
 /-- This run's replay records (one per source declaration, in order), the declarations whose rows
 differ from the base run's, and the replays that fell back to translation (with the reason). -/
-initialize replayRecords : IO.Ref (Array Json) ← IO.mkRef #[]
-initialize replayChanged : IO.Ref (Array String) ← IO.mkRef #[]
-initialize replayFallback : IO.Ref (Array (String × String)) ← IO.mkRef #[]
+initialize replayRecords : TLRef ((Array Json)) ← TLRef.new (#[])
+initialize replayChanged : TLRef ((Array String)) ← TLRef.new (#[])
+initialize replayFallback : TLRef ((Array (String × String))) ← TLRef.new (#[])
 
 /-- A name as its components (not `Name.toString`, whose escaping `String.toName` does not invert). -/
 def nameJson (n : Name) : Json :=
