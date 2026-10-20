@@ -12,13 +12,13 @@
    "mathcomp.boot.div.modn_rec__rocq2lean_termination_1": 458
   }
  },
- "direct_failures": 294,
+ "direct_failures": 299,
  "families": [
   {
    "affected_roots": {
     "classic": 0,
-    "modern": 121,
-    "total": 121
+    "modern": 99,
+    "total": 99
    },
    "category": 1,
    "example_path": [
@@ -36,11 +36,9 @@
    ],
    "example_root": "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_intervals_are_bounded_rs_elf",
    "family": "UNIVERSE_OTHER",
-   "members": 52,
+   "members": 50,
    "members_sample": [
     "Corelib.Classes.CMorphisms.iffT_flip_arrow_subrelation",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_4",
     "mathcomp.order.order/Order/Builders_62.HB_unnamed_factory_64__rocq2lean_obligation_17",
     "mathcomp.order.order/Order/Builders_62.HB_unnamed_factory_64__rocq2lean_obligation_18",
@@ -52,7 +50,9 @@
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_14",
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_15",
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_9",
-    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10"
+    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_11",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_12"
    ],
    "message_shapes": [
     [
@@ -86,87 +86,8 @@
    "reproducer_closure": 7,
    "roots_blocked_only_by_this_family": {
     "classic": 0,
-    "modern": 14,
-    "total": 14
-   },
-   "status": "open"
-  },
-  {
-   "acceptance": "-",
-   "affected_roots": {
-    "classic": 11,
-    "modern": 85,
-    "total": 96
-   },
-   "category": 1,
-   "example_path": [
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_intervals_are_bounded_rs_elf",
-    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.rs_jlfp_interference",
-    "prosa.model.priority.elf.ELF",
-    "prosa.model.priority.gel.GEL",
-    "mathcomp.algebra.ssrint.ssrint_int__canonical__Num_POrderNmodule",
-    "mathcomp.algebra.ssrint.HB_unnamed_mixin_53",
-    "mathcomp.algebra.ssrint.HB_unnamed_factory_37",
-    "mathcomp.algebra.ssrint.HB_unnamed_mixin_30",
-    "mathcomp.algebra.algebraic_hierarchy.rings_modules_and_algebras/GRing/Builders_406.HB_unnamed_factory_411",
-    "mathcomp.algebra.algebraic_hierarchy.rings_modules_and_algebras/GRing/Builders_406.HB_unnamed_factory_411__rocq2lean_obligation_109"
-   ],
-   "example_root": "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_intervals_are_bounded_rs_elf",
-   "family": "SOLUTION_FACT_VIOLATED",
-   "mechanism": "a solved (proof-local or identified) level violates a native fact (R2S/R2B), mostly MathComp nmodule/order structure levels identified by unification.",
-   "members": 140,
-   "members_sample": [
-    "prosa.implementation.refinements.refinements.refine_iota__rocq2lean_obligation_5",
-    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_1",
-    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_2",
-    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_3",
-    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_6",
-    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_7",
-    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_8",
-    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_1",
-    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_2",
-    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_3",
-    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_6",
-    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_7",
-    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_8",
-    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_15",
-    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_16"
-   ],
-   "message_shapes": [
-    [
-     "proof-local level X solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact X le X d",
-     90
-    ],
-    [
-     "proof-local level X solved as (some 0): native fact X le X does not hold for the solution",
-     28
-    ],
-    [
-     "proof-local level X solved as (some 0): native fact Set lt X does not hold for the solution",
-     13
-    ],
-    [
-     "proof-local level X solved as (some (max u_CoqEAL_refinements_binnat_47805__c12 u_CoqEAL_refinements_binnat_47",
-     1
-    ],
-    [
-     "proof-local level X solved as (some (max u_CoqEAL_refinements_binnat_47805__c2 u_CoqEAL_refinements_binnat_478",
-     1
-    ],
-    [
-     "proof-local level X solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_2487): native fact X le X d",
-     1
-    ]
-   ],
-   "minimal_reproducer": "prosa.implementation.refinements.refinements.refine_iota__rocq2lean_obligation_5",
-   "priority": "P2-adjacent",
-   "proposal": "analyse together with max coupling (the identification usually comes from max(...) arguments).",
-   "protected_members": 5,
-   "reproducer_closure": 30,
-   "roots_blocked_only_by_this_family": {
-    "classic": 4,
-    "modern": 3,
-    "total": 7
+    "modern": 4,
+    "total": 4
    },
    "status": "open"
   },
@@ -241,6 +162,85 @@
     "classic": 0,
     "modern": 10,
     "total": 10
+   },
+   "status": "open"
+  },
+  {
+   "acceptance": "-",
+   "affected_roots": {
+    "classic": 9,
+    "modern": 85,
+    "total": 94
+   },
+   "category": 1,
+   "example_path": [
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_intervals_are_bounded_rs_elf",
+    "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.rs_jlfp_interference",
+    "prosa.model.priority.elf.ELF",
+    "prosa.model.priority.gel.GEL",
+    "mathcomp.algebra.ssrint.ssrint_int__canonical__Num_POrderNmodule",
+    "mathcomp.algebra.ssrint.HB_unnamed_mixin_53",
+    "mathcomp.algebra.ssrint.HB_unnamed_factory_37",
+    "mathcomp.algebra.ssrint.HB_unnamed_mixin_30",
+    "mathcomp.algebra.algebraic_hierarchy.rings_modules_and_algebras/GRing/Builders_406.HB_unnamed_factory_411",
+    "mathcomp.algebra.algebraic_hierarchy.rings_modules_and_algebras/GRing/Builders_406.HB_unnamed_factory_411__rocq2lean_obligation_109"
+   ],
+   "example_root": "prosa.analysis.abstract.restricted_supply.bounded_bi.elf.busy_intervals_are_bounded_rs_elf",
+   "family": "SOLUTION_FACT_VIOLATED",
+   "mechanism": "a solved (proof-local or identified) level violates a native fact (R2S/R2B), mostly MathComp nmodule/order structure levels identified by unification.",
+   "members": 139,
+   "members_sample": [
+    "prosa.implementation.refinements.refinements.refine_iota__rocq2lean_obligation_5",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_2",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_3",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_7",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_8",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_2",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_3",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_7",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_8",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_15",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_16"
+   ],
+   "message_shapes": [
+    [
+     "proof-local level X solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_3387): native fact X le X d",
+     90
+    ],
+    [
+     "proof-local level X solved as (some 0): native fact X le X does not hold for the solution",
+     28
+    ],
+    [
+     "proof-local level X solved as (some 0): native fact Set lt X does not hold for the solution",
+     12
+    ],
+    [
+     "proof-local level X solved as (some (max u_CoqEAL_refinements_binnat_47805__c12 u_CoqEAL_refinements_binnat_47",
+     1
+    ],
+    [
+     "proof-local level X solved as (some (max u_CoqEAL_refinements_binnat_47805__c2 u_CoqEAL_refinements_binnat_478",
+     1
+    ],
+    [
+     "proof-local level X solved as (some u_mathcomp_algebra_numeric_hierarchy_numdomain_2487): native fact X le X d",
+     1
+    ]
+   ],
+   "minimal_reproducer": "prosa.implementation.refinements.refinements.refine_iota__rocq2lean_obligation_5",
+   "priority": "P2-adjacent",
+   "proposal": "analyse together with max coupling (the identification usually comes from max(...) arguments).",
+   "protected_members": 4,
+   "reproducer_closure": 30,
+   "roots_blocked_only_by_this_family": {
+    "classic": 2,
+    "modern": 4,
+    "total": 6
    },
    "status": "open"
   },
@@ -406,16 +406,16 @@
    "reproducer_closure": 3,
    "roots_blocked_only_by_this_family": {
     "classic": 0,
-    "modern": 6,
-    "total": 6
+    "modern": 13,
+    "total": 13
    },
    "status": "open"
   },
   {
    "affected_roots": {
     "classic": 0,
-    "modern": 19,
-    "total": 19
+    "modern": 30,
+    "total": 30
    },
    "category": 1,
    "example_path": [
@@ -426,13 +426,20 @@
    ],
    "example_root": "prosa.analysis.facts.priority.gel.hep_job_arrives_before",
    "family": "UNCLASSIFIED",
-   "members": 8,
+   "members": 15,
    "members_sample": [
+    "prosa.implementation.refinements.refinements.refine_b2n",
     "prosa.implementation.refinements.task.refine_Periodic",
     "prosa.implementation.refinements.task.refine_Sporadic",
+    "prosa.implementation.refinements.refinements.refine_size",
     "prosa.implementation.refinements.task.refine_task",
     "prosa.implementation.refinements.task.refine_task'",
     "prosa.implementation.refinements.task.refine_task_set'",
+    "prosa.implementation.refinements.arrival_curve.refine_positive_horizon__rocq2lean_obligation_8",
+    "prosa.implementation.refinements.arrival_curve.refine_positive_horizon__rocq2lean_obligation_9",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
     "mathcomp.algebra.numeric_hierarchy.numdomain/Num/NumDomain/Exports.Num_NumDomain_class__to__GRing_PzSemiRing_class",
     "mathcomp.algebra.numeric_hierarchy.numdomain/Num/NumDomain/Exports.Num_NumDomain_class__to__Num_POrderNmodule_class",
     "mathcomp.algebra.numeric_hierarchy.numdomain/Num/NumDomain/Exports.Num_NumDomain_class__to__Order_Preorder_class"
@@ -440,23 +447,67 @@
    "message_shapes": [
     [
      "default cast annotation is not convertible in Lean",
-     5
+     9
+    ],
+    [
+     "scrutinee type is not an application of Eq",
+     3
     ],
     [
      "projection of X with 1 parameters, the record has 2",
      3
     ]
    ],
-   "minimal_reproducer": "prosa.implementation.refinements.task.refine_Periodic",
+   "minimal_reproducer": "prosa.implementation.refinements.refinements.refine_b2n",
    "priority": "unranked",
-   "protected_members": 3,
-   "reproducer_closure": 37,
+   "protected_members": 5,
+   "reproducer_closure": 26,
    "roots_blocked_only_by_this_family": {
     "classic": 0,
-    "modern": 3,
-    "total": 3
+    "modern": 8,
+    "total": 8
    },
    "status": "open"
+  },
+  {
+   "acceptance": "-",
+   "affected_roots": {
+    "classic": 0,
+    "modern": 20,
+    "total": 20
+   },
+   "category": 1,
+   "example_path": [
+    "prosa.implementation.facts.job_constructor.arrivals_at_unique"
+   ],
+   "example_root": "prosa.implementation.facts.job_constructor.arrivals_at_unique",
+   "family": "REFERENCE_COHERENCE",
+   "mechanism": "an argument for a level shared with the referring declaration is not that level's (R2F) reading: JobType/TaskType's second level is read max(u51+1, u58); unification with a single-level sort `?a+1` makes the bounded solver set the free level to 0 (max(?a+1, ?x) = ?a+1 \u21d2 ?x := 0), which the generality check refuses (last tier).",
+   "members": 5,
+   "members_sample": [
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8",
+    "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals",
+    "prosa.implementation.facts.job_constructor.job_arrival_consistent",
+    "prosa.implementation.facts.job_constructor.arrivals_at_unique",
+    "prosa.implementation.facts.job_constructor.arrivals_between_unique"
+   ],
+   "message_shapes": [
+    [
+     "reference to X: coherence: source level X is shared with the referring declaration, so its argument must be X,",
+     5
+    ]
+   ],
+   "minimal_reproducer": "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8",
+   "priority": "P2-adjacent",
+   "proposal": "a representation question of its own (a single-level occurrence vs a two-level R2F reading; entry 9: not the COUPLED_BINDER_LEVELS mechanism); not changed without approval. Entry 10: the P2 retry tier for definitions (joint identification + bounded solver, kept only with fewer defaults and parameters of the type) and R3G-F's minimal reading resolve some members (3 protected Prosa roots: delay_propagation.propagated_arrival_curve_{valid,respected}, instantiated_task_intra_interference_is_bounded); attribution by ablation in entry 10.",
+   "protected_members": 4,
+   "reproducer_closure": 55,
+   "roots_blocked_only_by_this_family": {
+    "classic": 0,
+    "modern": 4,
+    "total": 4
+   },
+   "status": "diagnosed; partly resolved (entry 10)"
   },
   {
    "acceptance": "-",
@@ -557,45 +608,6 @@
    "acceptance": "-",
    "affected_roots": {
     "classic": 0,
-    "modern": 4,
-    "total": 4
-   },
-   "category": 1,
-   "example_path": [
-    "prosa.implementation.facts.job_constructor.arrivals_at_unique"
-   ],
-   "example_root": "prosa.implementation.facts.job_constructor.arrivals_at_unique",
-   "family": "REFERENCE_COHERENCE",
-   "mechanism": "an argument for a level shared with the referring declaration is not that level's (R2F) reading: JobType/TaskType's second level is read max(u51+1, u58); unification with a single-level sort `?a+1` makes the bounded solver set the free level to 0 (max(?a+1, ?x) = ?a+1 \u21d2 ?x := 0), which the generality check refuses (last tier).",
-   "members": 4,
-   "members_sample": [
-    "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals",
-    "prosa.implementation.facts.job_constructor.job_arrival_consistent",
-    "prosa.implementation.facts.job_constructor.arrivals_at_unique",
-    "prosa.implementation.facts.job_constructor.arrivals_between_unique"
-   ],
-   "message_shapes": [
-    [
-     "reference to X: coherence: source level X is shared with the referring declaration, so its argument must be X,",
-     4
-    ]
-   ],
-   "minimal_reproducer": "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals",
-   "priority": "P2-adjacent",
-   "proposal": "a representation question of its own (a single-level occurrence vs a two-level R2F reading; entry 9: not the COUPLED_BINDER_LEVELS mechanism); not changed without approval. Entry 10: the P2 retry tier for definitions (joint identification + bounded solver, kept only with fewer defaults and parameters of the type) and R3G-F's minimal reading resolve some members (3 protected Prosa roots: delay_propagation.propagated_arrival_curve_{valid,respected}, instantiated_task_intra_interference_is_bounded); attribution by ablation in entry 10.",
-   "protected_members": 4,
-   "reproducer_closure": 145,
-   "roots_blocked_only_by_this_family": {
-    "classic": 0,
-    "modern": 4,
-    "total": 4
-   },
-   "status": "diagnosed; partly resolved (entry 10)"
-  },
-  {
-   "acceptance": "-",
-   "affected_roots": {
-    "classic": 0,
     "modern": 2,
     "total": 2
    },
@@ -671,39 +683,39 @@
   }
  ],
  "pending_proof_tasks": {
-  "protected_pending_rows": 3610,
+  "protected_pending_rows": 3617,
   "tasks_by_kind": {
-   "obligation": 4815,
+   "obligation": 4821,
    "opaque_value": 1,
    "source_assumption": 4,
    "termination_obligation": 3,
-   "theorem_statement": 2717,
+   "theorem_statement": 2718,
    "unfolding_equation": 3
   },
   "top_prerequisites": [
    [
     "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_1",
-    3567
+    3573
    ],
    [
     "Corelib.ssr.ssrbool.iffP__rocq2lean_obligation_2",
-    3567
+    3573
    ],
    [
     "Corelib.ssr.ssrbool.not_false_is_true",
-    3523
+    3529
    ],
    [
     "Corelib.ssr.ssrbool.is_true_true",
-    3522
+    3528
    ],
    [
     "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_1",
-    3510
+    3516
    ],
    [
     "mathcomp.boot.ssrnat.eqnP__rocq2lean_obligation_2",
-    3510
+    3516
    ],
    [
     "mathcomp.boot.eqtype.opt_eqP__rocq2lean_obligation_1",
@@ -727,19 +739,19 @@
    ],
    [
     "mathcomp.boot.eqtype.inj_eqAxiom__rocq2lean_obligation_1",
-    1066
+    1068
    ],
    [
     "mathcomp.boot.eqtype.inj_eqAxiom__rocq2lean_obligation_2",
-    1066
+    1068
    ],
    [
     "mathcomp.boot.choice.nat_hasChoice__rocq2lean_obligation_1",
-    1065
+    1067
    ],
    [
     "mathcomp.boot.choice.nat_hasChoice__rocq2lean_obligation_2",
-    1065
+    1067
    ]
   ]
  },
@@ -2303,33 +2315,6 @@
    "family": "classic",
    "status": "UNIVERSE_REJECTED"
   },
-  "prosa.classic.util.powerset.mem_powerset": {
-   "blocker_families": [
-    "SOLUTION_FACT_VIOLATED"
-   ],
-   "direct_blockers": [
-    "prosa.classic.util.powerset.powerset"
-   ],
-   "example_path": [
-    "prosa.classic.util.powerset.mem_powerset",
-    "prosa.classic.util.powerset.powerset"
-   ],
-   "family": "classic",
-   "status": "BLOCKED_DEPENDENCY"
-  },
-  "prosa.classic.util.powerset.powerset": {
-   "blocker_families": [
-    "SOLUTION_FACT_VIOLATED"
-   ],
-   "direct_blockers": [
-    "prosa.classic.util.powerset.powerset"
-   ],
-   "example_path": [
-    "prosa.classic.util.powerset.powerset"
-   ],
-   "family": "classic",
-   "status": "UNIVERSE_REJECTED"
-  },
   "prosa.implementation.facts.job_constructor.arrivals_at_unique": {
    "blocker_families": [
     "REFERENCE_COHERENCE"
@@ -2463,6 +2448,7 @@
   "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
@@ -2481,16 +2467,15 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_4",
     "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_7",
     "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_8",
-    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1"
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8"
    ],
    "example_path": [
     "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound",
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_4"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -2498,6 +2483,8 @@
   "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
+    "UNCLASSIFIED",
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
@@ -2516,15 +2503,17 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_1",
     "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_4",
-    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8"
    ],
    "example_path": [
     "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_1"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -2532,6 +2521,8 @@
   "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
+    "UNCLASSIFIED",
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
@@ -2550,16 +2541,19 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_1",
     "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_4",
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP__rocq2lean_obligation_1",
-    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8"
    ],
    "example_path": [
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload",
+    "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_1"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -2567,6 +2561,7 @@
   "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
     "SOLUTION_FACT_VIOLATED",
     "UNCLASSIFIED",
     "UNIVERSE_OTHER"
@@ -2587,8 +2582,6 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_1",
     "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_4",
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_1",
@@ -2600,13 +2593,18 @@
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_7",
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_8",
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'__rocq2lean_obligation_9",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
     "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8",
     "prosa.implementation.refinements.task.refine_task'",
     "prosa.implementation.refinements.task.refine_task_set'"
    ],
    "example_path": [
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_FP'",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload",
+    "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_1"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -2614,6 +2612,8 @@
   "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
+    "UNCLASSIFIED",
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
@@ -2632,19 +2632,22 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_4",
     "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_7",
     "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_8",
     "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_1",
     "prosa.implementation.refinements.EDF.refinements.refine_bound_on_total_hep_workload__rocq2lean_obligation_4",
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP__rocq2lean_obligation_1",
-    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8"
    ],
    "example_path": [
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_4"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -2652,6 +2655,7 @@
   "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
     "REFERENCE_RAISING",
     "STATEMENT_FREE_LEVEL_PINNED",
     "UNCLASSIFIED",
@@ -2673,8 +2677,6 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_4",
     "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_7",
     "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_8",
@@ -2697,13 +2699,18 @@
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_7",
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_8",
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'__rocq2lean_obligation_9",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
     "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8",
     "prosa.implementation.refinements.task.refine_task'",
     "prosa.implementation.refinements.task.refine_task_set'"
    ],
    "example_path": [
     "prosa.implementation.refinements.EDF.refinements.refine_check_point_NP'",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.EDF.refinements.refine_blocking_bound__rocq2lean_obligation_4"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -2733,8 +2740,6 @@
     "CoqEAL.refinements.param.filter_R",
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.EDF.refinements.refine_search_space_emax_EDF__rocq2lean_obligation_10",
     "prosa.implementation.refinements.EDF.refinements.refine_search_space_emax_EDF__rocq2lean_obligation_8",
     "prosa.implementation.refinements.EDF.refinements.refine_search_space_emax_EDF__rocq2lean_obligation_9",
@@ -2756,7 +2761,7 @@
    ],
    "example_path": [
     "prosa.implementation.refinements.EDF.refinements.refine_search_space_emax_EDF",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.EDF.refinements.refine_search_space_emax_EDF__rocq2lean_obligation_10"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -2785,8 +2790,6 @@
     "CoqEAL.refinements.param.filter_R",
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_curve.refine_get_horizon_of_task__rocq2lean_obligation_2",
     "prosa.implementation.refinements.arrival_curve.refine_repeat_steps_with_offset__rocq2lean_obligation_11",
     "prosa.implementation.refinements.arrival_curve.refine_repeat_steps_with_offset__rocq2lean_obligation_13",
@@ -2817,6 +2820,7 @@
     "COURSE_OF_VALUES",
     "POLYMORPHIC_INSTANCE",
     "PROP_TYPE_CUMULATIVITY",
+    "REFERENCE_COHERENCE",
     "SOLUTION_FACT_VIOLATED",
     "STATEMENT_FREE_LEVEL_PINNED",
     "UNCLASSIFIED",
@@ -2837,8 +2841,6 @@
     "CoqEAL.refinements.param.filter_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "Corelib.Classes.CMorphisms.eq_proper_proxy",
     "Corelib.Classes.CMorphisms.iffT_flip_arrow_subrelation",
     "Corelib.Classes.CMorphisms.respectful",
@@ -2847,6 +2849,7 @@
     "prosa.implementation.refinements.EDF.refinements.refine_total_rbf'__rocq2lean_obligation_3",
     "prosa.implementation.refinements.EDF.refinements.refine_total_rbf__rocq2lean_obligation_1",
     "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8",
     "prosa.implementation.refinements.task.refine_task_set'"
    ],
    "example_path": [
@@ -2950,19 +2953,17 @@
   },
   "prosa.implementation.refinements.FP.refinements.refine_blocking_bound": {
    "blocker_families": [
-    "COURSE_OF_VALUES",
-    "UNIVERSE_OTHER"
+    "COURSE_OF_VALUES"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.param.filter_R",
     "CoqEAL.refinements.param.foldr_R",
-    "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.param.map_R"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_blocking_bound",
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.refinements.refine_foldr_max",
+    "CoqEAL.refinements.param.filter_R"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -2970,21 +2971,20 @@
   "prosa.implementation.refinements.FP.refinements.refine_blocking_bound'": {
    "blocker_families": [
     "COURSE_OF_VALUES",
-    "UNCLASSIFIED",
-    "UNIVERSE_OTHER"
+    "UNCLASSIFIED"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.param.filter_R",
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.task.refine_task'",
     "prosa.implementation.refinements.task.refine_task_set'"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_blocking_bound'",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.FP.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.refinements.refine_foldr_max",
+    "CoqEAL.refinements.param.filter_R"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -2992,6 +2992,8 @@
   "prosa.implementation.refinements.FP.refinements.refine_check_point": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
+    "UNCLASSIFIED",
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
@@ -3010,14 +3012,16 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.FP.refinements.refine_check_point__rocq2lean_obligation_1",
-    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_check_point",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.FP.refinements.refine_check_point__rocq2lean_obligation_1"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3025,6 +3029,7 @@
   "prosa.implementation.refinements.FP.refinements.refine_check_point'": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
     "SOLUTION_FACT_VIOLATED",
     "UNCLASSIFIED",
     "UNIVERSE_OTHER"
@@ -3045,8 +3050,6 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_1",
     "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_2",
     "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_3",
@@ -3056,13 +3059,17 @@
     "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_7",
     "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_8",
     "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_9",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
     "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8",
     "prosa.implementation.refinements.task.refine_task'",
     "prosa.implementation.refinements.task.refine_task_set'"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_check_point'",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.FP.refinements.refine_check_point'__rocq2lean_obligation_1"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3070,6 +3077,8 @@
   "prosa.implementation.refinements.FP.refinements.refine_check_point_NP": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
+    "UNCLASSIFIED",
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
@@ -3088,14 +3097,18 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.FP.refinements.refine_check_point_NP__rocq2lean_obligation_1",
-    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_check_point_NP",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.FP.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.refinements.refine_foldr_max",
+    "CoqEAL.refinements.param.filter_R"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3103,6 +3116,7 @@
   "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
     "REFERENCE_RAISING",
     "STATEMENT_FREE_LEVEL_PINNED",
     "UNCLASSIFIED",
@@ -3124,8 +3138,6 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_1",
     "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_10",
     "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_11",
@@ -3139,45 +3151,38 @@
     "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_7",
     "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_8",
     "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'__rocq2lean_obligation_9",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
     "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8",
     "prosa.implementation.refinements.task.refine_task'",
     "prosa.implementation.refinements.task.refine_task_set'"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_check_point_NP'",
-    "CoqEAL.refinements.refinements.refines_apply"
-   ],
-   "family": "modern",
-   "status": "BLOCKED_DEPENDENCY"
-  },
-  "prosa.implementation.refinements.FP.refinements.refine_hep_task": {
-   "blocker_families": [
-    "UNIVERSE_OTHER"
-   ],
-   "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply"
-   ],
-   "example_path": [
-    "prosa.implementation.refinements.FP.refinements.refine_hep_task",
-    "CoqEAL.refinements.refinements.refines_abstr2",
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.FP.refinements.refine_blocking_bound'",
+    "prosa.implementation.refinements.FP.refinements.refine_blocking_bound",
+    "prosa.implementation.refinements.refinements.refine_foldr_max",
+    "CoqEAL.refinements.param.filter_R"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
   },
   "prosa.implementation.refinements.FP.refinements.refine_ohep_task": {
    "blocker_families": [
-    "UNIVERSE_OTHER"
+    "UNCLASSIFIED"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_ohep_task",
-    "CoqEAL.refinements.refinements.refines_abstr2",
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.FP.refinements.refine_task_eqdef",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3205,8 +3210,6 @@
     "CoqEAL.refinements.param.cat_R",
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_curve.refine_get_horizon_of_task__rocq2lean_obligation_2",
     "prosa.implementation.refinements.arrival_curve.refine_repeat_steps_with_offset__rocq2lean_obligation_11",
     "prosa.implementation.refinements.arrival_curve.refine_repeat_steps_with_offset__rocq2lean_obligation_13",
@@ -3234,16 +3237,17 @@
   },
   "prosa.implementation.refinements.FP.refinements.refine_task_eqdef": {
    "blocker_families": [
-    "UNIVERSE_OTHER"
+    "UNCLASSIFIED"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_task_eqdef",
-    "CoqEAL.refinements.refinements.refines_abstr2",
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3251,6 +3255,7 @@
   "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
@@ -3269,13 +3274,18 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
-    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1"
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf",
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.arrival_curve.refine_task_rbf",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals",
+    "prosa.implementation.refinements.arrival_bound.refine_arrival_curve_prefix",
+    "CoqEAL.refinements.binnat.Rnat_div",
+    "CoqEAL.refinements.binnat.Rnat_div_subproof",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3284,6 +3294,7 @@
    "blocker_families": [
     "COURSE_OF_VALUES",
     "PROP_TYPE_CUMULATIVITY",
+    "REFERENCE_COHERENCE",
     "UNCLASSIFIED",
     "UNIVERSE_OTHER"
    ],
@@ -3303,16 +3314,22 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf'__rocq2lean_obligation_5",
     "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8",
     "prosa.implementation.refinements.task.refine_task'",
     "prosa.implementation.refinements.task.refine_task_set'"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf'",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.FP.refinements.refine_total_hep_rbf",
+    "prosa.implementation.refinements.arrival_curve.refine_task_rbf",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals",
+    "prosa.implementation.refinements.arrival_bound.refine_arrival_curve_prefix",
+    "CoqEAL.refinements.binnat.Rnat_div",
+    "CoqEAL.refinements.binnat.Rnat_div_subproof",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3320,6 +3337,8 @@
   "prosa.implementation.refinements.FP.refinements.refine_total_ohep_rbf": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
+    "UNCLASSIFIED",
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
@@ -3338,13 +3357,17 @@
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
-    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83",
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8"
    ],
    "example_path": [
     "prosa.implementation.refinements.FP.refinements.refine_total_ohep_rbf",
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.FP.refinements.refine_task_eqdef",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3380,9 +3403,7 @@
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_4",
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_9",
     "CoqEAL.refinements.param.filter_R",
-    "CoqEAL.refinements.param.last_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.param.last_R"
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_bound.refine_arrival_curve_prefix",
@@ -3409,29 +3430,13 @@
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
   },
-  "prosa.implementation.refinements.arrival_bound.refine_leq_steps": {
-   "blocker_families": [
-    "UNIVERSE_OTHER"
-   ],
-   "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_apply"
-   ],
-   "example_path": [
-    "prosa.implementation.refinements.arrival_bound.refine_leq_steps",
-    "CoqEAL.refinements.refinements.refines_apply"
-   ],
-   "family": "modern",
-   "status": "BLOCKED_DEPENDENCY"
-  },
   "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted": {
    "blocker_families": [
     "COURSE_OF_VALUES",
-    "SOLUTION_FACT_VIOLATED",
-    "UNIVERSE_OTHER"
+    "SOLUTION_FACT_VIOLATED"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.param.all_R",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_1",
     "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_15",
     "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_16",
@@ -3444,24 +3449,7 @@
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted",
-    "CoqEAL.refinements.refinements.refines_apply"
-   ],
-   "family": "modern",
-   "status": "BLOCKED_DEPENDENCY"
-  },
-  "prosa.implementation.refinements.arrival_bound.refine_ltn_steps": {
-   "blocker_families": [
-    "UNIVERSE_OTHER"
-   ],
-   "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_apply"
-   ],
-   "example_path": [
-    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps",
-    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps__rocq2lean_obligation_10",
-    "prosa.implementation.refinements.refinements.refine_ltn",
-    "CoqEAL.refinements.binnat.Rnat_S",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_1"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3469,12 +3457,10 @@
   "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted": {
    "blocker_families": [
     "COURSE_OF_VALUES",
-    "SOLUTION_FACT_VIOLATED",
-    "UNIVERSE_OTHER"
+    "SOLUTION_FACT_VIOLATED"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.param.all_R",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_1",
     "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_15",
     "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_16",
@@ -3487,34 +3473,34 @@
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_1"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
   },
   "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq": {
    "blocker_families": [
-    "UNIVERSE_OTHER"
+    "UNCLASSIFIED"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_6",
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_83"
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq__rocq2lean_obligation_168"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
   },
   "prosa.implementation.refinements.arrival_bound.refine_value_at": {
    "blocker_families": [
-    "COURSE_OF_VALUES",
-    "UNIVERSE_OTHER"
+    "COURSE_OF_VALUES"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.param.filter_R",
-    "CoqEAL.refinements.param.last_R",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.param.last_R"
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_bound.refine_value_at",
@@ -3526,6 +3512,7 @@
   "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals'": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
     "REFERENCE_RAISING",
     "UNCLASSIFIED",
     "UNIVERSE_OTHER"
@@ -3544,15 +3531,18 @@
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_9",
     "CoqEAL.refinements.param.filter_R",
     "CoqEAL.refinements.param.last_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals'__rocq2lean_obligation_1",
     "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals'__rocq2lean_obligation_3",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8",
     "prosa.implementation.refinements.task.refine_task'"
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals'",
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.arrival_bound.refine_arrival_curve_prefix",
+    "CoqEAL.refinements.binnat.Rnat_div",
+    "CoqEAL.refinements.binnat.Rnat_div_subproof",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3563,7 +3553,6 @@
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix__rocq2lean_obligation_11",
     "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix__rocq2lean_obligation_13",
     "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix__rocq2lean_obligation_15",
@@ -3578,7 +3567,8 @@
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix__rocq2lean_obligation_10",
+    "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix__rocq2lean_obligation_9"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3589,7 +3579,6 @@
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix'__rocq2lean_obligation_10",
     "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix'__rocq2lean_obligation_12",
     "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix'__rocq2lean_obligation_14",
@@ -3605,7 +3594,7 @@
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix'",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_curve.refine_get_arrival_curve_prefix'__rocq2lean_obligation_10"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3615,12 +3604,11 @@
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_curve.refine_get_horizon_of_task__rocq2lean_obligation_2"
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_curve.refine_get_horizon_of_task",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_curve.refine_get_horizon_of_task__rocq2lean_obligation_2"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3636,7 +3624,6 @@
     "CoqEAL.refinements.param.cat_R",
     "CoqEAL.refinements.param.foldr_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_curve.refine_repeat_steps_with_offset__rocq2lean_obligation_11",
     "prosa.implementation.refinements.arrival_curve.refine_repeat_steps_with_offset__rocq2lean_obligation_13",
     "prosa.implementation.refinements.arrival_curve.refine_repeat_steps_with_offset__rocq2lean_obligation_14",
@@ -3667,7 +3654,6 @@
    ],
    "direct_blockers": [
     "CoqEAL.refinements.param.all_R",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_1",
     "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_15",
     "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_16",
@@ -3692,7 +3678,8 @@
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_curve.refine_sorted_leq_steps",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted",
+    "prosa.implementation.refinements.arrival_bound.refine_leq_steps_sorted__rocq2lean_obligation_1"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3700,6 +3687,7 @@
   "prosa.implementation.refinements.arrival_curve.refine_task_rbf": {
    "blocker_families": [
     "COURSE_OF_VALUES",
+    "REFERENCE_COHERENCE",
     "UNIVERSE_OTHER"
    ],
    "direct_blockers": [
@@ -3716,14 +3704,17 @@
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_9",
     "CoqEAL.refinements.param.filter_R",
     "CoqEAL.refinements.param.last_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
-    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1"
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals__rocq2lean_obligation_1",
+    "prosa.implementation.refinements.arrival_curve.refine_extrapolated_arrival_curve__rocq2lean_obligation_8"
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_curve.refine_task_rbf",
-    "CoqEAL.refinements.refinements.refines_abstr2",
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.arrival_curve.refine_ConcreteMaxArrivals",
+    "prosa.implementation.refinements.arrival_bound.refine_arrival_curve_prefix",
+    "CoqEAL.refinements.binnat.Rnat_div",
+    "CoqEAL.refinements.binnat.Rnat_div_subproof",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3732,8 +3723,7 @@
    "blocker_families": [
     "COURSE_OF_VALUES",
     "SOLUTION_FACT_VIOLATED",
-    "UNCLASSIFIED",
-    "UNIVERSE_OTHER"
+    "UNCLASSIFIED"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.param.all_R",
@@ -3741,8 +3731,6 @@
     "CoqEAL.refinements.param.has_R",
     "CoqEAL.refinements.param.last_R",
     "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_1",
     "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_15",
     "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_16",
@@ -3752,13 +3740,17 @@
     "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_6",
     "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_7",
     "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_8",
+    "prosa.implementation.refinements.arrival_curve.refine_positive_horizon__rocq2lean_obligation_8",
+    "prosa.implementation.refinements.arrival_curve.refine_positive_horizon__rocq2lean_obligation_9",
     "prosa.implementation.refinements.arrival_curve.refine_valid_arrivals__rocq2lean_obligation_1",
     "prosa.implementation.refinements.arrival_curve.refine_valid_arrivals__rocq2lean_obligation_2",
     "prosa.implementation.refinements.task.refine_task'"
    ],
    "example_path": [
     "prosa.implementation.refinements.arrival_curve.refine_valid_arrivals",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.arrival_curve.refine_valid_arrival_curve_prefix",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted",
+    "prosa.implementation.refinements.arrival_bound.refine_ltn_steps_sorted__rocq2lean_obligation_1"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3776,20 +3768,6 @@
    "family": "modern",
    "status": "UNIVERSE_REJECTED"
   },
-  "prosa.implementation.refinements.refinements.Rnat_pred": {
-   "blocker_families": [
-    "UNIVERSE_OTHER"
-   ],
-   "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_apply"
-   ],
-   "example_path": [
-    "prosa.implementation.refinements.refinements.Rnat_pred",
-    "CoqEAL.refinements.refinements.refines_apply"
-   ],
-   "family": "modern",
-   "status": "BLOCKED_DEPENDENCY"
-  },
   "prosa.implementation.refinements.refinements.refine_all": {
    "blocker_families": [
     "COURSE_OF_VALUES"
@@ -3806,17 +3784,16 @@
   },
   "prosa.implementation.refinements.refinements.refine_b2n": {
    "blocker_families": [
-    "UNIVERSE_OTHER"
+    "UNCLASSIFIED"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.refinements.refine_b2n"
    ],
    "example_path": [
-    "prosa.implementation.refinements.refinements.refine_b2n",
-    "CoqEAL.refinements.refinements.refines_abstr"
+    "prosa.implementation.refinements.refinements.refine_b2n"
    ],
    "family": "modern",
-   "status": "BLOCKED_DEPENDENCY"
+   "status": "TRANSLATION_FAILED"
   },
   "prosa.implementation.refinements.refinements.refine_div_ceil": {
    "blocker_families": [
@@ -3833,14 +3810,14 @@
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_2",
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_3",
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_4",
-    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_9",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_9"
    ],
    "example_path": [
     "prosa.implementation.refinements.refinements.refine_div_ceil",
-    "CoqEAL.refinements.binnat.Rnat_S",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.binnat.Rnat_div",
+    "CoqEAL.refinements.binnat.Rnat_div_subproof",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl",
+    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_10"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3860,9 +3837,7 @@
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_2",
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_3",
     "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_4",
-    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_9",
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.binnat.Rnat_div_eucl__rocq2lean_obligation_9"
    ],
    "example_path": [
     "prosa.implementation.refinements.refinements.refine_dvdn",
@@ -3892,14 +3867,12 @@
   },
   "prosa.implementation.refinements.refinements.refine_foldr": {
    "blocker_families": [
-    "COURSE_OF_VALUES",
-    "UNIVERSE_OTHER"
+    "COURSE_OF_VALUES"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.param.filter_R",
     "CoqEAL.refinements.param.foldr_R",
-    "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.param.map_R"
    ],
    "example_path": [
     "prosa.implementation.refinements.refinements.refine_foldr",
@@ -3910,14 +3883,12 @@
   },
   "prosa.implementation.refinements.refinements.refine_foldr_max": {
    "blocker_families": [
-    "COURSE_OF_VALUES",
-    "UNIVERSE_OTHER"
+    "COURSE_OF_VALUES"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.param.filter_R",
     "CoqEAL.refinements.param.foldr_R",
-    "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.param.map_R"
    ],
    "example_path": [
     "prosa.implementation.refinements.refinements.refine_foldr_max",
@@ -3928,17 +3899,14 @@
   },
   "prosa.implementation.refinements.refinements.refine_iota": {
    "blocker_families": [
-    "SOLUTION_FACT_VIOLATED",
-    "UNIVERSE_OTHER"
+    "SOLUTION_FACT_VIOLATED"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_apply",
     "prosa.implementation.refinements.refinements.refine_iota__rocq2lean_obligation_5"
    ],
    "example_path": [
     "prosa.implementation.refinements.refinements.refine_iota",
-    "CoqEAL.refinements.binnat.Rnat_S",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.refinements.refine_iota__rocq2lean_obligation_5"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3953,21 +3921,6 @@
    "example_path": [
     "prosa.implementation.refinements.refinements.refine_last",
     "CoqEAL.refinements.param.last_R"
-   ],
-   "family": "modern",
-   "status": "BLOCKED_DEPENDENCY"
-  },
-  "prosa.implementation.refinements.refinements.refine_ltn": {
-   "blocker_families": [
-    "UNIVERSE_OTHER"
-   ],
-   "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_apply"
-   ],
-   "example_path": [
-    "prosa.implementation.refinements.refinements.refine_ltn",
-    "CoqEAL.refinements.binnat.Rnat_S",
-    "CoqEAL.refinements.refinements.refines_apply"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -3988,13 +3941,11 @@
   },
   "prosa.implementation.refinements.refinements.refine_shift_points_neg": {
    "blocker_families": [
-    "COURSE_OF_VALUES",
-    "UNIVERSE_OTHER"
+    "COURSE_OF_VALUES"
    ],
    "direct_blockers": [
     "CoqEAL.refinements.param.filter_R",
-    "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.param.map_R"
    ],
    "example_path": [
     "prosa.implementation.refinements.refinements.refine_shift_points_neg",
@@ -4005,48 +3956,43 @@
   },
   "prosa.implementation.refinements.refinements.refine_shift_points_pos": {
    "blocker_families": [
-    "COURSE_OF_VALUES",
-    "UNIVERSE_OTHER"
+    "COURSE_OF_VALUES"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.param.map_R"
    ],
    "example_path": [
     "prosa.implementation.refinements.refinements.refine_shift_points_pos",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.refinements.refine_map",
+    "CoqEAL.refinements.param.map_R"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
   },
   "prosa.implementation.refinements.refinements.refine_size": {
    "blocker_families": [
-    "UNIVERSE_OTHER"
+    "UNCLASSIFIED"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.refinements.refines_abstr",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.refinements.refine_size"
    ],
    "example_path": [
-    "prosa.implementation.refinements.refinements.refine_size",
-    "CoqEAL.refinements.binnat.Rnat_S",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.refinements.refine_size"
    ],
    "family": "modern",
-   "status": "BLOCKED_DEPENDENCY"
+   "status": "TRANSLATION_FAILED"
   },
   "prosa.implementation.refinements.refinements.refine_uncond_foldr": {
    "blocker_families": [
-    "COURSE_OF_VALUES",
-    "UNIVERSE_OTHER"
+    "COURSE_OF_VALUES"
    ],
    "direct_blockers": [
-    "CoqEAL.refinements.param.map_R",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "CoqEAL.refinements.param.map_R"
    ],
    "example_path": [
     "prosa.implementation.refinements.refinements.refine_uncond_foldr",
-    "CoqEAL.refinements.refinements.refines_apply"
+    "prosa.implementation.refinements.refinements.refine_map",
+    "CoqEAL.refinements.param.map_R"
    ],
    "family": "modern",
    "status": "BLOCKED_DEPENDENCY"
@@ -6124,11 +6070,11 @@
    "status": "UNIVERSE_REJECTED"
   }
  },
- "run": "/home/shunqwang4/research/r2l-run-S22/runs/st-corpus-S22",
+ "run": "/home/shunqwang4/research/r2l-run-S23/runs/st-corpus-S23",
  "schema": "rocq2lean-rule-backlog/1",
  "unclaimed_by_family": {
-  "classic": 23,
-  "modern": 156
+  "classic": 21,
+  "modern": 151
  },
- "unclaimed_protected_roots": 179
+ "unclaimed_protected_roots": 172
 }

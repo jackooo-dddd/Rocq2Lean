@@ -1,5 +1,11 @@
 # Status
 
+**2026-10-18 — R-OCC: per-occurrence levels for body-only levels (merged into `main` after validation).**
+* **Rule adopted (approved 2026-10-18):** R-OCC, a last tier for definitions (`docs/BODY_OCCURRENCE_LEVELS.md`).
+* **Corpus** at `79d89a5` (run `r2l-run-S23`; consumer, audit, provenance, conversion and tasks OK):
+  **685 Accepted / 3,617 Audited Pending / 145 Blocked / 27 Direct Failure**, 172 unclaimed (S22: 685 / 3,610 /
+  153 / 26); 0 claimed rows lost. Suites 18/18 and `test-all` 18/18.
+
 **2026-10-18 — Universe solver stages A and B; the least-solution rule (merged into `main` after validation).**
 * **Change:** coherence by unification gives a body level solved through its own occurrence its least solution
   (`5a42d9c`); stage A/B solver tooling is inert unless enabled (`docs/SOLVER_STAGE_A.md`, `docs/SOLVER_STAGE_B.md`).
