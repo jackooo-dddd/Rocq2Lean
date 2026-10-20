@@ -1,0 +1,61 @@
+{
+ "before": {
+  "Accepted": 685,
+  "Audited Pending": 3617,
+  "Blocked Dependency": 145,
+  "Direct Failure": 27
+ },
+ "after": {
+  "Accepted": 685,
+  "Audited Pending": 3647,
+  "Blocked Dependency": 118,
+  "Direct Failure": 24
+ },
+ "delta": {
+  "Accepted": 0,
+  "Audited Pending": 30,
+  "Blocked Dependency": -27,
+  "Direct Failure": -3
+ },
+ "moves": {
+  "Blocked Dependency -> Audited Pending": 25,
+  "Blocked Dependency -> Direct Failure": 2,
+  "Direct Failure -> Audited Pending": 5
+ },
+ "status_changes": 32,
+ "newly_accepted": [],
+ "newly_unblocked": [
+  "prosa.classic.implementation.apa.arrival_sequence/ConcreteArrivalSequence.periodic_arrival_sequence",
+  "prosa.classic.implementation.apa.bertogna_edf_example/ResponseTimeAnalysisEDF.schedulability_test_succeeds",
+  "prosa.classic.implementation.apa.bertogna_edf_example/ResponseTimeAnalysisEDF.ts_has_constrained_deadlines",
+  "prosa.classic.implementation.apa.bertogna_edf_example/ResponseTimeAnalysisEDF.ts_has_valid_parameters",
+  "prosa.classic.implementation.apa.bertogna_edf_example/ResponseTimeAnalysisEDF.ts_non_empty_affinities",
+  "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.priority_is_total",
+  "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.schedulability_test_succeeds",
+  "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.ts_has_constrained_deadlines",
+  "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.ts_has_unique_priorities",
+  "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.ts_has_valid_parameters",
+  "prosa.classic.implementation.apa.bertogna_fp_example/ResponseTimeAnalysisFP.ts_non_empty_affinities",
+  "prosa.classic.implementation.apa.task/ConcreteTask.concrete_taskset",
+  "prosa.implementation.refinements.FP.refinements.refine_blocking_bound",
+  "prosa.implementation.refinements.FP.refinements.refine_ohep_task",
+  "prosa.implementation.refinements.FP.refinements.refine_task_eqdef",
+  "prosa.implementation.refinements.arrival_bound.refine_get_time_steps",
+  "prosa.implementation.refinements.arrival_bound.refine_task_ab_eq",
+  "prosa.implementation.refinements.fast_search_space_computation.constant_max_arrivals",
+  "prosa.implementation.refinements.refinements.refine_all",
+  "prosa.implementation.refinements.refinements.refine_flatten",
+  "prosa.implementation.refinements.refinements.refine_foldr",
+  "prosa.implementation.refinements.refinements.refine_foldr_max",
+  "prosa.implementation.refinements.refinements.refine_last",
+  "prosa.implementation.refinements.refinements.refine_map",
+  "prosa.implementation.refinements.refinements.refine_shift_points_neg",
+  "prosa.implementation.refinements.refinements.refine_shift_points_pos",
+  "prosa.implementation.refinements.refinements.refine_zip",
+  "prosa.implementation.refinements.task.refine_Periodic",
+  "prosa.implementation.refinements.task.refine_Sporadic",
+  "prosa.results.transfer_schedulability.criterion.slackless_interval_continuation"
+ ],
+ "regressions_previously_accepted": [],
+ "same_protected_set": true
+}

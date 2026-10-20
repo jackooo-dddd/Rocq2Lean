@@ -147,6 +147,10 @@ structure DeclResult where
   proofValue : Option Expr := none
   /-- Assembly: a row carried over unchanged from the validated report (its JSON). -/
   verbatim : Option Json := none
+  /-- Incremental runs (docs/INCREMENTAL.md): a row replayed from the base run, written as the base
+  report's line for it (byte for byte), and whether the row was replayed rather than translated. -/
+  verbatimRaw : Option String := none
+  replayed : Bool := false
   /-- Assembly, proof tasks: `PROOF_ASSEMBLED`, `PROOF_NOT_SUPPLIED`, `ASSEMBLY_TRANSPORT_REQUIRED`,
   `OPAQUE_BINDING_PENDING` or `PROOF_VERIFIED_STATEMENT_PENDING`. -/
   proofState : String := ""
@@ -320,12 +324,63 @@ private def hypBinderCount (n : Name) (t : Expr) : Nat := Id.run do
     | _ => break
   return k
 
-private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (n : Name)
+/-- A normalized level as (constant, summands `p + k`); none outside the fragment (imax, mvars). -/
+partial def levelParts : Level → Option (Nat × Array (Name × Nat))
+  | .zero => some (0, #[])
+  | .succ l => (levelParts l).map fun (c, ps) => (c + 1, ps.map fun (p, k) => (p, k + 1))
+  | .param p => some (0, #[(p, 0)])
+  | .max a b => do
+    let (c1, p1) ← levelParts a
+    let (c2, p2) ← levelParts b
+    pure (max c1 c2, p1 ++ p2)
+  | _ => none
+
+/-- `σ₁ ≤ σ₂` for every value of the parameters. -/
+def levelDominated (σ₁ σ₂ : Level) : Bool :=
+  match levelParts σ₁.normalize, levelParts σ₂.normalize with
+  | some (c1, p1), some (c2, p2) =>
+    p1.all (fun (p, k) => p2.any fun (q, k') => q == p && k ≤ k') &&
+      (c1 == 0 || c1 ≤ c2 || p2.any fun (_, k') => c1 ≤ k')
+  | _, _ => false
+
+/-- (speed, exact) the generality check's per-check context: the source level of a parameter name (the first
+in `facts.levels`, as `find?` returned) and the source levels of the referring declaration's own parameters
+that are not copies. -/
+private structure PinCtx where
+  srcOf : Std.HashMap Name String
+  ownSrc : Array String
+  /-- C-PIN (docs/POLICY_RELAXATIONS.md): a closed argument `k` for a level free in the source is accepted when the
+  source graph does not force the level above `k` (an unprotected statement, on the policy tier). -/
+  carrierPins : Bool := false
+  /-- R-SET: a closed pin at 0 is admitted for a level without a named strict lower bound (these levels). -/
+  floor : Option (Std.HashSet String) := none
+  /-- C-PIN for a protected statement: only at a constant that is a term (its type does not end in a sort): a concrete
+  instance, over which no binder of the statement ranges (P0: no quantification range is narrowed). -/
+  termOnly : Bool := false
+  /-- C-PIN-M: non-closed model arguments at term constants. -/
+  modelPins : Bool := false
+
+/-- C-PIN / L-IDENT: set while the policy-relaxation last tier runs (unprotected statements only). -/
+initialize carrierPinTier : IO.Ref Bool ← IO.mkRef false
+initialize setFloorTier : IO.Ref Bool ← IO.mkRef false
+initialize identRef : IO.Ref (Array String) ← IO.mkRef #[]
+initialize levelIdentTier : IO.Ref Bool ← IO.mkRef false
+
+private def mkPinCtx (facts : IR.UniverseFacts) (own : List Name) : PinCtx := Id.run do
+  let mut m : Std.HashMap Name String := {}
+  for l in facts.levels do
+    let p := levelParamName l
+    unless m.contains p do m := m.insert p l
+  let ownSrc := own.toArray.filterMap fun q => if (q.toString.splitOn "__c").length > 1 then none else m[q]?
+  return { srcOf := m, ownSrc }
+
+private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (ctx : PinCtx) (own : List Name) (n : Name)
     (us : List Level) (nargs : Nat) : Option String := Id.run do
   let some ci := env.find? n | return none
   let lps := ci.levelParams
   if lps.length != us.length then return none
-  let doms := (binderDomains ci.type nargs).extract (hypBinderCount n ci.type) nargs
+  -- (speed: the binder domains are computed only when a parameter reaches the test below)
+  let mut doms? : Option (Array Expr) := none
   for (p, σ) in lps.zip us do
     unless p.toString.startsWith "u_" do continue      -- (R6 universe variables, Lean's own constants)
     if own.contains p then continue                     -- (a level of the declaration: R3)
@@ -336,7 +391,7 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
     if own.any (fun q => q != p && base q == base p && (q.toString.splitOn "__c").length > 1) then continue
     -- (an argument max(q₁, …) of own parameters (or copies) whose source levels are all *equal* to the
     -- referenced level in the source graph (≤ both ways) is that level's reading, not a specialization)
-    let srcOf (x : Name) : Option String := facts.levels.find? (fun l => levelParamName l == Name.mkSimple (base x))
+    let srcOf (x : Name) : Option String := ctx.srcOf[Name.mkSimple (base x)]?
     if let some lp := srcOf p then
       if let some (c, ps) := levelNF σ.normalize then
         if c == 0 && !ps.isEmpty && ps.all (fun (q, k) => k == 0 && own.contains q &&
@@ -346,13 +401,48 @@ private def freeLevelRef (env : Environment) (facts : IR.UniverseFacts) (own : L
       -- (rule R, general form: an argument over own levels equal to the referenced level at every model
       -- of the source facts, e.g. a referenced definition's R2F reading `max (u_l, u_m, …)` with `m ≤ l`, is
       -- that level, not a specialization)
-      let ownSrc : Array String := own.toArray.filterMap fun q =>
-        if (q.toString.splitOn "__c").length > 1 then none else facts.levels.find? (levelParamName · == q)
-      if (p.toString.splitOn "__c").length == 1 && σ.hasParam && equalAtModels facts (ownSrc.push lp) σ (.param p) then continue
+      if (p.toString.splitOn "__c").length == 1 && σ.hasParam && equalAtModels facts (ctx.ownSrc.push lp) σ (.param p) then continue
     if !σ.hasParam then
-      if let some l := facts.levels.find? (fun l => levelParamName l == p) then
+      if let some l := ctx.srcOf[p]? then
         if entails facts l "Set" 0 then continue
+    let doms := match doms? with
+      | some d => d
+      | none => (binderDomains ci.type nargs).extract (hypBinderCount n ci.type) nargs
+    doms? := some doms
     if doms.any (fun d => (collectLevelParams {} d).params.contains p) then continue
+    -- C-PIN: the instance at its concrete carrier's level `k`, a model of the source graph at that level
+    let rec endsInSort : Expr → Bool
+      | .forallE _ _ b _ => endsInSort b
+      | .sort _ => true
+      | _ => false
+    -- C-PIN-M (`R2L_RULE_CPIN_MODEL` while measured): at any constant of an unprotected statement (a term constant of a
+    -- protected one, as C-PIN), an argument that satisfies every
+    -- native fact between the pinned level and the constant's other levels, read with this reference's arguments
+    -- (Set facts by R-SET's floor): the reference is the instance at a model of its own levels' facts
+    if ctx.carrierPins && σ.hasParam && ctx.modelPins && (!ctx.termOnly || !endsInSort ci.type) then
+      if let some l := ctx.srcOf[p]? then
+        let argOf (x : String) : Option Level := (lps.zip us).findSome? fun (q, v) => if ctx.srcOf[q]? == some x then some v else none
+        let ok := facts.relations.all fun (a, r, b) =>
+          let k := if r == "lt" then 1 else 0
+          if b == l && a != l then
+            if a == "Set" then ctx.floor.isSome || levelDominated (Level.ofNat k) σ
+            else match argOf a with
+              | some va => levelDominated (va.addOffset k) σ
+              | none => true
+          else if a == l && b != l && b != "Set" then
+            match argOf b with
+            | some vb => levelDominated (σ.addOffset k) vb
+            | none => true
+          else true
+        if ok then continue
+    if ctx.carrierPins && !σ.hasParam && (!ctx.termOnly || !endsInSort ci.type) then
+      if let some l := ctx.srcOf[p]? then
+        if let some k := σ.normalize.toNat then
+          -- (R-SET: at 0, only a named strict lower bound forces the level up; `Set < l` alone is structural)
+          let forced := match ctx.floor with
+            | some ns => if k == 0 then ns.contains l else entails facts "Set" l (k + 1)
+            | none => entails facts "Set" l (k + 1)
+          if !forced then continue
     return some s!"{n}: the level of {p} is free in the source (no applied argument determines it, the source graph does not force it) but its argument is {σ}, not {p}"
   return none
 
@@ -365,28 +455,88 @@ private def siblingFixed (env : Environment) (n : Name) (nargs : Nat) : Array Na
       out := out.push j
   return out
 
-partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr) : Option String :=
-  match e with
-  | .app .. =>
-    let f := e.getAppFn
-    let args := e.getAppArgs
-    let r := match f with
-      | .const n us => freeLevelRef env facts own n us args.size
-      | _ => freeLevelPin env facts own f
-    if r.isSome then r else
-    let skip := match f with
-      | .const n _ => siblingFixed env n args.size
-      | _ => #[]
-    Id.run do
+/-- (speed, exact) the state of one generality traversal: subterms already found clean (the result depends
+on the subterm only), and the per-reference results. -/
+private abbrev PinM := StateM (Std.HashSet Expr × Std.HashMap (Name × List Level × Nat) (Option String) ×
+  Std.HashMap (Name × Nat) (Array Nat))
+
+private partial def freeLevelPinM (env : Environment) (facts : IR.UniverseFacts) (ctx : PinCtx) (own : List Name)
+    (e : Expr) : PinM (Option String) := do
+  if (← get).1.contains e then return none
+  let ref (n : Name) (us : List Level) (k : Nat) : PinM (Option String) := do
+    if let some r := (← get).2.1[(n, us, k)]? then return r
+    let r := freeLevelRef env facts ctx own n us k
+    modify fun (v, m, s) => (v, m.insert (n, us, k) r, s)
+    return r
+  let go := freeLevelPinM env facts ctx own
+  let r ← match e with
+    | .app .. => do
+      let f := e.getAppFn
+      let args := e.getAppArgs
+      let r ← match f with
+        | .const n us => ref n us args.size
+        | _ => go f
+      if r.isSome then pure r else
+      let skip ← match f with
+        | .const n _ => do
+          match (← get).2.2[(n, args.size)]? with
+          | some x => pure x
+          | none =>
+            let x := siblingFixed env n args.size
+            modify fun (v, m, s) => (v, m, s.insert (n, args.size) x)
+            pure x
+        | _ => pure #[]
+      let mut out : Option String := none
       for i in [0:args.size] do
         if skip.contains i then continue
-        if let some m := freeLevelPin env facts own args[i]! then return some m
-      return none
-  | .const n us => freeLevelRef env facts own n us 0
-  | .forallE _ d b _ | .lam _ d b _ => freeLevelPin env facts own d <|> freeLevelPin env facts own b
-  | .letE _ t v b _ => freeLevelPin env facts own t <|> freeLevelPin env facts own v <|> freeLevelPin env facts own b
-  | .mdata _ b | .proj _ _ b => freeLevelPin env facts own b
-  | _ => none
+        if let some m ← go args[i]! then
+          out := some m
+          break
+      pure out
+    | .const n us => ref n us 0
+    | .forallE _ d b _ | .lam _ d b _ => do
+      match ← go d with
+      | some m => pure (some m)
+      | none => go b
+    | .letE _ t v b _ => do
+      match ← go t with
+      | some m => pure (some m)
+      | none => match ← go v with
+        | some m => pure (some m)
+        | none => go b
+    | .mdata _ b | .proj _ _ b => go b
+    | _ => pure none
+  if r.isNone then modify fun (v, m, s) => (v.insert e, m, s)
+  return r
+
+partial def freeLevelPin (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr)
+    (carrierPins : Bool := false) (floor : Option (Std.HashSet String) := none) (termOnly : Bool := false)
+    (modelPins : Bool := false) : Option String :=
+  (freeLevelPinM env facts { mkPinCtx facts own with carrierPins, floor, termOnly, modelPins } own e).run' ({}, {}, {})
+
+/-- C-PIN, the report: the references of `e` accepted only through a carrier pin. -/
+partial def carrierPinRefs (env : Environment) (facts : IR.UniverseFacts) (own : List Name) (e : Expr)
+    (floor : Option (Std.HashSet String) := none) (termOnly : Bool := false) (modelPins : Bool := false) : Array String :=
+  let ctx0 := mkPinCtx facts own
+  let ctx1 := { ctx0 with carrierPins := true, floor, termOnly, modelPins }
+  let rec go (e : Expr) (acc : Array String) : Array String :=
+    match e with
+    | .app .. =>
+      let args := e.getAppArgs
+      let acc := match e.getAppFn with
+        | .const n us =>
+          if (freeLevelRef env facts ctx0 own n us args.size).isSome && (freeLevelRef env facts ctx1 own n us args.size).isNone
+          then (if acc.contains n.toString then acc else acc.push n.toString) else acc
+        | f => go f acc
+      args.foldl (fun a x => go x a) acc
+    | .const n us =>
+      if (freeLevelRef env facts ctx0 own n us 0).isSome && (freeLevelRef env facts ctx1 own n us 0).isNone
+      then (if acc.contains n.toString then acc else acc.push n.toString) else acc
+    | .forallE _ d b _ | .lam _ d b _ => go b (go d acc)
+    | .letE _ t v b _ => go b (go v (go t acc))
+    | .mdata _ b | .proj _ _ b => go b acc
+    | _ => acc
+  go e #[]
 
 private def peelBinders (e : Expr) (k : Nat) : Expr :=
   match k, e with
@@ -405,8 +555,29 @@ private def typeDomains (t : Expr) : Array Expr := Id.run do
 
 /-- P3: leading hypothesis binders of the same leaf at the same type (after universe solving) are
 collapsed into the first; returns the new type, value and the indices of the kept binders. -/
+initialize dupsRef : IO.Ref (Array (Nat × Nat)) ← IO.mkRef #[]
+
+/-- R-P3RES: the collapse `collapseHyps` chose (kept binders, duplicate ↦ canonical), applied to another version of the
+same declaration (the generic one, residual levels as parameters), so that both records describe one declaration. -/
+def collapseHypsBy (ty val : Expr) (n : Nat) (keep : Array Nat) (dups : Array (Nat × Nat)) : MetaM (Expr × Expr) := do
+  if keep.size == n then return (ty, val)
+  forallBoundedTelescope ty n fun xs tb => do
+    let vb ← instantiateLambda val xs
+    let dupOf := dups.map fun (j, i) => (xs[j]!, xs[i]!)
+    let rec go (k : Nat) (vars : Array Expr) (sub : Array (Expr × Expr)) : MetaM (Expr × Expr) := do
+      let tr (e : Expr) : Expr := (e.replaceFVars (dupOf.map (·.1)) (dupOf.map (·.2))).replaceFVars (sub.map (·.1)) (sub.map (·.2))
+      if h : k < keep.size then
+        let x := xs[keep[k]]!
+        let t := tr (← instantiateMVars (← inferType x))
+        withLocalDeclD (← x.fvarId!.getUserName) t fun y => go (k + 1) (vars.push y) (sub.push (x, y))
+      else
+        return (← mkForallFVars vars (tr tb), ← mkLambdaFVars vars (tr vb))
+    termination_by keep.size - k
+    go 0 #[] #[]
+
 def collapseHyps (ty val : Expr) (names : Array String) : MetaM (Expr × Expr × Array Nat) := do
   let n := names.size
+  dupsRef.set #[]
   forallBoundedTelescope ty n fun xs tb => do
     let vb ← instantiateLambda val xs
     let mut keep : Array Nat := #[]
@@ -421,7 +592,9 @@ def collapseHyps (ty val : Expr) (names : Array String) : MetaM (Expr × Expr ×
         if canon.isNone && names[i]! == names[j]! then
           if normLv (← instantiateMVars (← inferType xs[i]!)) == tj then canon := some i
       match canon with
-      | some i => dupOf := dupOf.push (xs[j]!, xs[i]!)
+      | some i =>
+        dupOf := dupOf.push (xs[j]!, xs[i]!)
+        dupsRef.modify (·.push (j, i))
       | none => keep := keep.push j
     if keep.size == xs.size then return (ty, val, keep)
     let rec go (k : Nat) (vars : Array Expr) (sub : Array (Expr × Expr)) : MetaM (Expr × Expr) := do
@@ -522,35 +695,21 @@ def identifyJointMVars (es : Array Expr) : MetaM (Array (Array LMVarId)) := do
       out := out.push S
   return out
 
-/-- A normalized level as (constant, summands `p + k`); none outside the fragment (imax, mvars). -/
-partial def levelParts : Level → Option (Nat × Array (Name × Nat))
-  | .zero => some (0, #[])
-  | .succ l => (levelParts l).map fun (c, ps) => (c + 1, ps.map fun (p, k) => (p, k + 1))
-  | .param p => some (0, #[(p, 0)])
-  | .max a b => do
-    let (c1, p1) ← levelParts a
-    let (c2, p2) ← levelParts b
-    pure (max c1 c2, p1 ++ p2)
-  | _ => none
-
-/-- `σ₁ ≤ σ₂` for every value of the parameters. -/
-def levelDominated (σ₁ σ₂ : Level) : Bool :=
-  match levelParts σ₁.normalize, levelParts σ₂.normalize with
-  | some (c1, p1), some (c2, p2) =>
-    p1.all (fun (p, k) => p2.any fun (q, k') => q == p && k ≤ k') &&
-      (c1 == 0 || c1 ≤ c2 || p2.any fun (_, k') => c1 ≤ k')
-  | _, _ => false
-
-def binderIndependence (facts : IR.UniverseFacts) (binders : Array String) (σ : String → Option Level) : Option String := Id.run do
+def binderIndependence (facts : IR.UniverseFacts) (binders : Array String) (σ : String → Option Level)
+    (allowIdent : Bool := false) : Option String × Array String := Id.run do
   let tr := binders.filterMap fun b => (σ b).map (b, ·)
   for (b, l) in tr do
     if !l.hasParam && !(entails facts b "Set" 0) then
-      return some s!"binder level {b} would be fixed at {l} (the source does not force it to Set)"
+      return (some s!"binder level {b} would be fixed at {l} (the source does not force it to Set)", #[])
+  let mut ident : Array String := #[]
   for (b1, l1) in tr do
     for (b2, l2) in tr do
       if b1 != b2 && levelDominated l1 l2 && !(entails facts b1 b2 0) then
-        return some s!"binder levels {b1} ≤ {b2} would be forced by the translation ({l1} ≤ {l2}), not by the source"
-  return none
+        -- L-IDENT (docs/POLICY_RELAXATIONS.md): an unprotected statement may be read in a model of the source graph
+        -- with `b1 ≤ b2`, when the source does not force `b2 < b1`; reported
+        if allowIdent && !(entails facts b2 b1 1) then ident := ident.push s!"{b1} <= {b2}"
+        else return (some s!"binder levels {b1} ≤ {b2} would be forced by the translation ({l1} ≤ {l2}), not by the source", #[])
+  return (none, ident)
 
 private partial def irEndsInSort : IR.Term → Bool
   | .prod _ _ b => irEndsInSort b
@@ -686,7 +845,7 @@ def shadowDump (src : String) (own : Array (String × Level)) (occs : Array (LMV
     ("diagnostics", toJson diags)]
 
 -- (compile-time budget only: the function is large; no effect on the translator at run time)
-set_option maxHeartbeats 400000 in
+set_option maxHeartbeats 1600000 in
 partial def processConstantCore (genv : GEnv) (results : Std.HashMap String DeclResult) (c : IR.ConstantDecl)
     (factReduce : Bool := false) (interp : Bool := false) (admit : Bool := false) (cumul : Bool := false)
     (extraOwn : Array String := #[]) (discover : Bool := false) (lower : Bool := false) (delta : Bool := false)
@@ -695,6 +854,8 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     (phantom : Bool := false) (eqLower : Bool := false) (shadow : Option (IO.Ref (Option Json)) := none)
     (witness : Option Json := none) :
     MetaM DeclResult := do
+  sharedFreeMap.set {}
+  sharedFreeOn.set (← sharedFreeTier.get)
   let base : DeclResult := { source := c.name, kind := "constant", status := "" }
   let (missing, failed, pending) := blockedDeps results (c.typeDeps ++ c.bodyDeps)
   unless missing.isEmpty do
@@ -942,6 +1103,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
               -- referenced level, and this level is solved to it (fact-checked)
               else if tyRefArgs.any (fun (l, σ) => l == m && σ == .mvar r) then
                 assignLevelMVar r (.param (levelParamName m))
+                probe "r3g.body_level_by_reference"
                 implicitRef.modify fun a => if a.contains m then a else a.push m
       -- R3G: a universe argument still free in the *type*, at a reference to a declaration whose
       -- parameter stands for source level `l`, is the source level `l` itself (Rocq references
@@ -973,17 +1135,35 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       -- (only own *type* levels represent a class: a proof-local level is solved, fact-checked by R2S, and
       -- never decides the class — R-CARRIER, factory_57's 551 against isSub's motive level 542)
       let ownCur ← (ownMVars.filter fun (m, _) => !resultLv.contains m && (typeLevels.contains m || stmt)).mapM fun (_, v) => instantiateLevelMVars v
-      let mut done : Array Level := #[]
+      let mut done : Std.HashSet Level := {}
       let mut chosen : Array (String × Array LMVarId) := #[]
+      -- (speed: the arguments are grouped once, by class and by source level, and an argument's current value
+      -- is read only for the source levels a class can pick, at the same point of the pass as before — no
+      -- assignment happens in between —, instead of re-reading every argument for every class: quadratic on
+      -- HB terms. The interface's arguments, read for R-CARRIER P2, are collected once from the same term.)
+      let cands := if interp then all else inTy
+      let mut clsOf : Std.HashMap Level (Array String) := {}
+      for (l', σ') in all do clsOf := clsOf.insert σ' ((clsOf.getD σ' #[]).push l')
+      let mut tyClsOf : Std.HashMap Level (Array String) := {}
+      for (l', σ') in cands do tyClsOf := tyClsOf.insert σ' ((tyClsOf.getD σ' #[]).push l')
+      let mut byL : Std.HashMap String (Array Level) := {}
+      for (l', σ') in all do byL := byL.insert l' ((byL.getD l' #[]).push σ')
+      let mut ifaceByL : Std.HashMap String (Array Level) := {}
+      for (n, ls) in constOccurrences (peelBinders (if stmt then val else ty) hyps.size) do
+        if let some gs := genv.constGlobals[n]? then
+          let ls := ls.drop (genv.polyByTarget[n]?.getD 0)
+          if gs.size == ls.length then
+            for l' in gs, σ' in ls do ifaceByL := ifaceByL.insert l' ((ifaceByL.getD l' #[]).push σ')
       -- (R2F-c: classes of the body are candidates too; their levels become own levels)
-      for (_, σ) in (if interp then all else inTy) do
+      for (_, σ) in cands do
         unless σ.isMVar && !done.contains σ do continue
-        done := done.push σ
-        let cls := (all.filter (·.2 == σ)).map (·.1)
-        let tyCls := ((if interp then all else inTy).filter (·.2 == σ)).map (·.1)
+        done := done.insert σ
+        let cls := clsOf.getD σ #[]
+        let tyCls := tyClsOf.getD σ #[]
         -- every argument for `l` anywhere must still be free: they all become `u_l` (coherence)
-        let mut cur : Array (String × Level) := #[]
-        for (l', σ') in all do cur := cur.push (l', ← instCollapse σ')
+        let mut cur : Std.HashMap String (Array Level) := {}
+        for l in tyCls do
+          unless cur.contains l do cur := cur.insert l (← (byL.getD l #[]).mapM instCollapse)
         -- (statement mode: an argument for `l` that unification already fixed to an expression, e.g. a
         -- referenced declaration's R2F reading of its own parameter, is left as is; R3 coherence, the
         -- kernel and the audit check it like every argument)
@@ -993,8 +1173,8 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           | _ => false
         let pick := tyCls.toList.eraseDups.find? fun l =>
           !own.contains l && !genv.templateLevels.contains l && cls.all (fun l' => genv.templateLevels.contains l' || entails genv.facts l l' 0) &&
-          (if genv.stmtMode then (cur.filter (·.1 == l)).any (·.2 == σ) && !ownCur.contains σ
-           else (cur.filter (·.1 == l)).all (fun (_, x) => x.isMVar || isCopyOf l x))
+          (if genv.stmtMode then (cur.getD l #[]).any (· == σ) && !ownCur.contains σ
+           else (cur.getD l #[]).all (fun x => x.isMVar || isCopyOf l x))
         if let some l := pick then
           -- R-CARRIER P2 (docs/CARRIER_LEVELS.md): the distinct free classes of arguments for `l` in the
           -- type (operands typing does not relate) are named separately, `l__c<k>`; with one class, `u_l`
@@ -1002,10 +1182,9 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           -- Count operand classes in the source interface, excluding generated prerequisite binders.
           -- Their universe instances are chosen by the translator (as for joint identification),
           -- and must not create extra independent classes beside the declaration's own operands.
-          for (l', σ') in ← argsFor (← instLevelMVars (peelBinders (if stmt then val else ty) hyps.size)) do
-            if l' == l then
-              let x ← instCollapse σ'
-              if (x.isMVar || isCopyOf l x) && !tyClasses.contains x then tyClasses := tyClasses.push x
+          for σ' in ifaceByL.getD l #[] do
+            let x ← instCollapse σ'
+            if (x.isMVar || isCopyOf l x) && !tyClasses.contains x then tyClasses := tyClasses.push x
           let split := genv.carrierSplit && !interp && tyClasses.size ≥ 2
           let k := (tyClasses.idxOf? σ).getD 0
           let name := if split then s!"{l}__c{k}" else l
@@ -1014,14 +1193,14 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
               let cs := (List.range tyClasses.size).toArray.map (s!"{l}__c{·}")
               if a.any (·.1 == l) then a else a.push (l, cs)
           let mut ms : Array LMVarId := #[]
-          for (l', σ') in cur do
-            if l' == l then
-              if let .mvar r ← instCollapse σ' then
-                -- (split: only this class; arguments of other type classes get their own copy, and
-                -- classes of the value alone join the first copy below)
-                if !split || (.mvar r) == σ then
-                  if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName name))
+          for σ' in cur.getD l #[] do
+            if let .mvar r ← instCollapse σ' then
+              -- (split: only this class; arguments of other type classes get their own copy, and
+              -- classes of the value alone join the first copy below)
+              if !split || (.mvar r) == σ then
+                if interp then ms := ms.push r else assignLevelMVar r (.param (levelParamName name))
           if interp then chosen := chosen.push (l, ms)
+          probe "r3g.implicit_level"
           implicitRef.modify fun a => if a.contains name then a else a.push name
       -- R-CARRIER P2: free arguments for a split level outside the type's classes (the value's) take
       -- the first copy
@@ -1072,6 +1251,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
         let mut cur : Std.HashMap String Level := {}
         for (t, v) in ownMVars do
           if typeLevels.contains t then cur := cur.insert t (← instantiateLevelMVars v)
+        probe "default.minimal_model"
         pure (minimalModelLevel genv.facts cur m)
       | none =>
         -- (R-OCC: an occurrence copy left free defaults as its source level)
@@ -1081,7 +1261,9 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
           for (t, v) in ownMVars do
             if typeLevels.contains t then cur := cur.insert t (← instantiateLevelMVars v)
           pure (minimalModelLevel genv.facts cur m)
-        | none => pure .zero
+        | none =>
+          probe "default.zero"
+          pure .zero
     -- coherence by unification: per-occurrence shared levels left free by typing are the own variables
     -- (after the value's type is unified with the declared type, before the parameters are named)
     -- solver stage B (experiment): a witness's values for the occurrences and own levels, before coherence
@@ -1152,6 +1334,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | _ => none
     let (ty, val, gty, gval) := (rn ty, rn val, rn gty, rn gval)
     unless ren.isEmpty do
+      probe "carrier.copies"
       -- implicit levels: every renamed copy / level replaced by its final name (source spelling)
       let finals : Array String := finalSplits.foldl (· ++ ·.2) #[]
       let split0 ← splitRef.get
@@ -1166,11 +1349,19 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     let backCopy : String → String := fun x => ((splits.find? (·.2.contains x)).map (·.1)).getD x
     let preCollapse := (ty, val)
     -- P3 retry tier: hypotheses of one leaf that ended at the same type are collapsed into the first
-    let (ty, val, hyps) ← if !hypExact || hyps.isEmpty then pure (ty, val, hyps) else do
-      unless resid.isEmpty do
+    let hyps0 := hyps
+    let (ty, val, hyps, keepIdx) ← if !hypExact || hyps.isEmpty then pure (ty, val, hyps, (#[] : Array Nat)) else do
+      -- (R-P3RES, switch `R2L_RULE_P3_RESID` while measured: residual levels are allowed with per-instance hypotheses;
+      -- they stay parameters, justified by the kernel at every value like any residual)
+      -- (last tiers only: in the early P3 attempt residuals stay refused, so a declaration a later tier accepts keeps
+      -- that translation — CoqEAL `refines_apply`, accepted by R-OCC with its six relation levels; S24 found the leak)
+      unless resid.isEmpty || (← setFloorTier.get) || (← bodyOccTier.get) do
         return { base with status := "UNSUPPORTED_FEATURE", message := "P3 tier: residual levels with per-instance hypotheses" }
       let (ty', val', keep) ← collapseHyps ty val (hyps.map (·.2))
-      pure (ty', val', keep.map (hyps[·]!))
+      pure (ty', val', keep.map (hyps[·]!), keep)
+    -- (R-P3RES: the generic version, residual levels as parameters, collapsed the same way)
+    let (gty, gval) ← if !hypExact || resid.isEmpty || keepIdx.isEmpty then pure (gty, gval) else
+      collapseHypsBy gty gval hyps0.size keepIdx (← dupsRef.get)
     if discover then
       return { base with status := "DISCOVERED", implicitLevels := (← implicitRef.get).qsort (· < ·) }
     -- C (docs/UNIVERSE_FAMILY_C.md): every level of a statement is a level of the statement; one left
@@ -1220,20 +1411,102 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
     -- (an implicit level that typing solved is an own level with a solution, not also a parameter: parameters and
     -- solved levels partition the own levels — entry 16, found by the audit on the R3G-for-definitions tier)
     let globals := (paramLevels ++ implicitLevels.filter (!sol.contains ·) ++ levelInterp.map (·.1)).toList.eraseDups.toArray.qsort (· < ·)
+    let floorOn0 ← setFloorTier.get
     let lparams := polyNames ++ globals.toList.map levelParamName
+    -- R-ORIENT (docs/POLICY_RELAXATIONS.md §10, last tiers): unification identified own levels `m₁ … mₖ` with
+    -- one own parameter `u_p` (each `mᵢ` solved as `u_p`); when that solution fails a native fact, the same
+    -- identification is represented by another member `r` (`u_p ↦ u_r`, `p` solved as `u_r`): the same term up
+    -- to the parameter's name. A free parameter `x` the source places between two members (`a ≤ x ≤ b`) is equal
+    -- to them in every model of the identification and is identified too (squeezed). Every solved level is
+    -- then checked against all its facts as before.
+    let mut orientUsed : Array String := #[]
+    let passes (sol : Std.HashMap String Level) (gl : Array String) (m : String) : Bool :=
+      (checkBodyLevel genv.facts gl sol m admitLv cumul).toBool ||
+        (floorOn0 && ((checkBodyLevel genv.facts gl sol m admitLv cumul (floor := some genv.namedStrict)).toBool ||
+          (checkBodyLevel genv.facts gl sol m admitLv cumul (floor := some genv.namedStrict) (diag := true)).toBool))
+    let plain (x : String) : Bool := !admitLv.contains x && !resultLv.contains x && !(levelInterp.any (·.1 == x))
+    let classes : Array String := if !floorOn0 then #[] else paramLevels.filter fun p =>
+      plain p && sol.toArray.any fun (m, σ) => σ == .param (levelParamName p) && plain m
+    let mut globals := globals
+    let mut renames : Array (Name × Name) := #[]
+    for p in classes do
+      let members := sol.toArray.filterMap fun (m, σ) => if σ == .param (levelParamName p) then some m else none
+      let touched := sol.toArray.filterMap fun (m, σ) =>
+        if (collectLevelParams {} (mkSort σ)).params.contains (levelParamName p) then some m else none
+      if touched.all (passes sol globals) then continue
+      -- (squeezed parameters, to a fixpoint)
+      let mut cls := members.push p
+      let mut sq : Array String := #[]
+      let mut grew := true
+      while grew do
+        grew := false
+        for x in globals do
+          if cls.contains x || !plain x then continue
+          if (cls.any fun a => entails genv.facts a x 0) && (cls.any fun b => entails genv.facts x b 0) then
+            cls := cls.push x
+            sq := sq.push x
+            grew := true
+      -- (candidates: the members, those below every other member in the source graph first)
+      let cands := members.push p
+      let low (a : String) : Bool := cls.all fun x => entails genv.facts a x 0
+      let lowFirst := (cands.filter low) ++ (cands.filter (!low ·))
+      for r in lowFirst do
+        let rn := levelParamName r
+        let gone : Array String := ((sq.push p).filter (· != r))
+        let goneN := gone.map levelParamName
+        let sub (σ : Level) : Level := (σ.replace fun x => match x with
+          | .param n => if goneN.contains n then some (.param rn) else none
+          | _ => none).normalize
+        let sol' := (sol.erase r).fold (fun acc m σ => acc.insert m (sub σ)) ({} : Std.HashMap String Level)
+        let sol' := gone.foldl (fun acc x => acc.insert x (.param rn)) sol'
+        let gl' := ((globals.filter (!gone.contains ·)).push r).toList.eraseDups.toArray.qsort (· < ·)
+        if (← IO.getEnv "R2L_ORIENT_DEBUG").isSome then
+          IO.eprintln s!"orient-debug {c.name} {p}->{r} sq={sq}"
+          for m in sol'.toArray.map (·.1) do
+            if !(passes sol' gl' m) then
+              if let .error e := checkBodyLevel genv.facts gl' sol' m admitLv cumul then IO.eprintln s!"orient-debug {c.name} {p}->{r}: {e}"
+        if (sol'.toArray.map (·.1)).all (passes sol' gl') then
+          probe "orient.reoriented"
+          sol := sol'
+          globals := gl'
+          paramLevels := ((paramLevels.filter (!gone.contains ·)).push r).toList.eraseDups.toArray
+          renames := renames ++ goneN.map (·, rn)
+          orientUsed := orientUsed.push s!"{p} -> {r}" ++ sq.map (s!"squeezed: {·} -> {r}")
+          break
+    let lparams := if renames.isEmpty then lparams else polyNames ++ globals.toList.map levelParamName
+    let rnO (e : Expr) : Expr := if renames.isEmpty then e else e.replaceLevel fun x => match x with
+      | .param n => (renames.find? (·.1 == n)).map (.param ·.2)
+      | _ => none
+    let (ty, val, gty, gval) ← if renames.isEmpty then pure (ty, val, gty, gval) else
+      pure (rnO (← instantiateMVars ty), rnO (← instantiateMVars val), rnO (← instantiateMVars gty), rnO (← instantiateMVars gval))
     -- R3 coherence for R2F-c own levels: an argument for `l` must be ι l
     let solι := levelInterp.foldl (fun (m : Std.HashMap String Level) (l, x) => m.insert l x) sol
     let base := { base with bodyLevels := own.filterMap fun m => sol[m]?.map (m, ·) }
     let base := if (← bodyOccLog.get).isEmpty then base else { base with levelDiagnostics := base.levelDiagnostics.push "body-occ" }
+    let base := if orientUsed.isEmpty then base else
+      { base with levelDiagnostics := base.levelDiagnostics ++ orientUsed.map (s!"orient: {·}") }
     for (mv, m) in ← bodyOccLog.get do
       let σ := (← instantiateLevelMVars (.mvar mv)).normalize
       if let .error msg := checkBodyCopy genv.facts globals sol m σ then
         return { base with status := "UNIVERSE_REJECTED", message := msg }
+    let floorOn ← setFloorTier.get
+    let mut floorUsed : Array String := #[]
+    let mut diagUsed : Array String := #[]
     for m in own do
       if sol.contains m then
         if resultLv.contains m then continue          -- (R2B-V: a lowering, checked below)
         if let .error msg := checkBodyLevel genv.facts globals sol m admitLv cumul then
-          return { base with status := "UNIVERSE_REJECTED", message := msg }
+          -- R-SET (last tier): the structural `Set < l` read as `Set ≤ l`; reported
+          if floorOn && (checkBodyLevel genv.facts globals sol m admitLv cumul (floor := some genv.namedStrict)).toBool then
+            floorUsed := floorUsed.push m
+          -- R-COPYDIAG (switch `R2L_RULE_COPY_DIAG` while measured): copied facts checked on the diagonal; reported
+          else if floorOn && true &&
+              (checkBodyLevel genv.facts globals sol m admitLv cumul (floor := some genv.namedStrict) (diag := true)).toBool then
+            floorUsed := floorUsed.push m
+            diagUsed := diagUsed.push m
+          else return { base with status := "UNIVERSE_REJECTED", message := msg }
+    let base := if floorUsed.isEmpty then base else
+      { base with levelDiagnostics := base.levelDiagnostics ++ floorUsed.map (s!"set-floor: {·}") ++ diagUsed.map (s!"copy-diag: {·}") }
     -- levels for which the relaxation was actually needed (the strict check fails): proof-local ones
     -- (R2B-P, source instance checked at verify) and levels of the type's own result sort (R2B-S)
     let mut r2bp : Array (String × Level) := #[]
@@ -1242,6 +1515,7 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       let tyGlobals := globalsOf c.type
       for m in own do
         if let some σ := sol[m]? then
+          if floorUsed.contains m then continue        -- (R-SET, reported as such)
           if !(checkBodyLevel genv.facts globals sol m admitLv false).toBool then
             -- a level of the type that is not only the result sort: the row is the source statement
             -- specialized at the checked instance (R2B-P with `in_type`; never on a requested root)
@@ -1284,6 +1558,10 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
       | .error msg, _ | _, .error msg =>
         return { base with status := "UNIVERSE_REJECTED", message := msg }
     let base := { base with universeChecks := nchecks }
+    -- (R-PREMODEL: the prerequisite statements the row's references were checked as models of, reported)
+    let base := if !genv.prereqModel then base else
+      let pre := ((constOccurrences ty).map (·.1) ++ (constOccurrences val).map (·.1)).filter genv.leafStmtTargets.contains
+      { base with levelDiagnostics := base.levelDiagnostics ++ (pre.toList.eraseDups.toArray.map (s!"prereq-model: {·}")) }
     -- C: a statement (anywhere) and a protected definition (its quantification ranges) are never
     -- specialized at a level the source leaves free (refused, as R2B-P/R2B-S are: no narrowing)
     -- binder-level independence of a statement (its quantification ranges)
@@ -1292,16 +1570,32 @@ partial def processConstantCore (genv : GEnv) (results : Std.HashMap String Decl
         match levelInterp.find? (·.1 == b) with
         | some (_, x) => some x
         | none => if paramLevels.contains b then some (.param (levelParamName b)) else sol[b]?
-      if let some m := binderIndependence genv.facts (binderLevelsIR body) σ then
-        return { base with status := "UNIVERSE_REJECTED", message := s!"statement specialization refused: {m}" }
+      let identOk := !genv.protectedNames.contains c.name && (← levelIdentTier.get)
+      match binderIndependence genv.facts (binderLevelsIR body) σ (allowIdent := identOk) with
+      | (some m, _) => return { base with status := "UNIVERSE_REJECTED", message := s!"statement specialization refused: {m}" }
+      | (none, ident) => identRef.set (ident.map (s!"level-ident: {·}"))
     let env ← getEnv
+    let cProt := genv.protectedNames.contains c.name
+    let cPin := stmt && (← carrierPinTier.get)
+    let floorP := if (← setFloorTier.get) then some genv.namedStrict else none
+    -- (C-PIN-M: in the pin / floor tiers only, like C-PIN; an early tier keeps the generality check unrelaxed)
+    let mPin := (← carrierPinTier.get) || (← setFloorTier.get)
     let pinned : Option String :=
       if stmt then
-        freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) <|>
-          freeLevelPin env genv.facts lparams (peelBinders val hyps.size)
+        freeLevelPin env genv.facts lparams (peelBinders ty hyps.size) (carrierPins := cPin) (floor := floorP) (termOnly := cProt) (modelPins := mPin) <|>
+          freeLevelPin env genv.facts lparams (peelBinders val hyps.size) (carrierPins := cPin) (floor := floorP) (termOnly := cProt) (modelPins := mPin)
       else if genv.protectedNames.contains c.name then
         (typeDomains (peelBinders ty hyps.size)).findSome? (freeLevelPin env genv.facts lparams)
       else none
+    -- (C-PIN / L-IDENT: the pins and identifications the row relies on, reported)
+    let base ← do
+      let mut extra := (← identRef.get)
+      identRef.set #[]
+      if cPin && pinned.isNone then
+        let pins := carrierPinRefs env genv.facts lparams (peelBinders ty hyps.size) (floor := floorP) (termOnly := cProt) (modelPins := mPin) ++
+          carrierPinRefs env genv.facts lparams (peelBinders val hyps.size) (floor := floorP) (termOnly := cProt) (modelPins := mPin)
+        extra := extra ++ (pins.toList.eraseDups.toArray.map (s!"carrier-pin: {·}"))
+      pure { base with levelDiagnostics := base.levelDiagnostics ++ extra }
     if let some m := pinned then
       return { base with status := "UNIVERSE_REJECTED",
                          message := if stmt then s!"statement specialization refused: {m}"
@@ -2171,8 +2465,286 @@ def asmAfter (a : AsmInput) (opaqueData : Std.HashSet String) (results : Std.Has
         r ← assembleProof results r d.name tmpl hs
   return (r, true)
 
-/-- Translate all declarations of an export, in order (`asm?`: assembly, see above). -/
-def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}) (asm? : Option AsmInput := none) :
+/-- The entries a translated constant's rows register for references to them (`cname`: the name it
+was translated under, `<name>.statement` / `.type` for a statement). Shared by the translation and the
+replay of a row from a base run (docs/INCREMENTAL.md), so both register the same entries. -/
+def registerConstant (genv0 : GEnv) (c0name cname : String) (r : DeclResult) : GEnv := Id.run do
+  let mut genv := genv0
+  -- B: generated statements (termination obligations, unfolding equations) are proof tasks
+  for x in r.synthetic do
+    if let some n := x.target then
+      if x.status == "STATEMENT_KERNEL_CHECKED" || x.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
+        genv := { genv with leafStmt := genv.leafStmt.insert x.source (n, x.pendingHyps),
+                            leafStmtTargets := genv.leafStmtTargets.insert n }
+        unless x.levelParams.isEmpty do
+          genv := { genv with constGlobals := genv.constGlobals.insert n x.paramLevels }
+  -- statement mode: register proof tasks (statements) and pending artifacts for later references
+  if r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" || r.status == "PENDING_KERNEL_CHECKED" then
+    if let some n := r.target then
+      if r.status == "PENDING_KERNEL_CHECKED" then
+        genv := { genv with pendingDefs := genv.pendingDefs.insert c0name (n, r.pendingHyps) }
+      else
+        genv := { genv with leafStmt := genv.leafStmt.insert c0name (n, r.pendingHyps),
+                            leafStmtTargets := genv.leafStmtTargets.insert n }
+      unless r.levelParams.isEmpty do
+        genv := { genv with constGlobals := genv.constGlobals.insert n r.paramLevels }
+  if r.ok then if let some n := r.target then
+    genv := { genv with consts := genv.consts.insert cname n,
+                        constLevels := genv.constLevels.insert cname r.levelParams.length,
+                        constGlobals := if r.levelParams.isEmpty then genv.constGlobals
+                          else genv.constGlobals.insert n r.paramLevels }
+    if r.polyParams > 0 then
+      genv := { genv with constPoly := genv.constPoly.insert cname r.polyParams,
+                          polyByTarget := genv.polyByTarget.insert n r.polyParams }
+    unless r.admittingLevels.isEmpty do
+      genv := { genv with admitting := genv.admitting.insert n r.admittingLevels }
+  return genv
+
+/-- The entries every translated declaration registers, after its kind's own (`registerConstant`, an
+inductive's in `translateDecl`): copy positions, the rule P gate and the R3G-F closures. Shared with replay. -/
+def registerCommon (genv0 : GEnv) (d : IR.Decl) (r : DeclResult) : GEnv := Id.run do
+  let mut genv := genv0
+  -- R-CARRIER P2: the copy positions of the declaration's universe parameters, for references to it
+  unless r.levelCopies.isEmpty do
+    let copies := r.levelCopies.foldl (· ++ ·.2) #[]
+    let mask := (r.levelParams.drop r.polyParams).toArray.map fun p => copies.any (levelParamName · == p)
+    for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
+      genv := { genv with copyPositions := genv.copyPositions.insert n mask }
+  -- R3G-F: the declaration's closure of result-sort implicit levels (its dependencies' and its own)
+  let deps := match d with
+    | .constant c => c.typeDeps ++ c.bodyDeps
+    | .inductive i => i.typeDeps
+  -- rule P gate: the declaration reaches a lifted definition
+  if r.propLift.isSome || deps.any genv.liftReach.contains then
+    genv := { genv with liftReach := genv.liftReach.insert d.name,
+                        liftTargets := (r.target.toList ++ (r.targetCtors.map (·.1)).toList).foldl (fun s n => s.insert n)
+                          (genv.liftTargets.insert ``PULift) }
+  let cl := r.resultSortImplicit.foldl (·.insert ·) (genv.rsOfDeps deps)
+  unless cl.isEmpty do genv := { genv with rsClosure := genv.rsClosure.insert d.name cl }
+  -- R3G-F applicability at references to this declaration (docs/RESULT_SORT_LEVELS.md §2): besides an
+  -- inductive's source result-sort-only levels (registered above), the R3G-F levels of its dependency
+  -- closure that are not levels of its own source (they reach it only through such blocks)
+  if r.accepted || r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
+    let expl : Std.HashSet String := match d with
+      | .constant c => globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)
+      | .inductive i => (globalsOfInd i).foldl (·.insert ·) {}
+    let inh := (genv.rsOfDeps deps).fold (fun acc l => if expl.contains l then acc else acc.push l) #[]
+    unless inh.isEmpty do
+      for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
+        let old := (genv.resultOnly[n]?).getD #[]
+        genv := { genv with resultOnly := genv.resultOnly.insert n (old ++ inh.filter (!old.contains ·)) }
+  return genv
+
+/-- R-SPLIT: the facts of a split view (each copy inherits the level's upper bounds); they stay in force
+after the view is accepted. Shared with replay. -/
+def splitFacts (facts : IR.UniverseFacts) (infos : Array Split.Info) : IR.UniverseFacts :=
+  facts.extend (infos.foldl (fun a inf => a ++ inf.names) #[]) (Split.copiedRelations facts infos)
+
+/-- R-SPLIT: references read every copy of a split level as the source level itself. Shared with replay. -/
+def registerSplit (genv : GEnv) (r : DeclResult) (split : Array (String × Array Nat × Array String)) : GEnv := Id.run do
+  let back : String → String := fun x => ((split.find? (·.2.2.contains x)).map (·.1)).getD x
+  let mut cg := genv.constGlobals
+  for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
+    if let some gs := cg[n]? then cg := cg.insert n (gs.map back)
+  return { genv with constGlobals := cg }
+
+/-! ## Incremental runs (docs/INCREMENTAL.md)
+
+Every run writes a *replay record* per source declaration (`replay_records.jsonl`): the declarations it
+installed (`addedLog`, those still present after it), whether its environment update was kept, and per
+row the universe parameters' source levels and the target. An incremental run takes a base run (its
+report, replay records and module) and the declarations to translate again. A constant that is not
+selected and none of whose dependencies changed, directly or through others, is *replayed*: the
+declarations it installed are submitted to the kernel again as the base module has them, its rows are
+the base report's lines, and its environment entries are registered by the same functions translation
+uses (`registerConstant`, `registerCommon`, `registerSplit`). Every other declaration (inductives
+included: they take seconds) is translated, and compared with its base rows; one that differs makes
+its dependents translated too. -/
+
+/-- A base run: its report lines and replay records, by source; its timing; its module's declarations;
+the declarations to translate again. -/
+structure ReplayInput where
+  lines : Std.HashMap String String
+  records : Std.HashMap String Json
+  timing : Std.HashMap String (Nat × Array (String × Nat × String))
+  consts : Std.HashMap Name ConstantInfo
+  rerun : Std.HashSet String
+
+/-- This run's replay records (one per source declaration, in order), the declarations whose rows
+differ from the base run's, and the replays that fell back to translation (with the reason). -/
+initialize replayRecords : IO.Ref (Array Json) ← IO.mkRef #[]
+initialize replayChanged : IO.Ref (Array String) ← IO.mkRef #[]
+initialize replayFallback : IO.Ref (Array (String × String)) ← IO.mkRef #[]
+
+/-- A name as its components (not `Name.toString`, whose escaping `String.toName` does not invert). -/
+def nameJson (n : Name) : Json :=
+  Json.arr (n.components.toArray.map fun c => match c with
+    | .str _ s => Json.str s
+    | .num _ k => Json.num k
+    | .anonymous => Json.null)
+
+def nameOfJson (j : Json) : Name :=
+  ((j.getArr?).toOption.getD #[]).foldl (fun n c => match c with
+    | .str s => .str n s
+    | .num k => match k.mantissa.toNat? with | some m => .num n m | none => n
+    | _ => n) .anonymous
+
+/-- The declaration a base module holds for a name (only definitions, theorems and opaque constants are
+replayed: inductives are always translated, and the translator installs nothing else). -/
+def declOfInfo : ConstantInfo → Option Declaration
+  | .defnInfo v => some (.defnDecl v)
+  | .thmInfo v => some (.thmDecl v)
+  | .opaqueInfo v => some (.opaqueDecl v)
+  | _ => none
+
+private def jArr (j : Json) (k : String) : Array String := (j.getObjValAs? (Array String) k).toOption.getD #[]
+private def jNat (j : Json) (k : String) : Nat := (j.getObjValAs? Nat k).toOption.getD 0
+
+/-- A base row (its report JSON and its replay record's row): the fields that the dependents of a row
+and the registration read. The row itself is written back as the base report's line. -/
+def rowOfJson (j rcd : Json) (raw : Option String) : DeclResult :=
+  let s (k : String) := (j.getObjValAs? String k).toOption.getD ""
+  { source := s "source", kind := s "kind", status := s "status", rule := s "rule", message := s "message",
+    target := match rcd.getObjVal? "target" with
+      | .ok t@(.arr _) => some (nameOfJson t)
+      | _ => none,
+    targetKind := s "target_kind",
+    levelParams := (jArr j "level_params").toList.map String.toName,
+    numParams := jNat j "num_params",
+    paramLevels := jArr rcd "param_levels",
+    polyParams := jNat j "universe_poly_params",
+    admittingLevels := jArr j "admitting_levels",
+    pendingHyps := jArr j "pending_hypotheses",
+    blockedBy := jArr j "blocked_by",
+    propLift := (j.getObjValAs? Nat "prop_lift").toOption,
+    levelCopies := ((j.getObjValAs? (Array Json) "level_copies").toOption.getD #[]).map fun c =>
+      ((c.getObjValAs? String "level").toOption.getD "", jArr c "copies"),
+    resultSortImplicit := jArr j "result_sort_implicit_levels",
+    levelSplit := ((j.getObjValAs? (Array Json) "level_split").toOption.getD #[]).map fun c =>
+      ((c.getObjValAs? String "level").toOption.getD "", (c.getObjValAs? (Array Nat) "params").toOption.getD #[], jArr c "copies"),
+    protectedIface := (j.getObjValAs? Bool "protected").toOption.getD false,
+    synthesizedFrom := s "synthesized_from", syntheticKind := s "synthetic_kind",
+    verbatimRaw := raw, replayed := raw.isSome }
+
+/-- `translateDecl` returns before registering anything for these constants (no translation rule, or
+nothing to translate). -/
+def constEarlyExit (src : IR.Source) (c0 : IR.ConstantDecl) : Bool :=
+  let raw := src.rawDecls[c0.name]?
+  (raw.bind fun j => (j.getObjVal? "termination").toOption).isSome ||
+  c0.bodyState == "obligation_extraction_failed" ||
+  (c0.bodyState == "opaque_interface" &&
+    ((raw.bind fun j => (j.getObjVal? "type_sort").toOption).bind fun j => (IR.parseTerm j).toOption).isNone)
+
+/-- The environment entries of a constant's rows, registered as translating it registered them. -/
+def replayRegistration (src : IR.Source) (genv : GEnv) (d : IR.Decl) (rows : Array DeclResult) (kept : Bool) :
+    Except String GEnv := do
+  unless kept do return genv
+  let .constant c0 := d | throw "not a constant"
+  let some main := rows.find? (·.source == c0.name) | throw "no row for the declaration"
+  if constEarlyExit src c0 then return genv
+  let main := { main with synthetic := rows.filter (·.source != c0.name) }
+  let isStmt := c0.bodyState == "statement_only" || c0.bodyState == "obligation" || c0.bodyState == "opaque_interface"
+  let cname := if isStmt then c0.name ++ (if c0.bodyState == "opaque_interface" then ".type" else ".statement") else c0.name
+  let mut g := genv
+  let mut dd := d
+  -- (R-SPLIT: the split view was translated, with its facts, which stay in force)
+  if !main.levelSplit.isEmpty then
+    let some (d', infos) := Split.view d | throw "R-SPLIT row without a split view"
+    g := { g with facts := splitFacts g.facts infos }
+    dd := d'
+  g := registerConstant g c0.name cname main
+  g := registerCommon g dd main
+  if !main.levelSplit.isEmpty then g := registerSplit g main main.levelSplit
+  return g
+
+/-- Fields of two environments that differ: every table's size, and the entries at the given keys (the
+names a declaration registers under). Used to check a replayed registration against translation. -/
+def genvDiff (a b : GEnv) (keysS : Array String) (keysN : Array Name) : Array String := Id.run do
+  let mut bad := #[]
+  let sizes : List (String × Nat × Nat) := [
+    ("consts", a.consts.size, b.consts.size), ("constLevels", a.constLevels.size, b.constLevels.size),
+    ("constGlobals", a.constGlobals.size, b.constGlobals.size), ("resultOnly", a.resultOnly.size, b.resultOnly.size),
+    ("rsClosure", a.rsClosure.size, b.rsClosure.size), ("copyPositions", a.copyPositions.size, b.copyPositions.size),
+    ("templateLevels", a.templateLevels.size, b.templateLevels.size), ("inds", a.inds.size, b.inds.size),
+    ("constPoly", a.constPoly.size, b.constPoly.size), ("polyByTarget", a.polyByTarget.size, b.polyByTarget.size),
+    ("admitting", a.admitting.size, b.admitting.size), ("liftReach", a.liftReach.size, b.liftReach.size),
+    ("liftTargets", a.liftTargets.size, b.liftTargets.size), ("leafStmt", a.leafStmt.size, b.leafStmt.size),
+    ("leafStmtTargets", a.leafStmtTargets.size, b.leafStmtTargets.size), ("pendingDefs", a.pendingDefs.size, b.pendingDefs.size),
+    ("facts.levels", a.facts.levels.size, b.facts.levels.size), ("facts.relations", a.facts.relations.size, b.facts.relations.size),
+    ("sortOverride", a.sortOverride.size, b.sortOverride.size)]
+  for (k, x, y) in sizes do
+    if x != y then bad := bad.push s!"{k}: size {x} vs {y}"
+  let srt (s : Std.HashSet String) : Array String := s.toArray.qsort (· < ·)
+  for k in keysS do
+    if a.consts[k]? != b.consts[k]? then bad := bad.push s!"consts[{k}]"
+    if a.constLevels[k]? != b.constLevels[k]? then bad := bad.push s!"constLevels[{k}]"
+    if a.constPoly[k]? != b.constPoly[k]? then bad := bad.push s!"constPoly[{k}]"
+    if a.leafStmt[k]? != b.leafStmt[k]? then bad := bad.push s!"leafStmt[{k}]"
+    if a.pendingDefs[k]? != b.pendingDefs[k]? then bad := bad.push s!"pendingDefs[{k}]"
+    if (a.rsClosure[k]?).map srt != (b.rsClosure[k]?).map srt then bad := bad.push s!"rsClosure[{k}]"
+    if a.liftReach.contains k != b.liftReach.contains k then bad := bad.push s!"liftReach[{k}]"
+  for n in keysN do
+    if a.constGlobals[n]? != b.constGlobals[n]? then bad := bad.push s!"constGlobals[{n}]"
+    if a.resultOnly[n]? != b.resultOnly[n]? then bad := bad.push s!"resultOnly[{n}]"
+    if a.copyPositions[n]? != b.copyPositions[n]? then bad := bad.push s!"copyPositions[{n}]"
+    if a.polyByTarget[n]? != b.polyByTarget[n]? then bad := bad.push s!"polyByTarget[{n}]"
+    if a.admitting[n]? != b.admitting[n]? then bad := bad.push s!"admitting[{n}]"
+    if a.liftTargets.contains n != b.liftTargets.contains n then bad := bad.push s!"liftTargets[{n}]"
+    if a.leafStmtTargets.contains n != b.leafStmtTargets.contains n then bad := bad.push s!"leafStmtTargets[{n}]"
+  return bad
+
+/-- A row as compared between runs: everything but its messages. -/
+def rowKey (j : Json) : String := match j with
+  | .obj _ => ((j.setObjVal! "message" .null).setObjVal! "universe_diagnostics" .null).compress
+  | j => j.compress
+
+/-- The replay record of a translated declaration. -/
+def replayRecord (d : IR.Decl) (kept : Bool) (added : Array Name) (rows : Array DeclResult)
+    (probes : Std.HashMap String Nat := {}) : Json :=
+  Json.mkObj [("decl", d.name), ("kind", match d with | .constant _ => "constant" | _ => "inductive"),
+    ("genv", kept), ("added", Json.arr (added.map nameJson)),
+    ("probes", Json.mkObj ((probes.toArray.qsort (·.1 < ·.1)).toList.map fun (k, n) => (k, Json.num n))),
+    ("rows", Json.arr (rows.map fun x => Json.mkObj [("source", x.source),
+      ("param_levels", Json.arr (x.paramLevels.map Json.str)),
+      ("target", match x.target with | some n => nameJson n | none => .null)]))]
+
+/-- Replay a constant from the base run: its declarations through the kernel, its rows, its registration. -/
+def replayDecl (src : IR.Source) (rp : ReplayInput) (genv : GEnv) (d : IR.Decl) :
+    MetaM (Except String (Array DeclResult × GEnv)) := do
+  let some rcd := rp.records[d.name]? | return .error "no replay record"
+  unless (rcd.getObjValAs? String "kind").toOption == some "constant" do return .error "not a constant"
+  let mut decls := #[]
+  for nj in ((rcd.getObjValAs? (Array Json) "added").toOption.getD #[]) do
+    let n := nameOfJson nj
+    match (rp.consts[n]?).bind declOfInfo with
+    | some x => decls := decls.push x
+    | none => return .error s!"{n} is not a definition, theorem or opaque constant of the base module"
+  let mut rows := #[]
+  for rr in ((rcd.getObjValAs? (Array Json) "rows").toOption.getD #[]) do
+    let srcName := (rr.getObjValAs? String "source").toOption.getD ""
+    let some raw := rp.lines[srcName]? | return .error s!"no base report row for {srcName}"
+    let j ← match Json.parse raw with
+      | .ok j => pure j
+      | .error e => return .error s!"base report row for {srcName}: {e}"
+    let (_, tiers) := (rp.timing[srcName]?).getD (0, #[])
+    rows := rows.push { rowOfJson j rr (some raw) with tierTimes := tiers }
+  let kept := (rcd.getObjValAs? Bool "genv").toOption.getD false
+  let g ← match replayRegistration src genv d rows kept with
+    | .ok g => pure g
+    | .error e => return .error e
+  let saved ← saveState
+  for x in decls do
+    match ← addChecked x with
+    | .accepted => pure ()
+    | .rejected msg =>
+      saved.restore
+      return .error s!"kernel: {msg.take 300}"
+  return .ok (rows, g)
+
+/-- Translate all declarations of an export, in order (`asm?`: assembly, see above; `rep?`: an incremental
+run's base run, docs/INCREMENTAL.md). -/
+def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}) (asm? : Option AsmInput := none)
+    (rep? : Option ReplayInput := none) :
     MetaM (Array DeclResult) := do
   let irBodies := src.decls.foldl (init := ({} : Std.HashMap String IR.Term)) fun m d => match d with
     | .constant c => match c.body, c.universes with
@@ -2230,7 +2802,9 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
   let shadowOnly : Option (Std.HashSet String) ← match ← IO.getEnv "R2L_SHADOW_ONLY" with
     | some f => pure (some ((← IO.FS.lines f).foldl (fun acc l => if l.trim.isEmpty then acc else acc.insert l.trim) {}))
     | none => pure none
-  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, phantomDefs, phantomProofs, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog, phaseLog, shadowWin, shadowOccConst, witnesses, witnessOn, retryAborted }
+  -- R-SET: the levels with a named strict lower bound
+  let namedStrict : Std.HashSet String := src.facts.relations.foldl (fun acc (a, r, b) => if r == "lt" && a != "Set" then acc.insert b else acc) {}
+  let mut genv : GEnv := { facts := src.facts, irBodies, setMotive, erasingPoly, phantomDefs, phantomProofs, protectedNames, stmtMode, reuseExisting := asm?.isSome, carrierSet, decoupled, tierLog := some tierLog, phaseLog, shadowWin, shadowOccConst, witnesses, witnessOn, retryAborted, namedStrict }
   let mut results : Std.HashMap String DeclResult := {}
   let mut out := #[]
   let opaqueData : Std.HashSet String := src.decls.foldl (init := {}) fun m d => match d with
@@ -2242,7 +2816,11 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     | some a => a.validated.fold (init := {}) fun m k v =>
       let p := jStr v "synthesized_from"
       if p.isEmpty then m else m.insert p ((m.getD p #[]).push (k, v))
+  -- incremental: declarations whose rows differ from the base run's, or that depend on one (transitively)
+  let mut tainted : Std.HashSet String := {}
+  let mut declIdx := 0
   for d in src.decls do
+    declIdx := declIdx + 1
     -- assembly, B: a termination obligation of `d` (its statement is in the validated library) gets its
     -- final theorem before `d` is translated again, so that the lowering can use it
     if let some a := asm? then
@@ -2276,6 +2854,31 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
             results := results.insert k x
             out := out.push x
         continue
+    -- incremental (docs/INCREMENTAL.md): a constant that is not selected and none of whose dependencies
+    -- changed (directly or through others) is replayed from the base run
+    let depChanged := (declDeps d).any tainted.contains
+    if let some rp := rep? then
+      if asm?.isNone && !depChanged && !rp.rerun.contains d.name then
+        if let .constant _ := d then
+          match ← replayDecl src rp genv d with
+          | .ok (rows, g) =>
+            genv := g
+            for x in rows do
+              results := results.insert x.source x
+              out := out.push x
+            if let some rcd := rp.records[d.name]? then replayRecords.modify (·.push rcd)
+            if let some f := (← IO.getEnv "R2L_PROGRESS") then
+              IO.FS.withFile f .append fun h => do
+                for x in rows do h.putStrLn s!"0\t{x.status}\t{x.source}\treplayed"
+            continue
+          | .error why => replayFallback.modify (·.push (d.name, why))
+    let genvBefore := genv
+    addedLog.set #[]
+    probeLog.set {}
+    -- (determinism: the metavariables and free variables of a declaration are named from its own position
+    -- in the export, so its translation does not depend on how many earlier declarations created — the
+    -- order of a set of level metavariables follows their names, e.g. the residual levels' numbering)
+    modifyThe Core.State fun s => { s with ngen := { namePrefix := .num `_r2l declIdx } }
     -- the heartbeat budget is per declaration; a declaration exceeding it is a RESOURCE_LIMIT row
     let saved ← saveState
     if let some ref := genv.tierLog then ref.set #[]
@@ -2299,6 +2902,34 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
         ({ source := d.name, kind := match d with | .constant _ => "constant" | _ => "inductive",
            status := if rt then "RESOURCE_LIMIT" else "TRANSLATION_FAILED",
            message := if rt then s!"resource limit per declaration: {msg.take 300}" else s!"internal error: {msg.take 600}" }, none)
+    -- R-TARGET (docs/POLICY_RELAXATIONS.md §11): a declaration whose budget ran out on the early tiers after an attempt
+    -- failed on a generated prerequisite statement's levels (R-PREMODEL's case, a tier the ladder did not reach) is
+    -- translated once more, with a fresh budget, with such references read as R-PREMODEL reads them; kept only when
+    -- accepted (a declaration that fails either way keeps its row)
+    let tiers0 ← match genv.tierLog with | some ref => ref.get | none => pure #[]
+    let premodelCase := tiers0.any fun (_, _, m) =>
+      (m.splitOn ".statement: argument").length > 1 && (m.splitOn "is not entailed by the source universe graph").length > 1
+    let (r, genv?, tiers0) ← if r.status == "RESOURCE_LIMIT" && !genv.prereqModel && premodelCase then do
+        if let some ref := genv.tierLog then ref.set #[]
+        let gP := { genv with prereqModel := true }
+        let r2? ← tryCatchRuntimeEx (Sum.inl <$> withTheReader Core.Context limits
+            (withCurrHeartbeats (translateSplit gP results d))) fun e => do
+          saved.restore
+          pure (Sum.inr (← e.toMessageData.toString))
+        match r2? with
+        | .inl (r2, g2) =>
+          let t2 ← match genv.tierLog with | some ref => ref.get | none => pure #[]
+          let tiers0 := tiers0 ++ t2.map fun (l, ms, m) => (s!"target:{l}", ms, m)
+          if r2.accepted then
+            probe "target.premodel_accepted"
+            pure ({ r2 with levelDiagnostics := r2.levelDiagnostics.push "targeted-retry: prereq-model" },
+                  some { g2 with prereqModel := false }, tiers0)
+          else
+            saved.restore
+            pure (r, genv?, tiers0)
+        | .inr m => pure (r, genv?, tiers0.push ("target", 0, s!"RESOURCE_LIMIT | {m.take 300}"))
+      else pure (r, genv?, tiers0)
+    if let some ref := genv.tierLog then ref.set tiers0
     let mut r := r
     r := { r with timeMs := (← IO.monoMsNow) - tDecl, tierTimes := ← match genv.tierLog with | some ref => ref.get | none => pure #[] }
     -- (diagnostics: `R2L_PROGRESS=<file>` appends each finished declaration, so a long run can be followed;
@@ -2343,6 +2974,31 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
         ("attempts", toJson r.tierTimes.size),
         ("phases", Json.mkObj (ph.toList.map fun (k, a, n) => (k, Json.arr #[toJson a, toJson n])))]
       IO.FS.withFile f .append fun h => h.putStrLn line.compress
+    -- incremental: the declaration's replay record (what it installed, each name once, in the order of its
+    -- last installation), and the check that replaying its rows registers exactly what translating it did
+    let added ← do
+      let env ← getEnv
+      let mut seen : Std.HashSet Name := {}
+      let mut keep := #[]
+      for n in (← addedLog.get).reverse do
+        if env.contains n && !seen.contains n then
+          seen := seen.insert n
+          keep := keep.push n
+      pure keep.reverse
+    let rowsNow := r.synthetic.filter (·.syntheticKind == "termination") ++ #[r] ++
+      r.synthetic.filter (·.syntheticKind != "termination")
+    let mut rcd := replayRecord d genv?.isSome added rowsNow (← probeLog.get)
+    if asm?.isNone then
+      if let (.constant _, some g) := (d, genv?) then
+        let recRows := (rcd.getObjValAs? (Array Json) "rows").toOption.getD #[]
+        let rows := (rowsNow.zip recRows).map fun (x, rr) => rowOfJson x.toJson rr none
+        let keysS := #[d.name, d.name ++ ".statement", d.name ++ ".type"] ++ rowsNow.map (·.source)
+        let keysN := (rowsNow.filterMap (·.target)).push ``PULift
+        let bad := match replayRegistration src genvBefore d rows true with
+          | .ok g' => genvDiff g g' keysS keysN
+          | .error e => #[e]
+        unless bad.isEmpty do rcd := rcd.setObjVal! "selfcheck" (Json.arr (bad.map Json.str))
+    replayRecords.modify (·.push rcd)
     match asm? with
     | none => if let some g := genv? then genv := g
     | some a =>
@@ -2361,6 +3017,7 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     r := { r with protectedIface := protectedNames.contains r.source }
     -- (B: termination statements are reported before their declaration, unfolding equations after
     -- it: each row only references rows reported earlier)
+    let outStart := out.size
     let gen := r.synthetic
     r := { r with synthetic := #[] }
     let mut after : Array DeclResult := #[]
@@ -2396,6 +3053,26 @@ def translateSource (src : IR.Source) (protectedNames : Std.HashSet String := {}
     for x in after do
       results := results.insert x.source x
       out := out.push x
+    -- incremental: a translated declaration whose record or rows (but their messages) differ from the base
+    -- run's changes its dependents' inputs: they are translated too
+    if let some rp := rep? then
+      let mine := out.extract outStart out.size
+      let strip (j : Json) : String := match j with
+        | .obj _ => (j.setObjVal! "selfcheck" .null).compress
+        | j => j.compress
+      let same := Id.run do
+        let some brec := rp.records[d.name]? | return false
+        if strip brec != strip rcd then return false
+        for x in mine do
+          let some raw := rp.lines[x.source]? | return false
+          match Json.parse raw with
+          | .ok j => if rowKey j != rowKey x.toJson then return false
+          | .error _ => return false
+        return true
+      if !same then
+        replayChanged.modify (·.push d.name)
+        tainted := tainted.insert d.name
+      else if depChanged then tainted := tainted.insert d.name
   return out
 where
   /-- R-SPLIT (docs/LEVEL_SPLIT.md, experimental): a declaration with an eligible level is first
@@ -2405,22 +3082,17 @@ where
   translateSplit (genv0 : GEnv) (results : Std.HashMap String DeclResult) (d : IR.Decl) : MetaM (DeclResult × GEnv) := do
     let some (d', infos) := Split.view d | translateDecl genv0 results d
     let copies := infos.foldl (fun a inf => a ++ inf.names) #[]
-    let back : String → String := fun x => (infos.find? (·.names.contains x)).map (·.level) |>.getD x
-    let facts' := genv0.facts.extend copies (Split.copiedRelations genv0.facts infos)
     let saved ← saveState
-    let (r, genv) ← translateDecl { genv0 with facts := facts' } results d'
+    let (r, genv) ← translateDecl { genv0 with facts := splitFacts genv0.facts infos } results d'
     -- (every copy must stay a universe parameter: a copy solved or defaulted would not be the split view)
     let generic := copies.all fun c => r.levelParams.contains (levelParamName c)
     if generic && (r.ok || r.status == "PENDING_KERNEL_CHECKED" || r.status == "STATEMENT_KERNEL_CHECKED" ||
         r.status == "STATEMENT_PENDING_KERNEL_CHECKED") then
       -- references: each copy stands for the source level
-      let mut cg := genv.constGlobals
-      for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
-        if let some gs := cg[n]? then cg := cg.insert n (gs.map back)
       let note := s!"R-SPLIT: {infos.map fun i => (i.level, i.params)}"
       return ({ r with levelSplit := infos.map fun i => (i.level, i.params, i.names),
                        levelDiagnostics := r.levelDiagnostics.push note },
-              { genv with constGlobals := cg })
+              registerSplit genv r (infos.map fun i => (i.level, i.params, i.names)))
     saved.restore
     let (r0, g0) ← translateDecl genv0 results d
     let why := if generic then s!"{r.status}: {r.message.take 300}" else "a copy was not kept as a universe parameter"
@@ -2613,6 +3285,14 @@ where
           -- definition declared at a `Type`)
           -- (entry 16: or the kernel saw a Prop-valued relation where a Type-valued one is expected)
           let relMismatch := r.status == "KERNEL_REJECTED" && (r.message.splitOn "→ Prop").length > 1
+          -- (R-PGATE, switch `R2L_RULE_P_GATE` while measured: the same kernel mismatch reported by the residual-default
+          -- check of a universe-rejected row — CoqEAL `Rnat_div_eucl` obligations, `prod_R` given the δ-unfolded `Rnat`)
+          let relMismatch := relMismatch || (true && r.status == "UNIVERSE_REJECTED" &&
+            (r.message.splitOn "(kernel) application type mismatch").length > 1 && (r.message.splitOn "→ Prop").length > 1)
+          -- (and the same mismatch found by the value's `Meta.check` before the kernel, reported in the row's diagnostics:
+          -- `Rnat_div_eucl`, a Prop relation `fun a b => nat_of_bin b = a` where `hrespectful` takes a Type-valued one)
+          let relMismatch := relMismatch || (r.status == "UNIVERSE_REJECTED" && r.levelDiagnostics.any fun d =>
+            (d.splitOn "Application type mismatch").length > 1 && (d.splitOn "→ Prop").length > 1 && (d.splitOn "→ Type").length > 1)
           let liftPossible := (c0.typeDeps ++ c0.bodyDeps).any genv.liftReach.contains || (!isStmt && irEndsInSort c0.type) || relMismatch
           if !r.accepted && c0.bodyState != "opaque_interface" && (retry r.status || castFail) && liftPossible then
             -- (with the ladder's variants: R2F-c, cumulativity, R3↓, per-occurrence coherence)
@@ -2814,12 +3494,17 @@ where
             try
               -- (with per-instance prerequisite hypotheses, P3: the occurrences are now independent, so one shared
               -- hypothesis for a pending dependency used at several of them no longer fits)
-              for (it, lo, ns, p3) in [(false, false, false, false), (false, false, false, true), (true, false, false, true),
-                                       (false, true, false, true), (false, false, true, false), (false, false, true, true)] do
+              -- (rule R-OCC+P, candidate `R2L_RULE_OCC_LIFT`: also with rule P's lift, a proposition used at a type —
+              -- CoqEAL's `Rnat` relations under the per-occurrence levels)
+              let lift := true
+              for (it, lo, ns, p3, pl) in [(false, false, false, false, false), (false, false, false, true, false), (true, false, false, true, false),
+                                           (false, true, false, true, false), (false, false, true, false, false), (false, false, true, true, false),
+                                           (false, false, false, false, true), (false, false, false, true, true), (true, false, false, true, true)] do
                 if ns && prot then continue
+                if pl && !lift then continue
                 let g' := if ns then { genv with carrierSplit := false } else genv
                 let r' ← budgeted c.name "constant" <| processConstant g' results c (stmt := isStmt) (inferSort := c0.bodyState == "opaque_interface")
-                  (interp := it) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                  (interp := it) (extraOwn := eo) (lower := lo) (hypExact := p3) (propLift := pl)
                 if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[body-occ] {r'.message}" }
                 if r'.status == "RESOURCE_LIMIT" then break
                 if r'.accepted then
@@ -2827,6 +3512,140 @@ where
                   iface := none
                   break
             finally
+              bodyOccTier.set false
+          -- (the rules of docs/POLICY_RELAXATIONS.md: after every earlier tier, R-OCC included, so that no row an earlier
+          -- tier accepts can change)
+          -- rule S-FREE (candidate, `R2L_RULE_SHARED_FREE`): after every tier above failed, the ladder's universe variants
+          -- with one metavariable per non-own source level at every reference (Lean's unifier otherwise merges the
+          -- occurrences of two source levels through a packed carrier `max (51, 21)`, stage C)
+          if !r.accepted && (retry r.status) && (← IO.getEnv "R2L_RULE_SHARED_FREE").isSome then
+            try
+              for (it, cu, lo) in [(false, false, false), (true, false, false), (false, true, false), (false, true, true)] do
+                sharedFreeTier.set true
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo)
+                sharedFreeTier.set false
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[shared-free] {r'.message}" }
+                if r'.accepted then
+                  r := { r' with levelDiagnostics := r'.levelDiagnostics.push "shared-free" }
+                  iface := none
+                  break
+            finally
+              sharedFreeTier.set false
+          -- C-PIN / L-IDENT (approved 2026-10-18, docs/POLICY_RELAXATIONS.md; switches `R2L_RULE_CARRIER_PIN`,
+          -- `R2L_RULE_LEVEL_IDENT` while measured): an unprotected statement refused by the generality or the
+          -- binder-independence check is retried with carrier pins / level identifications allowed (reported)
+          let polMsg := r.message ++ ((lastTier.map (·.message)).getD "")
+          let wantPin := true && (polMsg.splitOn "is free in the source").length > 1
+          let wantId := true && (polMsg.splitOn "would be forced by the translation").length > 1
+          if !r.accepted && isStmt && !genv.protectedNames.contains c0.name && (retry r.status) && (wantPin || wantId) then
+            try
+              carrierPinTier.set (true)
+              levelIdentTier.set (true)
+              setFloorTier.set (true)
+              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
+                                       (false, false, true, false), (false, false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[policy] {r'.message}" }
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := r'
+                  iface := none
+                  break
+            finally
+              carrierPinTier.set false
+              levelIdentTier.set false
+              setFloorTier.set false
+          -- R-PREMODEL (docs/POLICY_RELAXATIONS.md §8; switch `R2L_RULE_PREMODEL` while measured): a declaration refused for
+          -- raising at a generated prerequisite statement is retried with such references checked as models of the
+          -- statement's own level facts (with the C-PIN / L-IDENT / R-SET relaxations when those are switched on)
+          let preMsg := r.message ++ ((lastTier.map (·.message)).getD "")
+          if !r.accepted && (retry r.status) && true &&
+              ((preMsg.splitOn ".statement: argument").length > 1 && (preMsg.splitOn "is not entailed by the source universe graph").length > 1 ||
+                -- (R-ORIENT: a re-represented identification may meet a prerequisite statement's levels)
+                (preMsg.splitOn "does not hold for the solution").length > 1) then
+            try
+              setFloorTier.set (true)
+              carrierPinTier.set (isStmt && true)
+              levelIdentTier.set (isStmt && !genv.protectedNames.contains c0.name && true)
+              let gP := { genv with prereqModel := true }
+              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
+                                       (false, false, true, false), (false, false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant gP results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[prereq-model] {r'.message}" }
+                if (← IO.getEnv "R2L_ORIENT_DEBUG").isSome then IO.eprintln s!"tier-debug {c.name} prereq-model {r'.status}: {r'.message.take 700}"
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := r'
+                  iface := none
+                  break
+            finally
+              setFloorTier.set false
+              carrierPinTier.set false
+              levelIdentTier.set false
+          -- R-SET (docs/POLICY_RELAXATIONS.md; switch `R2L_RULE_SET_FLOOR` while measured): a declaration refused by a
+          -- source fact `Set < l` (a body-only level solved at 0) or a carrier pin at 0 is retried with Rocq's structural
+          -- `Set < l` read as `Set ≤ l` for levels no named level forces up (and, with C-PIN / L-IDENT switched on, those
+          -- for unprotected statements); reported `set-floor: l` / `carrier-pin: c`
+          let floorMsg := r.message ++ ((lastTier.map (·.message)).getD "")
+          let wantFloor := true &&
+            ((floorMsg.splitOn "native fact Set lt").length > 1 || (floorMsg.splitOn "but its argument is 0").length > 1 ||
+              -- (R-COPYDIAG: a copied fact of a solved level)
+              (true && (floorMsg.splitOn "does not hold for the solution").length > 1 &&
+                (floorMsg.splitOn "__c").length > 1) ||
+              -- (R-ORIENT: a solved level's fact, with the identification re-represented)
+              (floorMsg.splitOn "does not hold for the solution").length > 1)
+          if !r.accepted && (retry r.status) && wantFloor then
+            try
+              setFloorTier.set true
+              let unprotStmt := isStmt && !genv.protectedNames.contains c0.name
+              carrierPinTier.set (isStmt && true)
+              levelIdentTier.set (unprotStmt && true)
+              for (it, cu, lo, p3) in [(false, false, false, false), (true, false, false, false), (false, true, false, false),
+                                       (false, false, true, false), (false, false, false, true)] do
+                let r' ← budgeted c.name "constant" <| processConstant genv results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (cumul := cu) (extraOwn := eo) (lower := lo) (hypExact := p3)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[set-floor] {r'.message}" }
+                if (← IO.getEnv "R2L_ORIENT_DEBUG").isSome then IO.eprintln s!"tier-debug {c.name} set-floor {r'.status}: {r'.message.take 700}"
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := r'
+                  iface := none
+                  break
+            finally
+              setFloorTier.set false
+              carrierPinTier.set false
+              levelIdentTier.set false
+          -- R-ALL (switch `R2L_RULE_ALL_TIER` while measured): the last of these tiers, every relaxation of
+          -- docs/POLICY_RELAXATIONS.md at once (each one reported in the row and re-derived by the audit as when alone),
+          -- for declarations that need several (CoqEAL `refines_abstr2`: a prerequisite model and per-occurrence levels)
+          if !r.accepted && (retry r.status || r.status == "TRANSLATION_FAILED") && true then
+            let prot := genv.protectedNames.contains c0.name
+            try
+              setFloorTier.set true
+              carrierPinTier.set isStmt
+              levelIdentTier.set (isStmt && !prot)
+              bodyOccTier.set true
+              let gA := { genv with prereqModel := true }
+              for (it, lo, p3, pl, ns) in [(false, false, false, false, false), (false, false, true, false, false), (true, false, true, false, false),
+                                           (false, true, false, false, false), (false, false, false, true, false), (false, false, true, true, false),
+                                           (false, false, false, false, true), (false, false, true, false, true)] do
+                if ns && prot then continue
+                let g' := if ns then { gA with carrierSplit := false } else gA
+                let r' ← budgeted c.name "constant" <| processConstant g' results c (stmt := isStmt)
+                  (inferSort := c0.bodyState == "opaque_interface") (interp := it) (extraOwn := eo) (lower := lo) (hypExact := p3) (propLift := pl)
+                if r'.status != "UNSUPPORTED_FEATURE" then lastTier := some { r' with message := s!"[all] {r'.message}" }
+                if r'.status == "RESOURCE_LIMIT" then break
+                if r'.accepted then
+                  r := if ns then { r' with levelDiagnostics := r'.levelDiagnostics.push "no-split" } else r'
+                  iface := none
+                  break
+            finally
+              setFloorTier.set false
+              carrierPinTier.set false
+              levelIdentTier.set false
               bodyOccTier.set false
           -- generality first (docs/COHERENCE_READINGS.md §6): a definition accepted with an own *type*
           -- level solved by typing (R2S) under coherence by construction is retried with shared levels
@@ -2895,34 +3714,7 @@ where
             else if r.status == "PENDING_KERNEL_CHECKED" then "STATEMENT_PENDING_KERNEL_CHECKED" else r.status
           r := { r with source := c0.name, status := st,
                         targetKind := if st != r.status then "statement" else r.targetKind }
-        -- B: generated statements (termination obligations, unfolding equations) are proof tasks
-        for x in r.synthetic do
-          if let some n := x.target then
-            if x.status == "STATEMENT_KERNEL_CHECKED" || x.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
-              genv := { genv with leafStmt := genv.leafStmt.insert x.source (n, x.pendingHyps),
-                                  leafStmtTargets := genv.leafStmtTargets.insert n }
-              unless x.levelParams.isEmpty do
-                genv := { genv with constGlobals := genv.constGlobals.insert n x.paramLevels }
-        -- statement mode: register proof tasks (statements) and pending artifacts for later references
-        if r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" || r.status == "PENDING_KERNEL_CHECKED" then
-          if let some n := r.target then
-            if r.status == "PENDING_KERNEL_CHECKED" then
-              genv := { genv with pendingDefs := genv.pendingDefs.insert c0.name (n, r.pendingHyps) }
-            else
-              genv := { genv with leafStmt := genv.leafStmt.insert c0.name (n, r.pendingHyps),
-                                  leafStmtTargets := genv.leafStmtTargets.insert n }
-            unless r.levelParams.isEmpty do
-              genv := { genv with constGlobals := genv.constGlobals.insert n r.paramLevels }
-        if r.ok then if let some n := r.target then
-          genv := { genv with consts := genv.consts.insert c.name n,
-                              constLevels := genv.constLevels.insert c.name r.levelParams.length,
-                              constGlobals := if r.levelParams.isEmpty then genv.constGlobals
-                                else genv.constGlobals.insert n r.paramLevels }
-          if r.polyParams > 0 then
-            genv := { genv with constPoly := genv.constPoly.insert c.name r.polyParams,
-                                polyByTarget := genv.polyByTarget.insert n r.polyParams }
-          unless r.admittingLevels.isEmpty do
-            genv := { genv with admitting := genv.admitting.insert n r.admittingLevels }
+        genv := registerConstant genv c0.name c.name r
         pure r
       | .inductive i =>
         -- R3G for blocks: first with free reference levels as implicit parameters (more general); if
@@ -3058,35 +3850,7 @@ where
             for (l, _) in r.templateParams do
               genv := { genv with templateLevels := genv.templateLevels.insert l }
         pure r
-    -- R-CARRIER P2: the copy positions of the declaration's universe parameters, for references to it
-    unless r.levelCopies.isEmpty do
-      let copies := r.levelCopies.foldl (· ++ ·.2) #[]
-      let mask := (r.levelParams.drop r.polyParams).toArray.map fun p => copies.any (levelParamName · == p)
-      for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
-        genv := { genv with copyPositions := genv.copyPositions.insert n mask }
-    -- R3G-F: the declaration's closure of result-sort implicit levels (its dependencies' and its own)
-    let deps := match d with
-      | .constant c => c.typeDeps ++ c.bodyDeps
-      | .inductive i => i.typeDeps
-    -- rule P gate: the declaration reaches a lifted definition
-    if r.propLift.isSome || deps.any genv.liftReach.contains then
-      genv := { genv with liftReach := genv.liftReach.insert d.name,
-                          liftTargets := (r.target.toList ++ (r.targetCtors.map (·.1)).toList).foldl (fun s n => s.insert n)
-                            (genv.liftTargets.insert ``PULift) }
-    let cl := r.resultSortImplicit.foldl (·.insert ·) (genv.rsOfDeps deps)
-    unless cl.isEmpty do genv := { genv with rsClosure := genv.rsClosure.insert d.name cl }
-    -- R3G-F applicability at references to this declaration (docs/RESULT_SORT_LEVELS.md §2): besides an
-    -- inductive's source result-sort-only levels (registered above), the R3G-F levels of its dependency
-    -- closure that are not levels of its own source (they reach it only through such blocks)
-    if r.accepted || r.status == "STATEMENT_KERNEL_CHECKED" || r.status == "STATEMENT_PENDING_KERNEL_CHECKED" then
-      let expl : Std.HashSet String := match d with
-        | .constant c => globalsOf (c.body.getD (.sort .prop)) (globalsOf c.type)
-        | .inductive i => (globalsOfInd i).foldl (·.insert ·) {}
-      let inh := (genv.rsOfDeps deps).fold (fun acc l => if expl.contains l then acc else acc.push l) #[]
-      unless inh.isEmpty do
-        for n in (r.target.toList ++ (r.targetCtors.map (·.1)).toList) do
-          let old := (genv.resultOnly[n]?).getD #[]
-          genv := { genv with resultOnly := genv.resultOnly.insert n (old ++ inh.filter (!old.contains ·)) }
+    genv := registerCommon genv d r
     return (r, genv)
 
 end Rocq2Lean

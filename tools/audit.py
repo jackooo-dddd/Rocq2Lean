@@ -48,6 +48,17 @@ FACTS = None     # native universe facts of the audited export (set by main)
 # R-OCC (docs/BODY_OCCURRENCE_LEVELS.md): a sort occurrence of a body-only level may be a per-occurrence copy
 # (reports with "body-occ" rows); the copy is checked here against the level's upper-bound facts.
 BODY_OCC = [False]
+# C-PIN / L-IDENT (docs/POLICY_RELAXATIONS.md): the current row's reported carrier pins (referenced constants) and
+# level identifications ((b1, b2) pairs); empty for a protected row.
+PIN_OK = [set()]
+PREMODEL_OK = [set()]   # R-PREMODEL: the current row's reported prerequisite statements
+PIN_PROT = [False]   # C-PIN on a protected statement: at a term constant only (its type does not end in a sort)
+# R-SET: levels with a named strict lower bound (the others are above Set only structurally), and per row the levels
+# reported `set-floor: l`
+NAMED_STRICT = [set()]
+SETFLOOR = {}
+COPYDIAG = {}
+IDENT_OK = [set()]
 STATEMENT_MODE = [False]     # set by main_statement
 
 
@@ -1068,6 +1079,17 @@ class Auditor:
         return e, list(reversed(spine))
 
     def check_fix(self, s, e, path, env):
+        try:
+            return self.check_fix0(s, e, path, env)
+        except Mismatch:
+            # R-CONVOY: the source block βζι-reduced (definitional), as the translator lowers it when the structural
+            # lowering of the source body fails
+            s2 = dict(s, defs=[dict(d, body=convoy_reduce(d["body"])) for d in s["defs"]])
+            if s2 == s:
+                raise
+            return self.check_fix0(s2, e, path, env)
+
+    def check_fix0(self, s, e, path, env):
         """fix f a0..a_{n-1} {struct a_r} := match a_r with ... end
            ->  lam a0..a_{n-1}. I.rec params motive minors idx a_r Q   (Q = a_{r+1}..)"""
         # M6 δβ: constants to which the block passes its own functions are inlined; ζ: let-bound
@@ -2095,6 +2117,38 @@ def mentions_rels(t, lo, n):
     return bool(hit)
 
 
+def convoy_reduce(body):
+    """R-CONVOY, independently: definitional βζι-reduction of match convoys (a let bound to a constructor application
+    inlined, an applied λ β-reduced, a match on a constructor application of its inductive ι-reduced)."""
+    def ctor(x):
+        if x.get("k") == "app" and x["f"].get("k") == "construct":
+            return x["f"], x["args"]
+        if x.get("k") == "construct":
+            return x, []
+        return None
+
+    def pre(x, d):
+        k = x.get("k")
+        if k == "let" and ctor(x["v"]) is not None:
+            return src_flatten_apps(src_subst0(x["b"], x["v"]))
+        if k == "app" and x["f"].get("k") == "lam":
+            return beta_app(x["f"], x["args"])
+        if k == "case":
+            cv = ctor(x["c"])
+            if cv is not None:
+                c, args = cv
+                ind, npar = x["ci"]["ind"], x["ci"]["npar"]
+                if c["ind"] == ind and c["c"] < len(x["brs"]) and len(args) >= npar:
+                    fields, br = args[npar:], x["brs"][c["c"]]
+                    if len(fields) == len(br["ctx"]):
+                        b = br["body"]
+                        for j in reversed(range(len(fields))):
+                            b = src_subst0(b, src_lift(fields[j], j))
+                        return b
+        return None
+    return src_rewrite(body, pre)
+
+
 def zeta_fix_lets(body, nfun):
     """M6 ζ-normalization of a fixpoint body (independent of the translator): a let whose value
     mentions a function of the block (a partial application, e.g. Pos.peano_rect's f2) is inlined,
@@ -2575,6 +2629,17 @@ def equal_at_models(facts, own_params, a, b):
     return sa is not None and sb is not None and leq(sa, sb) and leq(sb, sa)
 
 
+def premodel_ok(facts, levels, args):
+    """R-PREMODEL, independently: the arguments satisfy every native fact between two of the statement's own levels."""
+    arg = dict(zip(levels, args))
+    for (a, b), r in facts.rel.items():
+        if a != b and a != "Set" and a in arg and b in arg:
+            lhs = {"k": "succ", "l": arg[a]} if r == "lt" else arg[a]
+            if not dominated(lhs, arg[b]):
+                return False
+    return True
+
+
 def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None, own_admit=frozenset(), lift=False,
                         lower=False):
     """Rule R3 (docs/UNIVERSE_TRANSLATION.md) for every reference in `exprs`.
@@ -2592,6 +2657,10 @@ def check_universe_args(facts, own, gen, exprs, body=None, poly=None, admit=None
             if len(us) != len(ls):
                 raise Mismatch(f"{name}: {len(us)} universe arguments for {len(ls)} parameters")
             cpos = GEN_COPY_POS.get(name, set())
+            # R-PREMODEL: a reported prerequisite statement whose arguments satisfy every native fact among its own levels
+            if name in HYP_STATEMENTS and name in PREMODEL_OK[0] and premodel_ok(facts, ls, us):
+                n += len(ls)
+                continue
             # rule H (docs/COHERENCE_READINGS.md §5): at a proof task's statement (a prerequisite
             # hypothesis's type, instantiated where the prerequisite is used), an argument for a shared
             # level may lie below it: R3-down, checked below like any argument for another declaration
@@ -2738,7 +2807,30 @@ def check_binder_independence(facts, d, params, sol, interp):
     for b1, x1 in tr:
         for b2, x2 in tr:
             if b1 != b2 and dominated(x1, x2) and not facts.entails(b1, b2, 0):
+                if (b1, b2) in IDENT_OK[0] and not facts.entails(b2, b1, 1):
+                    continue          # L-IDENT: reported, the source does not force b2 < b1
                 raise Mismatch(f"statement specialized: binder levels {b1} <= {b2} forced by the translation, not by the source")
+
+
+def ends_in_sort_(t):
+    while t is not None and t.get("k") == "forall":
+        t = t["b"]
+    return t is not None and t.get("k") == "sort"
+
+
+def pin_model_ok(facts, l, sigma, levels, args):
+    """C-PIN-M, independently: sigma (for l) and the reference's other arguments satisfy every native fact between l
+    and the referenced constant's other source levels."""
+    arg = dict(zip(levels, args))
+    for (a, b), r in facts.rel.items():
+        k = 1 if r == "lt" else 0
+        if b == l and a != l and a != "Set" and a in arg:
+            if not dominated({"k": "succ", "l": arg[a]} if k else arg[a], sigma):
+                return False
+        elif a == l and b != l and b != "Set" and b in arg:
+            if not dominated({"k": "succ", "l": sigma} if k else sigma, arg[b]):
+                return False
+    return True
 
 
 def check_statement_generality(facts, own, gen, exprs, poly, types):
@@ -2796,6 +2888,14 @@ def check_statement_generality(facts, own, gen, exprs, poly, types):
                     continue
                 if any(mentions_param(b, p) for b in binders):
                     continue
+                # C-PIN-M: a reported pin at a term constant whose argument satisfies every native fact between l and
+                # the constant's other levels, read with this reference's arguments (Set facts by R-SET's floor)
+                if ps and name in PIN_OK[0] and (not PIN_PROT[0] or not ends_in_sort_(ty)) and pin_model_ok(facts, l, sigma, gen[name], us_):
+                    continue
+                # C-PIN: a reported pin at a closed argument k the source graph does not force l above
+                if not ps and c is not None and name in PIN_OK[0] and (not PIN_PROT[0] or not ends_in_sort_(ty)) and (
+                        (c == 0 and l not in NAMED_STRICT[0]) or not facts.entails("Set", l, c + 1)):
+                    continue          # (R-SET: at 0, Set < l is structural unless a named level forces l up)
                 raise Mismatch(f"{name}: source level {l} is free in the statement (not determined by the reference's "
                                f"arguments, not forced by the source graph) but its argument is {sigma}, not the "
                                f"parameter {level_param(l)}: the statement is specialized (R3G)")
@@ -3147,8 +3247,22 @@ def check_body_levels(facts, d, sol, params=None, admit=frozenset(), prop_offset
             for a, i in lhs)
 
     mine = set(tl) | set(sol) | {"Set"}
+    floor_ = SETFLOOR.get(d.get("name"), set())
+    diag_ = COPYDIAG.get(d.get("name"), set())
+    base_ = lambda x: x.split("__c")[0]
     for (a, b), r in facts.rel.items():
         if (a in sol or b in sol) and a in mine and b in mine:
+            # R-COPYDIAG: for a reported level, a copied fact is checked with the copies read as their source levels
+            if (a in diag_ or b in diag_) and ("__c" in a or "__c" in b):
+                k_ = 1 if r == "lt" and not (a == "Set" and b not in NAMED_STRICT[0] and (a in floor_ or b in floor_)) else 0
+                if not leq([(base_(x), i) for x, i in summ(a)], [(base_(x), j) for x, j in summ(b)], k_):
+                    raise Mismatch(f"proof-local level solution violates the native fact {a} {r} {b}")
+                continue
+            # R-SET: a reported level's structural Set < b (no named strict lower bound) read as Set <= b
+            if a == "Set" and r == "lt" and floor_ and (b in floor_ or any(b == x for x in floor_)) and b not in NAMED_STRICT[0]:
+                if not leq(summ(a), summ(b), 0):
+                    raise Mismatch(f"proof-local level solution violates the native fact {a} {r} {b}")
+                continue
             # R2B-P (cumulativity-tier rows only): a fact Set < m may stem from Prop's typing
             # (Type@{Set+1} in Rocq, Sort 1 in Lean)
             # (only for the reported levels: R2B-P proof-local ones, R2B-S result-sort ones)
@@ -3217,6 +3331,16 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
     facts = Facts(lines[4]) if lines[4].get("kind") == "universe_facts" else None
     global FACTS
     FACTS = facts
+    NAMED_STRICT[0] = {b for (a, b), r in facts.rel.items() if r == "lt" and a != "Set"} if facts is not None else set()
+    SETFLOOR.clear()
+    COPYDIAG.clear()
+    for s__, r__ in (rows.items() if isinstance(rows, dict) else []):
+        cd = {x[len("copy-diag: "):] for x in (r__.get("universe_diagnostics") or []) if isinstance(x, str) and x.startswith("copy-diag: ")}
+        if cd:
+            COPYDIAG[s__] = cd
+        fl = {x[len("set-floor: "):] for x in (r__.get("universe_diagnostics") or []) if isinstance(x, str) and x.startswith("set-floor: ")}
+        if fl:
+            SETFLOOR[s__] = fl
     BODY_OCC[0] = any("body-occ" in (r_.get("universe_diagnostics") or []) for r_ in rows.values()) if isinstance(rows, dict) else False
     if facts is None:
         problem("universe", "source IR has no native universe facts")
@@ -3412,6 +3536,8 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                 # parameters by construction, not R3 obligations
                 self_names = {r_.get("target")} | {c["name"] for c in r_.get("target_ctors", [])}
                 gen_ = {k: v for k, v in gen.items() if k not in self_names} if d_["kind"] == "inductive" else gen
+                PREMODEL_OK[0] = {x[len("prereq-model: "):] for x in (r_.get("universe_diagnostics") or [])
+                                  if isinstance(x, str) and x.startswith("prereq-model: ")}
                 univ_checked += check_universe_args(facts, own, gen_, [x for x in exprs if x is not None], bl, poly,
                                                     gen_admit, own_admit, bool(r_.get("universe_cumulativity")),
                                                     bool(r_.get("universe_lowered")))
@@ -3433,6 +3559,11 @@ def universe_and_instance_checks(lines, decls, rows, metadata_path, problem, ali
                         if s_ in protected:
                             raise Mismatch(f"protected public declaration with a narrowed quantification range: {e}")
                         DEF_TYPE_CANDIDATES.append({"declaration": s_, "message": str(e)})
+                diags_ = [x for x in (r_.get("universe_diagnostics") or []) if isinstance(x, str)]
+                unprot_ = s_ in statements and s_ not in protected
+                PIN_OK[0] = {x[len("carrier-pin: "):] for x in diags_ if x.startswith("carrier-pin: ")} if s_ in statements else set()
+                PIN_PROT[0] = s_ in protected
+                IDENT_OK[0] = {tuple(x[len("level-ident: "):].split(" <= ")) for x in diags_ if x.startswith("level-ident: ")} if unprot_ else set()
                 if s_ in statements:
                     check_binder_independence(facts, d_, set(params), sol_only, interp_)
                 if s_ in statements or (d_["kind"] == "constant" and s_ in definitions):

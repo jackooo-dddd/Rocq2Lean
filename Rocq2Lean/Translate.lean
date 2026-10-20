@@ -16,6 +16,14 @@ Every failure is a structured `TransError` carrying a status and the node path.
 
 namespace Rocq2Lean
 
+/-- Incremental runs (docs/INCREMENTAL.md §6): named branches where a universe level is *chosen*, reached
+while translating the current declaration (in any attempt, accepted or not), with counts. They are written
+to the declaration's replay record, so that a change confined to one branch selects exactly the
+declarations that reached it. Diagnostics only: a probe never changes a result. -/
+initialize probeLog : IO.Ref (Std.HashMap String Nat) ← IO.mkRef {}
+
+def probe (name : String) : Lean.Meta.MetaM Unit := probeLog.modify fun m => m.insert name (m.getD name 0 + 1)
+
 open Lean Meta
 open IR (SortIR LevelExpr AName IndRef Relevance)
 
@@ -140,6 +148,12 @@ structure GEnv where
   these declarations keep their full source statement — no R2B-S result-sort lowering and no R2B-P
   specialization of a statement level — whether they are requested roots or dependencies. -/
   protectedNames : Std.HashSet String := {}
+  /-- R-SET: the levels with a *named* strict lower bound (`a < l`, `a ≠ Set`); every other level is above `Set` only
+  by Rocq's structural `Set < l`. -/
+  namedStrict : Std.HashSet String := {}
+  /-- R-PREMODEL (docs/POLICY_RELAXATIONS.md §8): set on its tier. A reference to a generated prerequisite statement
+  (a proof task's type) whose arguments satisfy every native fact among the statement's own levels is accepted. -/
+  prereqModel : Bool := false
   /-- Statement mode: constants available only as statements (theorems, extracted obligations, opaque
   data: their proof or value is a task for the Lean proving agent): source key ↦ (statement constant,
   the hypotheses of that constant when it is itself a pending artifact, as leaf keys). -/
@@ -408,6 +422,13 @@ def lookupInd (i : IndRef) : TransM IndTarget := do
     return t
   | none => failT "TRANSLATION_FAILED" s!"reference to inductive {i.mind}, which has no accepted translation"
 
+/-- Rule S-FREE (candidate, `R2L_RULE_SHARED_FREE`, a last tier): one level metavariable per source level that is not an
+own level, at every reference of the attempt (monomorphic Rocq: the level is one level at all of them), instead of a
+fresh one per reference. Set per attempt (`sharedFreeTier`), reset at the start of each attempt. -/
+initialize sharedFreeOn : IO.Ref Bool ← IO.mkRef false
+initialize sharedFreeMap : IO.Ref (Std.HashMap String Level) ← IO.mkRef {}
+initialize sharedFreeTier : IO.Ref Bool ← IO.mkRef false
+
 /-- Universe arguments at a reference to a declaration whose parameters stand for the source global
 levels `globals` (in parameter order): a level that is also one of the referring declaration's own
 levels is *the same level* in monomorphic Rocq, so the reference uses the referring declaration's
@@ -426,7 +447,13 @@ def sharedOrFreshLevels (globals : Array String) : TransM (List Level) := do
   if (← read).lowerShared then return ← liftMeta do globals.toList.mapM fun _ => mkFreshLevelMVar
   globals.toList.mapM fun l => match own[l]? with
     | some v => pure v
-    | none => liftMeta mkFreshLevelMVar
+    | none => do
+      if ← sharedFreeOn.get then
+        if let some v := (← sharedFreeMap.get)[l]? then return v
+        let v ← liftMeta mkFreshLevelMVar
+        sharedFreeMap.modify (·.insert l v)
+        return v
+      liftMeta mkFreshLevelMVar
 
 /-- Universe arguments of a reference to an accepted or pending target `n` (its source levels shared
 with the referring declaration, otherwise fresh). -/
@@ -779,6 +806,51 @@ partial def IR.betaApp (f : IR.Term) (args : Array IR.Term) : IR.Term :=
     | .app g as => .app g (as ++ args)
     | _ => .app f args
   else f
+
+/-- R-CONVOY (docs/POLICY_RELAXATIONS.md): definitional βζι-reduction of match convoys in a fixpoint body — a `let`
+bound to a constructor application is inlined, an applied λ is β-reduced, and a `match` on a constructor
+application of its inductive is ι-reduced (Paramcoq's `map_R`: `let K := cons_R … s_R in (λ s1' s2' s_R', match
+s_R' …) _ _ K`, whose recursive call is on a field of `K`, i.e. on `s_R`). Rocq's guard sees the call by the same
+reduction. Used only when the structural lowering fails on the source body. -/
+partial def IR.Term.convoyReduce (t : IR.Term) (fuel : Nat := 64) : IR.Term :=
+  if fuel == 0 then t else
+  let go (u : IR.Term) := u.convoyReduce (fuel - 1)
+  let ctorView : IR.Term → Option (IR.IndRef × Nat × Array IR.Term)
+    | .app (.construct i k _) args => some (i, k, args)
+    | .construct i k _ => some (i, k, #[])
+    | _ => none
+  match t with
+  | .letIn nm v ty b =>
+    let v' := go v
+    if (ctorView v').isSome then go ((b.subst0 v').flattenApps) else .letIn nm v' (go ty) (go b)
+  | .app f args =>
+    let f' := go f
+    let args' := args.map go
+    match f' with
+    | .lam .. => go (IR.betaApp f' args')
+    | .app g as => .app g (as ++ args')
+    | _ => .app f' args'
+  | .case i np r pu ps pctx ret c brs =>
+    let c' := go c
+    let rebuilt := IR.Term.case i np r pu (ps.map go) pctx (go ret) c' (brs.map fun (ctx, b) => (ctx, go b))
+    match ctorView c' with
+    | some (j, k, args) =>
+      if j.mind == i.mind && j.idx == i.idx && k < brs.size && args.size ≥ np then
+        let fields := args.extract np args.size
+        let (ctx, b) := brs[k]!
+        if fields.size == ctx.size then
+          go ((List.range fields.size).reverse.foldl (fun acc jj => acc.subst0 (fields[jj]!.liftRels jj)) b)
+        else rebuilt
+      else rebuilt
+    | none => rebuilt
+  | .evar ev args => .evar ev (args.map go)
+  | .cast c kd ty => .cast (go c) kd (go ty)
+  | .prod nm ty b => .prod nm (go ty) (go b)
+  | .lam nm ty b => .lam nm (go ty) (go b)
+  | .proj i np a c => .proj i np a (go c)
+  | .fix ds idx => .fix (ds.map fun (nm, ty, b, r) => (nm, go ty, go b, r)) idx
+  | .cofix ds idx => .cofix (ds.map fun (nm, ty, b, r) => (nm, go ty, go b, r)) idx
+  | _ => t
 
 /-- Statement mode: ζ-normalization of a fixpoint body *before* any lowering (the audit's
 `zeta_fix_lets`, same order): a `let` whose value mentions a function of the block (`rel` in
@@ -1523,7 +1595,9 @@ def coerceArgs (f : Expr) (args : Array Expr) (cnt : IO.Ref Nat) (lifted : Std.H
       let (ca, cd) := (cod (← instantiateMVars aty), cod (← instantiateMVars d))
       if ca.isSort && ca.sortLevel!.isZero && cd.isSort && !cd.sortLevel!.isZero && aty.isForall then
         let lifted ← forallTelescope d fun ys cd' => do
-          let body := mkAppN a ys
+          -- (β: a λ-relation, e.g. the δ-unfolded `Rnat` = `fun a b => nat_of_bin b = a`, is lifted as its body, the
+          -- form the audit compares λ by λ)
+          let body := (mkAppN a ys).headBeta
           let bt ← whnf (← inferType body)
           let cd'' ← whnf cd'
           if bt.isSort && bt.sortLevel!.isZero && cd''.isSort then
@@ -1588,6 +1662,10 @@ partial def trans (t : IR.Term) : TransM Expr := do
     if let some cnt := (← read).propCoerce then
       if let some r ← liftMeta (liftCoerce c' (← inferType c') ty') then
         cnt.modify (· + 1); return r
+    if (← (IO.getEnv "R2L_CAST_DEBUG" : IO _)).isSome then
+      let a ← liftMeta do (MessageData.ofExpr (← inferType c')).toString
+      let b ← liftMeta do (MessageData.ofExpr ty').toString
+      failT "TRANSLATION_FAILED" s!"{kind} cast annotation is not convertible in Lean: {a.take 600} vs {b.take 600}"
     failT "TRANSLATION_FAILED" s!"{kind} cast annotation is not convertible in Lean"
   | .prod n ty b => withPath "prod" do
     checkRelevant n
@@ -1762,7 +1840,7 @@ partial def transCase (ind : IndRef) (npar : Nat) (puinst : Array IR.Level) (ppa
     | _ => univArgs ind.mind tgt puinst params
   let sargs := sty.getAppArgs
   unless sty.getAppFn.isConstOf iname && sargs.size == npar + rv.numIndices do
-    failT "TRANSLATION_FAILED" s!"scrutinee type is not an application of {iname}"
+    failT "TRANSLATION_FAILED" s!"scrutinee type is not an application of {iname} (whnf: {(toString sty).take 200})"
   let idx := sargs.extract npar sargs.size
   let large := rv.levelParams.length == indLvls.length + 1
   let recLvls (u : Level) := if large then u :: indLvls else indLvls
@@ -2000,6 +2078,13 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
     unless e.msg.startsWith "recursive call on a term that is not a direct recursive constructor field" do
       throwThe TransError e
     restoreTrans saved
+    -- R-CONVOY (statement mode, switch `R2L_RULE_CONVOY` while measured): the structural lowering of the βζι-reduced
+    -- body (definitional), before the course-of-values and accessibility lowerings
+    if (← read).genv.stmtMode && true then
+      let defsC := defs.map fun (n, ty, b, r) => (n, ty, b.convoyReduce, r)
+      let savedC ← saveTrans
+      let rC ← tryCatchThe TransError (some <$> transFix1 defsC false) fun _ => do restoreTrans savedC; pure none
+      if let some x := rC then return x
     unless (← read).genv.stmtMode do return ← transFix1 defs true
     -- B (statement mode, docs/TERMINATION.md): recursion that neither the structural nor the
     -- course-of-values lowering covers (a call on a subterm Rocq's guard sees only by reducing a
@@ -2007,7 +2092,11 @@ partial def transFix (defs : Array (AName × IR.Term × IR.Term × Nat)) (fidx :
     -- termination obligation
     let saved2 ← saveTrans
     tryCatchThe TransError (transFix1 defs true) fun e2 => do
-      unless e2.msg.startsWith "recursive call on a term that is not a direct recursive constructor field" do
+      -- (R-COVWF: also when the course-of-values lowering does not cover the inductive — indexed, non-uniform or
+      -- Prop-only, CoqEAL's parametricity lemmas `map_R`, `filter_R`, … over `list_R`: the accessibility lowering
+      -- with its explicit termination obligation, as for a call Rocq's guard sees only by reduction)
+      unless e2.msg.startsWith "recursive call on a term that is not a direct recursive constructor field" ||
+          ((← IO.getEnv "R2L_RULE_COV_WF").isSome && e2.msg.startsWith "recursive call on a non-direct subterm (course-of-values)") do
         throwThe TransError e2
       restoreTrans saved2
       transFixWf defs
@@ -2867,9 +2956,12 @@ def rebindShared (ref : IO.Ref (Array (LMVarId × String))) (gl : Std.HashMap St
     -- (one class of occurrences for several shared levels, identified by typing: it is the level lying
     -- below every other level of the class, as R3G chooses; the others' arguments are then R3-checked)
     let low? := c.find? fun x => c.all fun y => x == y || entails f x y 0
+    if c.size > 1 then probe "rebind.class_several_levels"
     -- (a class whose lowest level is not an own level is left free: R3G names it after that level)
     if let some lo := low? then
-      unless gl.contains lo do continue
+      unless gl.contains lo do
+        probe "rebind.left_free"
+        continue
     let l := low?.getD l0
     if let some v := gl[l]? then
       let vi ← instantiateLevelMVars v
@@ -2877,6 +2969,7 @@ def rebindShared (ref : IO.Ref (Array (LMVarId × String))) (gl : Std.HashMap St
       -- the parameter `u_l` itself, so `l` denotes `max (…, u_l)`, its R2F reading; never a cycle)
       if (vi.collectMVars {}).contains r then
         unless vi == .mvar r do
+          probe "rebind.self_occurrence"
           -- (a body level (R2B) has no parameter: `l = max (…, l)` is solved by its least solution, the other
           -- summands — as a free body level takes its minimal model)
           if bodyOnly.contains l then
@@ -2911,7 +3004,11 @@ def checkInstantiation (f : IR.UniverseFacts) (own : Array String) (l : String) 
     throw s!"coherence: source level {l} is a motive level of the referring declaration but not of the referenced one"
   let shift (x : Level) : Level := if cAdmit && !dAdmit then x.succ else x
   if let some s := body[l]? then
-    if σ.normalize == (shift s).normalize then return
+    -- (the solution itself: coherent; for a motive level (R8) nothing more, otherwise its summands are R3-checked
+    -- below like every argument's — a proof-local level solved above the referenced constant's level raises it;
+    -- the audit's check_universe_args does the same; S25 `refine_value_at`: 47805 solved as u_381 at `Rnat`)
+    if σ.normalize == (shift s).normalize && (cAdmit || dAdmit) then return
+    if σ.normalize == (shift s).normalize then pure () else
     -- Rule R: an argument equal to the solution (or R2F image) at every model of the source facts (its
     -- summands are R3-checked below, as every argument's)
     if !cAdmit && !dAdmit && equalAtModels f own σ s then pure () else
@@ -2971,7 +3068,11 @@ def summandsLeq (f : IR.UniverseFacts) (lhs rhs : List (String × Nat)) (k : Nat
 solved by Lean's unifier as `σ m`; every native fact between `m` and `Set`, a type level or another
 proof-local level must still hold with each proof-local level read as its solution. -/
 def checkBodyLevel (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std.HashMap String Level)
-    (m : String) (admit : Array String := #[]) (propOffset : Bool := false) : Except String Unit := do
+    (m : String) (admit : Array String := #[]) (propOffset : Bool := false)
+    (floor : Option (Std.HashSet String) := none) (diag : Bool := false) : Except String Unit := do
+  -- R-COPYDIAG: every R-CARRIER / R-SPLIT copy `l__c<k>` read as its source level `l` (the source's situation, all
+  -- copies of one level equal); the facts are then the source's own facts between source levels
+  let base (x : String) : String := if diag then (x.splitOn "__c").head! else x
   let summ (x : String) : Except String (List (String × Nat)) :=
     match sol[x]? with
     | some σ => do
@@ -2986,6 +3087,18 @@ def checkBodyLevel (f : IR.UniverseFacts) (typeLevels : Array String) (sol : Std
     -- at Sort 1 (the image of Set), so a fact `Set < m` may stem from Prop alone; it is then checked
     -- as `Set ≤ m` (the kernel checks the typing itself)
     let k := if r == "lt" && !(propOffset && a == "Set") then 1 else 0
+    -- R-SET: Rocq's structural `Set < b` (no named level forces `b` strictly up) is read as `Set ≤ b`
+    let k := match floor with
+      | some ns => if a == "Set" && r == "lt" && !ns.contains b then 0 else k
+      | none => k
+    if diag then
+      let (a', b') := (base a, base b)
+      let bs (xs : List (String × Nat)) := xs.map fun (x, j) => (base x, j)
+      if (a'.splitOn "__c").length != (a.splitOn "__c").length || (b'.splitOn "__c").length != (b.splitOn "__c").length then
+        -- (a copied fact: checked between the source levels, the copies of each read as one)
+        unless summandsLeq f (bs (← summ a)) (bs (← summ b)) k do
+          throw s!"proof-local level {m} solved as {sol[m]?}: native fact {a} {r} {b} does not hold for the solution"
+        continue
     unless summandsLeq f (← summ a) (← summ b) k do
       throw s!"proof-local level {m} solved as {sol[m]?}: native fact {a} {r} {b} does not hold for the solution"
 
@@ -3068,6 +3181,18 @@ def checkUniverseObligations (genv : GEnv) (own : Array String) (e : Expr)
       let ls := ls.drop (genv.polyByTarget[c]?.getD 0)
       unless globals.size == ls.length do throw s!"{c}: {ls.length} universe arguments for {globals.size} parameters"
       let copyPos := (genv.copyPositions[c]?).getD #[]
+      -- R-PREMODEL: the prerequisite statement at a model of its own levels' facts (the proof task at that instance)
+      if genv.prereqModel && genv.leafStmtTargets.contains c then
+        let gl := globals.toList.zip ls
+        let argOf (x : String) : Option Level := (gl.find? (·.1 == x)).map (·.2)
+        let ok := genv.facts.relations.all fun (a, r, b) =>
+          if a == b || a == "Set" then true else
+          match argOf a, argOf b with
+          | some va, some vb => vb.geq (if r == "lt" then va.succ else va)
+          | _, _ => true
+        if ok then
+          n := n + globals.size
+          continue
       for l in globals, σ in ls, k in List.range globals.size do
         if genv.templateLevels.contains l then continue      -- R5, not R3
         let cAdmit := (genv.admitting[c]?.getD #[]).contains l
@@ -3134,10 +3259,15 @@ def solvePostponedLevels : MetaM (Array String × Array String) := do
     if (← isLevelDefEq lhs rhs) && (← getPostponed).isEmpty then continue
     saved.restore
     match ← solveMaxEq lhs rhs with
-    | some s => log := log.push s
+    | some s =>
+      probe "solver.assign"
+      log := log.push s
     | none => match ← solveMaxEq rhs lhs with
-      | some s => log := log.push s
+      | some s =>
+        probe "solver.assign"
+        log := log.push s
       | none =>
+        probe "solver.left"
         let unsat := unsatMaxEq lhs rhs || unsatMaxEq rhs lhs
         left := left.push s!"{if unsat then "unsatisfiable" else "solver limitation"}: {lhs} = {rhs}"
   return (log, left)
